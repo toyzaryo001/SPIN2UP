@@ -1,0 +1,236 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import api from "@/lib/api";
+import { Building2, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical } from "lucide-react";
+
+interface Category {
+    id: number;
+    name: string;
+}
+
+interface Provider {
+    id: number;
+    name: string;
+    slug: string;
+    logo?: string;
+    categoryId: number;
+    category: { name: string };
+    isActive: boolean;
+    sortOrder: number;
+    _count: { games: number };
+}
+
+export default function ProvidersPage() {
+    const [providers, setProviders] = useState<Provider[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [filterCat, setFilterCat] = useState("all");
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<Provider | null>(null);
+    const [formData, setFormData] = useState({ name: "", slug: "", logo: "", categoryId: "", isActive: true });
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [deletingItem, setDeletingItem] = useState<Provider | null>(null);
+
+    useEffect(() => { fetchData(); fetchCategories(); }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const res = await api.get("/admin/categories");
+            if (res.data.success) setCategories(res.data.data);
+        } catch (error) { console.error(error); }
+    };
+
+    const fetchData = async () => {
+        try {
+            const res = await api.get("/admin/providers");
+            if (res.data.success) setProviders(res.data.data);
+        } catch (error) { console.error(error); }
+        finally { setLoading(false); }
+    };
+
+    const openModal = (item?: Provider) => {
+        if (item) {
+            setEditingItem(item);
+            setFormData({ name: item.name, slug: item.slug, logo: item.logo || "", categoryId: item.categoryId.toString(), isActive: item.isActive });
+        } else {
+            setEditingItem(null);
+            setFormData({ name: "", slug: "", logo: "", categoryId: categories[0]?.id.toString() || "", isActive: true });
+        }
+        setIsModalOpen(true);
+    };
+
+    const handleSave = async () => {
+        if (!formData.categoryId) { alert("กรุณาเลือกหมวดหมู่"); return; }
+        try {
+            const payload = { ...formData, slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'), categoryId: Number(formData.categoryId) };
+            if (editingItem) {
+                await api.put(`/admin/providers/${editingItem.id}`, payload);
+            } else {
+                await api.post("/admin/providers", payload);
+            }
+            setIsModalOpen(false);
+            fetchData();
+        } catch (error) { alert("เกิดข้อผิดพลาด"); }
+    };
+
+    const toggle = async (id: number, isActive: boolean) => {
+        try {
+            await api.patch(`/admin/providers/${id}`, { isActive: !isActive });
+            fetchData();
+        } catch (error) { console.error(error); }
+    };
+
+    const confirmDelete = (item: Provider) => {
+        setDeletingItem(item);
+        setIsDeleteOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!deletingItem) return;
+        try {
+            await api.delete(`/admin/providers/${deletingItem.id}`);
+            setIsDeleteOpen(false);
+            fetchData();
+        } catch (error: any) {
+            alert(error.response?.data?.message || "ไม่สามารถลบได้");
+        }
+    };
+
+    const filtered = filterCat === "all" ? providers : providers.filter(p => p.categoryId === Number(filterCat));
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Building2 size={20} className="text-blue-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-slate-800">ค่ายเกม</h2>
+                        <p className="text-sm text-slate-500">PG, JOKER, JILI, PP ฯลฯ</p>
+                    </div>
+                </div>
+                <button onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800">
+                    <Plus size={18} /> เพิ่มค่ายเกม
+                </button>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-lg">
+                    <option value="all">ทุกหมวดหมู่</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <table className="w-full text-sm">
+                    <thead className="bg-slate-50 text-slate-500 font-medium">
+                        <tr>
+                            <th className="px-6 py-4 text-left w-12"></th>
+                            <th className="px-6 py-4 text-left">ค่ายเกม</th>
+                            <th className="px-6 py-4 text-left">หมวดหมู่</th>
+                            <th className="px-6 py-4 text-center">เกม</th>
+                            <th className="px-6 py-4 text-center">สถานะ</th>
+                            <th className="px-6 py-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {loading ? (
+                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">กำลังโหลด...</td></tr>
+                        ) : filtered.length === 0 ? (
+                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">ยังไม่มีค่ายเกม</td></tr>
+                        ) : (
+                            filtered.map(prov => (
+                                <tr key={prov.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4"><GripVertical size={16} className="text-slate-300 cursor-grab" /></td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            {prov.logo && <img src={prov.logo} alt={prov.name} className="w-8 h-8 rounded object-contain" />}
+                                            <span className="font-medium">{prov.name}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="px-2 py-1 bg-violet-100 text-violet-700 rounded text-xs">{prov.category.name}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="px-2 py-1 bg-slate-100 rounded text-xs">{prov._count.games} เกม</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <button onClick={() => toggle(prov.id, prov.isActive)}>
+                                            {prov.isActive ? <ToggleRight size={24} className="text-emerald-500" /> : <ToggleLeft size={24} className="text-slate-300" />}
+                                        </button>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <button onClick={() => openModal(prov)} className="p-2 hover:bg-slate-100 rounded"><Edit size={16} /></button>
+                                        <button onClick={() => confirmDelete(prov)} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">{editingItem ? 'แก้ไขค่ายเกม' : 'เพิ่มค่ายเกม'}</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">ชื่อค่าย *</label>
+                                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Slug</label>
+                                    <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" placeholder="auto" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">หมวดหมู่ *</label>
+                                    <select value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg">
+                                        <option value="">เลือก</option>
+                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">URL โลโก้</label>
+                                <input type="text" value={formData.logo} onChange={(e) => setFormData({ ...formData, logo: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                            </div>
+                            <div className="flex items-center">
+                                <input type="checkbox" id="provActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded" />
+                                <label htmlFor="provActive" className="ml-2 text-sm">เปิดใช้งาน</label>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">ยกเลิก</button>
+                            <button onClick={handleSave} className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center justify-center gap-2"><Save size={18} /> บันทึก</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Modal */}
+            {isDeleteOpen && deletingItem && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl w-full max-w-sm p-6 shadow-2xl text-center">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Trash2 className="text-red-500" size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">ยืนยันการลบ</h3>
+                        <p className="text-slate-500 mb-6">ลบค่ายเกม "{deletingItem.name}"?</p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setIsDeleteOpen(false)} className="flex-1 px-4 py-2 border rounded-lg">ยกเลิก</button>
+                            <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg">ลบ</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

@@ -1,0 +1,385 @@
+import { Router } from 'express';
+import prisma from '../../lib/db.js';
+import { Prisma } from '@prisma/client';
+import { requirePermission } from '../../middlewares/auth.middleware.js';
+
+const router = Router();
+
+// Helper: สร้าง date range
+function getDateRange(preset: string, startDate?: string, endDate?: string) {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (preset) {
+        case 'today':
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case 'yesterday':
+            start.setDate(start.getDate() - 1);
+            start.setHours(0, 0, 0, 0);
+            end.setDate(end.getDate() - 1);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case '3days':
+            start.setDate(start.getDate() - 2);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case '7days':
+            start.setDate(start.getDate() - 6);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case '1month':
+            start.setDate(start.getDate() - 29);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case 'custom':
+            if (startDate) start = new Date(startDate);
+            if (endDate) {
+                end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+            }
+            break;
+        default:
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+    }
+
+    return { start, end };
+}
+
+// Helper: สร้างรายงานรายวัน
+async function getDailyData(start: Date, end: Date, getData: (date: Date) => Promise<any>) {
+    const days: any[] = [];
+    const current = new Date(start);
+
+    while (current <= end) {
+        const dayStart = new Date(current);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(current);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const data = await getData(dayStart);
+        days.push({
+            date: dayStart.toISOString().split('T')[0],
+            ...data,
+        });
+
+        current.setDate(current.getDate() + 1);
+    }
+
+    return days;
+}
+
+// GET /api/admin/reports/new-users - 4.1 รายงานสมัครใหม่ (ต้องมีสิทธิ์ดู)
+router.get('/new-users', requirePermission('reports', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        const dailyData = await getDailyData(start, end, async (date) => {
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const users = await prisma.user.findMany({
+                where: { createdAt: { gte: date, lte: dayEnd } },
+                select: { id: true, username: true, fullName: true, phone: true, createdAt: true },
+            });
+
+            return { count: users.length, users };
+        });
+
+        const totalCount = dailyData.reduce((sum, d) => sum + d.count, 0);
+
+        res.json({ success: true, data: { dailyData, summary: { totalCount } } });
+    } catch (error) {
+        console.error('Report new users error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/new-users-deposit - 4.2 สมัครใหม่+ฝากในวัน (ต้องมีสิทธิ์ดู)
+router.get('/new-users-deposit', requirePermission('reports', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        const dailyData = await getDailyData(start, end, async (date) => {
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // ผู้ใช้ที่สมัครในวันนั้น
+            const newUsers = await prisma.user.findMany({
+                where: { createdAt: { gte: date, lte: dayEnd } },
+                select: { id: true, username: true, fullName: true },
+            });
+
+            // ตรวจสอบว่าใครฝากเงินในวันเดียวกัน
+            const usersWithDeposit = [];
+            for (const user of newUsers) {
+                const deposit = await prisma.transaction.findFirst({
+                    where: {
+                        userId: user.id,
+                        type: 'DEPOSIT',
+                        status: 'COMPLETED',
+                        createdAt: { gte: date, lte: dayEnd },
+                    },
+                });
+                if (deposit) {
+                    usersWithDeposit.push({ ...user, firstDeposit: deposit.amount });
+                }
+            }
+
+            return { count: usersWithDeposit.length, users: usersWithDeposit };
+        });
+
+        const totalCount = dailyData.reduce((sum, d) => sum + d.count, 0);
+
+        res.json({ success: true, data: { dailyData, summary: { totalCount } } });
+    } catch (error) {
+        console.error('Report new users deposit error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/deposits - 4.3 รายงานฝากเงิน (ต้องมีสิทธิ์ดู)
+router.get('/deposits', requirePermission('reports', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        const dailyData = await getDailyData(start, end, async (date) => {
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const result = await prisma.transaction.aggregate({
+                where: { type: 'DEPOSIT', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                _sum: { amount: true },
+                _count: true,
+            });
+
+            return { count: result._count, amount: result._sum.amount || 0 };
+        });
+
+        const totalCount = dailyData.reduce((sum, d) => sum + d.count, 0);
+        const totalAmount = dailyData.reduce((sum, d) => sum + Number(d.amount), 0);
+
+        res.json({ success: true, data: { dailyData, summary: { totalCount, totalAmount } } });
+    } catch (error) {
+        console.error('Report deposits error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/withdrawals - 4.4 รายงานถอนเงิน (ต้องมีสิทธิ์ดู)
+router.get('/withdrawals', requirePermission('reports', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        const dailyData = await getDailyData(start, end, async (date) => {
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const result = await prisma.transaction.aggregate({
+                where: { type: 'WITHDRAW', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                _sum: { amount: true },
+                _count: true,
+            });
+
+            return { count: result._count, amount: result._sum.amount || 0 };
+        });
+
+        const totalCount = dailyData.reduce((sum, d) => sum + d.count, 0);
+        const totalAmount = dailyData.reduce((sum, d) => sum + Number(d.amount), 0);
+
+        res.json({ success: true, data: { dailyData, summary: { totalCount, totalAmount } } });
+    } catch (error) {
+        console.error('Report withdrawals error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/bonus - 4.5 รายงานโบนัส (ต้องมีสิทธิ์ดู)
+router.get('/bonus', requirePermission('reports', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        const dailyData = await getDailyData(start, end, async (date) => {
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const result = await prisma.transaction.aggregate({
+                where: { type: 'BONUS', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                _sum: { amount: true },
+                _count: true,
+            });
+
+            return { count: result._count, amount: result._sum.amount || 0 };
+        });
+
+        const totalCount = dailyData.reduce((sum, d) => sum + d.count, 0);
+        const totalAmount = dailyData.reduce((sum, d) => sum + Number(d.amount), 0);
+
+        res.json({ success: true, data: { dailyData, summary: { totalCount, totalAmount } } });
+    } catch (error) {
+        console.error('Report bonus error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/profit-loss - 4.6 กำไรขาดทุน (ต้องมีสิทธิ์ดู)
+router.get('/profit-loss', requirePermission('reports', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        const dailyData = await getDailyData(start, end, async (date) => {
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const [deposits, withdrawals, bonus, bets, wins] = await Promise.all([
+                prisma.transaction.aggregate({
+                    where: { type: 'DEPOSIT', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                    _sum: { amount: true },
+                }),
+                prisma.transaction.aggregate({
+                    where: { type: 'WITHDRAW', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                    _sum: { amount: true },
+                }),
+                prisma.transaction.aggregate({
+                    where: { type: 'BONUS', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                    _sum: { amount: true },
+                }),
+                prisma.transaction.aggregate({
+                    where: { type: 'BET', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                    _sum: { amount: true },
+                }),
+                prisma.transaction.aggregate({
+                    where: { type: 'WIN', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                    _sum: { amount: true },
+                }),
+            ]);
+
+            const depositAmount = Number(deposits._sum.amount || 0);
+            const withdrawAmount = Number(withdrawals._sum.amount || 0);
+            const bonusAmount = Number(bonus._sum.amount || 0);
+            const betAmount = Number(bets._sum.amount || 0);
+            const winAmount = Number(wins._sum.amount || 0);
+            const profit = depositAmount - withdrawAmount - bonusAmount;
+            const gameProfit = betAmount - winAmount;
+
+            return { deposit: depositAmount, withdraw: withdrawAmount, bonus: bonusAmount, bet: betAmount, win: winAmount, profit, gameProfit };
+        });
+
+        const totalProfit = dailyData.reduce((sum, d) => sum + d.profit, 0);
+        const totalGameProfit = dailyData.reduce((sum, d) => sum + d.gameProfit, 0);
+
+        res.json({ success: true, data: { dailyData, summary: { totalProfit, totalGameProfit } } });
+    } catch (error) {
+        console.error('Report profit-loss error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/inactive-users - 4.7 ยูสไม่ออนไลน์ (ต้องมีสิทธิ์ดู)
+router.get('/inactive-users', requirePermission('reports', 'view'), async (req, res) => {
+    try {
+        const { days = 7 } = req.query;
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - Number(days));
+
+        const users = await prisma.user.findMany({
+            where: {
+                OR: [
+                    { lastLoginAt: { lt: cutoffDate } },
+                    { lastLoginAt: null },
+                ],
+                status: 'ACTIVE',
+            },
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                phone: true,
+                lastLoginAt: true,
+                balance: true,
+            },
+            orderBy: { lastLoginAt: 'asc' },
+        });
+
+        res.json({ success: true, data: { users, count: users.length } });
+    } catch (error) {
+        console.error('Report inactive users error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/user-win-lose/:userId - 4.8 ชนะ-แพ้รายบุคคล (ต้องมีสิทธิ์ดู)
+router.get('/user-win-lose/:userId', requirePermission('reports', 'view'), async (req, res) => {
+    try {
+        const { preset = '7days', startDate, endDate } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+        const userId = Number(req.params.userId);
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, username: true, fullName: true },
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+        }
+
+        const dailyData = await getDailyData(start, end, async (date) => {
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const [bets, wins] = await Promise.all([
+                prisma.transaction.aggregate({
+                    where: { userId, type: 'BET', createdAt: { gte: date, lte: dayEnd } },
+                    _sum: { amount: true },
+                    _count: true,
+                }),
+                prisma.transaction.aggregate({
+                    where: { userId, type: 'WIN', createdAt: { gte: date, lte: dayEnd } },
+                    _sum: { amount: true },
+                    _count: true,
+                }),
+            ]);
+
+            const betAmount = Number(bets._sum.amount || 0);
+            const winAmount = Number(wins._sum.amount || 0);
+
+            return {
+                betCount: bets._count,
+                betAmount,
+                winCount: wins._count,
+                winAmount,
+                profit: betAmount - winAmount,
+            };
+        });
+
+        const totalBet = dailyData.reduce((sum, d) => sum + d.betAmount, 0);
+        const totalWin = dailyData.reduce((sum, d) => sum + d.winAmount, 0);
+
+        res.json({
+            success: true,
+            data: {
+                user,
+                dailyData,
+                summary: { totalBet, totalWin, profit: totalBet - totalWin },
+            },
+        });
+    } catch (error) {
+        console.error('Report user win-lose error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+export default router;

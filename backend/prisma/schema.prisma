@@ -1,0 +1,392 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// =====================
+// MODELS
+// =====================
+
+// ผู้ใช้ (ผู้เล่น)
+model User {
+  id            Int           @id @default(autoincrement())
+  username      String        @unique
+  password      String
+  fullName      String
+  phone         String        @unique
+  bankName      String
+  bankAccount   String
+  lineId        String?
+  referrerCode  String?
+  referredBy    Int?
+  status        String        @default("ACTIVE") // UserStatus: ACTIVE, SUSPENDED
+  balance       Decimal       @default(0)
+  bonusBalance  Decimal       @default(0)
+  lastLoginAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  transactions  Transaction[]
+  gameSessions  GameSession[]
+  editLogs      EditLog[]     @relation("TargetUser")
+  promotionLogs PromotionLog[]
+
+  @@index([phone])
+  @@index([referrerCode])
+  @@index([createdAt])
+}
+
+// แอดมิน/พนักงาน (แยกจาก User)
+model Admin {
+  id            Int         @id @default(autoincrement())
+  username      String      @unique
+  password      String
+  fullName      String
+  phone         String?
+  isSuperAdmin  Boolean     @default(false)
+  roleId        Int?
+  role          AdminRole?  @relation(fields: [roleId], references: [id])
+  isActive      Boolean     @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  adminLogs     AdminLog[]
+  editLogs      EditLog[]   @relation("AdminEditor")
+
+  @@index([username])
+}
+
+// บทบาทแอดมิน
+model AdminRole {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  permissions String   // JSON string defining access
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  admins      Admin[]
+}
+
+// ประวัติการใช้งานแอดมิน (Log)
+model AdminLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int
+  admin     Admin    @relation(fields: [adminId], references: [id])
+  action    String   // LOGIN, CREATE, UPDATE, DELETE
+  resource  String   // MEMBER, PROMOTION, SETTING
+  details   String?  // JSON details of change
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ธุรกรรม
+model Transaction {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  user          User              @relation(fields: [userId], references: [id])
+  type          String            // TransactionType: DEPOSIT, WITHDRAW, etc.
+  subType       String?           // เครดิต, โบนัส
+  amount        Decimal
+  balanceBefore Decimal
+  balanceAfter  Decimal
+  status        String            @default("PENDING") // TransactionStatus: PENDING, APPROVED, ...
+  slipImage     String?
+  note          String?
+  adminId       Int?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Log การแก้ไข
+model EditLog {
+  id         Int      @id @default(autoincrement())
+  targetType String
+  targetId   Int
+  targetUser User?    @relation("TargetUser", fields: [targetId], references: [id])
+  field      String
+  oldValue   String?
+  newValue   String?
+  adminId    Int
+  admin      Admin    @relation("AdminEditor", fields: [adminId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([adminId])
+  @@index([createdAt])
+}
+
+// หมวดหมู่เกม (สล็อต, คาสิโน, ยิงปลา, กีฬา)
+model GameCategory {
+  id          Int             @id @default(autoincrement())
+  name        String          @unique
+  slug        String          @unique
+  icon        String?
+  description String?
+  isActive    Boolean         @default(true)
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  providers   GameProvider[]
+}
+
+// ค่ายเกม (PG, JOKER, JILI, PP)
+model GameProvider {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique
+  slug        String        @unique
+  logo        String?
+  categoryId  Int
+  category    GameCategory  @relation(fields: [categoryId], references: [id])
+  isActive    Boolean       @default(true)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  games       Game[]
+  
+  @@index([categoryId])
+}
+
+// เกม
+model Game {
+  id          Int            @id @default(autoincrement())
+  name        String
+  slug        String         @unique
+  providerId  Int?
+  provider    GameProvider?  @relation(fields: [providerId], references: [id])
+  thumbnail   String?
+  minBet      Decimal        @default(1)
+  maxBet      Decimal        @default(10000)
+  rtp         Float          @default(0.96)
+  isActive    Boolean        @default(true)
+  isHot       Boolean        @default(false)
+  isNew       Boolean        @default(false)
+  sortOrder   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  sessions    GameSession[]
+
+  @@index([providerId])
+  @@index([isActive])
+}
+
+// Session การเล่น
+model GameSession {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  gameId    Int
+  game      Game     @relation(fields: [gameId], references: [id])
+  betAmount Decimal
+  winAmount Decimal
+  result    String? // JSON string
+  playedAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([gameId])
+  @@index([playedAt])
+}
+
+// บัญชีธนาคาร (สำหรับรับเงิน)
+model BankAccount {
+  id            Int      @id @default(autoincrement())
+  bankName      String
+  accountNumber String
+  accountName   String
+  type          String   // deposit, withdraw
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// TrueMoney Wallet
+model TrueMoneyWallet {
+  id           Int      @id @default(autoincrement())
+  phoneNumber  String
+  accountName  String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ตั้งค่าระบบ
+model Setting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+
+  @@index([key])
+}
+
+// โปรโมชั่น
+model Promotion {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  type        String    // deposit_bonus, cashback, etc.
+  value       Decimal   // เปอร์เซ็นต์หรือจำนวนเงิน
+  minDeposit  Decimal?
+  maxBonus    Decimal?
+  turnover    Decimal?  // เทิร์น
+  image       String?
+  isActive    Boolean   @default(true)
+  startAt     DateTime?
+  endAt       DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  logs PromotionLog[]
+}
+
+// ประวัติรับโปรโมชั่น
+model PromotionLog {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  promotionId Int
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+  amount      Decimal
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([promotionId])
+  @@index([createdAt])
+}
+
+// แบนเนอร์
+model Banner {
+  id        Int      @id @default(autoincrement())
+  title     String?
+  image     String
+  link      String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ประกาศ/Popup/Marquee
+model Announcement {
+  id        Int      @id @default(autoincrement())
+  type      String   // popup, marquee
+  title     String?
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Agent Config
+model AgentConfig {
+  id          Int      @id @default(autoincrement())
+  name        String
+  apiKey      String?
+  apiSecret   String?
+  callbackUrl String?
+  rtp         Float    @default(0.96)
+  minBet      Decimal  @default(1)
+  maxBet      Decimal  @default(10000)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// รายงานรายวัน (สร้างทุกวัน)
+model DailyReport {
+  id              Int      @id @default(autoincrement())
+  date            DateTime @unique
+  newUsers        Int      @default(0)
+  newUsersDeposit Int      @default(0)
+  totalDeposit    Decimal  @default(0)
+  depositCount    Int      @default(0)
+  totalWithdraw   Decimal  @default(0)
+  withdrawCount   Int      @default(0)
+  totalBonus      Decimal  @default(0)
+  totalBet        Decimal  @default(0)
+  totalWin        Decimal  @default(0)
+  profit          Decimal  @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([date])
+}
+
+// ตั้งค่าฟีเจอร์เว็บ (เปิด/ปิดจากแอดมิน)
+model SiteFeature {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique // feature key: registration, deposit, withdraw, etc.
+  name        String   // Display name in Thai
+  description String?
+  isEnabled   Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+  updatedBy   Int?     // Admin ID who last updated
+
+  @@index([key])
+}
+
+// ช่องทางติดต่อ
+model ContactChannel {
+  id          Int      @id @default(autoincrement())
+  type        String   // LINE, TELEGRAM, FACEBOOK, TIKTOK, INSTAGRAM, etc.
+  name        String   // Display name like "LINE Official"
+  url         String   // Link to the channel
+  icon        String?  // Custom icon URL or emoji
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+}
+
+// =====================
+// ACTIVITIES SETTINGS
+// =====================
+
+// ตั้งค่าคืนยอดเสีย (Cashback)
+model CashbackSetting {
+  id          Int      @id @default(autoincrement())
+  rate        Decimal  @default(5)      // % คืนยอดเสีย
+  minLoss     Decimal  @default(100)    // ยอดเสียขั้นต่ำ
+  maxCashback Decimal  @default(10000)  // คืนสูงสุด
+  dayOfWeek   Int      @default(1)      // วันที่รับได้ (0=อาทิตย์, 1=จันทร์, ...)
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+// ตั้งค่าฝากสะสม (Streak)
+model StreakSetting {
+  id          Int      @id @default(autoincrement())
+  day         Int      @unique          // วันที่ (1-7)
+  minDeposit  Decimal  @default(100)    // ฝากขั้นต่ำต่อวัน
+  bonusAmount Decimal                   // โบนัสที่ได้รับ
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+// ตั้งค่าค่าคอมมิชชั่น (Commission 4 Tier)
+model CommissionSetting {
+  id          Int      @id @default(autoincrement())
+  level       Int      @unique          // ชั้นที่ (1-4)
+  rate        Decimal                   // % ค่าคอม
+  description String?                   // คำอธิบาย เช่น "แนะนำตรง"
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}

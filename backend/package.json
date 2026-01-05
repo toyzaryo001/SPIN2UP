@@ -1,7 +1,7 @@
 {
-  "name": "spinup-backend",
+  "name": "techwin-backend",
   "version": "1.0.0",
-  "description": "Casino Backend API",
+  "description": "Techwin Backend API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

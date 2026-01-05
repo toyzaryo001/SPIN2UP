@@ -19,12 +19,21 @@ const PORT = process.env.PORT || 3001;
 // Middleware - CORS with explicit origins (including LAN IP for mobile testing)
 app.use(cors({
     origin: [
+        // Development
         'http://localhost:3000',
         'http://localhost:3002',
         'http://127.0.0.1:3000',
         'http://127.0.0.1:3002',
         'http://192.168.100.118:3000',
-        'http://192.168.100.118:3002'
+        'http://192.168.100.118:3002',
+        // Production - techwinth.com
+        'https://techwinth.com',
+        'https://www.techwinth.com',
+        'https://admin.techwinth.com',
+        'https://api.techwinth.com',
+        'http://techwinth.com',
+        'http://www.techwinth.com',
+        'http://admin.techwinth.com'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import PlayerLayout from "@/components/PlayerLayout";
@@ -61,7 +61,16 @@ const thBanks = [
   { value: "TRUEWALLET", label: "True Wallet" },
 ];
 
+// Wrapper component to handle Suspense
 export default function HomePage() {
+  return (
+    <Suspense fallback={<PlayerLayout><div style={{ textAlign: "center", padding: "40px" }}>กำลังโหลด...</div></PlayerLayout>}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showLogin, setShowLogin] = useState(false);

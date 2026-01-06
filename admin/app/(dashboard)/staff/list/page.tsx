@@ -188,8 +188,8 @@ export default function StaffListPage() {
                         ) : (
                             filteredStaffs.map((staff) => (
                                 <tr key={staff.id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-semibold text-slate-700">{staff.username}</td>
-                                    <td className="px-6 py-4">{staff.fullName}</td>
+                                    <td className="px-6 py-4 font-semibold text-slate-900">{staff.username}</td>
+                                    <td className="px-6 py-4 text-slate-900">{staff.fullName}</td>
                                     <td className="px-6 py-4">
                                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 rounded text-slate-600">
                                             <Shield size={14} />
@@ -226,7 +226,7 @@ export default function StaffListPage() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold">{editingStaff ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงานใหม่'}</h3>
+                            <h3 className="text-xl font-bold text-slate-900">{editingStaff ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงานใหม่'}</h3>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg">
                                 <X size={20} />
                             </button>
@@ -239,7 +239,7 @@ export default function StaffListPage() {
                                     value={formData.username}
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                     disabled={!!editingStaff}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-100"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-100 text-slate-900"
                                 />
                             </div>
                             <div>
@@ -250,7 +250,7 @@ export default function StaffListPage() {
                                     type="password"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                                 />
                             </div>
                             <div>
@@ -259,7 +259,7 @@ export default function StaffListPage() {
                                     type="text"
                                     value={formData.fullName}
                                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                                 />
                             </div>
                             <div>
@@ -267,7 +267,7 @@ export default function StaffListPage() {
                                 <select
                                     value={formData.roleId}
                                     onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                                 >
                                     <option value="">-- Super Admin --</option>
                                     {roles.map(role => (
@@ -281,7 +281,7 @@ export default function StaffListPage() {
                                     <select
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                                     >
                                         <option value="ACTIVE">ACTIVE</option>
                                         <option value="SUSPENDED">SUSPENDED</option>
@@ -292,7 +292,7 @@ export default function StaffListPage() {
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-900"
                             >
                                 ยกเลิก
                             </button>
@@ -317,7 +317,7 @@ export default function StaffListPage() {
                             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
                                 <AlertTriangle className="text-red-500" size={32} />
                             </div>
-                            <h3 className="text-xl font-bold mb-2">ยืนยันการลบ</h3>
+                            <h3 className="text-xl font-bold mb-2 text-slate-900">ยืนยันการลบ</h3>
                             <p className="text-slate-500 mb-6">
                                 คุณต้องการลบพนักงาน <strong>{deletingStaff.username}</strong> ใช่หรือไม่?
                             </p>
@@ -325,7 +325,7 @@ export default function StaffListPage() {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setIsDeleteModalOpen(false)}
-                                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-900"
                             >
                                 ยกเลิก
                             </button>

@@ -74,7 +74,7 @@ router.get('/games', async (req: Request, res: Response) => {
 
         // Filter by category if specified
         if (categoryId) {
-            games = games.filter(g => g.provider?.categoryId === Number(categoryId));
+            games = games.filter(g => g.provider && 'categoryId' in g.provider && g.provider.categoryId === Number(categoryId));
         }
 
         // Only return games from active providers

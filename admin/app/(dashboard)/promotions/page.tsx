@@ -233,7 +233,7 @@ export default function PromotionsPage() {
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 />
                             </div>
                             <div>
@@ -242,7 +242,7 @@ export default function PromotionsPage() {
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     rows={3}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg resize-none"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg resize-none text-slate-900"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -251,7 +251,7 @@ export default function PromotionsPage() {
                                     <select
                                         value={formData.type}
                                         onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     >
                                         <option value="PERCENT">เปอร์เซ็นต์ (%)</option>
                                         <option value="FIXED">จำนวนเงินคงที่</option>
@@ -264,7 +264,7 @@ export default function PromotionsPage() {
                                         value={formData.value}
                                         onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                                         placeholder={formData.type === 'PERCENT' ? 'เช่น 100' : 'เช่น 50'}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     />
                                 </div>
                             </div>
@@ -276,7 +276,7 @@ export default function PromotionsPage() {
                                         value={formData.minDeposit}
                                         onChange={(e) => setFormData({ ...formData, minDeposit: e.target.value })}
                                         placeholder="0"
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     />
                                 </div>
                                 <div>
@@ -286,7 +286,7 @@ export default function PromotionsPage() {
                                         value={formData.maxBonus}
                                         onChange={(e) => setFormData({ ...formData, maxBonus: e.target.value })}
                                         placeholder="0"
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     />
                                 </div>
                                 <div>
@@ -296,7 +296,7 @@ export default function PromotionsPage() {
                                         value={formData.turnover}
                                         onChange={(e) => setFormData({ ...formData, turnover: e.target.value })}
                                         placeholder="1"
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     />
                                 </div>
                             </div>

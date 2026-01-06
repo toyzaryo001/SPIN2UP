@@ -125,9 +125,9 @@ export default function GamesPage() {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex gap-4 flex-wrap">
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg" placeholder="ค้นหาเกม..." />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-slate-900" placeholder="ค้นหาเกม..." />
                 </div>
-                <select value={filterProvider} onChange={(e) => setFilterProvider(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-lg">
+                <select value={filterProvider} onChange={(e) => setFilterProvider(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-lg text-slate-900">
                     <option value="all">ทุกค่าย</option>
                     {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -211,16 +211,16 @@ export default function GamesPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">ชื่อเกม *</label>
-                                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Slug</label>
-                                    <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" placeholder="auto" />
+                                    <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" placeholder="auto" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">ค่ายเกม</label>
-                                    <select value={formData.providerId} onChange={(e) => setFormData({ ...formData, providerId: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg">
+                                    <select value={formData.providerId} onChange={(e) => setFormData({ ...formData, providerId: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900">
                                         <option value="">ไม่ระบุ</option>
                                         {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
@@ -228,7 +228,7 @@ export default function GamesPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">URL รูปภาพ</label>
-                                <input type="text" value={formData.thumbnail} onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={formData.thumbnail} onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div className="flex flex-wrap gap-4">
                                 <label className="flex items-center gap-2 cursor-pointer">

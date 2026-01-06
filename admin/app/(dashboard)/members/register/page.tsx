@@ -76,7 +76,7 @@ export default function MemberRegisterPage() {
                                 type="text"
                                 value={formData.fullName}
                                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 placeholder="ชื่อจริง นามสกุล"
                             />
                         </div>
@@ -86,7 +86,7 @@ export default function MemberRegisterPage() {
                                 type="text"
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 placeholder="0812345678"
                             />
                         </div>
@@ -98,7 +98,7 @@ export default function MemberRegisterPage() {
                             <select
                                 value={formData.bankName}
                                 onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                             >
                                 <option value="">-- เลือกธนาคาร --</option>
                                 <option value="KBANK">กสิกรไทย (KBANK)</option>
@@ -127,7 +127,7 @@ export default function MemberRegisterPage() {
                                 type="text"
                                 value={formData.bankAccount}
                                 onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 placeholder="xxx-x-xxxxx-x"
                             />
                         </div>
@@ -161,7 +161,7 @@ export default function MemberRegisterPage() {
                                 type="text"
                                 value={formData.lineId}
                                 onChange={(e) => setFormData({ ...formData, lineId: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                             />
                         </div>
                         <div>
@@ -170,7 +170,7 @@ export default function MemberRegisterPage() {
                                 type="text"
                                 value={formData.referrerCode}
                                 onChange={(e) => setFormData({ ...formData, referrerCode: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                             />
                         </div>
                     </div>

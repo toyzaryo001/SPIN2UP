@@ -231,7 +231,7 @@ export default function ContactsPage() {
                                 </label>
                                 <select
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900"
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                 >
@@ -248,7 +248,7 @@ export default function ContactsPage() {
                                 </label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="เช่น LINE Official, Support Team"
@@ -261,7 +261,7 @@ export default function ContactsPage() {
                                 <input
                                     type="url"
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={formData.url}
                                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                                     placeholder="https://..."

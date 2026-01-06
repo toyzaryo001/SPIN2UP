@@ -77,14 +77,14 @@ export default function ManualHistoryPage() {
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg"
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                         placeholder="ค้นหา username..."
                     />
                 </div>
                 <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
-                    className="px-4 py-2 border border-slate-200 rounded-lg"
+                    className="px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                 >
                     <option value="all">ทุกประเภท</option>
                     <option value="DEPOSIT">เติมเครดิต</option>

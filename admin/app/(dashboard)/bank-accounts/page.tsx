@@ -138,7 +138,7 @@ export default function BankAccountsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ธนาคาร</label>
                                 <select
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900"
                                     value={formData.bankName}
                                     onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                                 >
@@ -162,7 +162,7 @@ export default function BankAccountsPage() {
                                 <input
                                     type="text"
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={formData.accountNumber}
                                     onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
                                 />
@@ -172,7 +172,7 @@ export default function BankAccountsPage() {
                                 <input
                                     type="text"
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={formData.accountName}
                                     onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
                                 />
@@ -180,7 +180,7 @@ export default function BankAccountsPage() {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ประเภท</label>
                                 <select
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                 >

@@ -68,7 +68,7 @@ export default function NotifySettingsPage() {
                             <label className="block text-sm font-medium text-slate-700 mb-1">LINE Notify Token</label>
                             <input
                                 type="text"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
                                 value={settings.lineNotifyToken || ""}
                                 onChange={(e) => handleChange("lineNotifyToken", e.target.value)}
                                 placeholder="ใส่ LINE Notify Token"
@@ -103,7 +103,7 @@ export default function NotifySettingsPage() {
                             <label className="block text-sm font-medium text-slate-700 mb-1">Bot Token</label>
                             <input
                                 type="text"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
                                 value={settings.telegramBotToken || ""}
                                 onChange={(e) => handleChange("telegramBotToken", e.target.value)}
                             />
@@ -112,7 +112,7 @@ export default function NotifySettingsPage() {
                             <label className="block text-sm font-medium text-slate-700 mb-1">Chat ID</label>
                             <input
                                 type="text"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
                                 value={settings.telegramChatId || ""}
                                 onChange={(e) => handleChange("telegramChatId", e.target.value)}
                             />

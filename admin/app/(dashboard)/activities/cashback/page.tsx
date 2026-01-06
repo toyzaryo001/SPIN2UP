@@ -108,7 +108,7 @@ export default function CashbackSettingsPage() {
                             step="0.1"
                             value={settings.rate}
                             onChange={(e) => setSettings({ ...settings, rate: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                         />
                     </div>
 
@@ -120,7 +120,7 @@ export default function CashbackSettingsPage() {
                             type="number"
                             value={settings.minLoss}
                             onChange={(e) => setSettings({ ...settings, minLoss: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                         />
                     </div>
 
@@ -132,7 +132,7 @@ export default function CashbackSettingsPage() {
                             type="number"
                             value={settings.maxCashback}
                             onChange={(e) => setSettings({ ...settings, maxCashback: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                         />
                     </div>
 
@@ -143,7 +143,7 @@ export default function CashbackSettingsPage() {
                         <select
                             value={settings.dayOfWeek}
                             onChange={(e) => setSettings({ ...settings, dayOfWeek: parseInt(e.target.value) })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                         >
                             {DAYS.map((day) => (
                                 <option key={day.value} value={day.value}>

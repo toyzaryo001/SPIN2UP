@@ -275,20 +275,20 @@ export default function NotificationsPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อ/หัวข้อ</label>
-                                <input type="text" value={bannerForm.title} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={bannerForm.title} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">URL รูปภาพ</label>
-                                <input type="text" value={bannerForm.imageUrl} onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })} placeholder="https://..." className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={bannerForm.imageUrl} onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })} placeholder="https://..." className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Link (ถ้ามี)</label>
-                                <input type="text" value={bannerForm.link} onChange={(e) => setBannerForm({ ...bannerForm, link: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={bannerForm.link} onChange={(e) => setBannerForm({ ...bannerForm, link: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">ลำดับ</label>
-                                    <input type="number" value={bannerForm.sortOrder} onChange={(e) => setBannerForm({ ...bannerForm, sortOrder: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                    <input type="number" value={bannerForm.sortOrder} onChange={(e) => setBannerForm({ ...bannerForm, sortOrder: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                                 </div>
                                 <div className="flex items-center pt-6">
                                     <input type="checkbox" id="bannerActive" checked={bannerForm.isActive} onChange={(e) => setBannerForm({ ...bannerForm, isActive: e.target.checked })} className="w-5 h-5 rounded border-slate-300 text-yellow-500" />
@@ -297,7 +297,7 @@ export default function NotificationsPage() {
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">
-                            <button onClick={() => setIsBannerModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">ยกเลิก</button>
+                            <button onClick={() => setIsBannerModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-900">ยกเลิก</button>
                             <button onClick={handleSaveBanner} disabled={isSaving} className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 flex items-center justify-center gap-2">
                                 <Save size={18} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
                             </button>
@@ -317,14 +317,14 @@ export default function NotificationsPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ประเภท</label>
-                                <select value={announcementForm.type} onChange={(e) => setAnnouncementForm({ ...announcementForm, type: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg">
+                                <select value={announcementForm.type} onChange={(e) => setAnnouncementForm({ ...announcementForm, type: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900">
                                     <option value="MARQUEE">ข้อความวิ่ง (Marquee)</option>
                                     <option value="POPUP">Popup</option>
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ข้อความ</label>
-                                <textarea value={announcementForm.content} onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })} rows={4} className="w-full px-4 py-2 border border-slate-200 rounded-lg resize-none" placeholder="พิมพ์ข้อความประกาศ..." />
+                                <textarea value={announcementForm.content} onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })} rows={4} className="w-full px-4 py-2 border border-slate-200 rounded-lg resize-none text-slate-900" placeholder="พิมพ์ข้อความประกาศ..." />
                             </div>
                             <div className="flex items-center">
                                 <input type="checkbox" id="annActive" checked={announcementForm.isActive} onChange={(e) => setAnnouncementForm({ ...announcementForm, isActive: e.target.checked })} className="w-5 h-5 rounded border-slate-300 text-yellow-500" />
@@ -332,7 +332,7 @@ export default function NotificationsPage() {
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">
-                            <button onClick={() => setIsAnnouncementModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">ยกเลิก</button>
+                            <button onClick={() => setIsAnnouncementModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-900">ยกเลิก</button>
                             <button onClick={handleSaveAnnouncement} disabled={isSaving} className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 flex items-center justify-center gap-2">
                                 <Save size={18} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
                             </button>
@@ -353,7 +353,7 @@ export default function NotificationsPage() {
                             <p className="text-slate-500 mb-6">คุณต้องการลบ <strong>{deletingItem.name}</strong> ใช่หรือไม่?</p>
                         </div>
                         <div className="flex gap-3">
-                            <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">ยกเลิก</button>
+                            <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-900">ยกเลิก</button>
                             <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">ลบ</button>
                         </div>
                     </div>

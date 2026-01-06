@@ -169,7 +169,7 @@ export default function MembersPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                     <input
                         type="text"
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                         placeholder="ค้นหา (Username, ชื่อ, เบอร์โทร)..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -307,7 +307,7 @@ export default function MembersPage() {
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                     disabled={!!editingUser}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg disabled:bg-slate-100"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg disabled:bg-slate-100 text-slate-900"
                                     placeholder="0812345678"
                                 />
                                 {!editingUser && (
@@ -320,7 +320,7 @@ export default function MembersPage() {
                                     type="text"
                                     value={formData.fullName}
                                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 />
                             </div>
                             <div>
@@ -331,7 +331,7 @@ export default function MembersPage() {
                                     type="password"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -340,7 +340,7 @@ export default function MembersPage() {
                                     <select
                                         value={formData.bankName}
                                         onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     >
                                         <option value="">-- เลือกธนาคาร --</option>
                                         <option value="KBANK">กสิกรไทย</option>
@@ -369,7 +369,7 @@ export default function MembersPage() {
                                         type="text"
                                         value={formData.bankAccount}
                                         onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     />
                                 </div>
                             </div>
@@ -379,7 +379,7 @@ export default function MembersPage() {
                                     type="text"
                                     value={formData.lineId}
                                     onChange={(e) => setFormData({ ...formData, lineId: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 />
                             </div>
                         </div>

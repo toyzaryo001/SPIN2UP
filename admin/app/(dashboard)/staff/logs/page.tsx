@@ -90,7 +90,7 @@ export default function StaffLogsPage() {
                             placeholder="ค้นหา username, รายละเอียด..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                         />
                     </div>
                     <div className="relative">
@@ -98,7 +98,7 @@ export default function StaffLogsPage() {
                         <select
                             value={filterAction}
                             onChange={(e) => setFilterAction(e.target.value)}
-                            className="pl-10 pr-8 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 appearance-none bg-white"
+                            className="pl-10 pr-8 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 appearance-none bg-white text-slate-900"
                         >
                             <option value="">ทุก Action</option>
                             {uniqueActions.map(action => (

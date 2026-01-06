@@ -49,7 +49,7 @@ export default function PromotionHistoryPage() {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                 <div className="relative max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg" placeholder="ค้นหา..." />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-slate-900" placeholder="ค้นหา..." />
                 </div>
             </div>
 

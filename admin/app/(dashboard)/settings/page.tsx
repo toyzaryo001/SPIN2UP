@@ -55,7 +55,7 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อเว็บไซต์</label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={settings.siteName || ""}
                                     onChange={(e) => handleChange("siteName", e.target.value)}
                                     placeholder="เช่น PLAYNEX89 CASINO"
@@ -65,7 +65,7 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Prefix (สำหรับ Username)</label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg uppercase"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg uppercase text-slate-900"
                                     value={settings.prefix || ""}
                                     onChange={(e) => handleChange("prefix", e.target.value.toUpperCase())}
                                     placeholder="เช่น SPIN"
@@ -84,7 +84,7 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ฝากขั้นต่ำ (บาท)</label>
                                 <input
                                     type="number"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={settings.minDeposit || "1"}
                                     onChange={(e) => handleChange("minDeposit", e.target.value)}
                                 />
@@ -93,7 +93,7 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ถอนขั้นต่ำ (บาท)</label>
                                 <input
                                     type="number"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={settings.minWithdraw || "100"}
                                     onChange={(e) => handleChange("minWithdraw", e.target.value)}
                                 />
@@ -105,7 +105,7 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ถอนสูงสุดต่อครั้ง (บาท)</label>
                                 <input
                                     type="number"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={settings.maxWithdrawPerTime || "50000"}
                                     onChange={(e) => handleChange("maxWithdrawPerTime", e.target.value)}
                                 />
@@ -114,7 +114,7 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">จำนวนครั้งถอนต่อวัน</label>
                                 <input
                                     type="number"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={settings.maxWithdrawPerDay || "5"}
                                     onChange={(e) => handleChange("maxWithdrawPerDay", e.target.value)}
                                 />
@@ -128,7 +128,7 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">JWT Secret Key</label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-slate-900"
                                     value={settings.jwtSecret || ""}
                                     onChange={(e) => handleChange("jwtSecret", e.target.value)}
                                     placeholder="ใส่ Secret Key สำหรับ JWT Token"
@@ -140,7 +140,7 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">API URL</label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     value={settings.apiUrl || ""}
                                     onChange={(e) => handleChange("apiUrl", e.target.value)}
                                     placeholder="https://api.yourdomain.com"

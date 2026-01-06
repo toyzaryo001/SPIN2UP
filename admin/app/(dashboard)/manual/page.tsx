@@ -154,7 +154,7 @@ export default function ManualPage() {
                             value={userSearch}
                             onChange={(e) => setUserSearch(e.target.value)}
                             placeholder="ระบุเบอร์โทร หรือ Username"
-                            className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                             onKeyDown={(e) => e.key === 'Enter' && searchUser()}
                         />
                         <button
@@ -197,7 +197,7 @@ export default function ManualPage() {
                             <select
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
-                                className={`w-full px-4 py-2 border border-slate-200 rounded-lg ${!reason ? 'text-slate-400' : ''}`}
+                                className={`w-full px-4 py-2 border border-slate-200 rounded-lg ${!reason ? 'text-slate-400' : 'text-slate-900'}`}
                             >
                                 <option value="">-- เลือกสาเหตุ --</option>
                                 {currentReasons.map(r => (
@@ -212,7 +212,7 @@ export default function ManualPage() {
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="0.00"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-lg"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-lg text-slate-900"
                             />
                         </div>
                         <div>
@@ -222,7 +222,7 @@ export default function ManualPage() {
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
                                 placeholder="รายละเอียดเพิ่มเติม..."
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                             />
                         </div>
 
@@ -241,10 +241,10 @@ export default function ManualPage() {
                                 onClick={handleTransaction}
                                 disabled={!foundUser || !amount || !reason || loading}
                                 className={`w-full py-3 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2 ${reason === "withdraw"
-                                        ? "bg-amber-500 hover:bg-amber-600"
-                                        : activeTab === "deposit"
-                                            ? "bg-emerald-500 hover:bg-emerald-600"
-                                            : "bg-red-500 hover:bg-red-600"
+                                    ? "bg-amber-500 hover:bg-amber-600"
+                                    : activeTab === "deposit"
+                                        ? "bg-emerald-500 hover:bg-emerald-600"
+                                        : "bg-red-500 hover:bg-red-600"
                                     }`}
                             >
                                 {reason === "withdraw" ? (

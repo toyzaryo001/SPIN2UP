@@ -1,7 +1,8 @@
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+// 7 days in seconds
+const JWT_EXPIRES_IN_SECONDS = 7 * 24 * 60 * 60;
 
 export interface JwtPayload {
     userId: number;
@@ -10,8 +11,7 @@ export interface JwtPayload {
 }
 
 export function signToken(payload: JwtPayload): string {
-    const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as string };
-    return jwt.sign(payload, JWT_SECRET, options);
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN_SECONDS });
 }
 
 export function verifyToken(token: string): JwtPayload {

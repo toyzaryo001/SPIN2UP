@@ -120,17 +120,45 @@ export default function SettingsPage() {
                                 />
                             </div>
                         </div>
-                    </div>
 
-                    <div className="pt-6">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="bg-slate-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50"
-                        >
-                            <Save size={20} />
-                            {loading ? "กำลังบันทึก..." : "บันทึกการตั้งค่า"}
-                        </button>
+                        <div className="space-y-4 pt-4">
+                            <h3 className="font-bold text-slate-700 border-b pb-2 mb-4">ตั้งค่าระบบ (System)</h3>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">JWT Secret Key</label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono"
+                                    value={settings.jwtSecret || ""}
+                                    onChange={(e) => handleChange("jwtSecret", e.target.value)}
+                                    placeholder="ใส่ Secret Key สำหรับ JWT Token"
+                                />
+                                <p className="text-xs text-slate-400 mt-1">ใช้สำหรับเข้ารหัส Token ควรเป็นค่าที่ยาวและปลอดภัย</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">API URL</label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                    value={settings.apiUrl || ""}
+                                    onChange={(e) => handleChange("apiUrl", e.target.value)}
+                                    placeholder="https://api.yourdomain.com"
+                                />
+                                <p className="text-xs text-slate-400 mt-1">URL ของ Backend API</p>
+                            </div>
+                        </div>
+
+                        <div className="pt-6">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="bg-slate-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                <Save size={20} />
+                                {loading ? "กำลังบันทึก..." : "บันทึกการตั้งค่า"}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

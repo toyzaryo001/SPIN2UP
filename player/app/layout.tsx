@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SPINUP - เว็บพนันออนไลน์อันดับ 1",
+  title: "PLAYNEX89 - เว็บพนันออนไลน์อันดับ 1",
   description: "ฝาก-ถอน ออโต้ 24 ชม. สล็อต คาสิโน กีฬา ครบจบในที่เดียว",
 };
 

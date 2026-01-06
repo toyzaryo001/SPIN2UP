@@ -69,7 +69,7 @@ export default function Header() {
                         fontWeight: 900,
                         color: "#FFD700",
                         textShadow: "2px 2px 4px rgba(0,0,0,0.3)"
-                    }}>SPINUP</span>
+                    }}>PLAYNEX89</span>
                 </Link>
 
                 {/* Balance Display (when logged in) + Hamburger */}
@@ -228,7 +228,7 @@ export default function Header() {
                             color: "#FFD700",
                             textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
                             margin: "8px 0 0"
-                        }}>SPINUP</p>
+                        }}>PLAYNEX89</p>
                     </div>
 
                     {/* User Info */}

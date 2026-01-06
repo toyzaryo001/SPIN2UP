@@ -43,7 +43,7 @@ export default function LoginPage() {
                 <div className="p-8">
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 bg-clip-text text-transparent">
-                            SPINUP ADMIN
+                            PLAYNEX89 ADMIN
                         </h1>
                         <p className="text-slate-500 mt-2">เข้าสู่ระบบจัดการหลังบ้าน</p>
                     </div>
@@ -96,7 +96,7 @@ export default function LoginPage() {
                     </form>
                 </div>
                 <div className="bg-slate-50 p-4 text-center text-xs text-slate-400">
-                    SPINUP Casino Management System © 2024
+                    PLAYNEX89 Casino Management System © 2024
                 </div>
             </div>
         </div>

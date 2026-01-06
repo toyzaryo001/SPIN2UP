@@ -9,7 +9,7 @@ export default function ReferralPage() {
     const { user, loading } = useAuth(true);
     const [copied, setCopied] = useState(false);
     const referralCode = user?.username || "REF12345678";
-    const referralLink = `https://spinup.com/r/${referralCode}`;
+    const referralLink = `https://playnex89.com/r/${referralCode}`;
     const totalReferrals = 5;
     const totalCommission = 500.00;
 

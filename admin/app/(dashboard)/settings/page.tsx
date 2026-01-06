@@ -58,7 +58,7 @@ export default function SettingsPage() {
                                     className="w-full px-4 py-2 border border-slate-200 rounded-lg"
                                     value={settings.siteName || ""}
                                     onChange={(e) => handleChange("siteName", e.target.value)}
-                                    placeholder="เช่น SPINUP CASINO"
+                                    placeholder="เช่น PLAYNEX89 CASINO"
                                 />
                             </div>
                             <div>

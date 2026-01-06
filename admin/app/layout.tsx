@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SPINUP Admin",
+  title: "PLAYNEX89 Admin",
   description: "Casino Management System",
 };
 

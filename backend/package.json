@@ -1,7 +1,7 @@
 {
-  "name": "spinup-backend",
+  "name": "playnex89-backend",
   "version": "1.0.0",
-  "description": "SPINUP Backend API",
+  "description": "Playnex89 Backend API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

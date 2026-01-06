@@ -36,9 +36,13 @@ const PERMISSION_MATRIX = [
         label: 'รายงาน',
         features: [
             { key: 'new_users', label: 'รายงานสมัครใหม่' },
+            { key: 'new_users_deposit', label: 'รายงานสมัครใหม่ฝากเงิน' },
             { key: 'deposits', label: 'รายงานฝากเงิน' },
             { key: 'withdrawals', label: 'รายงานถอนเงิน' },
+            { key: 'bonus', label: 'รายงานโบนัส' },
             { key: 'profit', label: 'รายงานกำไร-ขาดทุน' },
+            { key: 'inactive_users', label: 'รายงานยูสไม่ออนไลน์' },
+            { key: 'win_lose', label: 'รายงานแพ้-ชนะ' },
         ]
     },
     {
@@ -48,6 +52,7 @@ const PERMISSION_MATRIX = [
             { key: 'general', label: 'ตั้งค่าทั่วไป' },
             { key: 'features', label: 'ควบคุมฟีเจอร์' },
             { key: 'contacts', label: 'ช่องทางติดต่อ' },
+            { key: 'notify', label: 'แจ้งเตือน (Line/TG)' },
             { key: 'banks', label: 'บัญชีธนาคาร' },
             { key: 'truemoney', label: 'TrueMoney' },
         ]

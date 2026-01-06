@@ -1,7 +1,7 @@
 {
-  "name": "techwin-backend",
+  "name": "spinup-backend",
   "version": "1.0.0",
-  "description": "Techwin Backend API",
+  "description": "SPINUP Backend API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

@@ -26,14 +26,10 @@ app.use(cors({
         'http://127.0.0.1:3002',
         'http://192.168.100.118:3000',
         'http://192.168.100.118:3002',
-        // Production - techwinth.com
-        'https://techwinth.com',
-        'https://www.techwinth.com',
-        'https://admin.techwinth.com',
-        'https://api.techwinth.com',
-        'http://techwinth.com',
-        'http://www.techwinth.com',
-        'http://admin.techwinth.com'
+        // Production - Railway domains
+        /\.railway\.app$/,
+        /\.vercel\.app$/,
+        // Allow any HTTPS origin (customize for production)
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

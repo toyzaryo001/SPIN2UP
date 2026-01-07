@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Layers, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical, Upload } from "lucide-react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Category {
     id: number;
@@ -15,6 +18,57 @@ interface Category {
     _count: { providers: number };
 }
 
+// Sortable Row Component
+function SortableRow({ cat, toggle, openModal, confirmDelete, isImageIcon }: {
+    cat: Category;
+    toggle: (id: number, isActive: boolean) => void;
+    openModal: (item: Category) => void;
+    confirmDelete: (item: Category) => void;
+    isImageIcon: (icon: string) => boolean;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        backgroundColor: isDragging ? '#f8fafc' : undefined,
+    };
+
+    return (
+        <tr ref={setNodeRef} style={style} className="hover:bg-slate-50">
+            <td className="px-6 py-4">
+                <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-100 rounded">
+                    <GripVertical size={16} className="text-slate-400" />
+                </button>
+            </td>
+            <td className="px-6 py-4">
+                <div className="flex items-center gap-2">
+                    {cat.icon && (isImageIcon(cat.icon) ? (
+                        <img src={cat.icon} alt="" className="w-8 h-8 rounded object-cover" />
+                    ) : (
+                        <span className="text-xl">{cat.icon}</span>
+                    ))}
+                    <span className="font-medium">{cat.name}</span>
+                </div>
+            </td>
+            <td className="px-6 py-4 text-slate-500">{cat.slug}</td>
+            <td className="px-6 py-4 text-center">
+                <span className="px-2 py-1 bg-slate-100 rounded text-xs">{cat._count.providers} ค่าย</span>
+            </td>
+            <td className="px-6 py-4 text-center">
+                <button onClick={() => toggle(cat.id, cat.isActive)}>
+                    {cat.isActive ? <ToggleRight size={24} className="text-emerald-500" /> : <ToggleLeft size={24} className="text-slate-300" />}
+                </button>
+            </td>
+            <td className="px-6 py-4 text-center">
+                <button onClick={() => openModal(cat)} className="p-2 hover:bg-slate-100 rounded"><Edit size={16} /></button>
+                <button onClick={() => confirmDelete(cat)} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
+            </td>
+        </tr>
+    );
+}
+
 export default function CategoriesPage() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
@@ -25,6 +79,11 @@ export default function CategoriesPage() {
     const [deletingItem, setDeletingItem] = useState<Category | null>(null);
     const [uploading, setUploading] = useState(false);
 
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
     useEffect(() => { fetchData(); }, []);
 
     const fetchData = async () => {
@@ -33,6 +92,26 @@ export default function CategoriesPage() {
             if (res.data.success) setCategories(res.data.data);
         } catch (error) { console.error(error); }
         finally { setLoading(false); }
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = categories.findIndex(c => c.id === active.id);
+        const newIndex = categories.findIndex(c => c.id === over.id);
+
+        const newCategories = arrayMove(categories, oldIndex, newIndex);
+        setCategories(newCategories);
+
+        // Save new order to server
+        try {
+            const items = newCategories.map((cat, index) => ({ id: cat.id, sortOrder: index }));
+            await api.put("/admin/categories/reorder", { items });
+        } catch (error) {
+            console.error("Reorder failed:", error);
+            fetchData(); // Revert on error
+        }
     };
 
     const openModal = (item?: Category) => {
@@ -50,7 +129,6 @@ export default function CategoriesPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // For simplicity, convert to base64 (can be changed to upload to server)
         setUploading(true);
         try {
             const reader = new FileReader();
@@ -106,7 +184,6 @@ export default function CategoriesPage() {
         }
     };
 
-    // Check if icon is image URL or base64
     const isImageIcon = (icon: string) => {
         return icon.startsWith('http') || icon.startsWith('data:') || icon.startsWith('/');
     };
@@ -120,7 +197,7 @@ export default function CategoriesPage() {
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold text-slate-800">หมวดหมู่เกม</h2>
-                        <p className="text-sm text-slate-500">สล็อต, คาสิโน, ยิงปลา, กีฬา</p>
+                        <p className="text-sm text-slate-500">ลากเพื่อจัดลำดับ</p>
                     </div>
                 </div>
                 <button onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800">
@@ -140,42 +217,28 @@ export default function CategoriesPage() {
                             <th className="px-6 py-4 text-center">จัดการ</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {loading ? (
-                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">กำลังโหลด...</td></tr>
-                        ) : categories.length === 0 ? (
-                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">ยังไม่มีหมวดหมู่</td></tr>
-                        ) : (
-                            categories.map(cat => (
-                                <tr key={cat.id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4"><GripVertical size={16} className="text-slate-300 cursor-grab" /></td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            {cat.icon && (isImageIcon(cat.icon) ? (
-                                                <img src={cat.icon} alt="" className="w-8 h-8 rounded object-cover" />
-                                            ) : (
-                                                <span className="text-xl">{cat.icon}</span>
-                                            ))}
-                                            <span className="font-medium">{cat.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-500">{cat.slug}</td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="px-2 py-1 bg-slate-100 rounded text-xs">{cat._count.providers} ค่าย</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <button onClick={() => toggle(cat.id, cat.isActive)}>
-                                            {cat.isActive ? <ToggleRight size={24} className="text-emerald-500" /> : <ToggleLeft size={24} className="text-slate-300" />}
-                                        </button>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <button onClick={() => openModal(cat)} className="p-2 hover:bg-slate-100 rounded"><Edit size={16} /></button>
-                                        <button onClick={() => confirmDelete(cat)} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <SortableContext items={categories.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                            <tbody className="divide-y divide-slate-100">
+                                {loading ? (
+                                    <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">กำลังโหลด...</td></tr>
+                                ) : categories.length === 0 ? (
+                                    <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">ยังไม่มีหมวดหมู่</td></tr>
+                                ) : (
+                                    categories.map(cat => (
+                                        <SortableRow
+                                            key={cat.id}
+                                            cat={cat}
+                                            toggle={toggle}
+                                            openModal={openModal}
+                                            confirmDelete={confirmDelete}
+                                            isImageIcon={isImageIcon}
+                                        />
+                                    ))
+                                )}
+                            </tbody>
+                        </SortableContext>
+                    </DndContext>
                 </table>
             </div>
 
@@ -202,7 +265,6 @@ export default function CategoriesPage() {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">ไอคอน</label>
                                 <div className="flex gap-4 items-start">
-                                    {/* Icon Preview */}
                                     <div className="flex-shrink-0">
                                         {formData.icon ? (
                                             <div className="relative">
@@ -228,9 +290,7 @@ export default function CategoriesPage() {
                                         )}
                                     </div>
 
-                                    {/* Upload & Emoji Input */}
                                     <div className="flex-1 space-y-2">
-                                        {/* File Upload */}
                                         <label className={`flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploading ? 'border-yellow-500 bg-yellow-50' : 'border-slate-300 hover:border-yellow-500 hover:bg-yellow-50'}`}>
                                             <input
                                                 type="file"
@@ -245,7 +305,6 @@ export default function CategoriesPage() {
                                             </span>
                                         </label>
 
-                                        {/* Emoji Input */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-slate-500">หรือใส่ Emoji:</span>
                                             <input

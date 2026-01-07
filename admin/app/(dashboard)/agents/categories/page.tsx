@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Layers, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical } from "lucide-react";
+import { Layers, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical, Upload } from "lucide-react";
 
 interface Category {
     id: number;
@@ -23,6 +23,7 @@ export default function CategoriesPage() {
     const [formData, setFormData] = useState({ name: "", slug: "", icon: "", description: "", isActive: true });
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [deletingItem, setDeletingItem] = useState<Category | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => { fetchData(); }, []);
 
@@ -43,6 +44,30 @@ export default function CategoriesPage() {
             setFormData({ name: "", slug: "", icon: "", description: "", isActive: true });
         }
         setIsModalOpen(true);
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // For simplicity, convert to base64 (can be changed to upload to server)
+        setUploading(true);
+        try {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64 = reader.result as string;
+                setFormData({ ...formData, icon: base64 });
+                setUploading(false);
+            };
+            reader.onerror = () => {
+                alert("ไม่สามารถอ่านไฟล์ได้");
+                setUploading(false);
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            alert("เกิดข้อผิดพลาดในการอัพโหลด");
+            setUploading(false);
+        }
     };
 
     const handleSave = async () => {
@@ -79,6 +104,11 @@ export default function CategoriesPage() {
         } catch (error: any) {
             alert(error.response?.data?.message || "ไม่สามารถลบได้");
         }
+    };
+
+    // Check if icon is image URL or base64
+    const isImageIcon = (icon: string) => {
+        return icon.startsWith('http') || icon.startsWith('data:') || icon.startsWith('/');
     };
 
     return (
@@ -121,7 +151,11 @@ export default function CategoriesPage() {
                                     <td className="px-6 py-4"><GripVertical size={16} className="text-slate-300 cursor-grab" /></td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            {cat.icon && <span className="text-xl">{cat.icon}</span>}
+                                            {cat.icon && (isImageIcon(cat.icon) ? (
+                                                <img src={cat.icon} alt="" className="w-8 h-8 rounded object-cover" />
+                                            ) : (
+                                                <span className="text-xl">{cat.icon}</span>
+                                            ))}
                                             <span className="font-medium">{cat.name}</span>
                                         </div>
                                     </td>
@@ -150,35 +184,94 @@ export default function CategoriesPage() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold">{editingItem ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่'}</h3>
+                            <h3 className="text-xl font-bold text-slate-800">{editingItem ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่'}</h3>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1">ชื่อหมวดหมู่ *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อหมวดหมู่ *</label>
                                 <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Slug</label>
-                                    <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" placeholder="auto" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">ไอคอน (Emoji)</label>
-                                    <input type="text" value={formData.icon} onChange={(e) => setFormData({ ...formData, icon: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" placeholder="🎰" />
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Slug</label>
+                                <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" placeholder="auto" />
+                            </div>
+
+                            {/* Icon Section */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">ไอคอน</label>
+                                <div className="flex gap-4 items-start">
+                                    {/* Icon Preview */}
+                                    <div className="flex-shrink-0">
+                                        {formData.icon ? (
+                                            <div className="relative">
+                                                {isImageIcon(formData.icon) ? (
+                                                    <img src={formData.icon} alt="icon" className="w-20 h-20 rounded-xl object-cover border-2 border-slate-200" />
+                                                ) : (
+                                                    <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-yellow-100 to-orange-100 flex items-center justify-center text-4xl border-2 border-slate-200">
+                                                        {formData.icon}
+                                                    </div>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, icon: "" })}
+                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600 shadow-lg"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="w-20 h-20 rounded-xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">
+                                                <Upload size={24} />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Upload & Emoji Input */}
+                                    <div className="flex-1 space-y-2">
+                                        {/* File Upload */}
+                                        <label className={`flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploading ? 'border-yellow-500 bg-yellow-50' : 'border-slate-300 hover:border-yellow-500 hover:bg-yellow-50'}`}>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleFileUpload}
+                                                disabled={uploading}
+                                            />
+                                            <Upload size={16} className="text-slate-500" />
+                                            <span className="text-sm text-slate-600">
+                                                {uploading ? 'กำลังอัพโหลด...' : 'อัพโหลดรูป'}
+                                            </span>
+                                        </label>
+
+                                        {/* Emoji Input */}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-slate-500">หรือใส่ Emoji:</span>
+                                            <input
+                                                type="text"
+                                                value={isImageIcon(formData.icon) ? '' : formData.icon}
+                                                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                                                className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg text-slate-900 text-center text-lg"
+                                                placeholder="🎰"
+                                                maxLength={2}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
                             <div>
-                                <label className="block text-sm font-medium mb-1">คำอธิบาย</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">คำอธิบาย</label>
                                 <input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div className="flex items-center">
                                 <input type="checkbox" id="catActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded" />
-                                <label htmlFor="catActive" className="ml-2 text-sm">เปิดใช้งาน</label>
+                                <label htmlFor="catActive" className="ml-2 text-sm text-slate-700">เปิดใช้งาน</label>
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">
-                            <button onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">ยกเลิก</button>
+                            <button onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700">ยกเลิก</button>
                             <button onClick={handleSave} className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center justify-center gap-2"><Save size={18} /> บันทึก</button>
                         </div>
                     </div>

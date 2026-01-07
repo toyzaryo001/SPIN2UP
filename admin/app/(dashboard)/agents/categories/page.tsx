@@ -155,8 +155,8 @@ export default function CategoriesPage() {
                             const ctx = canvas.getContext('2d');
                             ctx?.drawImage(img, 0, 0, width, height);
 
-                            // Compress to JPEG with 80% quality
-                            const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                            // Keep as PNG to preserve transparency
+                            const base64 = canvas.toDataURL('image/png');
                             resolve(base64);
                         };
                         img.onerror = reject;
@@ -343,7 +343,7 @@ export default function CategoriesPage() {
                                                 {uploading ? 'กำลังอัพโหลด...' : 'อัพโหลดรูป'}
                                             </span>
                                         </label>
-                                        <p className="text-xs text-slate-400 text-center mt-1">ขนาดไฟล์ไม่เกิน 25 MB</p>
+                                        <p className="text-xs text-slate-400 text-center mt-1">รูปจะถูกย่ออัตโนมัติ</p>
 
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-slate-500">หรือใส่ Emoji:</span>

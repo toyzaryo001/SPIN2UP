@@ -56,6 +56,16 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Server info (IP check)
+app.get('/api/server-info', (req, res) => {
+    res.json({
+        serverTime: new Date().toISOString(),
+        clientIP: req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress,
+        host: req.headers.host,
+        environment: process.env.RAILWAY_ENVIRONMENT || 'local'
+    });
+});
+
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error(err.stack);

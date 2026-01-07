@@ -319,6 +319,7 @@ export default function CategoriesPage() {
                                                 {uploading ? 'กำลังอัพโหลด...' : 'อัพโหลดรูป'}
                                             </span>
                                         </label>
+                                        <p className="text-xs text-slate-400 text-center mt-1">ขนาดไฟล์ไม่เกิน 25 MB</p>
 
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-slate-500">หรือใส่ Emoji:</span>

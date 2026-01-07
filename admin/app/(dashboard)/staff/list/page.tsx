@@ -269,7 +269,7 @@ export default function StaffListPage() {
                                     onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
                                     className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                                 >
-                                    <option value="">-- Super Admin --</option>
+                                    <option value="">-- เลือกตำแหน่ง --</option>
                                     {roles.map(role => (
                                         <option key={role.id} value={role.id}>{role.name}</option>
                                     ))}

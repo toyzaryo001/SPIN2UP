@@ -10,6 +10,7 @@ import gameRoutes from './routes/game.routes.js';
 import adminRoutes from './routes/admin/index.js';
 import staffRoutes from './routes/staff.routes.js';
 import publicRoutes from './routes/public.routes.js';
+import superAdminRoutes from './routes/super-admin/index.js';
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.use('/api/games', gameRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/super-admin', superAdminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

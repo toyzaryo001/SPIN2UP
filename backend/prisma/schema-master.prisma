@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/master-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("MASTER_DATABASE_URL")
+}
+
+// =====================
+// MASTER DATABASE MODELS
+// Stores prefix configurations and super admin credentials
+// =====================
+
+// Prefix Configuration (each prefix = one tenant database)
+model Prefix {
+  id              Int      @id @default(autoincrement())
+  code            String   @unique  // e.g., "px89", "abc123"
+  name            String             // Display name e.g., "PLAYNEX89"
+  databaseUrl     String             // Connection string for tenant DB
+  adminDomain     String?            // e.g., "admin.playnex89.com"
+  playerDomain    String?            // e.g., "playnex89.com"
+  logo            String?            // Logo URL
+  primaryColor    String?            // Brand color
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+}
+
+// Super Admin (can manage all prefixes)
+model SuperAdmin {
+  id            Int       @id @default(autoincrement())
+  username      String    @unique
+  password      String
+  email         String?   @unique
+  fullName      String
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  logs          SuperAdminLog[]
+
+  @@index([username])
+}
+
+// Super Admin Activity Log
+model SuperAdminLog {
+  id            Int        @id @default(autoincrement())
+  superAdminId  Int
+  superAdmin    SuperAdmin @relation(fields: [superAdminId], references: [id])
+  action        String     // CREATE_PREFIX, UPDATE_PREFIX, DELETE_PREFIX, LOGIN, etc.
+  details       String?    // JSON details
+  ip            String?
+  createdAt     DateTime   @default(now())
+
+  @@index([superAdminId])
+  @@index([createdAt])
+}

@@ -445,7 +445,11 @@ function HomePageContent() {
                 cursor: "pointer"
               }}
             >
-              <span style={{ fontSize: "18px" }}>{cat.icon || "🎮"}</span>
+              {cat.icon && (cat.icon.startsWith('http') || cat.icon.startsWith('data:') || cat.icon.startsWith('/')) ? (
+                <img src={cat.icon} alt="" style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: "18px" }}>{cat.icon || "🎮"}</span>
+              )}
               <span style={{ fontSize: "9px", color: selectedCategory === cat.id ? "#FF9500" : "#666", fontWeight: 600 }}>{cat.name}</span>
             </button>
           ))}

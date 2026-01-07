@@ -131,36 +131,60 @@ export default function CategoriesPage() {
 
         setUploading(true);
         try {
-            // Convert to base64 first
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64 = reader.result as string;
-                try {
-                    // Upload to Cloudinary via our API
-                    const res = await api.post('/admin/upload', {
-                        image: base64,
-                        folder: 'categories'
-                    });
-                    if (res.data.success) {
-                        setFormData({ ...formData, icon: res.data.data.url });
-                    } else {
-                        alert('อัพโหลดไม่สำเร็จ');
-                    }
-                } catch (err) {
-                    console.error('Upload error:', err);
-                    alert('เกิดข้อผิดพลาดในการอัพโหลด');
-                }
-                setUploading(false);
+            // Compress image using canvas
+            const compressImage = (file: File): Promise<string> => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxSize = 800; // Max width/height
+                            let { width, height } = img;
+
+                            if (width > height && width > maxSize) {
+                                height = (height * maxSize) / width;
+                                width = maxSize;
+                            } else if (height > maxSize) {
+                                width = (width * maxSize) / height;
+                                height = maxSize;
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx?.drawImage(img, 0, 0, width, height);
+
+                            // Compress to JPEG with 80% quality
+                            const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                            resolve(base64);
+                        };
+                        img.onerror = reject;
+                        img.src = e.target?.result as string;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
             };
-            reader.onerror = () => {
-                alert("ไม่สามารถอ่านไฟล์ได้");
-                setUploading(false);
-            };
-            reader.readAsDataURL(file);
-        } catch (error) {
-            alert("เกิดข้อผิดพลาดในการอัพโหลด");
-            setUploading(false);
+
+            const base64 = await compressImage(file);
+
+            // Upload to Cloudinary via our API
+            const res = await api.post('/admin/upload', {
+                image: base64,
+                folder: 'categories'
+            });
+
+            if (res.data.success) {
+                setFormData({ ...formData, icon: res.data.data.url });
+            } else {
+                alert('อัพโหลดไม่สำเร็จ');
+            }
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('เกิดข้อผิดพลาดในการอัพโหลด');
         }
+        setUploading(false);
     };
 
     const handleSave = async () => {

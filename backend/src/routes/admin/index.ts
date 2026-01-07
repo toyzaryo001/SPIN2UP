@@ -15,6 +15,7 @@ import gameRoutes from './games.routes.js';
 import promotionRoutes from './promotions.routes.js';
 import bannerRoutes from './banners.routes.js';
 import activitiesRoutes from './activities.routes.js';
+import uploadRoutes from './upload.routes.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -90,5 +91,6 @@ router.use('/games', gameRoutes);
 router.use('/promotions', promotionRoutes);
 router.use('/banners', bannerRoutes);
 router.use('/activities', activitiesRoutes);
+router.use('/upload', uploadRoutes);
 
 export default router;

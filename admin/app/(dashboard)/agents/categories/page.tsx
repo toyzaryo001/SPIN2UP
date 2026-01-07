@@ -131,10 +131,25 @@ export default function CategoriesPage() {
 
         setUploading(true);
         try {
+            // Convert to base64 first
             const reader = new FileReader();
-            reader.onload = () => {
+            reader.onload = async () => {
                 const base64 = reader.result as string;
-                setFormData({ ...formData, icon: base64 });
+                try {
+                    // Upload to Cloudinary via our API
+                    const res = await api.post('/admin/upload', {
+                        image: base64,
+                        folder: 'categories'
+                    });
+                    if (res.data.success) {
+                        setFormData({ ...formData, icon: res.data.data.url });
+                    } else {
+                        alert('อัพโหลดไม่สำเร็จ');
+                    }
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    alert('เกิดข้อผิดพลาดในการอัพโหลด');
+                }
                 setUploading(false);
             };
             reader.onerror = () => {

@@ -207,33 +207,33 @@ export default function AgentsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อ Agent</label>
-                                    <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                    <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Prefix</label>
-                                    <input type="text" value={formData.prefix} onChange={(e) => setFormData({ ...formData, prefix: e.target.value })} placeholder="SPIN" className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                    <input type="text" value={formData.prefix} onChange={(e) => setFormData({ ...formData, prefix: e.target.value })} placeholder="SPIN" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">API Key</label>
-                                <input type="text" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm" />
+                                <input type="text" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Callback URL</label>
-                                <input type="text" value={formData.callbackUrl} onChange={(e) => setFormData({ ...formData, callbackUrl: e.target.value })} placeholder="https://..." className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={formData.callbackUrl} onChange={(e) => setFormData({ ...formData, callbackUrl: e.target.value })} placeholder="https://..." className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">RTP (%)</label>
-                                    <input type="number" min="1" max="100" value={formData.rtp} onChange={(e) => setFormData({ ...formData, rtp: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                    <input type="number" min="1" max="100" value={formData.rtp} onChange={(e) => setFormData({ ...formData, rtp: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Min Bet</label>
-                                    <input type="number" value={formData.minBet} onChange={(e) => setFormData({ ...formData, minBet: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                    <input type="number" value={formData.minBet} onChange={(e) => setFormData({ ...formData, minBet: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Max Bet</label>
-                                    <input type="number" value={formData.maxBet} onChange={(e) => setFormData({ ...formData, maxBet: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                    <input type="number" value={formData.maxBet} onChange={(e) => setFormData({ ...formData, maxBet: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">

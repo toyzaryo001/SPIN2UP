@@ -120,7 +120,7 @@ export default function StreakSettingsPage() {
                                         type="number"
                                         value={item.minDeposit}
                                         onChange={(e) => handleUpdate(item.day, 'minDeposit', parseFloat(e.target.value) || 0)}
-                                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400"
+                                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                                     />
                                 </td>
                                 <td className="px-6 py-4">
@@ -128,7 +128,7 @@ export default function StreakSettingsPage() {
                                         type="number"
                                         value={item.bonusAmount}
                                         onChange={(e) => handleUpdate(item.day, 'bonusAmount', parseFloat(e.target.value) || 0)}
-                                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400"
+                                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                                     />
                                 </td>
                                 <td className="px-6 py-4 text-center">

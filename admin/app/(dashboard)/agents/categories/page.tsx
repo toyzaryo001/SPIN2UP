@@ -156,21 +156,21 @@ export default function CategoriesPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">ชื่อหมวดหมู่ *</label>
-                                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Slug</label>
-                                    <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" placeholder="auto" />
+                                    <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" placeholder="auto" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">ไอคอน (Emoji)</label>
-                                    <input type="text" value={formData.icon} onChange={(e) => setFormData({ ...formData, icon: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" placeholder="🎰" />
+                                    <input type="text" value={formData.icon} onChange={(e) => setFormData({ ...formData, icon: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" placeholder="🎰" />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">คำอธิบาย</label>
-                                <input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div className="flex items-center">
                                 <input type="checkbox" id="catActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded" />

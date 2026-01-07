@@ -123,7 +123,7 @@ export default function CommissionSettingsPage() {
                                             step="0.1"
                                             value={item.rate}
                                             onChange={(e) => handleUpdate(item.level, 'rate', parseFloat(e.target.value) || 0)}
-                                            className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400"
+                                            className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                                         />
                                         <span className="text-slate-500">%</span>
                                     </div>
@@ -133,7 +133,7 @@ export default function CommissionSettingsPage() {
                                         type="text"
                                         value={item.description || ''}
                                         onChange={(e) => handleUpdate(item.level, 'description', e.target.value)}
-                                        className="w-48 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400"
+                                        className="w-48 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                                         placeholder="เช่น แนะนำตรง"
                                     />
                                 </td>

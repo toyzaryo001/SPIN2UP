@@ -136,11 +136,11 @@ export default function TrueMoneyPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">เบอร์โทร *</label>
-                                <input type="text" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="0812345678" className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="0812345678" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อบัญชี *</label>
-                                <input type="text" value={formData.accountName} onChange={(e) => setFormData({ ...formData, accountName: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg" />
+                                <input type="text" value={formData.accountName} onChange={(e) => setFormData({ ...formData, accountName: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
                             </div>
                             <div className="flex items-center">
                                 <input type="checkbox" id="walletActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded" />

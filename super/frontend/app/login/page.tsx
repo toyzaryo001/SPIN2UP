@@ -10,7 +10,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showSetup, setShowSetup] = useState(false);
-    const [setupData, setSetupData] = useState({ username: '', password: '', fullName: '', email: '' });
+    const [setupData, setSetupData] = useState({ username: '', password: '', confirmPassword: '', fullName: '' });
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
@@ -27,7 +27,7 @@ export default function LoginPage() {
         setError('');
 
         try {
-            const res = await fetch(`${API_URL}/api/super-admin/login`, {
+            const res = await fetch(`${API_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
@@ -51,14 +51,24 @@ export default function LoginPage() {
 
     const handleSetup = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (setupData.password !== setupData.confirmPassword) {
+            setError('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
         try {
-            const res = await fetch(`${API_URL}/api/super-admin/setup`, {
+            const res = await fetch(`${API_URL}/api/auth/setup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(setupData)
+                body: JSON.stringify({
+                    username: setupData.username,
+                    password: setupData.password,
+                    fullName: setupData.fullName
+                })
             });
 
             const data = await res.json();
@@ -163,27 +173,7 @@ export default function LoginPage() {
                             )}
 
                             <div>
-                                <label className="block text-purple-200 text-sm mb-1">Username *</label>
-                                <input
-                                    type="text"
-                                    value={setupData.username}
-                                    onChange={(e) => setSetupData({ ...setupData, username: e.target.value })}
-                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-purple-200 text-sm mb-1">Password *</label>
-                                <input
-                                    type="password"
-                                    value={setupData.password}
-                                    onChange={(e) => setSetupData({ ...setupData, password: e.target.value })}
-                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-purple-200 text-sm mb-1">ชื่อ-นามสกุล *</label>
+                                <label className="block text-purple-200 text-sm mb-1">NAME_ADMIN (ชื่อ-นามสกุล) *</label>
                                 <input
                                     type="text"
                                     value={setupData.fullName}
@@ -193,12 +183,33 @@ export default function LoginPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-purple-200 text-sm mb-1">Email</label>
+                                <label className="block text-purple-200 text-sm mb-1">USERNAME *</label>
                                 <input
-                                    type="email"
-                                    value={setupData.email}
-                                    onChange={(e) => setSetupData({ ...setupData, email: e.target.value })}
+                                    type="text"
+                                    value={setupData.username}
+                                    onChange={(e) => setSetupData({ ...setupData, username: e.target.value })}
                                     className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-purple-200 text-sm mb-1">PASSWORD *</label>
+                                <input
+                                    type="password"
+                                    value={setupData.password}
+                                    onChange={(e) => setSetupData({ ...setupData, password: e.target.value })}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-purple-200 text-sm mb-1">CONFIRM_PASSWORD (ยืนยันรหัสผ่าน) *</label>
+                                <input
+                                    type="password"
+                                    value={setupData.confirmPassword}
+                                    onChange={(e) => setSetupData({ ...setupData, confirmPassword: e.target.value })}
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white"
+                                    required
                                 />
                             </div>
 

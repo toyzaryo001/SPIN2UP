@@ -99,11 +99,11 @@ export default function PromotionsPage() {
                 {/* Breadcrumb & Share */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px" }}>
-                        <Link href="/" style={{ color: "#666", textDecoration: "none" }}>หน้าหลัก</Link>
-                        <span style={{ color: "#aaa" }}>/</span>
-                        <span style={{ color: "#22D3EE", fontWeight: 600 }}>โปรโมชั่น</span>
+                        <Link href="/" style={{ color: "#8B949E", textDecoration: "none" }}>หน้าหลัก</Link>
+                        <span style={{ color: "#555" }}>/</span>
+                        <span style={{ color: "#FFD700", fontWeight: 600 }}>โปรโมชั่น</span>
                     </div>
-                    <button style={{ display: "flex", alignItems: "center", gap: "4px", color: "#666", background: "none", border: "none", cursor: "pointer", fontSize: "14px" }}>
+                    <button style={{ display: "flex", alignItems: "center", gap: "4px", color: "#8B949E", background: "none", border: "none", cursor: "pointer", fontSize: "14px" }}>
                         <span>แชร์</span>
                         <Share2 size={16} />
                     </button>
@@ -111,11 +111,11 @@ export default function PromotionsPage() {
 
                 {/* Loading State */}
                 {loading ? (
-                    <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>
+                    <div style={{ textAlign: "center", padding: "40px", color: "#8B949E" }}>
                         กำลังโหลด...
                     </div>
                 ) : promotions.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>
+                    <div style={{ textAlign: "center", padding: "40px", color: "#8B949E" }}>
                         ยังไม่มีโปรโมชั่นในขณะนี้
                     </div>
                 ) : (
@@ -128,16 +128,16 @@ export default function PromotionsPage() {
                                     key={promo.id}
                                     onClick={() => openPopup(promo, index)}
                                     style={{
-                                        background: "white",
+                                        background: "#21262D",
                                         borderRadius: "16px",
                                         overflow: "hidden",
-                                        boxShadow: "0 4px 15px rgba(0,0,0,0.08)",
+                                        boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
                                         cursor: "pointer",
                                         display: "flex",
                                         alignItems: "stretch",
                                         minHeight: "90px",
                                         transition: "all 0.2s",
-                                        border: "1px solid rgba(0,0,0,0.05)"
+                                        border: "1px solid rgba(255,255,255,0.1)"
                                     }}
                                 >
                                     {/* Image/Icon Section */}
@@ -156,10 +156,10 @@ export default function PromotionsPage() {
 
                                     {/* Content */}
                                     <div style={{ flex: 1, padding: "14px", display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0 }}>
-                                        <h3 style={{ fontWeight: 700, color: "#333", fontSize: "14px", lineHeight: 1.3, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        <h3 style={{ fontWeight: 700, color: "#FFFFFF", fontSize: "14px", lineHeight: 1.3, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                             {promo.name}
                                         </h3>
-                                        <p style={{ fontSize: "12px", color: "#666", marginTop: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        <p style={{ fontSize: "12px", color: "#8B949E", marginTop: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                             {promo.description || `โบนัส ${promo.bonusPercent}% สูงสุด ${promo.maxBonus} บาท`}
                                         </p>
                                         <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
@@ -168,12 +168,12 @@ export default function PromotionsPage() {
                                                 alignItems: "center",
                                                 gap: "4px",
                                                 fontSize: "10px",
-                                                background: "#ECFEFF",
-                                                color: "#0891B2",
+                                                background: "rgba(255, 215, 0, 0.1)",
+                                                color: "#FFD700",
                                                 padding: "4px 10px",
                                                 borderRadius: "20px",
                                                 fontWeight: 600,
-                                                border: "1px solid #A5F3FC"
+                                                border: "1px solid rgba(255, 215, 0, 0.3)"
                                             }}>
                                                 🎯 โบนัส {promo.bonusPercent}%
                                             </span>
@@ -183,12 +183,12 @@ export default function PromotionsPage() {
                                                     alignItems: "center",
                                                     gap: "4px",
                                                     fontSize: "10px",
-                                                    background: "#FFF7ED",
-                                                    color: "#EA580C",
+                                                    background: "rgba(0, 208, 132, 0.1)",
+                                                    color: "#00D084",
                                                     padding: "4px 10px",
                                                     borderRadius: "20px",
                                                     fontWeight: 600,
-                                                    border: "1px solid #FDBA74"
+                                                    border: "1px solid rgba(0, 208, 132, 0.3)"
                                                 }}>
                                                     🔄 เทิร์น x{promo.turnover}
                                                 </span>
@@ -197,7 +197,7 @@ export default function PromotionsPage() {
                                     </div>
 
                                     {/* Arrow */}
-                                    <div style={{ display: "flex", alignItems: "center", paddingRight: "12px", color: "#ccc" }}>
+                                    <div style={{ display: "flex", alignItems: "center", paddingRight: "12px", color: "#8B949E" }}>
                                         <ChevronRight size={24} />
                                     </div>
                                 </div>
@@ -218,7 +218,7 @@ export default function PromotionsPage() {
                         alignItems: "flex-end",
                         justifyContent: "center",
                         transition: "all 0.3s",
-                        background: isClosing ? "rgba(0,0,0,0)" : "rgba(0,0,0,0.5)"
+                        background: isClosing ? "rgba(0,0,0,0)" : "rgba(0,0,0,0.7)"
                     }}
                     onClick={closePopup}
                 >
@@ -227,13 +227,14 @@ export default function PromotionsPage() {
                         style={{
                             width: "100%",
                             maxWidth: "512px",
-                            background: "white",
+                            background: "#21262D",
                             borderRadius: "24px 24px 0 0",
-                            boxShadow: "0 -10px 40px rgba(0,0,0,0.2)",
+                            boxShadow: "0 -10px 40px rgba(0,0,0,0.3)",
                             transform: isClosing ? "translateY(100%)" : "translateY(0)",
                             transition: "transform 0.3s ease-out",
                             maxHeight: "85vh",
-                            overflowY: "auto"
+                            overflowY: "auto",
+                            border: "1px solid rgba(255,255,255,0.1)"
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -263,7 +264,7 @@ export default function PromotionsPage() {
 
                         {/* Drag Handle */}
                         <div style={{ display: "flex", justifyContent: "center", paddingTop: "12px", paddingBottom: "8px" }}>
-                            <div style={{ width: "40px", height: "4px", background: "#ddd", borderRadius: "2px" }}></div>
+                            <div style={{ width: "40px", height: "4px", background: "#444", borderRadius: "2px" }}></div>
                         </div>
 
                         {/* Promo Image */}
@@ -288,22 +289,22 @@ export default function PromotionsPage() {
                         </div>
 
                         {/* Title */}
-                        <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#333", textAlign: "center", marginTop: "16px", padding: "0 16px" }}>
+                        <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#FFFFFF", textAlign: "center", marginTop: "16px", padding: "0 16px" }}>
                             {selectedPromo.name}
                         </h2>
 
                         {/* Details Section */}
                         <div style={{
                             margin: "16px",
-                            background: "#ECFEFF",
-                            border: "1px solid #A5F3FC",
+                            background: "rgba(255, 215, 0, 0.1)",
+                            border: "1px solid rgba(255, 215, 0, 0.3)",
                             borderRadius: "16px",
                             padding: "16px"
                         }}>
-                            <h3 style={{ color: "#0891B2", fontWeight: 700, fontSize: "14px", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <h3 style={{ color: "#FFD700", fontWeight: 700, fontSize: "14px", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
                                 📋 รายละเอียด
                             </h3>
-                            <p style={{ color: "#555", fontSize: "14px", lineHeight: 1.6 }}>
+                            <p style={{ color: "#8B949E", fontSize: "14px", lineHeight: 1.6 }}>
                                 {selectedPromo.description || `รับโบนัส ${selectedPromo.bonusPercent}% สูงสุด ${selectedPromo.maxBonus} บาท เมื่อฝากขั้นต่ำ ${selectedPromo.minDeposit} บาท`}
                             </p>
                         </div>
@@ -311,47 +312,47 @@ export default function PromotionsPage() {
                         {/* Info Badges */}
                         <div style={{ margin: "0 16px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                             <span style={{
-                                background: "#ECFEFF",
-                                color: "#0891B2",
+                                background: "rgba(255, 215, 0, 0.1)",
+                                color: "#FFD700",
                                 padding: "8px 14px",
                                 borderRadius: "10px",
                                 fontSize: "12px",
                                 fontWeight: 700,
-                                border: "1px solid #A5F3FC"
+                                border: "1px solid rgba(255, 215, 0, 0.3)"
                             }}>
                                 🎁 โบนัส: {selectedPromo.bonusPercent}%
                             </span>
                             <span style={{
-                                background: "#F0FDF4",
-                                color: "#16A34A",
+                                background: "rgba(0, 208, 132, 0.1)",
+                                color: "#00D084",
                                 padding: "8px 14px",
                                 borderRadius: "10px",
                                 fontSize: "12px",
                                 fontWeight: 700,
-                                border: "1px solid #86EFAC"
+                                border: "1px solid rgba(0, 208, 132, 0.3)"
                             }}>
                                 💵 ฝากขั้นต่ำ: {selectedPromo.minDeposit} บาท
                             </span>
                             <span style={{
-                                background: "#FEF3C7",
-                                color: "#D97706",
+                                background: "rgba(59, 130, 246, 0.1)",
+                                color: "#3B82F6",
                                 padding: "8px 14px",
                                 borderRadius: "10px",
                                 fontSize: "12px",
                                 fontWeight: 700,
-                                border: "1px solid #FCD34D"
+                                border: "1px solid rgba(59, 130, 246, 0.3)"
                             }}>
                                 💰 สูงสุด: {selectedPromo.maxBonus} บาท
                             </span>
                             {selectedPromo.turnover > 0 && (
                                 <span style={{
-                                    background: "#FFF7ED",
-                                    color: "#EA580C",
+                                    background: "rgba(255, 255, 255, 0.05)",
+                                    color: "#8B949E",
                                     padding: "8px 14px",
                                     borderRadius: "10px",
                                     fontSize: "12px",
                                     fontWeight: 700,
-                                    border: "1px solid #FDBA74"
+                                    border: "1px solid rgba(255, 255, 255, 0.1)"
                                 }}>
                                     🔄 เทิร์น: x{selectedPromo.turnover}
                                 </span>
@@ -364,15 +365,15 @@ export default function PromotionsPage() {
                                 onClick={handleClaimPromotion}
                                 style={{
                                     width: "100%",
-                                    background: "linear-gradient(135deg, #FF9500, #FF7A00)",
-                                    color: "white",
+                                    background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                                    color: "#0D1117",
                                     border: "none",
                                     padding: "16px",
                                     borderRadius: "14px",
                                     fontSize: "18px",
                                     fontWeight: 700,
                                     cursor: "pointer",
-                                    boxShadow: "0 6px 20px rgba(255,149,0,0.4)"
+                                    boxShadow: "0 6px 20px rgba(255,215,0,0.4)"
                                 }}
                             >
                                 รับโปรโมชั่นนี้

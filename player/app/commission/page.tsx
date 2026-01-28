@@ -86,12 +86,12 @@ export default function CommissionPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <span
                             onClick={() => router.push("/activity")}
-                            style={{ color: "#0EA5E9", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+                            style={{ color: "#8B949E", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
                         >
                             กิจกรรม
                         </span>
-                        <span style={{ color: "#888", fontSize: "14px" }}>/</span>
-                        <span style={{ color: "#F59E0B", fontSize: "14px", fontWeight: 600 }}>ค่าคอม 4 ชั้น</span>
+                        <span style={{ color: "#555", fontSize: "14px" }}>/</span>
+                        <span style={{ color: "#FFD700", fontSize: "14px", fontWeight: 600 }}>ค่าคอม 4 ชั้น</span>
                     </div>
                     <button style={{
                         display: "flex",
@@ -99,7 +99,7 @@ export default function CommissionPage() {
                         gap: "4px",
                         background: "transparent",
                         border: "none",
-                        color: "#0EA5E9",
+                        color: "#8B949E",
                         fontSize: "14px",
                         fontWeight: 600,
                         cursor: "pointer"
@@ -114,14 +114,14 @@ export default function CommissionPage() {
                     justifyContent: "space-between",
                     alignItems: "center"
                 }}>
-                    <span style={{ fontSize: "16px", fontWeight: 600, color: "#333" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 600, color: "#FFFFFF" }}>
                         รับเครดิตฟรี
                     </span>
                     <button
                         onClick={() => { }}
                         style={{
-                            background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
-                            color: "white",
+                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                            color: "#0D1117",
                             border: "none",
                             padding: "10px 20px",
                             borderRadius: "10px",
@@ -196,7 +196,7 @@ export default function CommissionPage() {
                     display: "flex",
                     justifyContent: "center",
                     gap: "40px",
-                    borderBottom: "2px solid #eee",
+                    borderBottom: "2px solid rgba(255,255,255,0.1)",
                     paddingBottom: "12px"
                 }}>
                     <button
@@ -206,7 +206,7 @@ export default function CommissionPage() {
                             border: "none",
                             fontSize: "16px",
                             fontWeight: 600,
-                            color: activeTab === "income" ? "#F59E0B" : "#888",
+                            color: activeTab === "income" ? "#FFD700" : "#8B949E",
                             cursor: "pointer",
                             position: "relative",
                             paddingBottom: "12px"
@@ -220,7 +220,7 @@ export default function CommissionPage() {
                                 left: 0,
                                 right: 0,
                                 height: "3px",
-                                background: "#F59E0B",
+                                background: "#FFD700",
                                 borderRadius: "2px"
                             }} />
                         )}
@@ -232,7 +232,7 @@ export default function CommissionPage() {
                             border: "none",
                             fontSize: "16px",
                             fontWeight: 600,
-                            color: activeTab === "info" ? "#F59E0B" : "#888",
+                            color: activeTab === "info" ? "#FFD700" : "#8B949E",
                             cursor: "pointer",
                             position: "relative",
                             paddingBottom: "12px"
@@ -246,7 +246,7 @@ export default function CommissionPage() {
                                 left: 0,
                                 right: 0,
                                 height: "3px",
-                                background: "#F59E0B",
+                                background: "#FFD700",
                                 borderRadius: "2px"
                             }} />
                         )}
@@ -264,20 +264,20 @@ export default function CommissionPage() {
                                     display: "flex",
                                     justifyContent: "space-between",
                                     alignItems: "center",
-                                    background: "white",
+                                    background: "#21262D",
                                     borderRadius: "14px",
                                     padding: "16px 20px",
-                                    border: "2px solid #F59E0B",
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+                                    border: "2px solid #FFD700",
+                                    boxShadow: "0 2px 10px rgba(0,0,0,0.15)"
                                 }}
                             >
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                     <span style={{ fontSize: "24px" }}>{cat.icon}</span>
-                                    <span style={{ fontSize: "15px", fontWeight: 600, color: "#F59E0B" }}>
+                                    <span style={{ fontSize: "15px", fontWeight: 600, color: "#FFD700" }}>
                                         ประเภท {cat.name}
                                     </span>
                                 </div>
-                                <span style={{ fontSize: "16px", fontWeight: 700, color: "#333" }}>
+                                <span style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF" }}>
                                     ฿ {cat.commission}
                                 </span>
                             </div>
@@ -285,7 +285,7 @@ export default function CommissionPage() {
 
                         {/* Total */}
                         <div style={{
-                            background: "linear-gradient(135deg, #F59E0B, #D97706)",
+                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
                             borderRadius: "14px",
                             padding: "20px",
                             display: "flex",
@@ -293,10 +293,10 @@ export default function CommissionPage() {
                             alignItems: "center",
                             marginTop: "8px"
                         }}>
-                            <span style={{ fontSize: "16px", fontWeight: 700, color: "white" }}>
+                            <span style={{ fontSize: "16px", fontWeight: 700, color: "#0D1117" }}>
                                 รวมค่าคอมทั้งหมด
                             </span>
-                            <span style={{ fontSize: "20px", fontWeight: 800, color: "white" }}>
+                            <span style={{ fontSize: "20px", fontWeight: 800, color: "#0D1117" }}>
                                 ฿ 0.00
                             </span>
                         </div>
@@ -305,15 +305,16 @@ export default function CommissionPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                         {/* Tier Info */}
                         <div style={{
-                            background: "white",
+                            background: "#21262D",
                             borderRadius: "16px",
                             padding: "20px",
-                            boxShadow: "0 4px 15px rgba(0,0,0,0.06)"
+                            boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
+                            border: "1px solid rgba(255,255,255,0.1)"
                         }}>
-                            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#333", marginBottom: "16px" }}>
+                            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>
                                 🏆 ระบบค่าคอม 4 ชั้น
                             </h3>
-                            <p style={{ fontSize: "13px", color: "#666", lineHeight: 1.6, marginBottom: "20px" }}>
+                            <p style={{ fontSize: "13px", color: "#8B949E", lineHeight: 1.6, marginBottom: "20px" }}>
                                 รับค่าคอมมิชชั่นจากเพื่อนที่คุณแนะนำ และเพื่อนของเพื่อนอีก 4 ชั้น!
                                 ยิ่งชวนมาก ยิ่งได้มาก!
                             </p>
@@ -328,9 +329,9 @@ export default function CommissionPage() {
                                             justifyContent: "space-between",
                                             alignItems: "center",
                                             padding: "14px 16px",
-                                            background: index === 0 ? "#FFF7ED" : "#f8f9fa",
+                                            background: index === 0 ? "rgba(255, 215, 0, 0.1)" : "rgba(255,255,255,0.05)",
                                             borderRadius: "12px",
-                                            border: index === 0 ? "2px solid #F59E0B" : "1px solid #eee"
+                                            border: index === 0 ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)"
                                         }}
                                     >
                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -350,14 +351,14 @@ export default function CommissionPage() {
                                             }}>
                                                 {tier.level}
                                             </div>
-                                            <span style={{ fontSize: "14px", fontWeight: 600, color: "#333" }}>
+                                            <span style={{ fontSize: "14px", fontWeight: 600, color: "#FFFFFF" }}>
                                                 {tier.desc}
                                             </span>
                                         </div>
                                         <span style={{
                                             fontSize: "16px",
                                             fontWeight: 700,
-                                            color: index === 0 ? "#F59E0B" : "#666"
+                                            color: index === 0 ? "#FFD700" : "#8B949E"
                                         }}>
                                             {tier.rate}
                                         </span>

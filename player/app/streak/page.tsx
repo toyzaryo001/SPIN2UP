@@ -66,46 +66,46 @@ export default function StreakPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 {/* Banner */}
                 <div style={{
-                    background: "linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)",
+                    background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
                     borderRadius: "16px",
                     padding: "20px",
-                    color: "white",
-                    boxShadow: "0 4px 20px rgba(255, 107, 107, 0.3)",
+                    color: "#0D1117",
+                    boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
                     display: "flex", alignItems: "center", gap: "12px"
                 }}>
-                    <span style={{ fontSize: "40px", filter: "drop-shadow(2px 2px 4px rgba(0,0,0,0.2))" }}>🔥</span>
+                    <span style={{ fontSize: "40px", filter: "drop-shadow(2px 2px 4px rgba(0,0,0,0.1))" }}>🔥</span>
                     <div>
-                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.2)" }}>ฝากต่อเนื่อง</h1>
+                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>ฝากต่อเนื่อง</h1>
                         <p style={{ fontSize: "14px", opacity: 0.9, marginTop: "4px" }}>ทำภารกิจสะสมวันรับโบนัสฟรี</p>
                     </div>
                 </div>
 
                 {/* Current Streak */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "24px",
                     textAlign: "center",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                    border: "2px solid rgba(255,149,0,0.2)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                    border: "1px solid rgba(255,215,0,0.3)"
                 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", marginBottom: "8px" }}>
-                        <Flame size={44} color="#FF9500" style={{ animation: "pulse 2s infinite" }} />
+                        <Flame size={44} color="#FFD700" style={{ animation: "pulse 2s infinite" }} />
                         <span style={{
                             fontSize: "64px",
                             fontWeight: 900,
-                            background: "linear-gradient(135deg, #FF9500, #EF4444)",
+                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
                             WebkitBackgroundClip: "text",
                             WebkitTextFillColor: "transparent"
                         }}>
                             {currentStreak}
                         </span>
                     </div>
-                    <p style={{ color: "#666", fontWeight: 600, fontSize: "15px" }}>วันที่ฝากต่อเนื่อง</p>
-                    <div style={{ width: "100%", background: "#e5e5e5", height: "10px", borderRadius: "5px", marginTop: "16px", overflow: "hidden" }}>
+                    <p style={{ color: "#8B949E", fontWeight: 600, fontSize: "15px" }}>วันที่ฝากต่อเนื่อง</p>
+                    <div style={{ width: "100%", background: "rgba(255,255,255,0.1)", height: "10px", borderRadius: "5px", marginTop: "16px", overflow: "hidden" }}>
                         <div style={{
                             height: "100%",
-                            background: "linear-gradient(90deg, #FF9500, #EF4444)",
+                            background: "linear-gradient(90deg, #FFD700, #FFC000)",
                             width: `${(currentStreak / 7) * 100}%`,
                             borderRadius: "5px",
                             transition: "width 0.5s"
@@ -115,14 +115,15 @@ export default function StreakPage() {
 
                 {/* Calendar Grid */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                        <Calendar size={20} color="#FF9500" />
-                        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#333" }}>โบนัสประจำวัน</h3>
+                        <Calendar size={20} color="#FFD700" />
+                        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF" }}>โบนัสประจำวัน</h3>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px" }}>
                         {streakBonus.map((item) => (
@@ -130,21 +131,21 @@ export default function StreakPage() {
                                 key={item.day}
                                 style={{
                                     background: item.claimed
-                                        ? "linear-gradient(135deg, #FF9500, #FF7A00)"
+                                        ? "linear-gradient(135deg, #FFD700, #FFC000)"
                                         : item.day === currentStreak + 1
-                                            ? "#FFF7ED"
-                                            : "#f8f8f8",
+                                            ? "rgba(255, 215, 0, 0.1)"
+                                            : "rgba(255,255,255,0.05)",
                                     borderRadius: "12px",
                                     padding: "12px 8px",
                                     textAlign: "center",
-                                    border: item.day === currentStreak + 1 ? "2px solid #FF9500" : "none",
-                                    boxShadow: item.claimed ? "0 4px 12px rgba(255,149,0,0.3)" : "none"
+                                    border: item.day === currentStreak + 1 ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
+                                    boxShadow: item.claimed ? "0 4px 12px rgba(255,215,0,0.3)" : "none"
                                 }}
                             >
                                 <p style={{
                                     fontSize: "11px",
                                     fontWeight: 600,
-                                    color: item.claimed ? "rgba(255,255,255,0.9)" : "#888",
+                                    color: item.claimed ? "rgba(13,17,23,0.9)" : "#8B949E",
                                     marginBottom: "4px"
                                 }}>
                                     วัน {item.day}
@@ -152,7 +153,7 @@ export default function StreakPage() {
                                 <p style={{
                                     fontSize: "16px",
                                     fontWeight: 800,
-                                    color: item.claimed ? "white" : "#333"
+                                    color: item.claimed ? "#0D1117" : "#FFFFFF"
                                 }}>
                                     ฿{item.bonus}
                                 </p>
@@ -166,13 +167,14 @@ export default function StreakPage() {
 
                 {/* Info */}
                 <div style={{
-                    background: "white",
+                    background: "#21262D",
                     borderRadius: "14px",
                     padding: "16px",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
-                    <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#333", marginBottom: "12px" }}>📋 เงื่อนไข</h3>
-                    <ul style={{ fontSize: "13px", color: "#666", lineHeight: 1.8, paddingLeft: "20px", margin: 0 }}>
+                    <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px" }}>📋 เงื่อนไข</h3>
+                    <ul style={{ fontSize: "13px", color: "#8B949E", lineHeight: 1.8, paddingLeft: "20px", margin: 0 }}>
                         <li>ฝากขั้นต่ำ ฿{settings[0]?.minDeposit || 100} ต่อวัน</li>
                         <li>ฝากครบ 7 วันติดต่อกัน รับโบนัสรวม ฿{streakBonus.reduce((a, b) => a + b.bonus, 0)}</li>
                         <li>หากขาดวันใดวันหนึ่ง ต้องเริ่มนับใหม่</li>

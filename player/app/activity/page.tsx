@@ -62,31 +62,32 @@ export default function ActivityPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {/* Balance Card */}
                 <div style={{
-                    background: "white",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                    border: "1px solid rgba(255,255,255,0.1)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between"
                 }}>
                     <div>
-                        <p style={{ fontSize: "12px", color: "#888", marginBottom: "4px" }}>ยอดเงินในเกม</p>
+                        <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "4px" }}>ยอดเงินในเกม</p>
                         <p style={{
                             fontSize: "28px",
                             fontWeight: 900,
-                            color: "#0EA5E9",
+                            color: "#FFD700",
                             margin: 0
                         }}>
                             ฿ {user ? Number(user.balance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) : "0.00"}
                         </p>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                        <p style={{ fontSize: "12px", color: "#888", marginBottom: "4px" }}>เครดิตฟรี</p>
+                        <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "4px" }}>เครดิตฟรี</p>
                         <p style={{
                             fontSize: "20px",
                             fontWeight: 700,
-                            color: "#333",
+                            color: "#FFFFFF",
                             margin: 0
                         }}>
                             {user ? Number(user.bonusBalance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) : "0.00"}
@@ -95,8 +96,8 @@ export default function ActivityPage() {
                     <button
                         onClick={() => handleNavigate("/deposit")}
                         style={{
-                            background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
-                            color: "white",
+                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                            color: "#0D1117",
                             border: "none",
                             padding: "12px 20px",
                             borderRadius: "10px",
@@ -120,8 +121,8 @@ export default function ActivityPage() {
                             key={index}
                             onClick={() => handleNavigate(action.path)}
                             style={{
-                                background: "white",
-                                border: "none",
+                                background: "#21262D",
+                                border: "1px solid rgba(255,255,255,0.1)",
                                 borderRadius: "16px",
                                 padding: "16px 8px",
                                 cursor: "pointer",
@@ -129,7 +130,7 @@ export default function ActivityPage() {
                                 flexDirection: "column",
                                 alignItems: "center",
                                 gap: "10px",
-                                boxShadow: "0 4px 15px rgba(0,0,0,0.06)",
+                                boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
                                 transition: "transform 0.2s"
                             }}
                         >
@@ -149,7 +150,7 @@ export default function ActivityPage() {
                             <span style={{
                                 fontSize: "11px",
                                 fontWeight: 600,
-                                color: "#444",
+                                color: "#FFFFFF",
                                 textAlign: "center",
                                 lineHeight: 1.3
                             }}>
@@ -163,15 +164,15 @@ export default function ActivityPage() {
                 <button
                     onClick={() => setShowContactDrawer(true)}
                     style={{
-                        background: "white",
-                        border: "none",
+                        background: "#21262D",
+                        border: "1px solid rgba(255,255,255,0.1)",
                         borderRadius: "16px",
                         padding: "16px",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         gap: "12px",
-                        boxShadow: "0 4px 15px rgba(0,0,0,0.06)",
+                        boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
                         width: "fit-content"
                     }}
                 >
@@ -192,7 +193,7 @@ export default function ActivityPage() {
                     <span style={{
                         fontSize: "14px",
                         fontWeight: 600,
-                        color: "#444"
+                        color: "#FFFFFF"
                     }}>
                         ติดต่อ
                     </span>

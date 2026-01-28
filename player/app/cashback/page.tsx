@@ -46,7 +46,7 @@ export default function CashbackPage() {
     if (!settings || !settings.isActive) {
         return (
             <PlayerLayout>
-                <div style={{ padding: "40px", textAlign: "center", color: "#888" }}>
+                <div style={{ padding: "40px", textAlign: "center", color: "#8B949E" }}>
                     ระบบคืนยอดเสียปิดใช้งานชั่วคราว
                 </div>
             </PlayerLayout>
@@ -63,34 +63,34 @@ export default function CashbackPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {/* Banner */}
                 <div style={{
-                    background: "linear-gradient(135deg, #EC407A 0%, #D81B60 100%)",
+                    background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
                     borderRadius: "16px",
                     padding: "20px",
-                    color: "white",
-                    boxShadow: "0 4px 20px rgba(236, 64, 122, 0.3)",
+                    color: "#0D1117",
+                    boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
                     display: "flex", alignItems: "center", gap: "12px"
                 }}>
                     <span style={{ fontSize: "40px" }}>💸</span>
                     <div>
-                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.2)" }}>คืนยอดเสีย</h1>
+                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>คืนยอดเสีย</h1>
                         <p style={{ fontSize: "14px", opacity: 0.9, marginTop: "4px" }}>เล่นเสียไม่ต้องเศร้า เราคืนให้</p>
                     </div>
                 </div>
 
                 {/* Cashback Card */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "24px",
                     textAlign: "center",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                    border: "2px solid rgba(236,64,122,0.15)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
-                    <p style={{ fontSize: "14px", color: "#888", marginBottom: "4px", fontWeight: 600 }}>ยอดเสียคืนที่รับได้</p>
+                    <p style={{ fontSize: "14px", color: "#8B949E", marginBottom: "4px", fontWeight: 600 }}>ยอดเสียคืนที่รับได้</p>
                     <p style={{
                         fontSize: "48px",
                         fontWeight: 900,
-                        color: "#D81B60",
+                        color: "#FFD700",
                         margin: "8px 0 24px",
                         textShadow: "1px 1px 2px rgba(0,0,0,0.1)"
                     }}>
@@ -98,15 +98,15 @@ export default function CashbackPage() {
                     </p>
                     <button style={{
                         width: "100%",
-                        background: "linear-gradient(135deg, #FF9500, #FF7A00)",
-                        color: "white",
+                        background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                        color: "#0D1117",
                         border: "none",
                         padding: "16px",
                         borderRadius: "14px",
                         fontSize: "18px",
                         fontWeight: 700,
                         cursor: "pointer",
-                        boxShadow: "0 6px 20px rgba(255,149,0,0.4)",
+                        boxShadow: "0 6px 20px rgba(255,215,0,0.4)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -115,7 +115,7 @@ export default function CashbackPage() {
                         <Wallet size={22} />
                         รับเงินคืนทันที
                     </button>
-                    <p style={{ fontSize: "12px", color: "#999", marginTop: "12px" }}>
+                    <p style={{ fontSize: "12px", color: "#8B949E", marginTop: "12px" }}>
                         *รับได้ทุกวัน{claimDay} หลัง 00:00 น.
                     </p>
                 </div>
@@ -123,40 +123,43 @@ export default function CashbackPage() {
                 {/* Stats */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <div style={{
-                        background: "white",
+                        background: "#21262D",
                         borderRadius: "14px",
                         padding: "16px",
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                        border: "1px solid rgba(255,255,255,0.1)"
                     }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                            <TrendingDown size={18} color="#D81B60" />
-                            <p style={{ fontSize: "12px", color: "#888", fontWeight: 600 }}>อัตราคืน</p>
+                            <TrendingDown size={18} color="#FFD700" />
+                            <p style={{ fontSize: "12px", color: "#8B949E", fontWeight: 600 }}>อัตราคืน</p>
                         </div>
-                        <p style={{ fontSize: "24px", fontWeight: 800, color: "#333" }}>{cashbackRate}%</p>
+                        <p style={{ fontSize: "24px", fontWeight: 800, color: "#FFFFFF" }}>{cashbackRate}%</p>
                     </div>
                     <div style={{
-                        background: "white",
+                        background: "#21262D",
                         borderRadius: "14px",
                         padding: "16px",
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                        border: "1px solid rgba(255,255,255,0.1)"
                     }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                            <CheckCircle size={18} color="#10b981" />
-                            <p style={{ fontSize: "12px", color: "#888", fontWeight: 600 }}>คืนสูงสุด</p>
+                            <CheckCircle size={18} color="#00D084" />
+                            <p style={{ fontSize: "12px", color: "#8B949E", fontWeight: 600 }}>คืนสูงสุด</p>
                         </div>
-                        <p style={{ fontSize: "24px", fontWeight: 800, color: "#333" }}>฿{maxCashback.toLocaleString()}</p>
+                        <p style={{ fontSize: "24px", fontWeight: 800, color: "#FFFFFF" }}>฿{maxCashback.toLocaleString()}</p>
                     </div>
                 </div>
 
                 {/* Info */}
                 <div style={{
-                    background: "white",
+                    background: "#21262D",
                     borderRadius: "14px",
                     padding: "16px",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
-                    <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#333", marginBottom: "12px" }}>📋 เงื่อนไข</h3>
-                    <ul style={{ fontSize: "13px", color: "#666", lineHeight: 1.8, paddingLeft: "20px", margin: 0 }}>
+                    <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px" }}>📋 เงื่อนไข</h3>
+                    <ul style={{ fontSize: "13px", color: "#8B949E", lineHeight: 1.8, paddingLeft: "20px", margin: 0 }}>
                         <li>ยอดเสียขั้นต่ำ ฿{minLoss.toLocaleString()} ขึ้นไป</li>
                         <li>คืนยอดเสียสูงสุด ฿{maxCashback.toLocaleString()}</li>
                         <li>รับได้ทุกวัน{claimDay} หลังเที่ยงคืน</li>

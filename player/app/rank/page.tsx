@@ -27,16 +27,16 @@ export default function RankPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {/* Banner */}
                 <div style={{
-                    background: "linear-gradient(135deg, #BA68C8 0%, #9C27B0 100%)",
+                    background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
                     borderRadius: "16px",
                     padding: "20px",
-                    color: "white",
-                    boxShadow: "0 4px 20px rgba(186, 104, 200, 0.3)",
+                    color: "#0D1117",
+                    boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
                     display: "flex", alignItems: "center", gap: "12px"
                 }}>
                     <span style={{ fontSize: "40px" }}>👑</span>
                     <div>
-                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.2)" }}>VIP Club</h1>
+                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>VIP Club</h1>
                         <p style={{ fontSize: "14px", opacity: 0.9, marginTop: "4px" }}>ยิ่งเล่นยิ่งได้ ยิ่งฝากยิ่งคุ้ม</p>
                     </div>
                 </div>
@@ -66,45 +66,47 @@ export default function RankPage() {
 
                 {/* Progress to Next Rank */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                        <span style={{ fontSize: "14px", fontWeight: 700, color: "#666" }}>
-                            เลื่อนขั้นถัดไป: <span style={{ color: "#9C27B0" }}>{ranks[currentRank + 1]?.name}</span>
+                        <span style={{ fontSize: "14px", fontWeight: 700, color: "#8B949E" }}>
+                            เลื่อนขั้นถัดไป: <span style={{ color: "#FFD700" }}>{ranks[currentRank + 1]?.name}</span>
                         </span>
-                        <span style={{ fontSize: "14px", fontWeight: 700, color: "#FF9500" }}>{progress.toFixed(0)}%</span>
+                        <span style={{ fontSize: "14px", fontWeight: 700, color: "#FFD700" }}>{progress.toFixed(0)}%</span>
                     </div>
                     <div style={{
                         height: "14px",
-                        background: "#f0f0f0",
+                        background: "rgba(255,255,255,0.1)",
                         borderRadius: "7px",
                         overflow: "hidden"
                     }}>
                         <div style={{
                             height: "100%",
-                            background: "linear-gradient(90deg, #BA68C8, #E91E63)",
+                            background: "linear-gradient(90deg, #FFD700, #FFC000)",
                             borderRadius: "7px",
                             width: `${Math.min(progress, 100)}%`,
                             transition: "width 1s ease-out"
                         }} />
                     </div>
-                    <p style={{ fontSize: "13px", color: "#888", marginTop: "10px", textAlign: "center" }}>
-                        ฝากอีก <span style={{ fontWeight: 700, color: "#333" }}>฿{(nextRankDeposit - currentDeposit).toLocaleString()}</span> เพื่อเลื่อนขั้น
+                    <p style={{ fontSize: "13px", color: "#8B949E", marginTop: "10px", textAlign: "center" }}>
+                        ฝากอีก <span style={{ fontWeight: 700, color: "#FFFFFF" }}>฿{(nextRankDeposit - currentDeposit).toLocaleString()}</span> เพื่อเลื่อนขั้น
                     </p>
                 </div>
 
                 {/* All Ranks */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: "16px", color: "#444", display: "flex", alignItems: "center", gap: "8px", fontSize: "16px" }}>
-                        <Crown size={20} color="#9C27B0" />
+                    <h3 style={{ fontWeight: 700, marginBottom: "16px", color: "#FFFFFF", display: "flex", alignItems: "center", gap: "8px", fontSize: "16px" }}>
+                        <Crown size={20} color="#FFD700" />
                         สิทธิพิเศษแต่ละระดับ
                     </h3>
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -117,27 +119,28 @@ export default function RankPage() {
                                     gap: "14px",
                                     padding: "14px",
                                     borderRadius: "14px",
-                                    border: index === currentRank ? "2px solid #BA68C8" : "1px solid transparent",
-                                    background: index === currentRank ? "#FAF5FF" : "#fff",
-                                    boxShadow: index === currentRank ? "0 4px 15px rgba(186,104,200,0.15)" : "none"
+                                    border: index === currentRank ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
+                                    background: index === currentRank ? "rgba(255, 215, 0, 0.1)" : "rgba(255,255,255,0.05)",
+                                    boxShadow: index === currentRank ? "0 4px 15px rgba(255,215,0,0.15)" : "none"
                                 }}
                             >
                                 <span style={{ fontSize: "32px" }}>{rank.icon}</span>
                                 <div style={{ flex: 1 }}>
                                     <p style={{
                                         fontWeight: 700,
-                                        color: index === currentRank ? "#9C27B0" : "#333",
+                                        color: index === currentRank ? "#FFD700" : "#FFFFFF",
                                         fontSize: "15px",
                                         margin: 0
                                     }}>{rank.name}</p>
-                                    <p style={{ fontSize: "12px", color: "#888", marginTop: "2px" }}>ฝากสะสม ฿{rank.minDeposit.toLocaleString()}</p>
+                                    <p style={{ fontSize: "12px", color: "#8B949E", marginTop: "2px" }}>ฝากสะสม ฿{rank.minDeposit.toLocaleString()}</p>
                                 </div>
                                 <div style={{
                                     padding: "8px 14px",
-                                    background: "#F0FDF4",
+                                    background: "rgba(0, 208, 132, 0.1)",
+                                    border: "1px solid rgba(0, 208, 132, 0.3)",
                                     borderRadius: "10px"
                                 }}>
-                                    <p style={{ fontSize: "12px", fontWeight: 700, color: "#22C55E", margin: 0 }}>{rank.benefit}</p>
+                                    <p style={{ fontSize: "12px", fontWeight: 700, color: "#00D084", margin: 0 }}>{rank.benefit}</p>
                                 </div>
                             </div>
                         ))}

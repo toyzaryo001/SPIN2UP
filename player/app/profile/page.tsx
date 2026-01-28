@@ -149,28 +149,29 @@ export default function ProfilePage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {/* Banner */}
                 <div style={{
-                    background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                    background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
                     borderRadius: "16px",
                     padding: "20px",
-                    color: "white",
+                    color: "#0D1117",
                     boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
                     display: "flex", alignItems: "center", gap: "12px"
                 }}>
                     <span style={{ fontSize: "40px" }}>👤</span>
                     <div>
-                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.2)" }}>โปรไฟล์ของฉัน</h1>
+                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>โปรไฟล์ของฉัน</h1>
                         <p style={{ fontSize: "14px", opacity: 0.9, marginTop: "4px" }}>ข้อมูลบัญชีของคุณ</p>
                     </div>
                 </div>
 
                 {/* User Info Details */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
-                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#333", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                         📋 ข้อมูลส่วนตัว
                     </h3>
 
@@ -185,12 +186,13 @@ export default function ProfilePage() {
 
                 {/* Bank Info */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
-                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#333", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                         💳 ข้อมูลธนาคาร
                     </h3>
 
@@ -202,12 +204,13 @@ export default function ProfilePage() {
 
                 {/* Account Info */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
-                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#333", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                         📊 ข้อมูลบัญชี
                     </h3>
 
@@ -222,10 +225,11 @@ export default function ProfilePage() {
 
                 {/* Change Password Button */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     overflow: "hidden",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                    border: "1px solid rgba(255,255,255,0.1)"
                 }}>
                     <button
                         onClick={() => setShowPasswordModal(true)}
@@ -242,9 +246,9 @@ export default function ProfilePage() {
                     >
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                             <span style={{ fontSize: "22px" }}>🔐</span>
-                            <span style={{ fontWeight: 600, color: "#444", fontSize: "14px" }}>เปลี่ยนรหัสผ่าน</span>
+                            <span style={{ fontWeight: 600, color: "#FFFFFF", fontSize: "14px" }}>เปลี่ยนรหัสผ่าน</span>
                         </div>
-                        <ChevronRight size={20} color="#ccc" />
+                        <ChevronRight size={20} color="#8B949E" />
                     </button>
                 </div>
 
@@ -253,16 +257,16 @@ export default function ProfilePage() {
                     onClick={handleLogout}
                     style={{
                         width: "100%",
-                        background: "rgba(255,255,255,0.95)",
+                        background: "#21262D",
                         borderRadius: "14px",
                         padding: "16px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "10px",
-                        border: "none",
+                        border: "1px solid rgba(255,255,255,0.1)",
                         cursor: "pointer",
-                        boxShadow: "0 4px 15px rgba(0,0,0,0.06)"
+                        boxShadow: "0 4px 15px rgba(0,0,0,0.15)"
                     }}
                 >
                     <LogOut size={20} color="#EF4444" />
@@ -275,7 +279,7 @@ export default function ProfilePage() {
                 <div style={{
                     position: "fixed",
                     inset: 0,
-                    background: "rgba(0,0,0,0.5)",
+                    background: "rgba(0,0,0,0.7)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -283,16 +287,17 @@ export default function ProfilePage() {
                     padding: "20px"
                 }}>
                     <div style={{
-                        background: "white",
+                        background: "#21262D",
                         borderRadius: "20px",
                         padding: "24px",
                         width: "100%",
-                        maxWidth: "400px"
+                        maxWidth: "400px",
+                        border: "1px solid rgba(255,255,255,0.1)"
                     }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#333", margin: 0 }}>🔐 เปลี่ยนรหัสผ่าน</h3>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#FFFFFF", margin: 0 }}>🔐 เปลี่ยนรหัสผ่าน</h3>
                             <button onClick={() => setShowPasswordModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}>
-                                <X size={24} color="#999" />
+                                <X size={24} color="#8B949E" />
                             </button>
                         </div>
 
@@ -310,7 +315,7 @@ export default function ProfilePage() {
                                 )}
 
                                 <div style={{ marginBottom: "16px" }}>
-                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 500, color: "#555", marginBottom: "6px" }}>รหัสผ่านปัจจุบัน</label>
+                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 500, color: "#8B949E", marginBottom: "6px" }}>รหัสผ่านปัจจุบัน</label>
                                     <div style={{ position: "relative" }}>
                                         <input
                                             type={showCurrentPassword ? "text" : "password"}
@@ -334,7 +339,7 @@ export default function ProfilePage() {
                                 </div>
 
                                 <div style={{ marginBottom: "16px" }}>
-                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 500, color: "#555", marginBottom: "6px" }}>รหัสผ่านใหม่</label>
+                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 500, color: "#8B949E", marginBottom: "6px" }}>รหัสผ่านใหม่</label>
                                     <div style={{ position: "relative" }}>
                                         <input
                                             type={showNewPassword ? "text" : "password"}
@@ -358,7 +363,7 @@ export default function ProfilePage() {
                                 </div>
 
                                 <div style={{ marginBottom: "20px" }}>
-                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 500, color: "#555", marginBottom: "6px" }}>ยืนยันรหัสผ่านใหม่</label>
+                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 500, color: "#8B949E", marginBottom: "6px" }}>ยืนยันรหัสผ่านใหม่</label>
                                     <input
                                         type="password"
                                         required
@@ -367,10 +372,12 @@ export default function ProfilePage() {
                                         style={{
                                             width: "100%",
                                             padding: "12px",
-                                            border: "1px solid #ddd",
+                                            border: "1px solid rgba(255,255,255,0.1)",
                                             borderRadius: "10px",
                                             fontSize: "14px",
-                                            boxSizing: "border-box"
+                                            boxSizing: "border-box",
+                                            background: "rgba(255,255,255,0.05)",
+                                            color: "#FFFFFF"
                                         }}
                                     />
                                 </div>
@@ -380,8 +387,8 @@ export default function ProfilePage() {
                                     disabled={passwordLoading}
                                     style={{
                                         width: "100%",
-                                        background: "linear-gradient(135deg, #FF9500, #F97316)",
-                                        color: "white",
+                                        background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                                        color: "#0D1117",
                                         padding: "14px",
                                         border: "none",
                                         borderRadius: "12px",
@@ -410,12 +417,12 @@ function InfoRow({ label, value, highlight }: { label: string; value: string; hi
             justifyContent: "space-between",
             alignItems: "center",
             padding: "12px",
-            background: highlight ? "#FFF7ED" : "#f8f9fa",
+            background: highlight ? "rgba(255, 215, 0, 0.1)" : "rgba(255,255,255,0.05)",
             borderRadius: "10px",
-            border: highlight ? "1px solid #FDBA74" : "1px solid #eee"
+            border: highlight ? "1px solid rgba(255, 215, 0, 0.3)" : "1px solid rgba(255,255,255,0.1)"
         }}>
-            <span style={{ fontSize: "13px", color: "#666" }}>{label}</span>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: highlight ? "#F97316" : "#333" }}>{value}</span>
+            <span style={{ fontSize: "13px", color: "#8B949E" }}>{label}</span>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: highlight ? "#FFD700" : "#FFFFFF" }}>{value}</span>
         </div>
     );
 }

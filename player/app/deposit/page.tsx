@@ -127,11 +127,11 @@ export default function DepositPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {/* Banner */}
                 <div style={{
-                    background: "linear-gradient(135deg, #FF9500 0%, #FF7A00 100%)",
+                    background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
                     borderRadius: "16px",
                     padding: "20px",
-                    color: "white",
-                    boxShadow: "0 4px 20px rgba(255, 149, 0, 0.3)",
+                    color: "#0D1117",
+                    boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
                     display: "flex", alignItems: "center", gap: "12px"
                 }}>
                     <span style={{ fontSize: "40px" }}>💰</span>
@@ -142,7 +142,7 @@ export default function DepositPage() {
                 </div>
 
                 {/* Tabs */}
-                <div style={{ display: "flex", background: "white", borderRadius: "30px", padding: "4px", boxShadow: "0 4px 15px rgba(0,0,0,0.08)" }}>
+                <div style={{ display: "flex", background: "#21262D", borderRadius: "30px", padding: "4px", boxShadow: "0 4px 15px rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)" }}>
                     <button
                         onClick={() => setActiveTab("deposit")}
                         style={{
@@ -158,9 +158,9 @@ export default function DepositPage() {
                             alignItems: "center",
                             justifyContent: "center",
                             gap: "8px",
-                            background: activeTab === "deposit" ? "linear-gradient(135deg, #FF9500, #FF7A00)" : "transparent",
-                            color: activeTab === "deposit" ? "white" : "#888",
-                            boxShadow: activeTab === "deposit" ? "0 4px 15px rgba(255,149,0,0.3)" : "none"
+                            background: activeTab === "deposit" ? "linear-gradient(135deg, #FFD700, #FFC000)" : "transparent",
+                            color: activeTab === "deposit" ? "#0D1117" : "#8B949E",
+                            boxShadow: activeTab === "deposit" ? "0 4px 15px rgba(255,215,0,0.3)" : "none"
                         }}
                     >
                         <Wallet size={18} />
@@ -181,9 +181,9 @@ export default function DepositPage() {
                             alignItems: "center",
                             justifyContent: "center",
                             gap: "8px",
-                            background: activeTab === "withdraw" ? "linear-gradient(135deg, #FF9500, #FF7A00)" : "transparent",
-                            color: activeTab === "withdraw" ? "white" : "#888",
-                            boxShadow: activeTab === "withdraw" ? "0 4px 15px rgba(255,149,0,0.3)" : "none"
+                            background: activeTab === "withdraw" ? "linear-gradient(135deg, #FFD700, #FFC000)" : "transparent",
+                            color: activeTab === "withdraw" ? "#0D1117" : "#8B949E",
+                            boxShadow: activeTab === "withdraw" ? "0 4px 15px rgba(255,215,0,0.3)" : "none"
                         }}
                     >
                         <ArrowDownToLine size={18} />
@@ -195,12 +195,13 @@ export default function DepositPage() {
                     <>
                         {/* Channel Selection */}
                         <div style={{
-                            background: "rgba(255,255,255,0.95)",
+                            background: "#21262D",
                             borderRadius: "16px",
                             padding: "20px",
-                            boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                            border: "1px solid rgba(255,255,255,0.1)"
                         }}>
-                            <p style={{ fontSize: "14px", fontWeight: 700, color: "#444", marginBottom: "16px" }}>เลือกช่องทางฝาก</p>
+                            <p style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>เลือกช่องทางฝาก</p>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
                                 {channels.map((ch) => (
                                     <button
@@ -209,8 +210,8 @@ export default function DepositPage() {
                                         style={{
                                             padding: "14px 10px",
                                             borderRadius: "14px",
-                                            border: selectedChannel === ch.id ? "2px solid #FF9500" : "2px solid transparent",
-                                            background: selectedChannel === ch.id ? "rgba(255,149,0,0.1)" : "rgba(255,255,255,0.7)",
+                                            border: selectedChannel === ch.id ? "2px solid #FFD700" : "2px solid rgba(255,255,255,0.1)",
+                                            background: selectedChannel === ch.id ? "rgba(255,215,0,0.1)" : "rgba(255,255,255,0.05)",
                                             display: "flex",
                                             flexDirection: "column",
                                             alignItems: "center",
@@ -218,11 +219,11 @@ export default function DepositPage() {
                                             cursor: "pointer",
                                             transition: "all 0.2s",
                                             transform: selectedChannel === ch.id ? "scale(1.05)" : "scale(1)",
-                                            boxShadow: selectedChannel === ch.id ? "0 4px 15px rgba(255,149,0,0.2)" : "none"
+                                            boxShadow: selectedChannel === ch.id ? "0 4px 15px rgba(255,215,0,0.2)" : "none"
                                         }}
                                     >
                                         <span style={{ fontSize: "28px" }}>{ch.emoji}</span>
-                                        <span style={{ fontSize: "11px", fontWeight: 700, color: selectedChannel === ch.id ? "#FF9500" : "#666" }}>
+                                        <span style={{ fontSize: "11px", fontWeight: 700, color: selectedChannel === ch.id ? "#FFD700" : "#8B949E" }}>
                                             {ch.label}
                                         </span>
                                     </button>
@@ -233,26 +234,28 @@ export default function DepositPage() {
                         {/* Bank Accounts from API */}
                         {bankAccounts.length === 0 ? (
                             <div style={{
-                                background: "rgba(255,255,255,0.95)",
+                                background: "#21262D",
                                 borderRadius: "16px",
                                 padding: "32px",
                                 textAlign: "center",
-                                boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                                boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                                border: "1px solid rgba(255,255,255,0.1)"
                             }}>
-                                <AlertCircle size={48} color="#FFB800" style={{ marginBottom: "16px" }} />
-                                <p style={{ color: "#666", fontWeight: 600 }}>ยังไม่มีบัญชีรับฝาก กรุณาติดต่อแอดมิน</p>
+                                <AlertCircle size={48} color="#FFD700" style={{ marginBottom: "16px" }} />
+                                <p style={{ color: "#8B949E", fontWeight: 600 }}>ยังไม่มีบัญชีรับฝาก กรุณาติดต่อแอดมิน</p>
                             </div>
                         ) : (
                             <>
                                 {/* Bank Selection */}
                                 {bankAccounts.length > 1 && (
                                     <div style={{
-                                        background: "rgba(255,255,255,0.95)",
+                                        background: "#21262D",
                                         borderRadius: "16px",
                                         padding: "16px",
-                                        boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                                        border: "1px solid rgba(255,255,255,0.1)"
                                     }}>
-                                        <p style={{ fontSize: "12px", color: "#888", marginBottom: "12px" }}>เลือกบัญชี</p>
+                                        <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "12px" }}>เลือกบัญชี</p>
                                         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                                             {bankAccounts.map((bank) => (
                                                 <button
@@ -261,12 +264,12 @@ export default function DepositPage() {
                                                     style={{
                                                         padding: "10px 16px",
                                                         borderRadius: "10px",
-                                                        border: selectedBank?.id === bank.id ? "2px solid #FF9500" : "1px solid #eee",
-                                                        background: selectedBank?.id === bank.id ? "rgba(255,149,0,0.1)" : "white",
+                                                        border: selectedBank?.id === bank.id ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
+                                                        background: selectedBank?.id === bank.id ? "rgba(255,215,0,0.1)" : "rgba(255,255,255,0.05)",
                                                         cursor: "pointer",
                                                         fontWeight: 700,
                                                         fontSize: "13px",
-                                                        color: "#333"
+                                                        color: "#FFFFFF"
                                                     }}
                                                 >
                                                     {bank.bankName}
@@ -279,11 +282,12 @@ export default function DepositPage() {
                                 {/* Selected Bank Info */}
                                 {selectedBank && (
                                     <div style={{
-                                        background: "rgba(255,255,255,0.95)",
+                                        background: "#21262D",
                                         borderRadius: "16px",
                                         padding: "24px",
                                         textAlign: "center",
-                                        boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                                        border: "1px solid rgba(255,255,255,0.1)"
                                     }}>
                                         <div style={{
                                             width: "64px",
@@ -301,7 +305,7 @@ export default function DepositPage() {
                                         }}>
                                             {selectedBank.bankName}
                                         </div>
-                                        <h3 style={{ fontWeight: 700, fontSize: "18px", color: "#333", marginBottom: "16px" }}>
+                                        <h3 style={{ fontWeight: 700, fontSize: "18px", color: "#FFD700", marginBottom: "16px" }}>
                                             {selectedBank.bankName === "KBANK" ? "ธนาคารกสิกรไทย" :
                                                 selectedBank.bankName === "SCB" ? "ธนาคารไทยพาณิชย์" :
                                                     selectedBank.bankName === "BBL" ? "ธนาคารกรุงเทพ" :
@@ -310,15 +314,15 @@ export default function DepositPage() {
                                         </h3>
 
                                         <div style={{
-                                            background: "rgba(255,255,255,0.8)",
+                                            background: "rgba(255,255,255,0.05)",
                                             borderRadius: "14px",
                                             padding: "16px",
                                             marginBottom: "12px",
-                                            border: "1px solid rgba(0,0,0,0.05)"
+                                            border: "1px solid rgba(255,255,255,0.1)"
                                         }}>
-                                            <p style={{ fontSize: "12px", color: "#888", marginBottom: "6px" }}>เลขบัญชี</p>
+                                            <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "6px" }}>เลขบัญชี</p>
                                             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
-                                                <span style={{ fontSize: "24px", fontWeight: 900, color: "#333", letterSpacing: "2px" }}>
+                                                <span style={{ fontSize: "24px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "2px" }}>
                                                     {selectedBank.accountNumber}
                                                 </span>
                                                 <button
@@ -331,23 +335,23 @@ export default function DepositPage() {
                                         </div>
 
                                         <div style={{
-                                            background: "rgba(255,255,255,0.8)",
+                                            background: "rgba(255,255,255,0.05)",
                                             borderRadius: "14px",
                                             padding: "14px",
-                                            border: "1px solid rgba(0,0,0,0.05)"
+                                            border: "1px solid rgba(255,255,255,0.1)"
                                         }}>
-                                            <p style={{ fontSize: "12px", color: "#888", marginBottom: "4px" }}>ชื่อบัญชี</p>
-                                            <p style={{ fontWeight: 700, color: "#333", fontSize: "16px" }}>{selectedBank.accountName}</p>
+                                            <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "4px" }}>ชื่อบัญชี</p>
+                                            <p style={{ fontWeight: 700, color: "#FFFFFF", fontSize: "16px" }}>{selectedBank.accountName}</p>
                                         </div>
 
                                         <div style={{
                                             marginTop: "16px",
-                                            background: "#FFF7ED",
-                                            border: "1px solid #FDBA74",
+                                            background: "rgba(255, 215, 0, 0.1)",
+                                            border: "1px solid rgba(255, 215, 0, 0.3)",
                                             borderRadius: "14px",
                                             padding: "14px"
                                         }}>
-                                            <p style={{ fontSize: "13px", color: "#EA580C", fontWeight: 600 }}>
+                                            <p style={{ fontSize: "13px", color: "#FFD700", fontWeight: 600 }}>
                                                 💡 โอนเงินแล้วรอ 1-3 นาที เครดิตเข้าอัตโนมัติ
                                             </p>
                                         </div>
@@ -360,33 +364,35 @@ export default function DepositPage() {
                     <>
                         {/* Withdraw Form */}
                         <div style={{
-                            background: "rgba(255,255,255,0.95)",
+                            background: "#21262D",
                             borderRadius: "16px",
                             padding: "24px",
-                            boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                            border: "1px solid rgba(255,255,255,0.1)"
                         }}>
                             <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                                <p style={{ fontSize: "14px", color: "#888", marginBottom: "6px" }}>ยอดเงินคงเหลือ</p>
-                                <p style={{ fontSize: "32px", fontWeight: 900, color: "#FF9500", textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>
+                                <p style={{ fontSize: "14px", color: "#8B949E", marginBottom: "6px" }}>ยอดเงินคงเหลือ</p>
+                                <p style={{ fontSize: "32px", fontWeight: 900, color: "#FFD700", textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>
                                     ฿{(user?.balance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                 </p>
                             </div>
 
                             <div style={{ marginBottom: "16px" }}>
-                                <label style={{ fontSize: "14px", fontWeight: 700, color: "#555", display: "block", marginBottom: "10px" }}>จำนวนเงิน</label>
+                                <label style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "10px" }}>จำนวนเงิน</label>
                                 <input
                                     type="number"
                                     placeholder="0.00"
                                     style={{
                                         width: "100%",
-                                        background: "rgba(255,255,255,0.9)",
-                                        border: "2px solid #f0f0f0",
+                                        background: "rgba(255,255,255,0.05)",
+                                        border: "2px solid rgba(255,255,255,0.1)",
                                         borderRadius: "14px",
                                         padding: "16px",
                                         fontSize: "28px",
                                         fontWeight: 700,
                                         textAlign: "center",
-                                        outline: "none"
+                                        outline: "none",
+                                        color: "#FFFFFF"
                                     }}
                                 />
                             </div>
@@ -397,14 +403,14 @@ export default function DepositPage() {
                                         key={amt}
                                         style={{
                                             padding: "12px",
-                                            background: "white",
+                                            background: "rgba(255,255,255,0.05)",
                                             borderRadius: "12px",
                                             fontSize: "14px",
                                             fontWeight: 700,
-                                            color: "#555",
-                                            border: "1px solid #eee",
+                                            color: "#FFFFFF",
+                                            border: "1px solid rgba(255,255,255,0.1)",
                                             cursor: "pointer",
-                                            boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
                                         }}
                                     >
                                         {amt}
@@ -414,13 +420,13 @@ export default function DepositPage() {
 
                             {/* User's bank account */}
                             <div style={{
-                                background: "rgba(255,255,255,0.8)",
+                                background: "rgba(255,255,255,0.05)",
                                 borderRadius: "14px",
                                 padding: "16px",
                                 marginBottom: "16px",
-                                border: "1px solid rgba(0,0,0,0.05)"
+                                border: "1px solid rgba(255,255,255,0.1)"
                             }}>
-                                <p style={{ fontSize: "12px", color: "#888", marginBottom: "10px" }}>บัญชีรับเงิน (บัญชีที่ท่านผูกไว้)</p>
+                                <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "10px" }}>บัญชีรับเงิน (บัญชีที่ท่านผูกไว้)</p>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                     <div style={{
                                         width: "42px",
@@ -438,23 +444,23 @@ export default function DepositPage() {
                                         {user?.bankName || "N/A"}
                                     </div>
                                     <div>
-                                        <p style={{ fontWeight: 700, color: "#333", fontSize: "14px" }}>{user?.bankAccount || "-"}</p>
-                                        <p style={{ fontSize: "12px", color: "#888" }}>{user?.fullName || "-"}</p>
+                                        <p style={{ fontWeight: 700, color: "#FFFFFF", fontSize: "14px" }}>{user?.bankAccount || "-"}</p>
+                                        <p style={{ fontSize: "12px", color: "#8B949E" }}>{user?.fullName || "-"}</p>
                                     </div>
                                 </div>
                             </div>
 
                             <button style={{
                                 width: "100%",
-                                background: "linear-gradient(135deg, #FF9500, #FF7A00)",
-                                color: "white",
+                                background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                                color: "#0D1117",
                                 border: "none",
                                 padding: "16px",
                                 borderRadius: "14px",
                                 fontSize: "18px",
                                 fontWeight: 700,
                                 cursor: "pointer",
-                                boxShadow: "0 6px 20px rgba(255,149,0,0.4)"
+                                boxShadow: "0 6px 20px rgba(255,215,0,0.4)"
                             }}>
                                 ยืนยันถอนเงิน
                             </button>

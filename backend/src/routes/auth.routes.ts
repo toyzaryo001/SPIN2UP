@@ -229,7 +229,7 @@ router.post('/admin/login', async (req, res) => {
             const prefixResults = await superPrisma.$queryRawUnsafe(
                 `SELECT * FROM "Prefix" WHERE LOWER(code) = LOWER($1) LIMIT 1`,
                 prefix
-            );
+            ) as any[];
             if (prefixResults && prefixResults.length > 0) targetPrefix = prefixResults[0];
         } catch (err) {
             console.error('Super DB Error:', err);

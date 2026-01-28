@@ -144,7 +144,7 @@ export default function StaffLogsPage() {
                                                     <User size={16} className="text-slate-500" />
                                                 </div>
                                                 <div>
-                                                    <div className="font-medium text-slate-700">{log.admin?.username || 'Unknown'}</div>
+                                                    <div className="font-medium text-slate-900">{log.admin?.username || 'Unknown'}</div>
                                                     <div className="text-xs text-slate-400">{log.admin?.fullName}</div>
                                                 </div>
                                             </div>
@@ -154,8 +154,8 @@ export default function StaffLogsPage() {
                                                 {log.action}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-slate-600 uppercase text-xs font-medium">{log.resource}</td>
-                                        <td className="px-6 py-4 text-slate-600 max-w-xs">
+                                        <td className="px-6 py-4 text-slate-900 uppercase text-xs font-medium">{log.resource}</td>
+                                        <td className="px-6 py-4 text-slate-900 max-w-xs">
                                             <span className="truncate block" title={log.details || ''}>
                                                 {log.details || '-'}
                                             </span>

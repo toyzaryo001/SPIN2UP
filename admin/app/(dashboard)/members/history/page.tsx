@@ -75,7 +75,7 @@ export default function MemberHistoryPage() {
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg"
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                         placeholder="ค้นหา..."
                     />
                 </div>
@@ -102,11 +102,11 @@ export default function MemberHistoryPage() {
                             filteredLogs.map(log => (
                                 <tr key={log.id} className="hover:bg-slate-50">
                                     <td className="px-6 py-4 text-slate-500">{formatDate(log.createdAt)}</td>
-                                    <td className="px-6 py-4 font-medium">{log.admin.username}</td>
+                                    <td className="px-6 py-4 font-medium text-slate-900">{log.admin.username}</td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
                                             <User size={16} className="text-slate-400" />
-                                            <span>{log.targetUser?.username || `ID: ${log.targetId}`}</span>
+                                            <span className="text-slate-900">{log.targetUser?.username || `ID: ${log.targetId}`}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">

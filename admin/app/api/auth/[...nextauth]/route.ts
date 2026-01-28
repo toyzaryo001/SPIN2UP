@@ -8,10 +8,11 @@ export const handler = NextAuth({
             name: "Credentials",
             credentials: {
                 username: { label: "Username", type: "text" },
-                password: { label: "Password", type: "password" }
+                password: { label: "Password", type: "password" },
+                prefix: { label: "Prefix", type: "text" }
             },
             async authorize(credentials) {
-                if (!credentials?.username || !credentials?.password) return null;
+                if (!credentials?.username || !credentials?.password || !credentials?.prefix) return null;
 
                 try {
                     // Use admin login endpoint (separate from player)
@@ -19,6 +20,7 @@ export const handler = NextAuth({
                     const res = await axios.post(`${apiUrl}/auth/admin/login`, {
                         username: credentials.username,
                         password: credentials.password,
+                        prefix: credentials.prefix,
                     });
 
                     if (res.data.success) {
@@ -33,6 +35,7 @@ export const handler = NextAuth({
                             isSuperAdmin: user.isSuperAdmin,
                             permissions: user.permissions,
                             accessToken: token,
+                            prefix: credentials.prefix,
                         };
                     }
                     return null;
@@ -52,6 +55,7 @@ export const handler = NextAuth({
                 token.permissions = (user as any).permissions;
                 token.accessToken = (user as any).accessToken;
                 token.username = (user as any).username;
+                token.prefix = (user as any).prefix;
             }
             return token;
         },
@@ -66,6 +70,7 @@ export const handler = NextAuth({
                     permissions: token.permissions,
                     username: token.username,
                     accessToken: token.accessToken,
+                    prefix: token.prefix,
                 } as any;
             }
             return session;

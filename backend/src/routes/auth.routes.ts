@@ -193,6 +193,7 @@ router.post('/login', async (req, res) => {
 const adminLoginSchema = z.object({
     username: z.string().min(1, 'กรุณากรอก Username'),
     password: z.string().min(1, 'กรุณากรอกรหัสผ่าน'),
+    prefix: z.string().optional(), // Optional for backward compatibility
 });
 
 // POST /api/auth/admin/login
@@ -206,9 +207,10 @@ router.post('/admin/login', async (req, res) => {
             });
         }
 
-        const { username, password } = validation.data;
+        const { username, password, prefix } = validation.data;
 
-        // Find admin
+        // Use main database for admin lookup (admins are in central DB for now)
+        // In future, can switch to tenant DB based on prefix
         const admin = await prisma.admin.findUnique({
             where: { username },
             include: { role: true },
@@ -236,7 +238,7 @@ router.post('/admin/login', async (req, res) => {
 
         // Generate token with ADMIN or SUPER_ADMIN role
         const role = admin.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN';
-        const token = signToken({ userId: admin.id, role, isAdmin: true });
+        const token = signToken({ userId: admin.id, role, isAdmin: true, prefix: prefix || '' });
 
         res.json({
             success: true,
@@ -249,6 +251,7 @@ router.post('/admin/login', async (req, res) => {
                     role,
                     isSuperAdmin: admin.isSuperAdmin,
                     permissions: admin.role?.permissions || '{}',
+                    prefix: prefix || '',
                 },
                 token,
             },

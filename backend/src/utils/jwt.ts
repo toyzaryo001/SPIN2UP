@@ -8,6 +8,7 @@ export interface JwtPayload {
     userId: number;
     role: string;
     isAdmin?: boolean;
+    prefix?: string;
 }
 
 export function signToken(payload: JwtPayload): string {

@@ -53,23 +53,24 @@ export default function Header() {
     return (
         <>
             <header style={{
-                background: "linear-gradient(135deg, #4ECDC4, #44A8D8, #2E8BC0)",
+                background: "linear-gradient(135deg, #0D1117, #161B22, #1A1F26)",
                 padding: "10px 16px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 flexShrink: 0,
-                zIndex: 50
+                zIndex: 50,
+                borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
             }}>
                 {/* Logo */}
                 <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "32px" }}>🐕</span>
+                    <span style={{ fontSize: "32px" }}>🎮</span>
                     <span style={{
                         fontSize: "22px",
                         fontWeight: 900,
                         color: "#FFD700",
-                        textShadow: "2px 2px 4px rgba(0,0,0,0.3)"
-                    }}>PLAYNEX89</span>
+                        textShadow: "2px 2px 4px rgba(0,0,0,0.5)"
+                    }}>CHECK24M</span>
                 </Link>
 
                 {/* Balance Display (when logged in) + Hamburger */}
@@ -78,14 +79,14 @@ export default function Header() {
                         <>
                             {/* Balance Info */}
                             <div style={{
-                                background: "rgba(255,255,255,0.15)",
+                                background: "rgba(255,215,0,0.1)",
                                 borderRadius: "12px",
                                 padding: "8px 14px",
                                 display: "flex",
                                 flexDirection: "column",
                                 alignItems: "flex-end",
                                 backdropFilter: "blur(10px)",
-                                border: "1px solid rgba(255,255,255,0.2)"
+                                border: "1px solid rgba(255, 215, 0, 0.3)"
                             }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                     <div style={{ textAlign: "right" }}>
@@ -116,8 +117,8 @@ export default function Header() {
                             <button
                                 onClick={() => setShowMenu(true)}
                                 style={{
-                                    background: "rgba(255,255,255,0.15)",
-                                    border: "2px solid rgba(255,255,255,0.4)",
+                                    background: "rgba(255, 215, 0, 0.1)",
+                                    border: "2px solid rgba(255, 215, 0, 0.4)",
                                     borderRadius: "10px",
                                     padding: "10px 12px",
                                     cursor: "pointer",
@@ -137,15 +138,15 @@ export default function Header() {
                             <Link
                                 href="/?action=login"
                                 style={{
-                                    background: "rgba(255,255,255,0.95)",
-                                    color: "#0891B2",
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    color: "#FFFFFF",
                                     padding: "6px 14px",
                                     borderRadius: "20px",
                                     fontSize: "11px",
                                     fontWeight: 700,
                                     textDecoration: "none",
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-                                    border: "1px solid rgba(255,255,255,0.5)"
+                                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                                    border: "1px solid rgba(255, 255, 255, 0.2)"
                                 }}
                             >
                                 เข้าสู่ระบบ
@@ -155,15 +156,15 @@ export default function Header() {
                             <Link
                                 href="/?action=register"
                                 style={{
-                                    background: "linear-gradient(135deg, #FF9500, #FF7A00)",
-                                    color: "white",
+                                    background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                                    color: "#0D1117",
                                     padding: "6px 14px",
                                     borderRadius: "20px",
                                     fontSize: "11px",
                                     fontWeight: 700,
                                     textDecoration: "none",
-                                    boxShadow: "0 2px 10px rgba(255,149,0,0.3)",
-                                    border: "1px solid rgba(255,255,255,0.3)"
+                                    boxShadow: "0 2px 10px rgba(255, 215, 0, 0.3)",
+                                    border: "1px solid rgba(255, 215, 0, 0.5)"
                                 }}
                             >
                                 สมัครสมาชิก
@@ -194,13 +195,15 @@ export default function Header() {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                background: "linear-gradient(180deg, #4ECDC4 0%, #44A8D8 50%, #2E8BC0 100%)",
+                background: "linear-gradient(180deg, #161B22 0%, #0D1117 100%)",
                 borderRadius: "24px 24px 0 0",
                 zIndex: 300,
                 transform: showMenu ? "translateY(0)" : "translateY(100%)",
                 transition: "transform 0.3s ease",
                 maxHeight: "80vh",
-                overflow: "auto"
+                overflow: "auto",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderBottom: "none"
             }}>
                 {/* Close Button */}
                 <button
@@ -215,20 +218,20 @@ export default function Header() {
                         padding: "8px"
                     }}
                 >
-                    <X size={28} color="white" />
+                    <X size={28} color="#FFD700" />
                 </button>
 
                 <div style={{ padding: "24px", paddingBottom: "40px" }}>
                     {/* Logo */}
                     <div style={{ textAlign: "center", marginBottom: "20px" }}>
-                        <span style={{ fontSize: "48px" }}>🐕</span>
+                        <span style={{ fontSize: "48px" }}>🎮</span>
                         <p style={{
                             fontSize: "24px",
                             fontWeight: 900,
                             color: "#FFD700",
-                            textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
+                            textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
                             margin: "8px 0 0"
-                        }}>PLAYNEX89</p>
+                        }}>CHECK24M</p>
                     </div>
 
                     {/* User Info */}
@@ -237,16 +240,17 @@ export default function Header() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            background: "rgba(255,255,255,0.1)",
+                            background: "rgba(255, 215, 0, 0.1)",
                             borderRadius: "16px",
                             padding: "16px",
-                            marginBottom: "20px"
+                            marginBottom: "20px",
+                            border: "1px solid rgba(255, 215, 0, 0.2)"
                         }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                 <div style={{
                                     width: "48px",
                                     height: "48px",
-                                    background: "rgba(255,255,255,0.2)",
+                                    background: "rgba(255, 215, 0, 0.2)",
                                     borderRadius: "50%",
                                     display: "flex",
                                     alignItems: "center",
@@ -256,10 +260,10 @@ export default function Header() {
                                     👤
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: "16px", fontWeight: 700, color: "white", margin: 0 }}>
+                                    <p style={{ fontSize: "16px", fontWeight: 700, color: "#FFD700", margin: 0 }}>
                                         {user.fullName}
                                     </p>
-                                    <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", margin: "4px 0 0" }}>
+                                    <p style={{ fontSize: "12px", color: "#8B949E", margin: "4px 0 0" }}>
                                         {user.username}
                                     </p>
                                 </div>
@@ -267,9 +271,9 @@ export default function Header() {
                             <button
                                 onClick={() => handleNavigate("/profile")}
                                 style={{
-                                    background: "rgba(0,0,0,0.3)",
-                                    color: "white",
-                                    border: "none",
+                                    background: "rgba(0, 208, 132, 0.2)",
+                                    color: "#00D084",
+                                    border: "1px solid rgba(0, 208, 132, 0.3)",
                                     padding: "10px 16px",
                                     borderRadius: "10px",
                                     fontWeight: 600,
@@ -290,9 +294,9 @@ export default function Header() {
                                 onClick={() => handleNavigate("/?action=login")}
                                 style={{
                                     flex: 1,
-                                    background: "white",
-                                    color: "#0891B2",
-                                    border: "none",
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    color: "#FFFFFF",
+                                    border: "1px solid rgba(255, 255, 255, 0.2)",
                                     padding: "14px",
                                     borderRadius: "12px",
                                     fontWeight: 700,
@@ -306,8 +310,8 @@ export default function Header() {
                                 onClick={() => handleNavigate("/?action=register")}
                                 style={{
                                     flex: 1,
-                                    background: "linear-gradient(135deg, #FF9500, #FF7A00)",
-                                    color: "white",
+                                    background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                                    color: "#0D1117",
                                     border: "none",
                                     padding: "14px",
                                     borderRadius: "12px",
@@ -449,19 +453,19 @@ function MenuItem({ icon, label, onClick, danger }: {
                 alignItems: "center",
                 gap: "14px",
                 padding: "16px",
-                background: "rgba(255,255,255,0.95)",
-                border: "none",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
                 borderRadius: "14px",
                 cursor: "pointer",
                 width: "100%",
                 textAlign: "left"
             }}
         >
-            <span style={{ color: danger ? "#EF4444" : "#444" }}>{icon}</span>
+            <span style={{ color: danger ? "#EF4444" : "#FFD700" }}>{icon}</span>
             <span style={{
                 fontSize: "15px",
                 fontWeight: 600,
-                color: danger ? "#EF4444" : "#333"
+                color: danger ? "#EF4444" : "#FFFFFF"
             }}>
                 {label}
             </span>

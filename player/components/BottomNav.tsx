@@ -17,8 +17,9 @@ export default function BottomNav() {
     return (
         <nav style={{
             position: "fixed", bottom: 0, left: 0, right: 0,
-            background: "white", display: "flex", justifyContent: "space-around", alignItems: "center",
-            height: "52px", boxShadow: "0 -2px 12px rgba(0,0,0,0.1)", zIndex: 100
+            background: "#161B22", display: "flex", justifyContent: "space-around", alignItems: "center",
+            height: "52px", boxShadow: "0 -2px 12px rgba(0,0,0,0.3)", zIndex: 100,
+            borderTop: "1px solid rgba(255, 255, 255, 0.1)"
         }}>
             {navItems.map((item) => {
                 const isActive = pathname === item.path;
@@ -29,7 +30,7 @@ export default function BottomNav() {
                         style={{
                             display: "flex", flexDirection: "column", alignItems: "center", gap: "2px",
                             background: "transparent", border: "none", cursor: "pointer",
-                            color: isActive ? "#FF9500" : "#888", padding: "4px 8px"
+                            color: isActive ? "#FFD700" : "#8B949E", padding: "4px 8px"
                         }}
                     >
                         <span style={{ fontSize: "18px" }}>{item.icon}</span>

@@ -5,10 +5,16 @@
 @tailwind utilities;
 
 :root {
-  --primary: #FF9500;
-  --primary-hover: #E88600;
-  --sky: #87CEEB;
-  --cream: #FFF8E7;
+  --bg-primary: #0D1117;
+  --bg-secondary: #161B22;
+  --bg-card: #21262D;
+  --accent-primary: #FFD700;
+  --accent-green: #00D084;
+  --accent-blue: #3B82F6;
+  --text-primary: #FFFFFF;
+  --text-secondary: #8B949E;
+  --primary: #FFD700;
+  --primary-hover: #FFC000;
 }
 
 * {
@@ -21,67 +27,66 @@ html,
 body {
   min-height: 100vh;
   font-family: 'Kanit', sans-serif;
+  color: var(--text-primary);
 }
 
 body {
   background: linear-gradient(180deg,
-      #7EC8E3 0%,
-      #A8DCF0 20%,
-      #C5E8F7 40%,
-      #E8F4FC 60%,
-      #FFF8E7 100%);
+      #0D1117 0%,
+      #161B22 50%,
+      #1A1F26 100%);
   background-attachment: fixed;
 }
 
 /* Card Styles */
 .card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-card);
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(33, 38, 45, 0.8);
   border-radius: 16px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-orange {
-  background: linear-gradient(135deg, #FF9500 0%, #FF7A00 100%);
-  color: white;
+  background: linear-gradient(135deg, #FFD700 0%, #FFC000 100%);
+  color: #0D1117;
   font-weight: 700;
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 149, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
 }
 
 .btn-orange:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 149, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
 }
 
-/* Orange Button */
+/* Primary Button */
 .btn-primary {
-  background: linear-gradient(135deg, #FF9500 0%, #FF7A00 100%);
-  color: white;
+  background: linear-gradient(135deg, #FFD700 0%, #FFC000 100%);
+  color: #0D1117;
   font-weight: 700;
   padding: 12px 24px;
   border-radius: 50px;
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(255, 149, 0, 0.4);
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(255, 149, 0, 0.5);
+  box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
 }
 
 .btn-primary:active {
@@ -90,17 +95,19 @@ body {
 
 /* Game Card */
 .game-card {
-  background: white;
+  background: var(--bg-card);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .game-card:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  border-color: var(--accent-primary);
 }
 
 .game-card img {
@@ -155,9 +162,10 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background: white;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  background: var(--bg-secondary);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
   z-index: 100;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Animations */

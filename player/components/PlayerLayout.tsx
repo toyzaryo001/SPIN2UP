@@ -17,9 +17,10 @@ export default function PlayerLayout({ children }: PlayerLayoutProps) {
             height: "100vh",
             display: "flex",
             flexDirection: "column",
-            background: "linear-gradient(180deg, #87CEEB 0%, #B0E0E6 50%, #FFF8E7 100%)",
+            background: "linear-gradient(180deg, #0D1117 0%, #161B22 50%, #1A1F26 100%)",
             fontFamily: "'Kanit', sans-serif",
-            overflow: "hidden"
+            overflow: "hidden",
+            color: "#FFFFFF"
         }}>
             <Header />
 
@@ -46,9 +47,9 @@ export default function PlayerLayout({ children }: PlayerLayoutProps) {
                     width: "56px",
                     height: "56px",
                     borderRadius: "14px",
-                    background: "white",
-                    border: "none",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                    background: "#21262D",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
                     cursor: "pointer",
                     display: "flex",
                     flexDirection: "column",
@@ -59,7 +60,7 @@ export default function PlayerLayout({ children }: PlayerLayoutProps) {
                 }}
             >
                 <span style={{ fontSize: "24px" }}>💬</span>
-                <span style={{ fontSize: "9px", fontWeight: 600, color: "#666" }}>ติดต่อ</span>
+                <span style={{ fontSize: "9px", fontWeight: 600, color: "#8B949E" }}>ติดต่อ</span>
             </button>
 
             {/* Contact Drawer */}

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "PLAYNEX89 - เว็บพนันออนไลน์อันดับ 1",
-  description: "ฝาก-ถอน ออโต้ 24 ชม. สล็อต คาสิโน กีฬา ครบจบในที่เดียว",
+export const metadata = {
+  title: "CHECK24M - เว็บพนันออนไลน์อันดับ 1",
+  description: "เว็บพนันออนไลน์ที่ดีที่สุด",
 };
 
 export default function RootLayout({

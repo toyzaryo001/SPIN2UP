@@ -350,7 +350,7 @@ function HomePageContent() {
           whiteSpace: "nowrap",
           border: "1px solid #BBDEFB"
         }}>
-          https://playnex89.com/?prefix=playnex89&action=register&refer_code=...
+          https://check24m.com/?prefix=check24m&action=register&refer_code=...
         </div>
         <button style={{
           width: "100%",

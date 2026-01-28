@@ -9,7 +9,7 @@ export default function ReferralPage() {
     const { user, loading } = useAuth(true);
     const [copied, setCopied] = useState(false);
     const referralCode = user?.username || "REF12345678";
-    const referralLink = `https://playnex89.com/r/${referralCode}`;
+    const referralLink = `https://check24m.com/r/${referralCode}`;
     const totalReferrals = 5;
     const totalCommission = 500.00;
 
@@ -52,11 +52,12 @@ export default function ReferralPage() {
 
                 {/* Referral Link Card */}
                 <div style={{
-                    background: "rgba(255,255,255,0.95)",
+                    background: "#21262D",
                     borderRadius: "16px",
                     padding: "24px",
                     textAlign: "center",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)"
                 }}>
                     <div style={{
                         width: "64px",
@@ -71,18 +72,18 @@ export default function ReferralPage() {
                     }}>
                         <Share2 size={32} color="white" />
                     </div>
-                    <p style={{ fontSize: "14px", color: "#888", marginBottom: "8px", fontWeight: 600 }}>รหัสแนะนำของคุณ</p>
-                    <p style={{ fontSize: "28px", fontWeight: 900, color: "#0288D1", marginBottom: "16px", letterSpacing: "2px" }}>{referralCode}</p>
+                    <p style={{ fontSize: "14px", color: "#8B949E", marginBottom: "8px", fontWeight: 600 }}>รหัสแนะนำของคุณ</p>
+                    <p style={{ fontSize: "28px", fontWeight: 900, color: "#FFD700", marginBottom: "16px", letterSpacing: "2px" }}>{referralCode}</p>
 
                     <div style={{
-                        background: "#f5f5f5",
+                        background: "rgba(255, 255, 255, 0.05)",
                         borderRadius: "14px",
                         padding: "10px 12px",
                         display: "flex",
                         alignItems: "center",
                         gap: "10px",
                         marginBottom: "16px",
-                        border: "1px solid #eee"
+                        border: "1px solid rgba(255, 255, 255, 0.1)"
                     }}>
                         <input
                             type="text"
@@ -92,7 +93,7 @@ export default function ReferralPage() {
                                 flex: 1,
                                 background: "transparent",
                                 fontSize: "13px",
-                                color: "#666",
+                                color: "#FFFFFF",
                                 border: "none",
                                 outline: "none",
                                 fontWeight: 500
@@ -115,15 +116,15 @@ export default function ReferralPage() {
 
                     <button style={{
                         width: "100%",
-                        background: "linear-gradient(135deg, #FF9500, #FF7A00)",
-                        color: "white",
+                        background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                        color: "#0D1117",
                         border: "none",
                         padding: "14px",
                         borderRadius: "14px",
                         fontSize: "16px",
                         fontWeight: 700,
                         cursor: "pointer",
-                        boxShadow: "0 6px 20px rgba(255,149,0,0.4)"
+                        boxShadow: "0 6px 20px rgba(255, 215, 0, 0.4)"
                     }}>
                         คัดลอกลิงก์
                     </button>

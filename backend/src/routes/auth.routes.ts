@@ -209,63 +209,80 @@ router.post('/admin/login', async (req, res) => {
 
         const { username, password, prefix } = validation.data;
 
-        // Use main database for admin lookup (admins are in central DB for now)
-        // In future, can switch to tenant DB based on prefix
-        const admin = await prisma.admin.findUnique({
-            where: { username },
-            include: { role: true },
-        });
-
-        // Validate Prefix
-        if (prefix) {
-            const prefixSetting = await prisma.setting.findUnique({ where: { key: 'prefix' } });
-            const systemPrefix = prefixSetting?.value;
-
-            if (systemPrefix && systemPrefix.toLowerCase() !== prefix.toLowerCase()) {
-                return res.status(401).json({ success: false, message: 'Prefix ไม่ถูกต้อง' });
-            }
+        // 1. Validate Prefix & Get Tenant DB Config
+        if (!prefix) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุ Prefix' });
         }
 
-        if (!admin) {
-            return res.status(401).json({ success: false, message: 'Username หรือรหัสผ่านไม่ถูกต้อง' });
+        // Use a separate connection to check the Super Admin DB (Master DB)
+        const superDbUrl = process.env.SUPER_DATABASE_URL;
+        if (!superDbUrl) {
+            console.error('SERVER ERROR: SUPER_DATABASE_URL is not defined');
+            return res.status(500).json({ success: false, message: 'System Config Error' });
         }
 
-        if (!admin.isActive) {
-            return res.status(403).json({ success: false, message: 'บัญชีถูกระงับ' });
+        const { PrismaClient } = await import('@prisma/client');
+        const superPrisma = new PrismaClient({ datasources: { db: { url: superDbUrl } } });
+
+        let targetPrefix;
+        try {
+            const prefixResults = await superPrisma.$queryRawUnsafe(
+                `SELECT * FROM "Prefix" WHERE LOWER(code) = LOWER($1) LIMIT 1`,
+                prefix
+            );
+            if (prefixResults && prefixResults.length > 0) targetPrefix = prefixResults[0];
+        } catch (err) {
+            console.error('Super DB Error:', err);
+            return res.status(500).json({ success: false, message: 'DB Error' });
+        } finally {
+            await superPrisma.$disconnect();
         }
 
-        // Verify password
-        const isValidPassword = await bcrypt.compare(password, admin.password);
-        if (!isValidPassword) {
-            return res.status(401).json({ success: false, message: 'Username หรือรหัสผ่านไม่ถูกต้อง' });
-        }
+        if (!targetPrefix) return res.status(401).json({ success: false, message: 'Prefix ไม่ถูกต้อง' });
+        if (!targetPrefix.isActive) return res.status(403).json({ success: false, message: 'Prefix Inactive' });
 
-        // Update last login
-        await prisma.admin.update({
-            where: { id: admin.id },
-            data: { lastLoginAt: new Date() },
-        });
+        // 2. Connect to Tenant DB
+        const tenantPrisma = new PrismaClient({ datasources: { db: { url: targetPrefix.databaseUrl } } });
 
-        // Generate token with ADMIN or SUPER_ADMIN role
-        const role = admin.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN';
-        const token = signToken({ userId: admin.id, role, isAdmin: true, prefix: prefix || '' });
+        try {
+            const admin = await tenantPrisma.admin.findUnique({
+                where: { username },
+                include: { role: true },
+            });
 
-        res.json({
-            success: true,
-            message: 'เข้าสู่ระบบสำเร็จ',
-            data: {
-                user: {
-                    id: admin.id,
-                    username: admin.username,
-                    fullName: admin.fullName,
-                    role,
-                    isSuperAdmin: admin.isSuperAdmin,
-                    permissions: admin.role?.permissions || '{}',
-                    prefix: prefix || '',
+            if (!admin) return res.status(401).json({ success: false, message: 'Username หรือรหัสผ่านไม่ถูกต้อง' });
+            if (!admin.isActive) return res.status(403).json({ success: false, message: 'บัญชีถูกระงับ' });
+
+            const isValidPassword = await bcrypt.compare(password, admin.password);
+            if (!isValidPassword) return res.status(401).json({ success: false, message: 'Username หรือรหัสผ่านไม่ถูกต้อง' });
+
+            await tenantPrisma.admin.update({
+                where: { id: admin.id },
+                data: { lastLoginAt: new Date() },
+            });
+
+            const role = admin.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN';
+            const token = signToken({ userId: admin.id, role, isAdmin: true, prefix: prefix || '' });
+
+            res.json({
+                success: true,
+                message: 'เข้าสู่ระบบสำเร็จ',
+                data: {
+                    user: {
+                        id: admin.id,
+                        username: admin.username,
+                        fullName: admin.fullName,
+                        role,
+                        isSuperAdmin: admin.isSuperAdmin,
+                        permissions: admin.role?.permissions || '{}',
+                        prefix: prefix || '',
+                    },
+                    token,
                 },
-                token,
-            },
-        });
+            });
+        } finally {
+            await tenantPrisma.$disconnect();
+        }
     } catch (error) {
         console.error('Admin login error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });

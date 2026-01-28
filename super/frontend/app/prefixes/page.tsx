@@ -61,7 +61,7 @@ export default function PrefixesPage() {
 
     const fetchPrefixes = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/prefixes`, {
+            const res = await fetch(`${API_URL}/api/super-admin/prefixes`, {
                 headers: getAuthHeaders()
             });
             const data = await res.json();
@@ -84,8 +84,8 @@ export default function PrefixesPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const url = editingPrefix
-            ? `${API_URL}/api/prefixes/${editingPrefix.id}`
-            : `${API_URL}/api/prefixes`;
+            ? `${API_URL}/api/super-admin/prefixes/${editingPrefix.id}`
+            : `${API_URL}/api/super-admin/prefixes`;
         const method = editingPrefix ? 'PUT' : 'POST';
 
         try {
@@ -110,7 +110,7 @@ export default function PrefixesPage() {
         if (!confirm('ยืนยันการลบ Prefix นี้?')) return;
 
         try {
-            const res = await fetch(`${API_URL}/api/prefixes/${id}`, {
+            const res = await fetch(`${API_URL}/api/super-admin/prefixes/${id}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
@@ -125,7 +125,7 @@ export default function PrefixesPage() {
 
     const handleToggle = async (prefix: Prefix) => {
         try {
-            const res = await fetch(`${API_URL}/api/prefixes/${prefix.id}`, {
+            const res = await fetch(`${API_URL}/api/super-admin/prefixes/${prefix.id}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ isActive: !prefix.isActive })
@@ -316,8 +316,8 @@ export default function PrefixesPage() {
                                             <button
                                                 onClick={() => handleToggle(prefix)}
                                                 className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm transition-colors ${prefix.isActive
-                                                        ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                                                        : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                                    ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                                    : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                                                     }`}
                                             >
                                                 {prefix.isActive ? <Power size={14} /> : <PowerOff size={14} />}

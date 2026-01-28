@@ -91,6 +91,55 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 });
 
+// POST /api/super-admin/setup - Create first Super Admin
+router.post('/setup', async (req: Request, res: Response) => {
+    try {
+        const { username, password, fullName, email } = req.body;
+
+        // Check if Super Admin already exists
+        const existingAdmin = await prisma.superAdmin.count();
+        if (existingAdmin > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'มี Super Admin อยู่แล้ว ไม่สามารถสร้างใหม่ได้'
+            });
+        }
+
+        if (!username || !password || !fullName) {
+            return res.status(400).json({
+                success: false,
+                message: 'กรุณากรอกข้อมูลให้ครบ'
+            });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create Super Admin
+        const admin = await prisma.superAdmin.create({
+            data: {
+                username,
+                password: hashedPassword,
+                fullName,
+                email: email || null
+            }
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'สร้าง Super Admin สำเร็จ',
+            data: {
+                id: admin.id,
+                username: admin.username,
+                fullName: admin.fullName
+            }
+        });
+    } catch (error) {
+        console.error('Setup Super Admin error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 // GET /api/super-admin/me
 router.get('/me', verifySuperAdmin, async (req: Request, res: Response) => {
     try {

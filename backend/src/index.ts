@@ -30,10 +30,14 @@ app.use(cors({
         // Production - Railway domains
         /\.railway\.app$/,
         /\.vercel\.app$/,
-        // Custom Domains
+        // Custom Domains - playnex89
         'https://admin.playnex89.com',
         'https://www.playnex89.com',
         'https://playnex89.com',
+        // Custom Domains - check24m
+        'https://admin.check24m.com',
+        'https://www.check24m.com',
+        'https://check24m.com',
         // Allow any HTTPS origin (customize for production)
     ],
     credentials: true,

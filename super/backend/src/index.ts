@@ -14,6 +14,7 @@ app.use(cors({
     origin: [
         'http://localhost:3000',
         'http://localhost:3004',
+        'https://super.check24m.com',
         /\.railway\.app$/,
         /\.vercel\.app$/,
     ],

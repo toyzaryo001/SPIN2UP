@@ -50,7 +50,7 @@ function SortableRow({ cat, toggle, openModal, confirmDelete, isImageIcon }: {
                     ) : (
                         <span className="text-xl">{cat.icon}</span>
                     ))}
-                    <span className="font-medium">{cat.name}</span>
+                    <span className="font-medium text-slate-900">{cat.name}</span>
                 </div>
             </td>
             <td className="px-6 py-4 text-slate-500">{cat.slug}</td>

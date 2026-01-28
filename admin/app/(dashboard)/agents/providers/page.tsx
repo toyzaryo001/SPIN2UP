@@ -148,7 +148,7 @@ export default function ProvidersPage() {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             {prov.logo && <img src={prov.logo} alt={prov.name} className="w-8 h-8 rounded object-contain" />}
-                                            <span className="font-medium">{prov.name}</span>
+                                            <span className="font-medium text-slate-900">{prov.name}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">

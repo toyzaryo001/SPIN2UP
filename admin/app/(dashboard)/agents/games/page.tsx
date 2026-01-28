@@ -158,7 +158,7 @@ export default function GamesPage() {
                                         <div className="flex items-center gap-3">
                                             {game.thumbnail && <img src={game.thumbnail} alt={game.name} className="w-10 h-10 rounded object-cover" />}
                                             <div>
-                                                <p className="font-medium flex items-center gap-2">
+                                                <p className="font-medium text-slate-900 flex items-center gap-2">
                                                     {game.name}
                                                     {game.isHot && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-xs flex items-center gap-0.5"><Flame size={12} /> HOT</span>}
                                                     {game.isNew && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-xs flex items-center gap-0.5"><Sparkles size={12} /> NEW</span>}

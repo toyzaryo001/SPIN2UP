@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Megaphone, Plus, Edit, Trash2, X, Save, AlertTriangle, Image } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Banner {
     id: number;
@@ -63,7 +64,7 @@ export default function BannersPage() {
             fetchBanners();
         } catch (error) {
             console.error("Save error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }

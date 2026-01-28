@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Search, Plus, Minus, ArrowRight } from "lucide-react";
 import { formatBaht } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 const depositReasons = [
     { value: "credit_manual", label: "ระบบออโต้ไม่ทำงาน" },
@@ -37,7 +38,7 @@ export default function ManualPage() {
             if (res.data.success && res.data.data.users.length > 0) {
                 setFoundUser(res.data.data.users[0]);
             } else {
-                alert("ไม่พบผู้ใช้งาน");
+                toast.error("ไม่พบผู้ใช้งาน");
                 setFoundUser(null);
             }
         } catch (error) {
@@ -49,7 +50,7 @@ export default function ManualPage() {
 
     const handleTransaction = async () => {
         if (!foundUser || !amount || !reason) {
-            alert("กรุณากรอกข้อมูลให้ครบ");
+            toast.error("กรุณากรอกข้อมูลให้ครบ");
             return;
         }
 
@@ -66,12 +67,12 @@ export default function ManualPage() {
                 });
 
                 if (res.data.success) {
-                    alert("สร้างรายการถอนสำเร็จ");
+                    toast.success("สร้างรายการถอนสำเร็จ");
                     router.push('/manual/withdrawals');
                 }
             } catch (error) {
                 console.error("Withdraw error:", error);
-                alert("เกิดข้อผิดพลาด");
+                toast.error("เกิดข้อผิดพลาด");
             } finally {
                 setLoading(false);
             }
@@ -93,7 +94,7 @@ export default function ManualPage() {
             });
 
             if (res.data.success) {
-                alert("ทำรายการสำเร็จ");
+                toast.success("ทำรายการสำเร็จ");
                 setAmount("");
                 setReason("");
                 setNote("");
@@ -101,7 +102,7 @@ export default function ManualPage() {
             }
         } catch (error) {
             console.error("Transaction error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setLoading(false);
         }

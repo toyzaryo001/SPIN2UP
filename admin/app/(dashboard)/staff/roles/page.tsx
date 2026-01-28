@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Plus, Edit, Trash2, X, Save, ShieldCheck, AlertTriangle, Check } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Role {
     id: number;
@@ -243,7 +244,7 @@ export default function StaffRolesPage() {
 
     const handleSave = async () => {
         if (!formData.name.trim()) {
-            alert("กรุณากรอกชื่อบทบาท");
+            toast.error("กรุณากรอกชื่อบทบาท");
             return;
         }
         setIsSaving(true);
@@ -262,7 +263,7 @@ export default function StaffRolesPage() {
             setIsModalOpen(false);
         } catch (error) {
             console.error("Save role error:", error);
-            alert("เกิดข้อผิดพลาดในการบันทึก");
+            toast.error("เกิดข้อผิดพลาดในการบันทึก");
         } finally {
             setIsSaving(false);
         }
@@ -277,7 +278,7 @@ export default function StaffRolesPage() {
             setDeletingRole(null);
         } catch (error) {
             console.error("Delete role error:", error);
-            alert("เกิดข้อผิดพลาดในการลบ");
+            toast.error("เกิดข้อผิดพลาดในการลบ");
         }
     };
 

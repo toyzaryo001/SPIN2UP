@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { UserPlus, Edit, Trash2, Shield, Search, X, Save, AlertTriangle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 interface Staff {
     id: number;
@@ -111,10 +112,10 @@ export default function StaffListPage() {
             fetchStaffs();
         } catch (error: any) {
             if (error.response?.status === 403) {
-                alert("คุณไม่มีสิทธิ์ในการดำเนินการนี้");
+                toast.error("คุณไม่มีสิทธิ์ในการดำเนินการนี้");
             } else {
                 console.error("Save error:", error);
-                alert(error.response?.data?.message || "เกิดข้อผิดพลาด กรุณาลองใหม่");
+                toast.error(error.response?.data?.message || "เกิดข้อผิดพลาด กรุณาลองใหม่");
             }
         } finally {
             setIsSaving(false);
@@ -129,7 +130,7 @@ export default function StaffListPage() {
             fetchStaffs();
         } catch (error) {
             console.error("Delete error:", error);
-            alert("ไม่สามารถลบได้");
+            toast.error("ไม่สามารถลบได้");
         }
     };
 

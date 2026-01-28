@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Settings, Save, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 const DAYS = [
     { value: 0, label: "อาทิตย์" },
@@ -34,7 +35,6 @@ export default function CashbackSettingsPage() {
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
     const fetchSettings = async () => {
         try {
@@ -55,10 +55,10 @@ export default function CashbackSettingsPage() {
             setSaving(true);
             const res = await api.put("/admin/activities/cashback", settings);
             if (res.data.success) {
-                setMessage({ type: "success", text: "บันทึกสำเร็จ" });
+                toast.success("บันทึกสำเร็จ");
             }
         } catch (error) {
-            setMessage({ type: "error", text: "เกิดข้อผิดพลาด" });
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setSaving(false);
         }
@@ -67,13 +67,6 @@ export default function CashbackSettingsPage() {
     useEffect(() => {
         fetchSettings();
     }, []);
-
-    useEffect(() => {
-        if (message) {
-            const timer = setTimeout(() => setMessage(null), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [message]);
 
     if (loading) {
         return <div className="p-6 text-center">กำลังโหลด...</div>;
@@ -90,12 +83,6 @@ export default function CashbackSettingsPage() {
                     ← กลับ
                 </Link>
             </div>
-
-            {message && (
-                <div className={`p-4 rounded-lg ${message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {message.text}
-                </div>
-            )}
 
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                 <div className="grid grid-cols-2 gap-6">

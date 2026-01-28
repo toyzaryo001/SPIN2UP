@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { formatBaht, formatDate } from "@/lib/utils";
 import { Search, UserPlus, Edit, Ban, X, Save, AlertTriangle, CheckCircle, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface User {
     id: number;
@@ -118,7 +119,7 @@ export default function MembersPage() {
             fetchUsers();
         } catch (error) {
             console.error("Save error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }
@@ -133,7 +134,7 @@ export default function MembersPage() {
             fetchUsers();
         } catch (error) {
             console.error("Status change error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         }
     };
 
@@ -149,11 +150,11 @@ export default function MembersPage() {
             setIsDeleteModalOpen(false);
             setDeleteUser(null);
             fetchUsers();
-            alert("ลบสมาชิกสำเร็จ");
+            toast.success("ลบสมาชิกสำเร็จ");
         } catch (error: any) {
             console.error("Delete error:", error);
             const message = error.response?.data?.message || "เกิดข้อผิดพลาด";
-            alert(message);
+            toast.error(message);
         }
     };
 

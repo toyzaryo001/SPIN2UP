@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { formatBaht, formatDate } from "@/lib/utils";
 import { Clock, Check, X, Search, RefreshCw } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Withdrawal {
     id: number;
@@ -44,7 +45,7 @@ export default function PendingWithdrawalsPage() {
             fetchWithdrawals();
         } catch (error) {
             console.error("Approve error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         }
     };
 
@@ -56,7 +57,7 @@ export default function PendingWithdrawalsPage() {
             fetchWithdrawals();
         } catch (error) {
             console.error("Reject error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         }
     };
 

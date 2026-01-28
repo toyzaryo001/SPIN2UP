@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { MessageSquare, Plus, Edit, Trash2, X, Save, AlertTriangle } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Announcement {
     id: number;
@@ -51,7 +52,7 @@ export default function AnnouncementsPage() {
 
     const handleSave = async () => {
         if (!formData.content.trim()) {
-            alert("กรุณากรอกข้อความ");
+            toast.error("กรุณากรอกข้อความ");
             return;
         }
         setIsSaving(true);
@@ -65,7 +66,7 @@ export default function AnnouncementsPage() {
             fetchAnnouncements();
         } catch (error) {
             console.error("Save error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }

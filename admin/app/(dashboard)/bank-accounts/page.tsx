@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import { formatBaht } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function BankAccountsPage() {
     const [banks, setBanks] = useState<any[]>([]);
@@ -51,7 +52,7 @@ export default function BankAccountsPage() {
             fetchBanks();
         } catch (error) {
             console.error("Save bank error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         }
     };
 

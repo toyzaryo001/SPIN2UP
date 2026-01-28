@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Smartphone, Plus, Edit, Trash2, X, Save, AlertTriangle } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface TrueMoneyWallet {
     id: number;
@@ -50,7 +51,7 @@ export default function TrueMoneyPage() {
 
     const handleSave = async () => {
         if (!formData.phoneNumber || !formData.accountName) {
-            alert("กรุณากรอกข้อมูลให้ครบ");
+            toast.error("กรุณากรอกข้อมูลให้ครบ");
             return;
         }
         setIsSaving(true);
@@ -64,7 +65,7 @@ export default function TrueMoneyPage() {
             fetchWallets();
         } catch (error) {
             console.error("Save error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Plus, Sliders, X, Save, AlertTriangle, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Agent {
     id: number;
@@ -80,7 +81,7 @@ export default function AgentsPage() {
 
     const handleSave = async () => {
         if (!formData.name.trim() || !formData.prefix.trim()) {
-            alert("กรุณากรอกชื่อและ Prefix");
+            toast.error("กรุณากรอกชื่อและ Prefix");
             return;
         }
         setIsSaving(true);
@@ -101,7 +102,7 @@ export default function AgentsPage() {
             fetchAgents();
         } catch (error) {
             console.error("Save error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }
@@ -115,7 +116,7 @@ export default function AgentsPage() {
             fetchAgents();
         } catch (error) {
             console.error("Delete error:", error);
-            alert("ไม่สามารถลบได้");
+            toast.error("ไม่สามารถลบได้");
         }
     };
 

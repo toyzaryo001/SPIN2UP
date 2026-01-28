@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Bell, Megaphone, Plus, Edit, Trash2, X, Save, AlertTriangle, Image, Type } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Banner {
     id: number;
@@ -86,7 +87,7 @@ export default function NotificationsPage() {
             fetchBanners();
         } catch (error) {
             console.error("Save banner error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }
@@ -116,7 +117,7 @@ export default function NotificationsPage() {
             fetchAnnouncements();
         } catch (error) {
             console.error("Save announcement error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }
@@ -141,7 +142,7 @@ export default function NotificationsPage() {
             setIsDeleteModalOpen(false);
         } catch (error) {
             console.error("Delete error:", error);
-            alert("ไม่สามารถลบได้");
+            toast.error("ไม่สามารถลบได้");
         }
     };
 

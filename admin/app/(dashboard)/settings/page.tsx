@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Save } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState<any>({});
@@ -28,10 +29,10 @@ export default function SettingsPage() {
         setLoading(true);
         try {
             await api.put("/admin/settings", settings);
-            alert("บันทึกการตั้งค่าสำเร็จ");
+            toast.success("บันทึกการตั้งค่าสำเร็จ");
         } catch (error) {
             console.error("Save settings error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setLoading(false);
         }

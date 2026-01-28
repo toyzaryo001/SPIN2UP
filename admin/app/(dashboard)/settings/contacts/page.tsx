@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import axios from "axios";
 import { Plus, Trash2, Edit2, Check, X, MessageCircle } from "lucide-react";
+import toast from "react-hot-toast";
 
 const CHANNEL_TYPES = [
     { value: "LINE", label: "LINE", icon: "💬", color: "#06C755" },
@@ -51,7 +52,7 @@ export default function ContactsPage() {
             }
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 403) {
-                alert('คุณไม่มีสิทธิ์ในการดูช่องทางติดต่อ');
+                toast.error('คุณไม่มีสิทธิ์ในการดูช่องทางติดต่อ');
             } else {
                 console.error("Fetch contacts error:", error);
             }
@@ -81,10 +82,10 @@ export default function ContactsPage() {
             fetchContacts();
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 403) {
-                alert('คุณไม่มีสิทธิ์ในการจัดการช่องทางติดต่อ');
+                toast.error('คุณไม่มีสิทธิ์ในการจัดการช่องทางติดต่อ');
             } else {
                 console.error("Save contact error:", error);
-                alert("เกิดข้อผิดพลาด");
+                toast.error("เกิดข้อผิดพลาด");
             }
         }
     };
@@ -96,7 +97,7 @@ export default function ContactsPage() {
             fetchContacts();
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 403) {
-                alert('คุณไม่มีสิทธิ์ในการลบช่องทางติดต่อ');
+                toast.error('คุณไม่มีสิทธิ์ในการลบช่องทางติดต่อ');
             } else {
                 console.error("Delete contact error:", error);
             }
@@ -112,7 +113,7 @@ export default function ContactsPage() {
             fetchContacts();
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 403) {
-                alert('คุณไม่มีสิทธิ์ในการเปลี่ยนสถานะ');
+                toast.error('คุณไม่มีสิทธิ์ในการเปลี่ยนสถานะ');
             } else {
                 console.error("Toggle active error:", error);
             }

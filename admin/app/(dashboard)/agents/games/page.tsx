@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Gamepad2, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, Flame, Sparkles, Search } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Provider {
     id: number;
@@ -73,7 +74,7 @@ export default function GamesPage() {
             }
             setIsModalOpen(false);
             fetchData();
-        } catch (error) { alert("เกิดข้อผิดพลาด"); }
+        } catch (error) { toast.error("เกิดข้อผิดพลาด"); }
     };
 
     const toggle = async (id: number, field: 'isActive' | 'isHot' | 'isNew', value: boolean) => {
@@ -95,7 +96,7 @@ export default function GamesPage() {
             setIsDeleteOpen(false);
             fetchData();
         } catch (error: any) {
-            alert(error.response?.data?.message || "ไม่สามารถลบได้");
+            toast.error(error.response?.data?.message || "ไม่สามารถลบได้");
         }
     };
 

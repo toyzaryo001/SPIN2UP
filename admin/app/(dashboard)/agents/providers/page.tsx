@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Building2, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Category {
     id: number;
@@ -61,7 +62,7 @@ export default function ProvidersPage() {
     };
 
     const handleSave = async () => {
-        if (!formData.categoryId) { alert("กรุณาเลือกหมวดหมู่"); return; }
+        if (!formData.categoryId) { toast.error("กรุณาเลือกหมวดหมู่"); return; }
         try {
             const payload = { ...formData, slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'), categoryId: Number(formData.categoryId) };
             if (editingItem) {
@@ -71,7 +72,7 @@ export default function ProvidersPage() {
             }
             setIsModalOpen(false);
             fetchData();
-        } catch (error) { alert("เกิดข้อผิดพลาด"); }
+        } catch (error) { toast.error("เกิดข้อผิดพลาด"); }
     };
 
     const toggle = async (id: number, isActive: boolean) => {
@@ -93,7 +94,7 @@ export default function ProvidersPage() {
             setIsDeleteOpen(false);
             fetchData();
         } catch (error: any) {
-            alert(error.response?.data?.message || "ไม่สามารถลบได้");
+            toast.error(error.response?.data?.message || "ไม่สามารถลบได้");
         }
     };
 

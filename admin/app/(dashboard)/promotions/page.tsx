@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Plus, Edit2, Trash2, X, Save, Image, AlertTriangle, ToggleLeft, ToggleRight } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Promotion {
     id: number;
@@ -82,7 +83,7 @@ export default function PromotionsPage() {
 
     const handleSave = async () => {
         if (!formData.name.trim()) {
-            alert("กรุณากรอกชื่อโปรโมชั่น");
+            toast.error("กรุณากรอกชื่อโปรโมชั่น");
             return;
         }
         setIsSaving(true);
@@ -104,10 +105,10 @@ export default function PromotionsPage() {
             fetchPromotions();
         } catch (error: any) {
             if (error.response?.status === 403) {
-                alert("คุณไม่มีสิทธิ์ในการดำเนินการนี้");
+                toast.error("คุณไม่มีสิทธิ์ในการดำเนินการนี้");
             } else {
                 console.error("Save error:", error);
-                alert(error.response?.data?.message || "เกิดข้อผิดพลาด");
+                toast.error(error.response?.data?.message || "เกิดข้อผิดพลาด");
             }
         } finally {
             setIsSaving(false);
@@ -122,10 +123,10 @@ export default function PromotionsPage() {
             fetchPromotions();
         } catch (error: any) {
             if (error.response?.status === 403) {
-                alert("คุณไม่มีสิทธิ์ในการลบโปรโมชั่น");
+                toast.error("คุณไม่มีสิทธิ์ในการลบโปรโมชั่น");
             } else {
                 console.error("Delete error:", error);
-                alert(error.response?.data?.message || "ไม่สามารถลบได้");
+                toast.error(error.response?.data?.message || "ไม่สามารถลบได้");
             }
         }
     };
@@ -136,7 +137,7 @@ export default function PromotionsPage() {
             fetchPromotions();
         } catch (error: any) {
             if (error.response?.status === 403) {
-                alert("คุณไม่มีสิทธิ์ในการเปลี่ยนสถานะ");
+                toast.error("คุณไม่มีสิทธิ์ในการเปลี่ยนสถานะ");
             } else {
                 console.error("Toggle error:", error);
             }

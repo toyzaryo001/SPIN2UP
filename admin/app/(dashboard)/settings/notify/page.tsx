@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Bell, Save } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function NotifySettingsPage() {
     const [settings, setSettings] = useState<any>({});
@@ -28,10 +29,10 @@ export default function NotifySettingsPage() {
         setLoading(true);
         try {
             await api.put("/admin/settings", settings);
-            alert("บันทึกสำเร็จ");
+            toast.success("บันทึกสำเร็จ");
         } catch (error) {
             console.error("Save error:", error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setLoading(false);
         }
@@ -44,9 +45,9 @@ export default function NotifySettingsPage() {
     const testTelegram = async () => {
         try {
             await api.post("/admin/settings/test-telegram");
-            alert("ส่งข้อความทดสอบสำเร็จ!");
+            toast.success("ส่งข้อความทดสอบสำเร็จ!");
         } catch (error) {
-            alert("ไม่สามารถส่งได้ กรุณาตรวจสอบ Token และ Chat ID");
+            toast.error("ไม่สามารถส่งได้ กรุณาตรวจสอบ Token และ Chat ID");
         }
     };
 

@@ -6,6 +6,7 @@ import { Layers, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVerti
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import toast from "react-hot-toast";
 
 interface Category {
     id: number;
@@ -178,11 +179,11 @@ export default function CategoriesPage() {
             if (res.data.success) {
                 setFormData({ ...formData, icon: res.data.data.url });
             } else {
-                alert('อัพโหลดไม่สำเร็จ');
+                toast.error('อัพโหลดไม่สำเร็จ');
             }
         } catch (err) {
             console.error('Upload error:', err);
-            alert('เกิดข้อผิดพลาดในการอัพโหลด');
+            toast.error('เกิดข้อผิดพลาดในการอัพโหลด');
         }
         setUploading(false);
     };
@@ -197,7 +198,7 @@ export default function CategoriesPage() {
             }
             setIsModalOpen(false);
             fetchData();
-        } catch (error) { alert("เกิดข้อผิดพลาด"); }
+        } catch (error) { toast.error("เกิดข้อผิดพลาด"); }
     };
 
     const toggle = async (id: number, isActive: boolean) => {
@@ -219,7 +220,7 @@ export default function CategoriesPage() {
             setIsDeleteOpen(false);
             fetchData();
         } catch (error: any) {
-            alert(error.response?.data?.message || "ไม่สามารถลบได้");
+            toast.error(error.response?.data?.message || "ไม่สามารถลบได้");
         }
     };
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { UserPlus, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 export default function MemberRegisterPage() {
     const router = useRouter();
@@ -24,12 +25,12 @@ export default function MemberRegisterPage() {
         e.preventDefault();
 
         if (formData.password !== formData.confirmPassword) {
-            alert("รหัสผ่านไม่ตรงกัน");
+            toast.error("รหัสผ่านไม่ตรงกัน");
             return;
         }
 
         if (!formData.fullName || !formData.phone || !formData.bankName || !formData.bankAccount || !formData.password) {
-            alert("กรุณากรอกข้อมูลให้ครบ");
+            toast.error("กรุณากรอกข้อมูลให้ครบ");
             return;
         }
 
@@ -37,12 +38,12 @@ export default function MemberRegisterPage() {
         try {
             const res = await api.post("/admin/users", formData);
             if (res.data.success) {
-                alert("สร้างสมาชิกสำเร็จ!");
+                toast.success("สร้างสมาชิกสำเร็จ!");
                 router.push("/members");
             }
         } catch (error: any) {
             console.error("Create error:", error);
-            alert(error.response?.data?.message || "เกิดข้อผิดพลาด");
+            toast.error(error.response?.data?.message || "เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }

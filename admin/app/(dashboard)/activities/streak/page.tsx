@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Flame, Save, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 interface StreakDay {
     id?: number;
@@ -17,7 +18,6 @@ export default function StreakSettingsPage() {
     const [settings, setSettings] = useState<StreakDay[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
     const fetchSettings = async () => {
         try {
@@ -49,9 +49,9 @@ export default function StreakSettingsPage() {
                     isActive: item.isActive
                 });
             }
-            setMessage({ type: "success", text: "บันทึกสำเร็จ" });
+            toast.success("บันทึกสำเร็จ");
         } catch (error) {
-            setMessage({ type: "error", text: "เกิดข้อผิดพลาด" });
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setSaving(false);
         }
@@ -60,13 +60,6 @@ export default function StreakSettingsPage() {
     useEffect(() => {
         fetchSettings();
     }, []);
-
-    useEffect(() => {
-        if (message) {
-            const timer = setTimeout(() => setMessage(null), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [message]);
 
     if (loading) {
         return <div className="p-6 text-center">กำลังโหลด...</div>;
@@ -86,12 +79,6 @@ export default function StreakSettingsPage() {
                     ← กลับ
                 </Link>
             </div>
-
-            {message && (
-                <div className={`p-4 rounded-lg ${message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {message.text}
-                </div>
-            )}
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                 <table className="w-full">

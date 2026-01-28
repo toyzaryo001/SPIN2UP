@@ -216,6 +216,16 @@ router.post('/admin/login', async (req, res) => {
             include: { role: true },
         });
 
+        // Validate Prefix
+        if (prefix) {
+            const prefixSetting = await prisma.setting.findUnique({ where: { key: 'prefix' } });
+            const systemPrefix = prefixSetting?.value;
+
+            if (systemPrefix && systemPrefix.toLowerCase() !== prefix.toLowerCase()) {
+                return res.status(401).json({ success: false, message: 'Prefix ไม่ถูกต้อง' });
+            }
+        }
+
         if (!admin) {
             return res.status(401).json({ success: false, message: 'Username หรือรหัสผ่านไม่ถูกต้อง' });
         }

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/db.js';
 import { verifySuperAdmin } from './auth.routes.js';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 
 const router = Router();
 

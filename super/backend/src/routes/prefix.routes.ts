@@ -122,6 +122,31 @@ router.put('/:id', verifySuperAdmin, async (req: Request, res: Response) => {
             }
         });
 
+        // Create/Update Initial Admin in Tenant DB?
+        if (req.body.createInitialAdmin && req.body.initialAdminUsername && req.body.initialAdminPassword) {
+            try {
+                const { PrismaClient } = await import('@prisma/client');
+                const tenantPrisma = new PrismaClient({ datasources: { db: { url: databaseUrl || prefix.databaseUrl } } });
+                const bcrypt = await import('bcryptjs');
+
+                const hashedPassword = await bcrypt.hash(req.body.initialAdminPassword, 10);
+
+                // Use raw query for Upsert (Insert or Update Password if exists)
+                await tenantPrisma.$executeRawUnsafe(
+                    `INSERT INTO "Admin" ("username", "password", "fullName", "isSuperAdmin", "isActive", "updatedAt") 
+                     VALUES ($1, $2, 'Root Admin', true, true, NOW())
+                     ON CONFLICT ("username") 
+                     DO UPDATE SET "password" = $2, "isActive" = true, "updatedAt" = NOW()`,
+                    req.body.initialAdminUsername,
+                    hashedPassword
+                );
+
+                await tenantPrisma.$disconnect();
+            } catch (err) {
+                console.error("Failed to create/upadte initial admin:", err);
+            }
+        }
+
         // Log action
         const decoded = (req as any).superAdmin;
         await prisma.superAdminLog.create({

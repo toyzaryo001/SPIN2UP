@@ -184,14 +184,23 @@ const Banner = () => (
   </div>
 );
 
-const GameCard = ({ title, provider, image, hot, type }: any) => {
-  // Dynamic background based on type if no image
-  const defaultColor = type === 'slot' ? 'bg-gradient-to-br from-purple-900 to-slate-900' : 'bg-gradient-to-br from-blue-900 to-slate-900';
+const gameGradients = [
+  "bg-gradient-to-br from-green-800 to-slate-900",
+  "bg-gradient-to-br from-red-900 to-slate-900",
+  "bg-gradient-to-br from-pink-800 to-purple-900",
+  "bg-gradient-to-br from-yellow-700 to-orange-900",
+  "bg-gradient-to-br from-blue-800 to-slate-900",
+  "bg-gradient-to-br from-purple-800 to-slate-900",
+];
+
+const GameCard = ({ title, provider, image, hot, type, color, index }: any) => {
+  // Use provided color, or cycle through gradients based on index, or default
+  const bgClass = color || gameGradients[(index || 0) % gameGradients.length];
 
   return (
     <div className="group relative bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-yellow-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-yellow-500/20 cursor-pointer">
       {/* Image Placeholder */}
-      <div className={`h-32 md:h-40 w-full ${defaultColor} relative overflow-hidden bg-slate-900`}>
+      <div className={`h-32 md:h-40 w-full ${bgClass} relative overflow-hidden bg-slate-900`}>
         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all"></div>
 
         {image ? (
@@ -309,6 +318,7 @@ const HomeContent = ({ games }: { games: Game[] }) => {
           {displayGames.slice(0, 12).map((game, i) => (
             <GameCard
               key={i}
+              index={i}
               title={game.name}
               provider={game.provider?.name || "Game"}
               image={game.thumbnail}

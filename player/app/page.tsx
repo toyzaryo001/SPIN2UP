@@ -296,11 +296,26 @@ const JackpotBar = () => {
 
 // --- Main Pages Content ---
 
+const MOCK_GAMES: Game[] = [
+  { id: 101, name: "Treasures of Aztec", slug: "treasures-of-aztec", isHot: true, isNew: false, provider: { id: 1, name: "PG Soft", categoryId: 1 }, thumbnail: "" },
+  { id: 102, name: "Roma Legacy", slug: "roma-legacy", isHot: true, isNew: false, provider: { id: 2, name: "Joker", categoryId: 1 }, thumbnail: "" },
+  { id: 103, name: "Sweet Bonanza", slug: "sweet-bonanza", isHot: true, isNew: false, provider: { id: 3, name: "Pragmatic", categoryId: 1 }, thumbnail: "" },
+  { id: 104, name: "Lucky Neko", slug: "lucky-neko", isHot: false, isNew: true, provider: { id: 1, name: "PG Soft", categoryId: 1 }, thumbnail: "" },
+  { id: 105, name: "Baccarat Live", slug: "baccarat-live", isHot: true, isNew: false, provider: { id: 4, name: "SA Gaming", categoryId: 2 }, thumbnail: "" },
+  { id: 106, name: "Sexy Gaming", slug: "sexy-gaming", isHot: false, isNew: false, provider: { id: 5, name: "AE Sexy", categoryId: 2 }, thumbnail: "" },
+  { id: 107, name: "Mahjong Ways 2", slug: "mahjong-ways-2", isHot: true, isNew: false, provider: { id: 1, name: "PG Soft", categoryId: 1 }, thumbnail: "" },
+  { id: 108, name: "Caishen Wins", slug: "caishen-wins", isHot: false, isNew: false, provider: { id: 1, name: "PG Soft", categoryId: 1 }, thumbnail: "" },
+];
+
 const HomeContent = ({ games }: { games: Game[] }) => {
-  // Mock fallback if games empty
-  const displayGames = games.length > 0 ? games : Array(12).fill({ name: "Loading...", provider: { name: "Provider" }, isHot: false });
-  const providers = Array.from(new Set(games.map(g => g.provider?.name || "PG Soft"))).slice(0, 8);
-  if (providers.length === 0) providers.push("PG Soft", "Joker", "Pragmatic");
+  // Use MOCK_GAMES if API returns empty, ensuring the UI looks populated like the screenshots
+  const displayGames = games.length > 0 ? games : MOCK_GAMES;
+
+  // Extract providers or use the specific default list from ex.txt
+  let providers = Array.from(new Set(games.map(g => g.provider?.name || "PG Soft"))).slice(0, 8);
+  if (games.length === 0) {
+    providers = ["PG Soft", "Joker", "Pragmatic", "Jili", "Spadegaming", "Red Tiger", "Habanero", "Blueprint"];
+  }
 
   return (
     <div className="animate-fade-in">
@@ -315,15 +330,15 @@ const HomeContent = ({ games }: { games: Game[] }) => {
           <button className="text-sm text-green-400 hover:text-green-300 underline font-kanit">ดูทั้งหมด</button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {displayGames.slice(0, 12).map((game, i) => (
+          {displayGames.map((game, i) => (
             <GameCard
               key={i}
               index={i}
               title={game.name}
               provider={game.provider?.name || "Game"}
               image={game.thumbnail}
-              hot={game.isHot || i < 3}
-              type='slot'
+              hot={game.isHot}
+              type={game.provider?.categoryId === 2 ? 'casino' : 'slot'}
             />
           ))}
         </div>

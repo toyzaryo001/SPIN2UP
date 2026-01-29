@@ -33,7 +33,10 @@ export default function PrefixesPage() {
         name: '',
         databaseUrl: '',
         adminDomain: '',
-        playerDomain: ''
+        playerDomain: '',
+        createInitialAdmin: true,
+        initialAdminUsername: 'admin',
+        initialAdminPassword: ''
     });
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
@@ -145,14 +148,20 @@ export default function PrefixesPage() {
             name: prefix.name,
             databaseUrl: prefix.databaseUrl,
             adminDomain: prefix.adminDomain || '',
-            playerDomain: prefix.playerDomain || ''
+            playerDomain: prefix.playerDomain || '',
+            createInitialAdmin: true,
+            initialAdminUsername: 'admin',
+            initialAdminPassword: ''
         });
         setEditingPrefix(prefix);
         setShowModal(true);
     };
 
     const openCreateModal = () => {
-        setFormData({ code: '', name: '', databaseUrl: '', adminDomain: '', playerDomain: '' });
+        setFormData({
+            code: '', name: '', databaseUrl: '', adminDomain: '', playerDomain: '',
+            createInitialAdmin: true, initialAdminUsername: 'admin', initialAdminPassword: ''
+        });
         setEditingPrefix(null);
         setShowModal(true);
     };
@@ -160,7 +169,10 @@ export default function PrefixesPage() {
     const closeModal = () => {
         setShowModal(false);
         setEditingPrefix(null);
-        setFormData({ code: '', name: '', databaseUrl: '', adminDomain: '', playerDomain: '' });
+        setFormData({
+            code: '', name: '', databaseUrl: '', adminDomain: '', playerDomain: '',
+            createInitialAdmin: true, initialAdminUsername: 'admin', initialAdminPassword: ''
+        });
     };
 
     const copyDatabaseUrl = (prefix: Prefix) => {
@@ -431,6 +443,56 @@ export default function PrefixesPage() {
                                     />
                                 </div>
                             </div>
+
+                            {!editingPrefix && (
+                                <div className="border-t border-white/10 pt-4 mt-4">
+                                    <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                                        <Shield size={18} className="text-purple-400" />
+                                        สร้างแอดมินคนแรก (Initial Admin)
+                                    </h4>
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="createInitialAdmin"
+                                                checked={formData.createInitialAdmin}
+                                                onChange={(e) => setFormData({ ...formData, createInitialAdmin: e.target.checked })}
+                                                className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-purple-600 focus:ring-purple-500"
+                                            />
+                                            <label htmlFor="createInitialAdmin" className="text-slate-300 text-sm cursor-pointer select-none">
+                                                สร้าง User แอดมินเริ่มต้นให้ทันที
+                                            </label>
+                                        </div>
+
+                                        {formData.createInitialAdmin && (
+                                            <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                                <div>
+                                                    <label className="block text-purple-300 text-sm mb-2">Username</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.initialAdminUsername}
+                                                        onChange={(e) => setFormData({ ...formData, initialAdminUsername: e.target.value })}
+                                                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white"
+                                                        placeholder="admin"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-purple-300 text-sm mb-2">Password</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.initialAdminPassword}
+                                                        onChange={(e) => setFormData({ ...formData, initialAdminPassword: e.target.value })}
+                                                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white"
+                                                        placeholder="ตั้งรหัสผ่าน..."
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"

@@ -38,7 +38,7 @@ router.get('/:id', verifySuperAdmin, async (req: Request, res: Response) => {
 // POST /api/prefixes - Create new prefix
 router.post('/', verifySuperAdmin, async (req: Request, res: Response) => {
     try {
-        const { code, name, databaseUrl, adminDomain, playerDomain, logo, primaryColor } = req.body;
+        const { code, name, databaseUrl, adminDomain, playerDomain, logo, primaryColor, createInitialAdmin, initialAdminUsername, initialAdminPassword } = req.body;
 
         if (!code || !name || !databaseUrl) {
             return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบ' });
@@ -61,6 +61,29 @@ router.post('/', verifySuperAdmin, async (req: Request, res: Response) => {
                 primaryColor
             }
         });
+
+        // Create Initial Admin in Tenant DB?
+        if (createInitialAdmin && initialAdminUsername && initialAdminPassword) {
+            try {
+                const { PrismaClient } = await import('@prisma/client');
+                const tenantPrisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+                const bcrypt = await import('bcryptjs'); // Dynamic import to ensure availability
+
+                const hashedPassword = await bcrypt.hash(initialAdminPassword, 10);
+
+                // Use raw query to avoid needing generated types
+                await tenantPrisma.$executeRawUnsafe(
+                    `INSERT INTO "Admin" ("username", "password", "fullName", "isSuperAdmin", "isActive", "updatedAt") VALUES ($1, $2, 'Root Admin', true, true, NOW())`,
+                    initialAdminUsername,
+                    hashedPassword
+                );
+
+                await tenantPrisma.$disconnect();
+            } catch (err) {
+                console.error("Failed to create initial admin:", err);
+                // Note: We don't revert prefix creation, just warn
+            }
+        }
 
         // Log action
         const decoded = (req as any).superAdmin;

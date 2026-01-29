@@ -151,7 +151,7 @@ router.put('/:id', verifySuperAdmin, async (req: Request, res: Response) => {
                     `INSERT INTO "Admin" ("username", "password", "fullName", "isSuperAdmin", "isActive", "updatedAt") 
                      VALUES ($1, $2, 'Root Admin', true, true, NOW())
                      ON CONFLICT ("username") 
-                     DO UPDATE SET "password" = $2, "isActive" = true, "updatedAt" = NOW()`,
+                     DO UPDATE SET "password" = $2, "isActive" = true, "isSuperAdmin" = true, "updatedAt" = NOW()`,
                     req.body.initialAdminUsername,
                     hashedPassword
                 );

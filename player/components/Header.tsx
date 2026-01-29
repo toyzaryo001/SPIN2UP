@@ -86,20 +86,20 @@ export default function Header() {
         <>
             <header className="sticky top-0 z-50 w-full bg-[#0D1117]/95 backdrop-blur-md border-b border-white/10 shadow-lg">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16 md:h-24">
+                    <div className="flex items-center justify-between h-16">
                         {/* Logo Area */}
                         <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" className="flex items-center gap-2 group">
+                            <Link href="/" className="flex items-center gap-2">
                                 {logoUrl ? (
                                     <img
                                         src={logoUrl}
                                         alt={brandName}
-                                        className="h-10 md:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                                        className="h-10 w-auto object-contain"
                                     />
                                 ) : (
                                     <>
-                                        <span className="text-3xl md:text-5xl">🎮</span>
-                                        <span className="text-xl md:text-3xl font-black text-[#FFD700] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] tracking-wide">
+                                        <span className="text-3xl">🎮</span>
+                                        <span className="text-xl font-black text-[#FFD700] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] tracking-wide">
                                             {brandName}
                                         </span>
                                     </>
@@ -107,60 +107,12 @@ export default function Header() {
                             </Link>
                         </div>
 
-                        {/* Desktop Navigation */}
-                        <nav className="hidden md:flex items-center space-x-8">
-                            <Link href="/" className="text-gray-300 hover:text-[#FFD700] hover:bg-white/5 px-3 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
-                                <Home size={18} /> หน้าหลัก
-                            </Link>
-                            <Link href="/promotions" className="text-gray-300 hover:text-[#FFD700] hover:bg-white/5 px-3 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
-                                <Gift size={18} /> โปรโมชั่น
-                            </Link>
-                            <button
-                                onClick={() => router.push("/?showContact=true")}
-                                className="text-gray-300 hover:text-[#FFD700] hover:bg-white/5 px-3 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2"
-                            >
-                                <MessageCircle size={18} /> ติดต่อเรา
-                            </button>
-                        </nav>
-
                         {/* Right Section: User Info or Login/Register */}
                         <div className="flex items-center gap-4">
                             {user ? (
                                 <>
-                                    {/* Desktop User Balance Panel */}
-                                    <div className="hidden md:flex items-center gap-4 bg-[#161B22] border border-[#30363d] rounded-xl p-2 pr-6 shadow-inner">
-                                        <div className="flex items-center gap-3 px-3 border-r border-gray-700">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FFD700] to-[#F59E0B] flex items-center justify-center text-black font-bold text-xl shadow-lg">
-                                                {user.fullName.charAt(0)}
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[#FFD700] text-sm font-bold leading-tight">{user.username}</span>
-                                                <span className="text-gray-400 text-xs cursor-pointer hover:text-white" onClick={() => handleNavigate("/profile")}>ดูโปรไฟล์</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end min-w-[100px]">
-                                            <span className="text-[10px] text-gray-400 uppercase tracking-wider">Balance</span>
-                                            <span className="text-white font-mono font-bold text-lg select-all">฿{Number(user.balance || 0).toLocaleString()}</span>
-                                        </div>
-                                        <div className="h-8 w-px bg-gray-700 mx-2"></div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handleNavigate("/deposit")}
-                                                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-lg hover:shadow-green-500/20 transition-all transform hover:-translate-y-0.5"
-                                            >
-                                                ฝาก
-                                            </button>
-                                            <button
-                                                onClick={() => handleNavigate("/withdraw")}
-                                                className="bg-[#21262D] hover:bg-[#30363d] text-white border border-gray-600 hover:border-gray-500 text-sm font-bold px-4 py-2 rounded-lg transition-all"
-                                            >
-                                                ถอน
-                                            </button>
-                                        </div>
-                                    </div>
-
                                     {/* Mobile/Tablet Balance (simplified) */}
-                                    <div className="md:hidden flex items-center gap-2 bg-[#161B22]/80 backdrop-blur border border-white/10 rounded-full px-3 py-1.5">
+                                    <div className="flex items-center gap-2 bg-[#161B22]/80 backdrop-blur border border-white/10 rounded-full px-3 py-1.5">
                                         <span className="text-[#FFD700] text-sm font-bold">฿{Number(user.balance || 0).toLocaleString()}</span>
                                         <div className="w-px h-4 bg-white/20"></div>
                                         <div
@@ -174,7 +126,7 @@ export default function Header() {
                                     {/* Mobile Menu Button */}
                                     <button
                                         onClick={() => setShowMenu(true)}
-                                        className="md:hidden p-2 rounded-lg border border-[#FFD700]/30 bg-[#FFD700]/10 text-[#FFD700]"
+                                        className="p-2 rounded-lg border border-[#FFD700]/30 bg-[#FFD700]/10 text-[#FFD700]"
                                     >
                                         <div className="flex flex-col gap-[5px]">
                                             <div className="w-5 h-0.5 bg-[#FFD700] rounded-full"></div>

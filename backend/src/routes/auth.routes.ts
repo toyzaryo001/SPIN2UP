@@ -196,6 +196,47 @@ const adminLoginSchema = z.object({
     prefix: z.string().optional(), // Optional for backward compatibility
 });
 
+// GET /api/auth/config
+router.get('/config', async (req, res) => {
+    try {
+        const { domain } = req.query;
+        if (!domain || typeof domain !== 'string') return res.json({ success: false });
+
+        const superDbUrl = process.env.SUPER_DATABASE_URL;
+        if (!superDbUrl) return res.status(500).json({ success: false, message: 'System Config Error' });
+
+        const { PrismaClient } = await import('@prisma/client');
+        const superPrisma = new PrismaClient({ datasources: { db: { url: superDbUrl } } });
+
+        try {
+            const prefixResults = await superPrisma.$queryRawUnsafe(
+                `SELECT code, name, "adminDomain", "playerDomain", logo, "primaryColor" FROM "Prefix" WHERE "adminDomain" = $1 OR "playerDomain" = $1 LIMIT 1`,
+                domain
+            ) as any[];
+
+            if (prefixResults && prefixResults.length > 0) {
+                const p = prefixResults[0];
+                res.json({
+                    success: true,
+                    data: {
+                        code: p.code,
+                        name: p.name,
+                        logo: p.logo,
+                        primaryColor: p.primaryColor
+                    }
+                });
+            } else {
+                res.json({ success: false });
+            }
+        } finally {
+            await superPrisma.$disconnect();
+        }
+    } catch (err) {
+        console.error('Config lookup error:', err);
+        res.status(500).json({ success: false });
+    }
+});
+
 // POST /api/auth/admin/login
 router.post('/admin/login', async (req, res) => {
     try {

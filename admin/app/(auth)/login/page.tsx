@@ -13,19 +13,41 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [brandName, setBrandName] = useState("ADMIN");
+    const [fixedPrefix, setFixedPrefix] = useState(false);
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
     useEffect(() => {
-        // Get brand name from domain
-        const hostname = window.location.hostname;
-        // Extract name from subdomain (e.g., admin.check24m.com -> CHECK24M)
-        const parts = hostname.split('.');
-        if (parts.length >= 2) {
-            // Get the main domain name (e.g., check24m from admin.check24m.com)
-            const mainDomain = parts[parts.length - 2].toUpperCase();
-            if (mainDomain && mainDomain !== 'LOCALHOST') {
-                setBrandName(`${mainDomain} ADMIN`);
+        const storedPrefix = localStorage.getItem('adminPrefix');
+        if (storedPrefix) setPrefix(storedPrefix.toUpperCase());
+
+        const checkDomain = async () => {
+            try {
+                const hostname = window.location.hostname;
+
+                // 1. Basic brand name fallback (existing logic)
+                const parts = hostname.split('.');
+                if (parts.length >= 2) {
+                    const mainDomain = parts[parts.length - 2].toUpperCase();
+                    if (mainDomain && mainDomain !== 'LOCALHOST') {
+                        setBrandName(`${mainDomain} ADMIN`);
+                    }
+                }
+
+                // 2. Fetch Config from Backend
+                const res = await fetch(`${API_URL}/api/auth/config?domain=${hostname}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    setPrefix(data.data.code.toUpperCase());
+                    setBrandName(data.data.name);
+                    setFixedPrefix(true);
+                }
+            } catch (err) {
+                console.error("Domain config check failed", err);
             }
-        }
+        };
+
+        checkDomain();
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -50,8 +72,9 @@ export default function LoginPage() {
             if (result?.error) {
                 setError("Username, รหัสผ่าน หรือ Prefix ไม่ถูกต้อง");
             } else {
-                // Store prefix for later use
-                localStorage.setItem('adminPrefix', prefix.toLowerCase());
+                if (!fixedPrefix) {
+                    localStorage.setItem('adminPrefix', prefix.toLowerCase());
+                }
                 router.push("/");
                 router.refresh();
             }
@@ -111,20 +134,22 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Prefix</label>
-                            <div className="relative">
-                                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                                <input
-                                    type="text"
-                                    value={prefix}
-                                    onChange={(e) => setPrefix(e.target.value.toUpperCase())}
-                                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all text-slate-900 uppercase"
-                                    placeholder=""
-                                    required
-                                />
+                        {!fixedPrefix && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700">Prefix</label>
+                                <div className="relative">
+                                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                                    <input
+                                        type="text"
+                                        value={prefix}
+                                        onChange={(e) => setPrefix(e.target.value.toUpperCase())}
+                                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all text-slate-900 uppercase"
+                                        placeholder="เช่น PX89"
+                                        required
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <button
                             type="submit"

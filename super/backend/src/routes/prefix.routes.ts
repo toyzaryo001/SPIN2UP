@@ -332,7 +332,7 @@ router.get('/logs', verifySuperAdmin, async (req: Request, res: Response) => {
 async function runTenantMigration(databaseUrl: string) {
     try {
         console.log(`Starting Auto-Migration for ${databaseUrl}...`);
-        const schemaPath = path.resolve(process.cwd(), '../../backend/prisma/schema.prisma');
+        const schemaPath = path.resolve(process.cwd(), 'prisma/tenant.prisma');
 
         // Run prisma db push
         const { stdout, stderr } = await execPromise(`npx prisma db push --schema="${schemaPath}" --accept-data-loss --skip-generate`, {

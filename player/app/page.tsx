@@ -109,7 +109,7 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
             <button
               key={menu.id}
               onClick={() => setActiveTab(menu.id)}
-              className={`flex flex-col md:flex-row items-center justify-center gap-2 px-6 py-4 min-w-[100px] md:min-w-0 transition-all border-b-2 
+              className={`flex flex-col md:flex-row items-center justify-center gap-3 px-6 py-4 min-w-[100px] md:min-w-0 transition-all border-b-2 
                 ${activeTab === menu.id
                   ? 'border-yellow-500 text-yellow-400 bg-slate-700/50'
                   : 'border-transparent text-slate-400 hover:text-white hover:bg-slate-700'
@@ -136,7 +136,7 @@ const Banner = () => (
         <span className="inline-block px-3 py-1 bg-yellow-500 text-slate-900 text-xs font-bold rounded-full w-fit mb-2 animate-pulse font-sans">
           HOT PROMOTION
         </span>
-        <h2 className="text-3xl md:text-5xl font-black text-white mb-2 drop-shadow-lg font-sans">
+        <h2 className="text-3xl md:text-5xl font-black text-white mb-1 drop-shadow-lg font-sans leading-tight">
           สมัครใหม่รับ <span className="text-yellow-400">100%</span>
         </h2>
         <p className="text-blue-200 mb-6 max-w-md font-sans">
@@ -161,7 +161,7 @@ const Banner = () => (
 
       <div className="mt-4 p-4 bg-slate-900/50 rounded-xl border border-slate-700">
         <p className="text-xs text-slate-400 mb-1 font-sans">ลิงค์แนะนำของคุณ</p>
-        <div className="flex items-center justify-between bg-slate-800 rounded p-2">
+        <div className="flex items-center justify-between bg-slate-800 rounded p-3 mt-1">
           <span className="text-green-400 text-sm font-mono truncate">goldenbet.com/u/user888</span>
           <button className="text-yellow-400 hover:text-yellow-300">
             <Gift size={16} />

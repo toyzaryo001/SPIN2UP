@@ -28,7 +28,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
   <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-50">
-    <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <div className="w-full max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
       {/* Logo Area */}
       <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.href = '/'}>
         <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/20">
@@ -100,7 +100,7 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
 
   return (
     <nav className="bg-slate-800 border-b border-slate-700 shadow-md">
-      <div className="container mx-auto px-4">
+      <div className="w-full max-w-[1400px] mx-auto px-4">
         <div className="flex overflow-x-auto no-scrollbar">
           {menus.map((menu) => (
             <button
@@ -252,7 +252,7 @@ const JackpotBar = () => {
 
   return (
     <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-y border-yellow-500/30 py-3 mb-6">
-      <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="w-full max-w-[1400px] mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Trophy className="text-yellow-400 animate-pulse" />
           <span className="text-white font-bold uppercase tracking-wider font-sans">Progressive Jackpot</span>
@@ -585,7 +585,7 @@ function HomePageLogic() {
 
       <NavBar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="container mx-auto px-4 py-6 pb-24">
+      <main className="w-full max-w-[1400px] mx-auto px-4 py-6 pb-24">
         {renderContent()}
       </main>
 
@@ -618,7 +618,7 @@ function HomePageLogic() {
 
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-10 hidden md:block">
-        <div className="container mx-auto px-4 grid grid-cols-4 gap-8">
+        <div className="w-full max-w-[1400px] mx-auto px-4 grid grid-cols-4 gap-8">
           <div>
             <h3 className="text-white font-bold mb-4 font-sans">GOLDENBET</h3>
             <p className="text-sm font-sans">เว็บพนันออนไลน์อันดับ 1 มั่นคง ปลอดภัย ฝาก-ถอน รวดเร็วด้วยระบบอัตโนมัติ 24 ชั่วโมง</p>

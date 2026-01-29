@@ -14,6 +14,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [brandName, setBrandName] = useState("ADMIN");
     const [fixedPrefix, setFixedPrefix] = useState(false);
+    const [isCheckingDomain, setIsCheckingDomain] = useState(true);
 
     // Auto-fix URL to ensure no double /api/api
     const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -46,6 +47,8 @@ export default function LoginPage() {
                 }
             } catch (err) {
                 console.error("Domain config check failed", err);
+            } finally {
+                setIsCheckingDomain(false);
             }
         };
 
@@ -84,6 +87,17 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
+    if (isCheckingDomain) {
+        return (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+                <div className="text-white text-center">
+                    <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p>กำลังตรวจสอบการติดตั้ง...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">

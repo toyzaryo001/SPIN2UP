@@ -110,60 +110,69 @@ export default function LoginPage() {
                 {/* Login Form */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-xl">
                     {!showSetup ? (
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <h2 className="text-xl font-semibold text-white text-center mb-6">เข้าสู่ระบบ Super Admin</h2>
+                        <>
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <h2 className="text-xl font-semibold text-white text-center mb-6">เข้าสู่ระบบ Super Admin</h2>
 
-                            {error && (
-                                <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-sm">
-                                    {error}
-                                </div>
-                            )}
+                                {error && (
+                                    <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-sm">
+                                        {error}
+                                    </div>
+                                )}
 
-                            <div>
-                                <label className="block text-purple-200 text-sm font-medium mb-2">
-                                    Username
-                                </label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400" size={20} />
-                                    <input
-                                        type="text"
-                                        value={formData.username}
-                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                        className="w-full bg-white/10 border border-white/20 rounded-lg pl-10 pr-4 py-3 text-white placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        placeholder="superadmin"
-                                        required
-                                    />
+                                <div>
+                                    <label className="block text-purple-200 text-sm font-medium mb-2">
+                                        Username
+                                    </label>
+                                    <div className="relative">
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400" size={20} />
+                                        <input
+                                            type="text"
+                                            value={formData.username}
+                                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                            className="w-full bg-white/10 border border-white/20 rounded-lg pl-10 pr-4 py-3 text-white placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            placeholder="superadmin"
+                                            required
+                                        />
+                                    </div>
                                 </div>
+
+                                <div>
+                                    <label className="block text-purple-200 text-sm font-medium mb-2">
+                                        Password
+                                    </label>
+                                    <div className="relative">
+                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400" size={20} />
+                                        <input
+                                            type="password"
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                            className="w-full bg-white/10 border border-white/20 rounded-lg pl-10 pr-4 py-3 text-white placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            placeholder="••••••••"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30"
+                                >
+                                    <Shield size={20} />
+                                    {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+                                </button>
+                            </form>
+                            <div className="mt-4 text-center">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSetup(true)}
+                                    className="text-sm text-purple-400 hover:text-purple-300 underline"
+                                >
+                                    ตั้งค่า Super Admin คนแรก? (First Time Setup)
+                                </button>
                             </div>
-
-                            <div>
-                                <label className="block text-purple-200 text-sm font-medium mb-2">
-                                    Password
-                                </label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400" size={20} />
-                                    <input
-                                        type="password"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className="w-full bg-white/10 border border-white/20 rounded-lg pl-10 pr-4 py-3 text-white placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        placeholder="••••••••"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30"
-                            >
-                                <Shield size={20} />
-                                {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
-                            </button>
-
-
-                        </form>
+                        </>
                     ) : (
                         <form onSubmit={handleSetup} className="space-y-4">
                             <h2 className="text-xl font-semibold text-white text-center mb-6">สร้าง Super Admin คนแรก</h2>

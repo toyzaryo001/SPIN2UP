@@ -9,6 +9,8 @@ export default function Header() {
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [showMenu, setShowMenu] = useState(false);
+    const [brandName, setBrandName] = useState("CASINO"); // Default
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
     useEffect(() => {
         const checkUser = () => {
@@ -28,6 +30,30 @@ export default function Header() {
         window.addEventListener('storage', checkUser);
         window.addEventListener('user-login', checkUser);
         window.addEventListener('user-logout', checkUser);
+
+        // Fetch Branding
+        const fetchBranding = async () => {
+            try {
+                const { default: axios } = await import("axios");
+                const hostname = window.location.hostname;
+                const res = await axios.get(`${API_URL}/auth/config?domain=${hostname}`);
+                if (res.data.success) {
+                    setBrandName(res.data.data.name);
+                } else {
+                    // Fallback check hostname
+                    const parts = hostname.split('.');
+                    if (parts.length >= 2) {
+                        const mainDomain = parts[parts.length - 2].toUpperCase();
+                        if (mainDomain !== 'LOCALHOST') {
+                            setBrandName(mainDomain);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Branding error", error);
+            }
+        };
+        fetchBranding();
 
         return () => {
             window.removeEventListener('storage', checkUser);
@@ -70,7 +96,7 @@ export default function Header() {
                         fontWeight: 900,
                         color: "#FFD700",
                         textShadow: "2px 2px 4px rgba(0,0,0,0.5)"
-                    }}>CHECK24M</span>
+                    }}>{brandName}</span>
                 </Link>
 
                 {/* Balance Display (when logged in) + Hamburger */}
@@ -231,7 +257,7 @@ export default function Header() {
                             color: "#FFD700",
                             textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
                             margin: "8px 0 0"
-                        }}>CHECK24M</p>
+                        }}>{brandName}</p>
                     </div>
 
                     {/* User Info */}

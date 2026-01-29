@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -134,6 +134,45 @@ function HomePageContent() {
   }, []);
 
   const filteredGames = selectedCategory ? games.filter(g => g.provider?.categoryId === selectedCategory) : games;
+
+  /* CONFIG FETCHING */
+  const [config, setConfig] = useState({ prefix: 'check24m', name: 'CHECK24M', protocol: 'https' });
+  const [referralLink, setReferralLink] = useState('https://check24m.com/?prefix=check24m&action=register&refer_code=...');
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const hostname = window.location.hostname;
+        // Use axios from import or window
+        const { default: axios } = await import("axios");
+        const res = await axios.get(`${API_URL}/auth/config?domain=${hostname}`);
+        let newConfig = { prefix: 'check24m', name: 'CHECK24M' };
+
+        if (res.data.success) {
+          newConfig = {
+            prefix: res.data.data.code?.toLowerCase() || 'prefix',
+            name: res.data.data.name
+          };
+        } else {
+          // Fallback
+          const parts = hostname.split('.');
+          if (parts.length >= 2) {
+            const mainDomain = parts[parts.length - 2].toLowerCase();
+            if (mainDomain !== 'localhost') {
+              newConfig = { prefix: mainDomain, name: mainDomain.toUpperCase() };
+            }
+          }
+        }
+        setConfig({ ...newConfig, protocol: window.location.protocol.replace(':', '') });
+
+        setReferralLink(`${window.location.protocol}//${window.location.host}/?prefix=${newConfig.prefix}&action=register&refer_code=...`);
+
+      } catch (error) {
+        console.error("Config fetch error", error);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -350,7 +389,7 @@ function HomePageContent() {
           whiteSpace: "nowrap",
           border: "1px solid #BBDEFB"
         }}>
-          https://check24m.com/?prefix=check24m&action=register&refer_code=...
+          {referralLink}
         </div>
         <button style={{
           width: "100%",

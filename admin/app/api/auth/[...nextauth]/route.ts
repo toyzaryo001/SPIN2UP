@@ -38,10 +38,11 @@ export const handler = NextAuth({
                             prefix: credentials.prefix,
                         };
                     }
-                    return null;
-                } catch (error) {
-                    console.error("Admin login failed:", error);
-                    return null;
+                    throw new Error(res.data.message || 'ข้อมูลไม่ถูกต้อง');
+                } catch (error: any) {
+                    console.error("Admin login failed:", error?.response?.data || error.message);
+                    const errorMessage = error?.response?.data?.message || error.message || 'เข้าสู่ระบบไม่สำเร็จ';
+                    throw new Error(errorMessage);
                 }
             }
         })

@@ -69,7 +69,7 @@ export default function LoginPage() {
             });
 
             if (result?.error) {
-                setError("Username, รหัสผ่าน หรือ Prefix ไม่ถูกต้อง");
+                setError(result.error);
             } else {
 
                 router.push("/");

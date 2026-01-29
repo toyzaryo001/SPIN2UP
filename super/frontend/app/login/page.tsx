@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Lock, User, ExternalLink } from 'lucide-react';
 
+import { toast } from 'react-hot-toast';
+
 export default function LoginPage() {
     const router = useRouter();
     const [formData, setFormData] = useState({ username: '', password: '' });
@@ -38,12 +40,15 @@ export default function LoginPage() {
             if (data.success) {
                 localStorage.setItem('superAdminToken', data.data.token);
                 localStorage.setItem('superAdminUser', JSON.stringify(data.data.user));
+                toast.success('ยินดีต้อนรับเข้าสู่ระบบ');
                 router.push('/prefixes');
             } else {
                 setError(data.message || 'เข้าสู่ระบบไม่สำเร็จ');
+                toast.error(data.message || 'เข้าสู่ระบบไม่สำเร็จ');
             }
         } catch (err) {
             setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
         } finally {
             setLoading(false);
         }
@@ -54,6 +59,7 @@ export default function LoginPage() {
 
         if (setupData.password !== setupData.confirmPassword) {
             setError('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
+            toast.error('รหัสผ่านไม่ตรงกัน');
             return;
         }
 
@@ -74,14 +80,16 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (data.success) {
-                alert('สร้าง Super Admin สำเร็จ! กรุณาเข้าสู่ระบบ');
+                toast.success('สร้าง Super Admin สำเร็จ! กรุณาเข้าสู่ระบบ');
                 setShowSetup(false);
                 setFormData({ username: setupData.username, password: setupData.password });
             } else {
                 setError(data.message || 'ไม่สามารถสร้าง Super Admin ได้');
+                toast.error(data.message || 'สร้างไม่สำเร็จ');
             }
         } catch (err) {
             setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
         } finally {
             setLoading(false);
         }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 import {
     Shield, Database, Plus, Trash2, Edit2, Power, PowerOff,
     LogOut, RefreshCw, CheckCircle, XCircle, Globe, Key, Copy, Check
@@ -73,6 +74,7 @@ export default function PrefixesPage() {
             }
         } catch (error) {
             console.error('Error fetching prefixes:', error);
+            toast.error('ไม่สามารถโหลดข้อมูล Prefix ได้');
         } finally {
             setLoading(false);
         }
@@ -82,6 +84,7 @@ export default function PrefixesPage() {
         localStorage.removeItem('superAdminToken');
         localStorage.removeItem('superAdminUser');
         router.push('/login');
+        toast.success('ออกจากระบบเรียบร้อย');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -99,13 +102,19 @@ export default function PrefixesPage() {
             });
             const data = await res.json();
             if (data.success) {
+                if (data.warning) {
+                    toast.error(data.warning, { duration: 6000 });
+                } else {
+                    toast.success(editingPrefix ? 'บันทึกการแก้ไขสำเร็จ' : 'สร้าง Prefix สำเร็จ');
+                }
                 fetchPrefixes();
                 closeModal();
             } else {
-                alert(data.message);
+                toast.error(data.message);
             }
         } catch (error) {
             console.error('Error saving prefix:', error);
+            toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
         }
     };
 
@@ -119,10 +128,14 @@ export default function PrefixesPage() {
             });
             const data = await res.json();
             if (data.success) {
+                toast.success('ลบ Prefix สำเร็จ');
                 fetchPrefixes();
+            } else {
+                toast.error(data.message || 'ไม่สามารถลบได้');
             }
         } catch (error) {
             console.error('Error deleting prefix:', error);
+            toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
         }
     };
 
@@ -135,10 +148,14 @@ export default function PrefixesPage() {
             });
             const data = await res.json();
             if (data.success) {
+                toast.success(`เปลี่ยนสถานะเป็น ${!prefix.isActive ? 'Active' : 'Inactive'} แล้ว`);
                 fetchPrefixes();
+            } else {
+                toast.error(data.message || 'ไม่สามารถเปลี่ยนสถานะได้');
             }
         } catch (error) {
             console.error('Error toggling prefix:', error);
+            toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
         }
     };
 
@@ -178,6 +195,7 @@ export default function PrefixesPage() {
     const copyDatabaseUrl = (prefix: Prefix) => {
         navigator.clipboard.writeText(prefix.databaseUrl);
         setCopiedId(prefix.id);
+        toast.success('คัดลอก Database URL แล้ว');
         setTimeout(() => setCopiedId(null), 2000);
     };
 

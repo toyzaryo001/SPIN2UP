@@ -79,9 +79,13 @@ router.post('/', verifySuperAdmin, async (req: Request, res: Response) => {
                 );
 
                 await tenantPrisma.$disconnect();
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Failed to create initial admin:", err);
-                // Note: We don't revert prefix creation, just warn
+                return res.status(201).json({
+                    success: true,
+                    data: prefix,
+                    warning: `สร้าง Prefix สำเร็จ แต่สร้าง Admin ไม่สำเร็จ: ${err.message}`
+                });
             }
         }
 
@@ -142,8 +146,13 @@ router.put('/:id', verifySuperAdmin, async (req: Request, res: Response) => {
                 );
 
                 await tenantPrisma.$disconnect();
-            } catch (err) {
-                console.error("Failed to create/upadte initial admin:", err);
+            } catch (err: any) {
+                console.error("Failed to create/update initial admin:", err);
+                return res.json({
+                    success: true,
+                    data: prefix,
+                    warning: `บันทึก Prefix สำเร็จ แต่สร้าง Admin ไม่สำเร็จ: ${err.message}`
+                });
             }
         }
 

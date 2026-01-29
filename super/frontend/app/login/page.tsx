@@ -154,13 +154,7 @@ export default function LoginPage() {
                                 {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
                             </button>
 
-                            <button
-                                type="button"
-                                onClick={() => setShowSetup(true)}
-                                className="w-full text-purple-400 hover:text-purple-300 text-sm py-2 transition-colors"
-                            >
-                                ยังไม่มี Super Admin? คลิกเพื่อสร้าง
-                            </button>
+
                         </form>
                     ) : (
                         <form onSubmit={handleSetup} className="space-y-4">

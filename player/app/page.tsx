@@ -356,12 +356,13 @@ function HomePageContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* REFERRAL SECTION */}
-        <div className="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg border border-white/20">
-          <p className="text-xs md:text-sm text-gray-600 font-bold mb-2 flex items-center gap-2">
+        {/* REFERRAL SECTION */}
+        <div className="bg-[#161B22]/50 backdrop-blur rounded-2xl p-4 shadow-lg border border-white/10">
+          <p className="text-xs md:text-sm text-[#FFD700] font-bold mb-2 flex items-center gap-2">
             🔗 ลิงก์ชวนเพื่อน
           </p>
           <div className="flex gap-2">
-            <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800 truncate font-mono">
+            <div className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-xs text-blue-300 truncate font-mono">
               {referralLink}
             </div>
             <button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs md:text-sm font-bold px-4 py-2 rounded-lg shadow-md transition-all whitespace-nowrap">
@@ -371,57 +372,57 @@ function HomePageContent() {
         </div>
 
         {/* SEARCH BAR */}
-        <div className="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg border border-white/20 flex items-center gap-2">
+        {/* SEARCH BAR */}
+        <div className="bg-[#161B22]/50 backdrop-blur rounded-2xl p-4 shadow-lg border border-white/10 flex items-center gap-2">
           <div className="flex-1 relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg">🔍</span>
             <input
               type="text"
               placeholder="ค้นหาเกมที่นี่..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#FFD700] outline-none transition-all"
+              className="w-full pl-10 pr-4 py-2 bg-black/30 border border-white/10 text-white rounded-xl text-sm focus:ring-2 focus:ring-[#FFD700] outline-none transition-all placeholder:text-gray-500"
             />
           </div>
-          <button className="bg-gradient-to-r from-[#FFD700] to-[#FFC000] text-[#0D1117] font-bold text-sm px-6 py-2 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+          <button className="bg-gradient-to-r from-[#FFD700] to-[#FFC000] text-[#0D1117] font-bold text-sm px-6 py-2 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 whitespace-nowrap">
             ค้นหา
           </button>
         </div>
       </div>
 
-      <div className="bg-white/95 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row gap-4 md:gap-6">
-        {/* LEFT SIDEBAR - Dynamic Categories */}
-        <div className="w-full md:w-48 flex-shrink-0 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+      <div className="flex flex-col gap-4">
+        {/* CATEGORIES - Horizontal Scroll */}
+        <div className="w-full flex gap-2 overflow-x-auto pb-2 scrollbar-none">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`flex-shrink-0 flex flex-col md:flex-row items-center gap-2 p-3 rounded-xl transition-all ${!selectedCategory
-              ? "bg-orange-500/10 border border-orange-500/30 text-orange-500"
-              : "hover:bg-gray-100 text-gray-600"
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full transition-all border ${!selectedCategory
+              ? "bg-[#FFD700] border-[#FFD700] text-[#0D1117]"
+              : "bg-[#161B22] border-white/10 text-gray-400 hover:text-white"
               }`}
           >
-            <span className="text-xl">🏠</span>
-            <span className="text-xs md:text-sm font-bold">ทั้งหมด</span>
+            <span className="text-lg">🏠</span>
+            <span className="text-xs font-bold whitespace-nowrap">ทั้งหมด</span>
           </button>
 
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`flex-shrink-0 flex flex-col md:flex-row items-center gap-2 p-3 rounded-xl transition-all ${selectedCategory === cat.id
-                ? "bg-orange-500/10 border border-orange-500/30 text-orange-500"
-                : "hover:bg-gray-100 text-gray-600"
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full transition-all border ${selectedCategory === cat.id
+                ? "bg-[#FFD700] border-[#FFD700] text-[#0D1117]"
+                : "bg-[#161B22] border-white/10 text-gray-400 hover:text-white"
                 }`}
             >
               {cat.icon && (cat.icon.startsWith('http') || cat.icon.startsWith('data:') || cat.icon.startsWith('/')) ? (
-                <img src={cat.icon} alt="" className="w-6 h-6 rounded-md object-cover" />
+                <img src={cat.icon} alt="" className="w-5 h-5 rounded object-cover" />
               ) : (
-                <span className="text-xl">{cat.icon || "🎮"}</span>
+                <span className="text-lg">{cat.icon || "🎮"}</span>
               )}
-              <span className="text-xs md:text-sm font-bold whitespace-nowrap">{cat.name}</span>
+              <span className="text-xs font-bold whitespace-nowrap">{cat.name}</span>
             </button>
           ))}
         </div>
 
-        {/* GAME GRID - Dynamic from API */}
         <div className="flex-1">
-          <h2 className="text-sm md:text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             🎰 {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name : "รวมเกมฮิต"}
           </h2>
           {gamesLoading ? (
@@ -429,9 +430,9 @@ function HomePageContent() {
           ) : filteredGames.length === 0 ? (
             <div className="text-center p-8 text-gray-400">ยังไม่มีเกม</div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+            <div className="grid grid-cols-3 gap-3">
               {filteredGames.map((game, i) => (
-                <div key={game.id} className="group relative rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer bg-gray-100">
+                <div key={game.id} className="group relative rounded-xl overflow-hidden shadow-lg border border-white/5 bg-[#161B22]">
                   <div
                     className="aspect-square w-full relative group-hover:scale-110 transition-transform duration-500"
                     style={{

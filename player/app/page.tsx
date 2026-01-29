@@ -455,73 +455,105 @@ function HomePageContent() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {/* CATEGORIES - Horizontal Scroll */}
-        <div className="w-full flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div style={{
+          display: "flex",
+          gap: "8px",
+          overflowX: "auto",
+          paddingBottom: "4px",
+          scrollbarWidth: "none"
+        }}>
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full transition-all border ${!selectedCategory
-              ? "bg-[#FFD700] border-[#FFD700] text-[#0D1117]"
-              : "bg-[#161B22] border-white/10 text-gray-400 hover:text-white"
-              }`}
+            style={{
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 16px",
+              borderRadius: "50px",
+              border: !selectedCategory ? "1px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
+              background: !selectedCategory ? "#FFD700" : "rgba(22, 27, 34, 0.6)",
+              color: !selectedCategory ? "#0D1117" : "#888",
+              cursor: "pointer"
+            }}
           >
-            <span className="text-lg">🏠</span>
-            <span className="text-xs font-bold whitespace-nowrap">ทั้งหมด</span>
+            <span style={{ fontSize: "16px" }}>🏠</span>
+            <span style={{ fontSize: "12px", fontWeight: 700 }}>ทั้งหมด</span>
           </button>
 
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full transition-all border ${selectedCategory === cat.id
-                ? "bg-[#FFD700] border-[#FFD700] text-[#0D1117]"
-                : "bg-[#161B22] border-white/10 text-gray-400 hover:text-white"
-                }`}
+              style={{
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 16px",
+                borderRadius: "50px",
+                border: selectedCategory === cat.id ? "1px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
+                background: selectedCategory === cat.id ? "#FFD700" : "rgba(22, 27, 34, 0.6)",
+                color: selectedCategory === cat.id ? "#0D1117" : "#888",
+                cursor: "pointer"
+              }}
             >
               {cat.icon && (cat.icon.startsWith('http') || cat.icon.startsWith('data:') || cat.icon.startsWith('/')) ? (
-                <img src={cat.icon} alt="" className="w-5 h-5 rounded object-cover" />
+                <img src={cat.icon} alt="" style={{ width: "20px", height: "20px", borderRadius: "4px", objectFit: "cover" }} />
               ) : (
-                <span className="text-lg">{cat.icon || "🎮"}</span>
+                <span style={{ fontSize: "16px" }}>{cat.icon || "🎮"}</span>
               )}
-              <span className="text-xs font-bold whitespace-nowrap">{cat.name}</span>
+              <span style={{ fontSize: "12px", fontWeight: 700 }}>{cat.name}</span>
             </button>
           ))}
         </div>
 
-        <div className="flex-1">
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <div style={{ flex: 1 }}>
+          <h2 style={{ fontSize: "16px", fontWeight: 700, color: "white", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
             🎰 {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name : "รวมเกมฮิต"}
           </h2>
           {gamesLoading ? (
-            <div className="text-center p-8 text-gray-400">กำลังโหลด...</div>
+            <div style={{ textAlign: "center", padding: "30px", color: "#666" }}>กำลังโหลด...</div>
           ) : filteredGames.length === 0 ? (
-            <div className="text-center p-8 text-gray-400">ยังไม่มีเกม</div>
+            <div style={{ textAlign: "center", padding: "30px", color: "#666" }}>ยังไม่มีเกม</div>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
               {filteredGames.map((game, i) => (
-                <div key={game.id} className="group relative rounded-xl overflow-hidden shadow-lg border border-white/5 bg-[#161B22]">
+                <div key={game.id} style={{
+                  position: "relative",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
+                  background: "#161B22",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                  cursor: "pointer"
+                }}>
                   <div
-                    className="aspect-square w-full relative group-hover:scale-110 transition-transform duration-500"
                     style={{
+                      width: "100%",
+                      aspectRatio: "1/1",
                       background: game.thumbnail ? `url(${game.thumbnail}) center/cover` : gameGradients[i % gameGradients.length],
+                      position: "relative"
                     }}
                   >
                     {!game.thumbnail && (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-4xl opacity-40">🎮</span>
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontSize: "32px", opacity: 0.4 }}>🎮</span>
                       </div>
                     )}
                   </div>
 
                   {/* Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+                  <div style={{ position: "absolute", top: "6px", left: "6px", display: "flex", flexDirection: "column", gap: "4px", zIndex: 10 }}>
                     {game.isHot && (
-                      <span className="bg-red-500 text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+                      <span style={{ background: "#FF4444", color: "white", fontSize: "9px", fontWeight: 700, padding: "2px 6px", borderRadius: "4px" }}>
                         🔥 HOT
                       </span>
                     )}
                     {game.isNew && (
-                      <span className="bg-blue-500 text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+                      <span style={{ background: "#2196F3", color: "white", fontSize: "9px", fontWeight: 700, padding: "2px 6px", borderRadius: "4px" }}>
                         NEW
                       </span>
                     )}
@@ -533,9 +565,13 @@ function HomePageContent() {
                   </button>
 
                   {/* Overlay Content */}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 text-white translate-y-2 group-hover:translate-y-0 transition-transform">
-                    <p className="text-[10px] md:text-sm font-bold truncate leading-tight">{game.name}</p>
-                    {game.provider && <p className="text-[9px] md:text-xs text-gray-300 opacity-80">{game.provider.name}</p>}
+                  <div style={{
+                    position: "absolute", bottom: 0, left: 0, right: 0,
+                    background: "linear-gradient(to top, rgba(0,0,0,0.9), transparent)",
+                    padding: "30px 8px 8px 8px"
+                  }}>
+                    <p style={{ fontSize: "11px", fontWeight: 700, color: "white", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{game.name}</p>
+                    {game.provider && <p style={{ fontSize: "9px", color: "#aaa" }}>{game.provider.name}</p>}
                   </div>
                 </div>
               ))}

@@ -336,53 +336,120 @@ function HomePageContent() {
       )}
 
       {/* QUICK LINKS ROW */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "20px" }}>
         {quickLinks.map((item) => (
           <button
             key={item.label}
             onClick={() => item.path && router.push(item.path)}
-            className="flex flex-col items-center gap-2 group cursor-pointer"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+              background: "none",
+              border: "none",
+              cursor: "pointer"
+            }}
           >
             <div
-              className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl flex items-center justify-center text-2xl md:text-3xl shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg"
-              style={{ background: item.color }}
+              style={{
+                width: "50px",
+                height: "50px",
+                borderRadius: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "24px",
+                background: item.color,
+                boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
+              }}
             >
               {item.icon}
             </div>
-            <span className="text-[10px] md:text-sm font-bold text-gray-300 group-hover:text-white transition-colors">{item.label}</span>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#ccc" }}>{item.label}</span>
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div style={{ display: "grid", gap: "12px", marginBottom: "20px" }}>
         {/* REFERRAL SECTION */}
-        {/* REFERRAL SECTION */}
-        <div className="bg-[#161B22]/50 backdrop-blur rounded-2xl p-4 shadow-lg border border-white/10">
-          <p className="text-xs md:text-sm text-[#FFD700] font-bold mb-2 flex items-center gap-2">
+        <div style={{
+          background: "rgba(22, 27, 34, 0.6)",
+          borderRadius: "16px",
+          padding: "16px",
+          border: "1px solid rgba(255, 255, 255, 0.05)"
+        }}>
+          <p style={{ fontSize: "12px", color: "#FFD700", fontWeight: 700, marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
             🔗 ลิงก์ชวนเพื่อน
           </p>
-          <div className="flex gap-2">
-            <div className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-xs text-blue-300 truncate font-mono">
+          <div style={{ display: "flex", gap: "8px" }}>
+            <div style={{
+              flex: 1,
+              background: "rgba(0,0,0,0.3)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              fontSize: "12px",
+              color: "#aaa",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              fontFamily: "monospace"
+            }}>
               {referralLink}
             </div>
-            <button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs md:text-sm font-bold px-4 py-2 rounded-lg shadow-md transition-all whitespace-nowrap">
+            <button style={{
+              background: "linear-gradient(135deg, #FF9500, #FF7A00)",
+              color: "white",
+              border: "none",
+              fontSize: "12px",
+              fontWeight: 700,
+              padding: "8px 16px",
+              borderRadius: "8px",
+              cursor: "pointer"
+            }}>
               คัดลอก
             </button>
           </div>
         </div>
 
         {/* SEARCH BAR */}
-        {/* SEARCH BAR */}
-        <div className="bg-[#161B22]/50 backdrop-blur rounded-2xl p-4 shadow-lg border border-white/10 flex items-center gap-2">
-          <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg">🔍</span>
+        <div style={{
+          background: "rgba(22, 27, 34, 0.6)",
+          borderRadius: "16px",
+          padding: "12px",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
+          display: "flex",
+          gap: "10px",
+          alignItems: "center"
+        }}>
+          <div style={{ flex: 1, position: "relative" }}>
+            <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontSize: "16px" }}>🔍</span>
             <input
               type="text"
-              placeholder="ค้นหาเกมที่นี่..."
-              className="w-full pl-10 pr-4 py-2 bg-black/30 border border-white/10 text-white rounded-xl text-sm focus:ring-2 focus:ring-[#FFD700] outline-none transition-all placeholder:text-gray-500"
+              placeholder="ค้นหาเกม..."
+              style={{
+                width: "100%",
+                padding: "8px 8px 8px 36px",
+                background: "rgba(0,0,0,0.3)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "10px",
+                fontSize: "13px",
+                color: "white",
+                outline: "none"
+              }}
             />
           </div>
-          <button className="bg-gradient-to-r from-[#FFD700] to-[#FFC000] text-[#0D1117] font-bold text-sm px-6 py-2 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 whitespace-nowrap">
+          <button style={{
+            background: "linear-gradient(135deg, #FFD700, #FFC000)",
+            color: "#0D1117",
+            border: "none",
+            fontWeight: 700,
+            fontSize: "13px",
+            padding: "8px 16px",
+            borderRadius: "10px",
+            cursor: "pointer"
+          }}>
             ค้นหา
           </button>
         </div>

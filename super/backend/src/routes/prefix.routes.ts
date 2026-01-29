@@ -109,9 +109,9 @@ router.post('/', verifySuperAdmin, async (req: Request, res: Response) => {
         });
 
         res.status(201).json({ success: true, data: prefix });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Create prefix error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        res.status(500).json({ success: false, message: error?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
     }
 });
 

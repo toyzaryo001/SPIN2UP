@@ -112,9 +112,9 @@ export default function PrefixesPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving prefix:', error);
-            toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            toast.error(`เกิดข้อผิดพลาด: ${error?.message || 'เชื่อมต่อ Server ไม่ได้'}`);
         }
     };
 

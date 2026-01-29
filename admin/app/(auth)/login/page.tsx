@@ -17,8 +17,7 @@ export default function LoginPage() {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
     useEffect(() => {
-        const storedPrefix = localStorage.getItem('adminPrefix');
-        if (storedPrefix) setPrefix(storedPrefix.toUpperCase());
+
 
         const checkDomain = async () => {
             try {
@@ -72,9 +71,7 @@ export default function LoginPage() {
             if (result?.error) {
                 setError("Username, รหัสผ่าน หรือ Prefix ไม่ถูกต้อง");
             } else {
-                if (!fixedPrefix) {
-                    localStorage.setItem('adminPrefix', prefix.toLowerCase());
-                }
+
                 router.push("/");
                 router.refresh();
             }

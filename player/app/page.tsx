@@ -336,206 +336,138 @@ function HomePageContent() {
       )}
 
       {/* QUICK LINKS ROW */}
-      <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "12px" }}>
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {quickLinks.map((item) => (
           <button
             key={item.label}
             onClick={() => item.path && router.push(item.path)}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "4px",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer"
-            }}
+            className="flex flex-col items-center gap-2 group cursor-pointer"
           >
             <div
-              style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "50%",
-                background: item.color,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-              }}
+              className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl flex items-center justify-center text-2xl md:text-3xl shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg"
+              style={{ background: item.color }}
             >
               {item.icon}
             </div>
-            <span style={{ fontSize: "10px", color: "#444", fontWeight: 600 }}>{item.label}</span>
+            <span className="text-[10px] md:text-sm font-bold text-gray-300 group-hover:text-white transition-colors">{item.label}</span>
           </button>
         ))}
       </div>
 
-      {/* REFERRAL SECTION */}
-      <div style={{
-        background: "rgba(255,255,255,0.95)",
-        borderRadius: "16px",
-        padding: "14px",
-        marginBottom: "12px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
-      }}>
-        <p style={{ fontSize: "13px", color: "#555", marginBottom: "8px", fontWeight: 600 }}>🔗 ลิงก์ชวนเพื่อน</p>
-        <div style={{
-          background: "#E3F2FD",
-          padding: "10px 12px",
-          borderRadius: "10px",
-          fontSize: "11px",
-          color: "#1565C0",
-          marginBottom: "10px",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          border: "1px solid #BBDEFB"
-        }}>
-          {referralLink}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* REFERRAL SECTION */}
+        <div className="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg border border-white/20">
+          <p className="text-xs md:text-sm text-gray-600 font-bold mb-2 flex items-center gap-2">
+            🔗 ลิงก์ชวนเพื่อน
+          </p>
+          <div className="flex gap-2">
+            <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800 truncate font-mono">
+              {referralLink}
+            </div>
+            <button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs md:text-sm font-bold px-4 py-2 rounded-lg shadow-md transition-all whitespace-nowrap">
+              คัดลอก
+            </button>
+          </div>
         </div>
-        <button style={{
-          width: "100%",
-          background: "linear-gradient(135deg, #FF9500, #FF7A00)",
-          color: "white",
-          border: "none",
-          padding: "12px",
-          borderRadius: "25px",
-          fontWeight: 700,
-          fontSize: "14px",
-          cursor: "pointer",
-          boxShadow: "0 4px 15px rgba(255,149,0,0.3)"
-        }}>
-          » กดเพื่อคัดลอกลิ้งชวนเพื่อน «
-        </button>
+
+        {/* SEARCH BAR */}
+        <div className="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg border border-white/20 flex items-center gap-2">
+          <div className="flex-1 relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg">🔍</span>
+            <input
+              type="text"
+              placeholder="ค้นหาเกมที่นี่..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#FFD700] outline-none transition-all"
+            />
+          </div>
+          <button className="bg-gradient-to-r from-[#FFD700] to-[#FFC000] text-[#0D1117] font-bold text-sm px-6 py-2 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+            ค้นหา
+          </button>
+        </div>
       </div>
 
-      {/* SEARCH BAR */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
-        <div style={{ flex: 1, position: "relative" }}>
-          <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "18px" }}>🐕</span>
-          <input
-            type="text"
-            placeholder="ค้นหาเกมที่นี่"
-            style={{
-              width: "100%",
-              padding: "12px 12px 12px 44px",
-              border: "none",
-              borderRadius: "25px",
-              fontSize: "14px",
-              background: "white",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.06)"
-            }}
-          />
-        </div>
-        <button style={{
-          background: "linear-gradient(135deg, #FF9500, #FF7A00)",
-          color: "white",
-          border: "none",
-          padding: "0 24px",
-          borderRadius: "25px",
-          fontWeight: 700,
-          fontSize: "14px",
-          cursor: "pointer",
-          boxShadow: "0 4px 15px rgba(255,149,0,0.3)"
-        }}>
-          ค้นหา
-        </button>
-      </div>
-
-      {/* SIDEBAR + GAME GRID */}
-      <div style={{
-        background: "rgba(255,255,255,0.95)",
-        borderRadius: "16px",
-        padding: "12px",
-        display: "flex",
-        gap: "10px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
-      }}>
+      <div className="bg-white/95 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row gap-4 md:gap-6">
         {/* LEFT SIDEBAR - Dynamic Categories */}
-        <div style={{ width: "60px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div className="w-full md:w-48 flex-shrink-0 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
           <button
             onClick={() => setSelectedCategory(null)}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "3px",
-              padding: "8px 4px",
-              background: !selectedCategory ? "rgba(255,149,0,0.15)" : "transparent",
-              border: !selectedCategory ? "1px solid rgba(255,149,0,0.3)" : "none",
-              borderRadius: "10px",
-              cursor: "pointer"
-            }}
+            className={`flex-shrink-0 flex flex-col md:flex-row items-center gap-2 p-3 rounded-xl transition-all ${!selectedCategory
+              ? "bg-orange-500/10 border border-orange-500/30 text-orange-500"
+              : "hover:bg-gray-100 text-gray-600"
+              }`}
           >
-            <span style={{ fontSize: "18px" }}>🏠</span>
-            <span style={{ fontSize: "9px", color: !selectedCategory ? "#FF9500" : "#666", fontWeight: 600 }}>ทั้งหมด</span>
+            <span className="text-xl">🏠</span>
+            <span className="text-xs md:text-sm font-bold">ทั้งหมด</span>
           </button>
+
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "3px",
-                padding: "8px 4px",
-                background: selectedCategory === cat.id ? "rgba(255,149,0,0.15)" : "transparent",
-                border: selectedCategory === cat.id ? "1px solid rgba(255,149,0,0.3)" : "none",
-                borderRadius: "10px",
-                cursor: "pointer"
-              }}
+              className={`flex-shrink-0 flex flex-col md:flex-row items-center gap-2 p-3 rounded-xl transition-all ${selectedCategory === cat.id
+                ? "bg-orange-500/10 border border-orange-500/30 text-orange-500"
+                : "hover:bg-gray-100 text-gray-600"
+                }`}
             >
               {cat.icon && (cat.icon.startsWith('http') || cat.icon.startsWith('data:') || cat.icon.startsWith('/')) ? (
-                <img src={cat.icon} alt="" style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }} />
+                <img src={cat.icon} alt="" className="w-6 h-6 rounded-md object-cover" />
               ) : (
-                <span style={{ fontSize: "18px" }}>{cat.icon || "🎮"}</span>
+                <span className="text-xl">{cat.icon || "🎮"}</span>
               )}
-              <span style={{ fontSize: "9px", color: selectedCategory === cat.id ? "#FF9500" : "#666", fontWeight: 600 }}>{cat.name}</span>
+              <span className="text-xs md:text-sm font-bold whitespace-nowrap">{cat.name}</span>
             </button>
           ))}
         </div>
 
         {/* GAME GRID - Dynamic from API */}
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: "14px", fontWeight: 700, color: "#333", marginBottom: "10px" }}>
+        <div className="flex-1">
+          <h2 className="text-sm md:text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             🎰 {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name : "รวมเกมฮิต"}
           </h2>
           {gamesLoading ? (
-            <div style={{ textAlign: "center", padding: "24px", color: "#888" }}>กำลังโหลด...</div>
+            <div className="text-center p-8 text-gray-400">กำลังโหลด...</div>
           ) : filteredGames.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "24px", color: "#888" }}>ยังไม่มีเกม</div>
+            <div className="text-center p-8 text-gray-400">ยังไม่มีเกม</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
               {filteredGames.map((game, i) => (
-                <div key={game.id} style={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 3px 12px rgba(0,0,0,0.12)", cursor: "pointer", position: "relative" }}>
-                  <div style={{
-                    aspectRatio: "1",
-                    background: game.thumbnail ? `url(${game.thumbnail}) center/cover` : gameGradients[i % gameGradients.length],
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative"
-                  }}>
-                    {!game.thumbnail && <span style={{ fontSize: "32px", opacity: 0.4 }}>🎮</span>}
+                <div key={game.id} className="group relative rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer bg-gray-100">
+                  <div
+                    className="aspect-square w-full relative group-hover:scale-110 transition-transform duration-500"
+                    style={{
+                      background: game.thumbnail ? `url(${game.thumbnail}) center/cover` : gameGradients[i % gameGradients.length],
+                    }}
+                  >
+                    {!game.thumbnail && (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-4xl opacity-40">🎮</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Badges */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
                     {game.isHot && (
-                      <span style={{ position: "absolute", top: "4px", left: "4px", background: "#FF4444", color: "white", fontSize: "7px", fontWeight: 700, padding: "2px 5px", borderRadius: "4px" }}>
+                      <span className="bg-red-500 text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
                         🔥 HOT
                       </span>
                     )}
                     {game.isNew && (
-                      <span style={{ position: "absolute", top: game.isHot ? "22px" : "4px", left: "4px", background: "#2196F3", color: "white", fontSize: "7px", fontWeight: 700, padding: "2px 5px", borderRadius: "4px" }}>
-                        ✨ NEW
+                      <span className="bg-blue-500 text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+                        NEW
                       </span>
                     )}
-                    <button style={{ position: "absolute", top: "4px", right: "4px", width: "22px", height: "22px", borderRadius: "50%", background: "white", border: "none", cursor: "pointer", fontSize: "10px", color: "#FF6B6B", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      ♥
-                    </button>
-                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.7))", padding: "10px 6px 6px", color: "white" }}>
-                      <p style={{ fontSize: "10px", fontWeight: 700, marginBottom: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{game.name}</p>
-                      {game.provider && <p style={{ fontSize: "8px", opacity: 0.8 }}>{game.provider.name}</p>}
-                    </div>
+                  </div>
+
+                  {/* Fav Button */}
+                  <button className="absolute top-2 right-2 w-6 h-6 md:w-8 md:h-8 rounded-full bg-white/90 hover:bg-white text-red-500 flex items-center justify-center shadow-sm z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    ❤️
+                  </button>
+
+                  {/* Overlay Content */}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 text-white translate-y-2 group-hover:translate-y-0 transition-transform">
+                    <p className="text-[10px] md:text-sm font-bold truncate leading-tight">{game.name}</p>
+                    {game.provider && <p className="text-[9px] md:text-xs text-gray-300 opacity-80">{game.provider.name}</p>}
                   </div>
                 </div>
               ))}

@@ -27,10 +27,9 @@ export default function PlayerLayout({ children }: PlayerLayoutProps) {
             <main style={{
                 flex: 1,
                 overflowY: "auto",
-                paddingBottom: "80px",
                 scrollbarWidth: "none"
-            }}>
-                <div style={{ maxWidth: "500px", margin: "0 auto", padding: "16px" }}>
+            }} className="w-full">
+                <div className="w-full max-w-md md:max-w-7xl mx-auto p-4 pb-24 md:pb-8">
                     {children}
                 </div>
             </main>

@@ -84,131 +84,123 @@ export default function Header() {
 
     return (
         <>
-            <header style={{
-                background: "linear-gradient(135deg, #0D1117, #161B22, #1A1F26)",
-                padding: "10px 16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexShrink: 0,
-                zIndex: 50,
-                borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
-            }}>
-                {/* Logo */}
-                <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "8px" }}>
-                    {logoUrl ? (
-                        <img src={logoUrl} alt={brandName} style={{ height: "40px", objectFit: "contain" }} />
-                    ) : (
-                        <>
-                            <span style={{ fontSize: "32px" }}>🎮</span>
-                            <span style={{
-                                fontSize: "22px",
-                                fontWeight: 900,
-                                color: "#FFD700",
-                                textShadow: "2px 2px 4px rgba(0,0,0,0.5)"
-                            }}>{brandName}</span>
-                        </>
-                    )}
-                </Link>
+            <header className="sticky top-0 z-50 w-full bg-[#0D1117]/95 backdrop-blur-md border-b border-white/10 shadow-lg">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16 md:h-24">
+                        {/* Logo Area */}
+                        <div className="flex-shrink-0 flex items-center">
+                            <Link href="/" className="flex items-center gap-2 group">
+                                {logoUrl ? (
+                                    <img
+                                        src={logoUrl}
+                                        alt={brandName}
+                                        className="h-10 md:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                                    />
+                                ) : (
+                                    <>
+                                        <span className="text-3xl md:text-5xl">🎮</span>
+                                        <span className="text-xl md:text-3xl font-black text-[#FFD700] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] tracking-wide">
+                                            {brandName}
+                                        </span>
+                                    </>
+                                )}
+                            </Link>
+                        </div>
 
-                {/* Balance Display (when logged in) + Hamburger */}
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    {user ? (
-                        <>
-                            {/* Balance Info */}
-                            <div style={{
-                                background: "rgba(255,215,0,0.1)",
-                                borderRadius: "12px",
-                                padding: "8px 14px",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "flex-end",
-                                backdropFilter: "blur(10px)",
-                                border: "1px solid rgba(255, 215, 0, 0.3)"
-                            }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                    <div style={{ textAlign: "right" }}>
-                                        <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.8)" }}>เงิน</span>
-                                        <p style={{ fontSize: "14px", fontWeight: 700, color: "white", margin: 0 }}>
-                                            ฿ {Number(user.balance || 0).toFixed(2)}
-                                        </p>
-                                    </div>
-                                    <div style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.3)" }} />
-                                    <div style={{ textAlign: "right" }}>
-                                        <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.8)" }}>เครดิต</span>
-                                        <p style={{ fontSize: "14px", fontWeight: 700, color: "white", margin: 0 }}>
-                                            {Number(user.bonusBalance || 0).toFixed(2)}
-                                        </p>
-                                    </div>
-                                    <div style={{
-                                        background: "rgba(255,255,255,0.2)",
-                                        borderRadius: "8px",
-                                        padding: "6px",
-                                        cursor: "pointer"
-                                    }} onClick={() => handleNavigate("/deposit")}>
-                                        💰
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Hamburger Menu Button - Only when logged in */}
+                        {/* Desktop Navigation */}
+                        <nav className="hidden md:flex items-center space-x-8">
+                            <Link href="/" className="text-gray-300 hover:text-[#FFD700] hover:bg-white/5 px-3 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
+                                <Home size={18} /> หน้าหลัก
+                            </Link>
+                            <Link href="/promotions" className="text-gray-300 hover:text-[#FFD700] hover:bg-white/5 px-3 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
+                                <Gift size={18} /> โปรโมชั่น
+                            </Link>
                             <button
-                                onClick={() => setShowMenu(true)}
-                                style={{
-                                    background: "rgba(255, 215, 0, 0.1)",
-                                    border: "2px solid rgba(255, 215, 0, 0.4)",
-                                    borderRadius: "10px",
-                                    padding: "10px 12px",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "4px"
-                                }}
+                                onClick={() => router.push("/?showContact=true")}
+                                className="text-gray-300 hover:text-[#FFD700] hover:bg-white/5 px-3 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2"
                             >
-                                <div style={{ width: "22px", height: "3px", background: "#FFD700", borderRadius: "2px" }} />
-                                <div style={{ width: "22px", height: "3px", background: "#FFD700", borderRadius: "2px" }} />
-                                <div style={{ width: "22px", height: "3px", background: "#FFD700", borderRadius: "2px" }} />
+                                <MessageCircle size={18} /> ติดต่อเรา
                             </button>
-                        </>
-                    ) : (
-                        <>
-                            {/* Login Button */}
-                            <Link
-                                href="/?action=login"
-                                style={{
-                                    background: "rgba(255, 255, 255, 0.1)",
-                                    color: "#FFFFFF",
-                                    padding: "6px 14px",
-                                    borderRadius: "20px",
-                                    fontSize: "11px",
-                                    fontWeight: 700,
-                                    textDecoration: "none",
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                                    border: "1px solid rgba(255, 255, 255, 0.2)"
-                                }}
-                            >
-                                เข้าสู่ระบบ
-                            </Link>
+                        </nav>
 
-                            {/* Register Button */}
-                            <Link
-                                href="/?action=register"
-                                style={{
-                                    background: "linear-gradient(135deg, #FFD700, #FFC000)",
-                                    color: "#0D1117",
-                                    padding: "6px 14px",
-                                    borderRadius: "20px",
-                                    fontSize: "11px",
-                                    fontWeight: 700,
-                                    textDecoration: "none",
-                                    boxShadow: "0 2px 10px rgba(255, 215, 0, 0.3)",
-                                    border: "1px solid rgba(255, 215, 0, 0.5)"
-                                }}
-                            >
-                                สมัครสมาชิก
-                            </Link>
-                        </>
-                    )}
+                        {/* Right Section: User Info or Login/Register */}
+                        <div className="flex items-center gap-4">
+                            {user ? (
+                                <>
+                                    {/* Desktop User Balance Panel */}
+                                    <div className="hidden md:flex items-center gap-4 bg-[#161B22] border border-[#30363d] rounded-xl p-2 pr-6 shadow-inner">
+                                        <div className="flex items-center gap-3 px-3 border-r border-gray-700">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FFD700] to-[#F59E0B] flex items-center justify-center text-black font-bold text-xl shadow-lg">
+                                                {user.fullName.charAt(0)}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[#FFD700] text-sm font-bold leading-tight">{user.username}</span>
+                                                <span className="text-gray-400 text-xs cursor-pointer hover:text-white" onClick={() => handleNavigate("/profile")}>ดูโปรไฟล์</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end min-w-[100px]">
+                                            <span className="text-[10px] text-gray-400 uppercase tracking-wider">Balance</span>
+                                            <span className="text-white font-mono font-bold text-lg select-all">฿{Number(user.balance || 0).toLocaleString()}</span>
+                                        </div>
+                                        <div className="h-8 w-px bg-gray-700 mx-2"></div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleNavigate("/deposit")}
+                                                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-lg hover:shadow-green-500/20 transition-all transform hover:-translate-y-0.5"
+                                            >
+                                                ฝาก
+                                            </button>
+                                            <button
+                                                onClick={() => handleNavigate("/withdraw")}
+                                                className="bg-[#21262D] hover:bg-[#30363d] text-white border border-gray-600 hover:border-gray-500 text-sm font-bold px-4 py-2 rounded-lg transition-all"
+                                            >
+                                                ถอน
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Mobile/Tablet Balance (simplified) */}
+                                    <div className="md:hidden flex items-center gap-2 bg-[#161B22]/80 backdrop-blur border border-white/10 rounded-full px-3 py-1.5">
+                                        <span className="text-[#FFD700] text-sm font-bold">฿{Number(user.balance || 0).toLocaleString()}</span>
+                                        <div className="w-px h-4 bg-white/20"></div>
+                                        <div
+                                            className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center cursor-pointer active:scale-95"
+                                            onClick={() => handleNavigate("/deposit")}
+                                        >
+                                            <span className="text-xs">💰</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Mobile Menu Button */}
+                                    <button
+                                        onClick={() => setShowMenu(true)}
+                                        className="md:hidden p-2 rounded-lg border border-[#FFD700]/30 bg-[#FFD700]/10 text-[#FFD700]"
+                                    >
+                                        <div className="flex flex-col gap-[5px]">
+                                            <div className="w-5 h-0.5 bg-[#FFD700] rounded-full"></div>
+                                            <div className="w-5 h-0.5 bg-[#FFD700] rounded-full"></div>
+                                            <div className="w-5 h-0.5 bg-[#FFD700] rounded-full"></div>
+                                        </div>
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="flex items-center gap-3">
+                                    <Link
+                                        href="/?action=login"
+                                        className="hidden md:inline-flex px-6 py-2.5 rounded-full border border-white/20 text-white font-bold text-sm hover:bg-white/10 transition-all"
+                                    >
+                                        เข้าสู่ระบบ
+                                    </Link>
+                                    <Link
+                                        href="/?action=register"
+                                        className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#FFD700] to-[#FFC000] text-[#0D1117] font-bold text-sm hover:shadow-[0_0_20px_rgba(255,215,0,0.4)] transition-all transform hover:-translate-y-0.5"
+                                    >
+                                        สมัครสมาชิก
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </header>
 

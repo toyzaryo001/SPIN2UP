@@ -41,9 +41,9 @@ export default function LoginPage() {
                 const data = await res.json();
 
                 if (data.success) {
-                    setPrefix(data.data.code.toUpperCase());
+                    // setPrefix(data.data.code.toUpperCase()); // User wants to type manually
                     setBrandName(data.data.name);
-                    setFixedPrefix(true);
+                    // setFixedPrefix(true); // User wants to see the field
                 }
             } catch (err) {
                 console.error("Domain config check failed", err);
@@ -148,22 +148,21 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        {!fixedPrefix && (
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Prefix</label>
-                                <div className="relative">
-                                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                                    <input
-                                        type="text"
-                                        value={prefix}
-                                        onChange={(e) => setPrefix(e.target.value.toUpperCase())}
-                                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all text-slate-900 uppercase"
-                                        placeholder=""
-                                        required
-                                    />
-                                </div>
+                        {/* Always show Prefix field */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Prefix</label>
+                            <div className="relative">
+                                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                                <input
+                                    type="text"
+                                    value={prefix}
+                                    onChange={(e) => setPrefix(e.target.value.toUpperCase())}
+                                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all text-slate-900 uppercase"
+                                    placeholder="เช่น PX89"
+                                    required
+                                />
                             </div>
-                        )}
+                        </div>
 
                         <button
                             type="submit"

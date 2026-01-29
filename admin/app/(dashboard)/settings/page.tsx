@@ -63,6 +63,17 @@ export default function SettingsPage() {
                                 />
                             </div>
                             <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Logo URL</label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    value={settings.logoUrl || ""}
+                                    onChange={(e) => handleChange("logoUrl", e.target.value)}
+                                    placeholder="https://example.com/logo.png"
+                                />
+                                <p className="text-xs text-slate-400 mt-1">ลิงก์รูปภาพโลโก้ (ถ้ามีจะแสดงแทนชื่อเว็บ)</p>
+                            </div>
+                            <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Prefix (สำหรับ Username)</label>
                                 <input
                                     type="text"

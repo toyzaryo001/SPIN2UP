@@ -1,10 +1,33 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-export const metadata = {
-  title: "CHECK24M - เว็บพนันออนไลน์อันดับ 1",
-  description: "เว็บพนันออนไลน์ที่ดีที่สุด",
-};
+import { headers } from "next/headers";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const domain = host.split(':')[0]; // Remove port
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
+  try {
+    const res = await fetch(`${API_URL}/auth/config?domain=${domain}`, { next: { revalidate: 60 } });
+    const json = await res.json();
+    if (json.success && json.data) {
+      return {
+        title: `${json.data.name} - เว็บพนันออนไลน์อันดับ 1`,
+        description: "เว็บพนันออนไลน์ที่ดีที่สุด",
+        icons: json.data.logo ? { icon: json.data.logo } : undefined
+      };
+    }
+  } catch (error) {
+    console.error("Metadata fetch error:", error);
+  }
+
+  return {
+    title: "CASINO - เว็บพนันออนไลน์อันดับ 1",
+    description: "เว็บพนันออนไลน์ที่ดีที่สุด",
+  };
+}
 
 export default function RootLayout({
   children,

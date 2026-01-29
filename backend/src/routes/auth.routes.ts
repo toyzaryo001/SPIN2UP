@@ -208,29 +208,54 @@ router.get('/config', async (req, res) => {
         const { PrismaClient } = await import('@prisma/client');
         const superPrisma = new PrismaClient({ datasources: { db: { url: superDbUrl } } });
 
+        let prefixData: any = null;
+
         try {
             const prefixResults = await superPrisma.$queryRawUnsafe(
-                `SELECT code, name, "adminDomain", "playerDomain", logo, "primaryColor" FROM "Prefix" WHERE "adminDomain" = $1 OR "playerDomain" = $1 LIMIT 1`,
+                `SELECT code, name, "databaseUrl", "adminDomain", "playerDomain", logo, "primaryColor" FROM "Prefix" WHERE "adminDomain" = $1 OR "playerDomain" = $1 LIMIT 1`,
                 domain
             ) as any[];
 
             if (prefixResults && prefixResults.length > 0) {
-                const p = prefixResults[0];
-                res.json({
-                    success: true,
-                    data: {
-                        code: p.code,
-                        name: p.name,
-                        logo: p.logo,
-                        primaryColor: p.primaryColor
-                    }
-                });
-            } else {
-                res.json({ success: false });
+                prefixData = prefixResults[0];
             }
         } finally {
             await superPrisma.$disconnect();
         }
+
+        if (prefixData) {
+            // Connect to Tenant DB to get Settings
+            const tenantPrisma = new PrismaClient({ datasources: { db: { url: prefixData.databaseUrl } } });
+            let tenantSettings: any = {};
+
+            try {
+                const settings = await tenantPrisma.setting.findMany();
+                settings.forEach((s: { key: string; value: string }) => {
+                    tenantSettings[s.key] = s.value;
+                });
+            } catch (err) {
+                console.error("Tenant settings fetch error", err);
+            } finally {
+                await tenantPrisma.$disconnect();
+            }
+
+            res.json({
+                success: true,
+                data: {
+                    code: prefixData.code,
+                    // Prefer Tenant Setting > Super Admin Name
+                    name: tenantSettings.siteName || prefixData.name,
+                    // Prefer Tenant Setting > Super Admin Logo
+                    logo: tenantSettings.logoUrl || prefixData.logo,
+                    primaryColor: prefixData.primaryColor,
+                    // Also return valid settings like lineUrl if needed later
+                    lineUrl: tenantSettings.lineUrl || ""
+                }
+            });
+        } else {
+            res.json({ success: false });
+        }
+
     } catch (err) {
         console.error('Config lookup error:', err);
         res.status(500).json({ success: false });

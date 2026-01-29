@@ -10,6 +10,7 @@ export default function Header() {
     const [user, setUser] = useState<any>(null);
     const [showMenu, setShowMenu] = useState(false);
     const [brandName, setBrandName] = useState("CASINO"); // Default
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
     useEffect(() => {
@@ -39,6 +40,7 @@ export default function Header() {
                 const res = await axios.get(`${API_URL}/auth/config?domain=${hostname}`);
                 if (res.data.success) {
                     setBrandName(res.data.data.name);
+                    setLogoUrl(res.data.data.logo);
                 } else {
                     // Fallback check hostname
                     const parts = hostname.split('.');
@@ -90,13 +92,19 @@ export default function Header() {
             }}>
                 {/* Logo */}
                 <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "32px" }}>🎮</span>
-                    <span style={{
-                        fontSize: "22px",
-                        fontWeight: 900,
-                        color: "#FFD700",
-                        textShadow: "2px 2px 4px rgba(0,0,0,0.5)"
-                    }}>{brandName}</span>
+                    {logoUrl ? (
+                        <img src={logoUrl} alt={brandName} style={{ height: "40px", objectFit: "contain" }} />
+                    ) : (
+                        <>
+                            <span style={{ fontSize: "32px" }}>🎮</span>
+                            <span style={{
+                                fontSize: "22px",
+                                fontWeight: 900,
+                                color: "#FFD700",
+                                textShadow: "2px 2px 4px rgba(0,0,0,0.5)"
+                            }}>{brandName}</span>
+                        </>
+                    )}
                 </Link>
 
                 {/* Balance Display (when logged in) + Hamburger */}
@@ -250,14 +258,20 @@ export default function Header() {
                 <div style={{ padding: "24px", paddingBottom: "40px" }}>
                     {/* Logo */}
                     <div style={{ textAlign: "center", marginBottom: "20px" }}>
-                        <span style={{ fontSize: "48px" }}>🎮</span>
-                        <p style={{
-                            fontSize: "24px",
-                            fontWeight: 900,
-                            color: "#FFD700",
-                            textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-                            margin: "8px 0 0"
-                        }}>{brandName}</p>
+                        {logoUrl ? (
+                            <img src={logoUrl} alt={brandName} style={{ height: "60px", margin: "0 auto", objectFit: "contain" }} />
+                        ) : (
+                            <>
+                                <span style={{ fontSize: "48px" }}>🎮</span>
+                                <p style={{
+                                    fontSize: "24px",
+                                    fontWeight: 900,
+                                    color: "#FFD700",
+                                    textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
+                                    margin: "8px 0 0"
+                                }}>{brandName}</p>
+                            </>
+                        )}
                     </div>
 
                     {/* User Info */}

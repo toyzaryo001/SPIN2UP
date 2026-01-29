@@ -159,24 +159,46 @@ export default function Sidebar() {
   const [permissions, setPermissions] = useState<Permissions | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [brandName, setBrandName] = useState("ADMIN");
 
-  // Fetch admin permissions on mount
+  // Fetch admin permissions and branding on mount
   useEffect(() => {
-    const fetchPermissions = async () => {
+    const fetchData = async () => {
       try {
-        const res = await api.get('/admin/me');
-        if (res.data.success) {
-          setPermissions(res.data.data.permissions || {});
-          setIsSuperAdmin(res.data.data.isSuperAdmin || false);
+        // 1. Fetch Permissions
+        const permRes = await api.get('/admin/me');
+        if (permRes.data.success) {
+          setPermissions(permRes.data.data.permissions || {});
+          setIsSuperAdmin(permRes.data.data.isSuperAdmin || false);
         }
+
+        // 2. Fetch Branding (from public config)
+        // We use the raw axios or fetch here because api.get adds Auth header which is fine, 
+        // but this endpoint is public. We can reuse the same logic as Login.
+        // Or simpler: just use api.get('/auth/config?domain=...') if the route is exposed under /api/auth
+        const hostname = window.location.hostname;
+        const configRes = await api.get(`/auth/config?domain=${hostname}`);
+        if (configRes.data.success) {
+          setBrandName(`${configRes.data.data.name} ADMIN`);
+        } else {
+          // Fallback: try to guess from hostname if API fails
+          const parts = hostname.split('.');
+          if (parts.length >= 2) {
+            const mainDomain = parts[parts.length - 2].toUpperCase();
+            if (mainDomain && mainDomain !== 'LOCALHOST') {
+              setBrandName(`${mainDomain} ADMIN`);
+            }
+          }
+        }
+
       } catch (error) {
-        console.error('Failed to fetch permissions:', error);
+        console.error('Failed to fetch sidebar data:', error);
         setPermissions({});
       } finally {
         setLoading(false);
       }
     };
-    fetchPermissions();
+    fetchData();
   }, []);
 
   // Restore scroll position when pathname changes or component mounts
@@ -241,7 +263,7 @@ export default function Sidebar() {
     <div className="w-64 bg-slate-900 text-white h-screen flex flex-col shrink-0">
       <div className="p-6 border-b border-slate-800">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-          PLAYNEX89 ADMIN
+          {brandName}
         </h1>
       </div>
 

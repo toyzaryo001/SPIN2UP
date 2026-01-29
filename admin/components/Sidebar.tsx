@@ -160,6 +160,7 @@ export default function Sidebar() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [brandName, setBrandName] = useState("ADMIN");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   // Fetch admin permissions and branding on mount
   useEffect(() => {
@@ -173,13 +174,11 @@ export default function Sidebar() {
         }
 
         // 2. Fetch Branding (from public config)
-        // We use the raw axios or fetch here because api.get adds Auth header which is fine, 
-        // but this endpoint is public. We can reuse the same logic as Login.
-        // Or simpler: just use api.get('/auth/config?domain=...') if the route is exposed under /api/auth
         const hostname = window.location.hostname;
         const configRes = await api.get(`/auth/config?domain=${hostname}`);
         if (configRes.data.success) {
           setBrandName(`${configRes.data.data.name} ADMIN`);
+          setLogoUrl(configRes.data.data.logo);
         } else {
           // Fallback: try to guess from hostname if API fails
           const parts = hostname.split('.');
@@ -261,10 +260,14 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 bg-slate-900 text-white h-screen flex flex-col shrink-0">
-      <div className="p-6 border-b border-slate-800">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-          {brandName}
-        </h1>
+      <div className="p-6 border-b border-slate-800 flex justify-center items-center">
+        {logoUrl ? (
+          <img src={logoUrl} alt={brandName} className="h-10 object-contain" />
+        ) : (
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+            {brandName}
+          </h1>
+        )}
       </div>
 
       <nav

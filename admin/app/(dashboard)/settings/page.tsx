@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Save } from "lucide-react";
+import { Save, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function SettingsPage() {
@@ -127,14 +127,29 @@ export default function SettingsPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">JWT Secret Key</label>
-                                <input
-                                    type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-slate-900"
-                                    value={settings.jwtSecret || ""}
-                                    onChange={(e) => handleChange("jwtSecret", e.target.value)}
-                                    placeholder="ใส่ Secret Key สำหรับ JWT Token"
-                                />
-                                <p className="text-xs text-slate-400 mt-1">ใช้สำหรับเข้ารหัส Token ควรเป็นค่าที่ยาวและปลอดภัย</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-slate-900"
+                                        value={settings.jwtSecret || ""}
+                                        onChange={(e) => handleChange("jwtSecret", e.target.value)}
+                                        placeholder="ใส่ Secret Key สำหรับ JWT Token"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                                                .map(b => b.toString(16).padStart(2, '0'))
+                                                .join('');
+                                            handleChange("jwtSecret", secret);
+                                        }}
+                                        className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition-colors border border-slate-200"
+                                        title="Generate Random Key"
+                                    >
+                                        <RefreshCw size={18} />
+                                    </button>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">ใช้สำหรับเข้ารหัส Token (กดปุ่มเพื่อสุ่มค่าใหม่ให้ปลอดภัยที่สุด)</p>
                             </div>
 
                             <div>

@@ -16,8 +16,11 @@ export const handler = NextAuth({
 
                 try {
                     // Use admin login endpoint (separate from player)
-                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
-                    const res = await axios.post(`${apiUrl}/auth/admin/login`, {
+                    let apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+                    // Remove trailing slash and /api if present to standardize
+                    apiBase = apiBase.replace(/\/$/, "").replace(/\/api$/, "");
+
+                    const res = await axios.post(`${apiBase}/api/auth/admin/login`, {
                         username: credentials.username,
                         password: credentials.password,
                         prefix: credentials.prefix,

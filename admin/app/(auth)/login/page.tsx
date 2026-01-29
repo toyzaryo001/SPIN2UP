@@ -14,7 +14,10 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [brandName, setBrandName] = useState("ADMIN");
     const [fixedPrefix, setFixedPrefix] = useState(false);
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+
+    // Auto-fix URL to ensure no double /api/api
+    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const API_URL = rawApiUrl.replace(/\/$/, "").replace(/\/api$/, "");
 
     useEffect(() => {
 

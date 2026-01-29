@@ -4,6 +4,7 @@ import { verifySuperAdmin } from './auth.routes.js';
 import * as bcrypt from 'bcryptjs';
 import { exec } from 'child_process';
 import util from 'util';
+import path from 'path';
 
 const execPromise = util.promisify(exec);
 
@@ -331,10 +332,10 @@ router.get('/logs', verifySuperAdmin, async (req: Request, res: Response) => {
 async function runTenantMigration(databaseUrl: string) {
     try {
         console.log(`Starting Auto-Migration for ${databaseUrl}...`);
-        const schemaPath = '../backend/prisma/schema.prisma'; // Relative to super/backend
+        const schemaPath = path.resolve(process.cwd(), '../../backend/prisma/schema.prisma');
 
         // Run prisma db push
-        const { stdout, stderr } = await execPromise(`npx prisma db push --schema=${schemaPath} --accept-data-loss --skip-generate`, {
+        const { stdout, stderr } = await execPromise(`npx prisma db push --schema="${schemaPath}" --accept-data-loss --skip-generate`, {
             env: { ...process.env, DATABASE_URL: databaseUrl },
             cwd: process.cwd(), // super/backend
             timeout: 60000 // 1 minute timeout

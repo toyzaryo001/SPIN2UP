@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/db.js';
 import { verifySuperAdmin } from './auth.routes.js';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 
@@ -67,7 +68,6 @@ router.post('/', verifySuperAdmin, async (req: Request, res: Response) => {
             try {
                 const { PrismaClient } = await import('@prisma/client');
                 const tenantPrisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
-                const bcrypt = await import('bcryptjs'); // Dynamic import to ensure availability
 
                 const hashedPassword = await bcrypt.hash(initialAdminPassword, 10);
 
@@ -131,7 +131,7 @@ router.put('/:id', verifySuperAdmin, async (req: Request, res: Response) => {
             try {
                 const { PrismaClient } = await import('@prisma/client');
                 const tenantPrisma = new PrismaClient({ datasources: { db: { url: databaseUrl || prefix.databaseUrl } } });
-                const bcrypt = await import('bcryptjs');
+                // const bcrypt = await import('bcryptjs'); // Removed dynamic import
 
                 const hashedPassword = await bcrypt.hash(req.body.initialAdminPassword, 10);
 

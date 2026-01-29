@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
-import axios from "axios";
 import {
   Search,
   Menu,
@@ -22,9 +21,13 @@ import {
   X // Added X for Modals
 } from 'lucide-react';
 
+// หมายเหตุ: คุณต้องติดตั้ง axios ก่อนใช้งาน (npm install axios)
+// หากยังไม่ได้ติดตั้ง หรือต้องการใช้ fetch ธรรมดา สามารถปรับแก้ตรงนี้ได้
+import axios from "axios";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
-// --- Components (Strict ex.txt Visuals) ---
+// --- Components (Visuals) ---
 
 const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
   <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-50">

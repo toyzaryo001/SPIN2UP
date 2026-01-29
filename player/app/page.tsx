@@ -126,7 +126,7 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
 };
 
 const Banner = () => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
     <div className="md:col-span-2 relative h-48 md:h-64 rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/10 group">
       <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-slate-900 z-0"></div>
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
@@ -254,7 +254,7 @@ const JackpotBar = () => {
   }, []);
 
   return (
-    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-y border-yellow-500/30 py-3 mb-6">
+    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-y border-yellow-500/30 py-4 mb-12">
       <div className="w-full px-4 flex flex-col md:flex-row items-center justify-between gap-4" style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <div className="flex items-center gap-2">
           <Trophy className="text-yellow-400 animate-pulse" />
@@ -309,7 +309,7 @@ const HomeContent = ({ games }: any) => {
       <Banner />
       <JackpotBar />
 
-      <div className="mb-8">
+      <div className="mb-16">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2 font-sans">
             <Flame className="text-orange-500" /> เกมฮิตช่วงนี้
@@ -326,7 +326,7 @@ const HomeContent = ({ games }: any) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
         <div className="md:col-span-1 hidden md:block">
           <Sidebar title="ค่ายเกมยอดฮิต" items={providers} active={null} />
         </div>
@@ -620,7 +620,7 @@ function HomePageLogic() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-10 hidden md:block">
+      <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-16 mt-20 hidden md:block">
         <div className="w-full px-4 grid grid-cols-4 gap-8" style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <div>
             <h3 className="text-white font-bold mb-4 font-sans">GOLDENBET</h3>

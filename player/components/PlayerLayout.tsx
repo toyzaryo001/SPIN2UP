@@ -29,7 +29,7 @@ export default function PlayerLayout({ children }: PlayerLayoutProps) {
                 overflowY: "auto",
                 scrollbarWidth: "none"
             }} className="w-full">
-                <div style={{ maxWidth: "500px", margin: "0 auto", padding: "16px", paddingBottom: "80px" }}>
+                <div className="w-full mx-auto pb-20">
                     {children}
                 </div>
             </main>

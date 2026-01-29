@@ -381,7 +381,7 @@ export default function PrefixesPage() {
                                         value={formData.code}
                                         onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase() })}
                                         className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-10 pr-4 py-3 text-white font-mono"
-                                        placeholder="px89"
+                                        placeholder=""
                                         required
                                         disabled={!!editingPrefix}
                                     />
@@ -394,7 +394,7 @@ export default function PrefixesPage() {
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white"
-                                    placeholder="PLAYNEX89"
+                                    placeholder=""
                                     required
                                 />
                             </div>
@@ -405,7 +405,7 @@ export default function PrefixesPage() {
                                     value={formData.databaseUrl}
                                     onChange={(e) => setFormData({ ...formData, databaseUrl: e.target.value })}
                                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white font-mono text-sm"
-                                    placeholder="postgresql://user:pass@host:5432/db"
+                                    placeholder=""
                                     required
                                 />
                             </div>
@@ -417,7 +417,7 @@ export default function PrefixesPage() {
                                         value={formData.adminDomain}
                                         onChange={(e) => setFormData({ ...formData, adminDomain: e.target.value })}
                                         className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white"
-                                        placeholder="admin.example.com"
+                                        placeholder=""
                                     />
                                 </div>
                                 <div>
@@ -427,7 +427,7 @@ export default function PrefixesPage() {
                                         value={formData.playerDomain}
                                         onChange={(e) => setFormData({ ...formData, playerDomain: e.target.value })}
                                         className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white"
-                                        placeholder="example.com"
+                                        placeholder=""
                                     />
                                 </div>
                             </div>

@@ -2,6 +2,10 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/db.js';
 import { verifySuperAdmin } from './auth.routes.js';
 import * as bcrypt from 'bcryptjs';
+import { exec } from 'child_process';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
 
 const router = Router();
 
@@ -66,6 +70,9 @@ router.post('/', verifySuperAdmin, async (req: Request, res: Response) => {
         // Create Initial Admin in Tenant DB?
         if (createInitialAdmin && initialAdminUsername && initialAdminPassword) {
             try {
+                // Auto-Migrate: Ensure tables exist
+                await runTenantMigration(databaseUrl);
+
                 const { PrismaClient } = await import('@prisma/client');
                 const tenantPrisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 
@@ -129,6 +136,9 @@ router.put('/:id', verifySuperAdmin, async (req: Request, res: Response) => {
         // Create/Update Initial Admin in Tenant DB?
         if (req.body.createInitialAdmin && req.body.initialAdminUsername && req.body.initialAdminPassword) {
             try {
+                // Auto-Migrate: Ensure tables exist
+                await runTenantMigration(databaseUrl || prefix.databaseUrl);
+
                 const { PrismaClient } = await import('@prisma/client');
                 const tenantPrisma = new PrismaClient({ datasources: { db: { url: databaseUrl || prefix.databaseUrl } } });
                 // const bcrypt = await import('bcryptjs'); // Removed dynamic import
@@ -314,5 +324,30 @@ router.get('/logs', verifySuperAdmin, async (req: Request, res: Response) => {
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });
+
+
+
+// Helper: Run Prisma Migration for Tenant
+async function runTenantMigration(databaseUrl: string) {
+    try {
+        console.log(`Starting Auto-Migration for ${databaseUrl}...`);
+        const schemaPath = '../backend/prisma/schema.prisma'; // Relative to super/backend
+
+        // Run prisma db push
+        const { stdout, stderr } = await execPromise(`npx prisma db push --schema=${schemaPath} --accept-data-loss --skip-generate`, {
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(), // super/backend
+            timeout: 60000 // 1 minute timeout
+        });
+
+        console.log('Migration output:', stdout);
+        if (stderr) console.warn('Migration stderr:', stderr);
+
+    } catch (error: any) {
+        console.error('Migration failed:', error);
+        // Throwing error here will be caught by the route handler and returned as warning
+        throw new Error(`Auto-Migrate Failed: ${error.message}`);
+    }
+}
 
 export default router;

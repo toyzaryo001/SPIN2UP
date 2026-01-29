@@ -396,15 +396,13 @@ model CommissionSetting {
 // =====================
 
 // Prefix Configuration (each prefix = one tenant)
-/* 
-NOTE: These models (Prefix, SuperAdmin) are managed by SUPER_DB.
-      But we include them here in TENANT_DB schema just to keep schemas consistent if needed,
-      OR we can EXCLUDE them if tenant DB should not have these.
-      Usually Tenant DB DOES NOT need these tables.
-      But to be safe and identical to the original file, I included them.
-      However, for Tenant DB, Prefix/SuperAdmin tables are redundant.
-      But to avoid error "Unknown model", I'll keep it identical to source for now.
-*/
+// NOTE: These models (Prefix, SuperAdmin) are managed by SUPER_DB.
+// But we include them here in TENANT_DB schema just to keep schemas consistent if needed,
+// OR we can EXCLUDE them if tenant DB should not have these.
+// Usually Tenant DB DOES NOT need these tables.
+// But to be safe and identical to the original file, I included them.
+// However, for Tenant DB, Prefix/SuperAdmin tables are redundant.
+// But to avoid error "Unknown model", I'll keep it identical to source for now.
 
 model Prefix {
   id              Int      @id @default(autoincrement())

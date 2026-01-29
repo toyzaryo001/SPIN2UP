@@ -141,34 +141,37 @@ function HomePageContent() {
 
   useEffect(() => {
     const fetchConfig = async () => {
+      const hostname = window.location.hostname;
+
+      const applyFallback = () => {
+        const parts = hostname.split('.');
+        if (parts.length >= 2) {
+          const mainDomain = parts[parts.length - 2].toLowerCase();
+          if (mainDomain !== 'localhost') {
+            const newConfig = { prefix: mainDomain, name: mainDomain.toUpperCase() };
+            setConfig({ ...newConfig, protocol: window.location.protocol.replace(':', '') });
+            setReferralLink(`${window.location.protocol}//${window.location.host}/?prefix=${newConfig.prefix}&action=register&refer_code=...`);
+          }
+        }
+      };
+
       try {
-        const hostname = window.location.hostname;
-        // Use axios from import or window
         const { default: axios } = await import("axios");
         const res = await axios.get(`${API_URL}/auth/config?domain=${hostname}`);
-        let newConfig = { prefix: 'check24m', name: 'CHECK24M' };
 
         if (res.data.success) {
-          newConfig = {
+          const newConfig = {
             prefix: res.data.data.code?.toLowerCase() || 'prefix',
             name: res.data.data.name
           };
+          setConfig({ ...newConfig, protocol: window.location.protocol.replace(':', '') });
+          setReferralLink(`${window.location.protocol}//${window.location.host}/?prefix=${newConfig.prefix}&action=register&refer_code=...`);
         } else {
-          // Fallback
-          const parts = hostname.split('.');
-          if (parts.length >= 2) {
-            const mainDomain = parts[parts.length - 2].toLowerCase();
-            if (mainDomain !== 'localhost') {
-              newConfig = { prefix: mainDomain, name: mainDomain.toUpperCase() };
-            }
-          }
+          applyFallback();
         }
-        setConfig({ ...newConfig, protocol: window.location.protocol.replace(':', '') });
-
-        setReferralLink(`${window.location.protocol}//${window.location.host}/?prefix=${newConfig.prefix}&action=register&refer_code=...`);
-
       } catch (error) {
         console.error("Config fetch error", error);
+        applyFallback();
       }
     };
     fetchConfig();

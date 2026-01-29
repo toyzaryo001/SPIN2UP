@@ -211,32 +211,43 @@ router.get('/config', async (req, res) => {
         let prefixData: any = null;
 
         try {
+            // Case-insensitive match, and handle potential www. prefix if needed (though frontend sends hostname)
+            const cleanDomain = domain.replace(/^www\./, '').toLowerCase();
+
             const prefixResults = await superPrisma.$queryRawUnsafe(
-                `SELECT code, name, "databaseUrl", "adminDomain", "playerDomain", logo, "primaryColor" FROM "Prefix" WHERE "adminDomain" = $1 OR "playerDomain" = $1 LIMIT 1`,
-                domain
+                `SELECT code, name, "databaseUrl", "adminDomain", "playerDomain", logo, "primaryColor" 
+                 FROM "Prefix" 
+                 WHERE LOWER("adminDomain") LIKE $1 OR LOWER("playerDomain") LIKE $1 
+                 LIMIT 1`,
+                `%${cleanDomain}`
             ) as any[];
 
             if (prefixResults && prefixResults.length > 0) {
                 prefixData = prefixResults[0];
             }
+        } catch (dbErr) {
+            console.error("SuperDB Query Error:", dbErr);
         } finally {
             await superPrisma.$disconnect();
         }
 
         if (prefixData) {
             // Connect to Tenant DB to get Settings
-            const tenantPrisma = new PrismaClient({ datasources: { db: { url: prefixData.databaseUrl } } });
             let tenantSettings: any = {};
 
             try {
-                const settings = await tenantPrisma.setting.findMany();
-                settings.forEach((s: { key: string; value: string }) => {
-                    tenantSettings[s.key] = s.value;
-                });
+                const tenantPrisma = new PrismaClient({ datasources: { db: { url: prefixData.databaseUrl } } });
+                try {
+                    const settings = await tenantPrisma.setting.findMany();
+                    settings.forEach((s: { key: string; value: string }) => {
+                        tenantSettings[s.key] = s.value;
+                    });
+                } finally {
+                    await tenantPrisma.$disconnect();
+                }
             } catch (err) {
-                console.error("Tenant settings fetch error", err);
-            } finally {
-                await tenantPrisma.$disconnect();
+                console.error("Tenant settings fetch error (could be schema mismatch or connection)", err);
+                // Non-fatal: we still have prefixData
             }
 
             res.json({
@@ -248,12 +259,11 @@ router.get('/config', async (req, res) => {
                     // Prefer Tenant Setting > Super Admin Logo
                     logo: tenantSettings.logoUrl || prefixData.logo,
                     primaryColor: prefixData.primaryColor,
-                    // Also return valid settings like lineUrl if needed later
                     lineUrl: tenantSettings.lineUrl || ""
                 }
             });
         } else {
-            res.json({ success: false });
+            res.json({ success: false, message: "Prefix not found for domain" });
         }
 
     } catch (err) {

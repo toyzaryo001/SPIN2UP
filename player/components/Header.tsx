@@ -34,25 +34,29 @@ export default function Header() {
 
         // Fetch Branding
         const fetchBranding = async () => {
+            const hostname = window.location.hostname;
+            const setFallback = () => {
+                const parts = hostname.split('.');
+                if (parts.length >= 2) {
+                    const mainDomain = parts[parts.length - 2].toUpperCase();
+                    if (mainDomain !== 'LOCALHOST') {
+                        setBrandName(mainDomain);
+                    }
+                }
+            };
+
             try {
                 const { default: axios } = await import("axios");
-                const hostname = window.location.hostname;
                 const res = await axios.get(`${API_URL}/auth/config?domain=${hostname}`);
                 if (res.data.success) {
                     setBrandName(res.data.data.name);
                     setLogoUrl(res.data.data.logo);
                 } else {
-                    // Fallback check hostname
-                    const parts = hostname.split('.');
-                    if (parts.length >= 2) {
-                        const mainDomain = parts[parts.length - 2].toUpperCase();
-                        if (mainDomain !== 'LOCALHOST') {
-                            setBrandName(mainDomain);
-                        }
-                    }
+                    setFallback();
                 }
             } catch (error) {
                 console.error("Branding error", error);
+                setFallback();
             }
         };
         fetchBranding();

@@ -576,7 +576,12 @@ const CasinoContent = ({ games, category, providers: globalProviders }: any) => 
     );
   });
 
-  const displayProviders = validProviders.length > 0 ? validProviders : allProviders;
+  // Fallback defaults if API returns nothing or filter is too strict
+  const defaultCasinoProviders = [
+    { name: "SA Gaming" }, { name: "Sexy Baccarat" }, { name: "Dream Gaming" }, { name: "WM Casino" }, { name: "Asia Gaming" }
+  ];
+
+  const displayProviders = validProviders.length > 0 ? validProviders : (globalProviders.length > 0 ? globalProviders : defaultCasinoProviders);
   const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "SA Gaming";
 
   // Ensure activeProvider is initialized to a valid one

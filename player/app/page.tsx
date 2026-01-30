@@ -35,7 +35,7 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
         <div className="absolute inset-0 bg-blue-500/10 blur-md rounded-full group-hover:bg-blue-500/20 transition-all"></div>
         <input
           type="text"
-          placeholder="Search your favorite game..."
+          placeholder="ค้นหาเกมโปรดของคุณ..."
           className="w-full bg-[#0f172a]/80 text-white border border-white/10 rounded-full py-3 pl-12 pr-4 focus:outline-none focus:border-blue-500/50 transition-all relative z-10 placeholder-slate-500"
         />
         <Search className="absolute left-4 top-3.5 text-slate-400 w-5 h-5 z-20 group-hover:text-blue-400 transition-colors" />
@@ -63,11 +63,11 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
         ) : (
           <div className="flex items-center gap-3">
             <button onClick={onLogin} className="px-6 py-2.5 rounded-full font-bold text-white hover:text-yellow-400 transition-colors relative group overflow-hidden">
-              <span className="relative z-10">LOGIN</span>
+              <span className="relative z-10">เข้าสู่ระบบ</span>
               <div className="absolute inset-0 bg-white/5 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
             </button>
             <button onClick={onRegister} className="btn-gold px-8 py-2.5 rounded-full relative overflow-hidden group">
-              <span className="relative z-10 flex items-center gap-2">REGISTER <ChevronRight size={16} /></span>
+              <span className="relative z-10 flex items-center gap-2">สมัครสมาชิก <ChevronRight size={16} /></span>
               <div className="absolute inset-0 bg-white/20 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
           </div>
@@ -82,12 +82,12 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
 
 const NavBar = ({ activeTab, setActiveTab }: any) => {
   const menus = [
-    { id: 'home', label: 'LOBBY', icon: <Play size={18} /> },
-    { id: 'slots', label: 'SLOTS', icon: <Gamepad2 size={18} /> },
-    { id: 'casino', label: 'LIVE CASINO', icon: <Dices size={18} /> },
-    { id: 'sports', label: 'SPORTS', icon: <Trophy size={18} /> },
-    { id: 'lotto', label: 'LOTTO', icon: <Gift size={18} /> },
-    { id: 'promotions', label: 'PROMO', icon: <Star size={18} /> },
+    { id: 'home', label: 'หน้าหลัก', icon: <Play size={18} /> },
+    { id: 'slots', label: 'สล็อต', icon: <Gamepad2 size={18} /> },
+    { id: 'casino', label: 'คาสิโนสด', icon: <Dices size={18} /> },
+    { id: 'sports', label: 'กีฬา', icon: <Trophy size={18} /> },
+    { id: 'lotto', label: 'หวย', icon: <Gift size={18} /> },
+    { id: 'promotions', label: 'โปรโมชั่น', icon: <Star size={18} /> },
   ];
 
   return (
@@ -115,7 +115,7 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
 };
 
 const Banner = () => (
-  <div className="relative rounded-3xl overflow-hidden mb-12 min-h-[400px] flex items-center group border border-white/10">
+  <div className="relative rounded-3xl overflow-hidden h-full min-h-[300px] flex items-center group border border-white/10">
     {/* Cinematic Background */}
     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-[10s] group-hover:scale-110"></div>
     <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a] via-[#0f172a]/80 to-transparent"></div>
@@ -128,28 +128,49 @@ const Banner = () => (
     </div>
 
     {/* Content */}
-    <div className="relative z-10 px-8 md:px-16 max-w-2xl">
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-6 animate-slide-up">
+    <div className="relative z-10 px-8 max-w-lg">
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-4 animate-slide-up">
         <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
-        <span className="text-xs font-bold text-green-400 tracking-wider">NEW MEMBER EXCLUSIVE</span>
+        <span className="text-xs font-bold text-green-400 tracking-wider">โปรโมชั่นสุดฮิต</span>
       </div>
 
-      <h2 className="text-5xl md:text-7xl font-black text-white leading-[0.9] mb-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-        WELCOME <br />
-        <span className="text-gradient-gold">BONUS 100%</span>
+      <h2 className="text-4xl md:text-5xl font-black text-white leading-[0.9] mb-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        สมัครใหม่รับ <br />
+        <span className="text-gradient-gold">โบนัส 100%</span>
       </h2>
 
-      <p className="text-slate-300 text-lg mb-8 font-light max-w-md animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        Experience the ultimate luxury gambling. Deposit now and get double the value instantly.
+      <p className="text-slate-300 text-sm md:text-base mb-6 font-light animate-slide-up" style={{ animationDelay: '0.2s' }}>
+        ฝากครั้งแรกรับโบนัสทันที สูงสุด 5,000 บาท ทำเทิร์นน้อย ถอนไม่อั้น
       </p>
 
       <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-        <button className="btn-green px-8 py-4 rounded-full text-lg shadow-lg hover:shadow-green-500/30 flex items-center gap-2 group/btn">
-          CLAIM BONUS <ChevronRight className="group-hover/btn:translate-x-1 transition-transform" />
+        <button className="btn-green px-6 py-3 rounded-xl text-base shadow-lg hover:shadow-green-500/30 flex items-center gap-2 group/btn">
+          รับโบนัสเลย <ChevronRight className="group-hover/btn:translate-x-1 transition-transform" />
         </button>
-        <button className="px-8 py-4 rounded-full text-white font-bold border border-white/20 hover:bg-white/10 transition-all">
-          View Details
-        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const InviteCard = () => (
+  <div className="glass-card h-full rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between group border border-white/10">
+    <div className="absolute top-0 right-0 p-4 opacity-50">
+      <Users size={80} className="text-white/5" />
+    </div>
+
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Users className="text-blue-400" />
+        <h3 className="text-xl font-bold text-white">ชวนเพื่อนรับรายได้</h3>
+      </div>
+      <p className="text-slate-400 text-sm">รับคอมมิชชั่น 0.8% ทุกยอดเล่น</p>
+    </div>
+
+    <div className="bg-[#0f172a]/50 p-4 rounded-xl border border-white/5 mt-4">
+      <p className="text-[10px] text-slate-500 mb-2 uppercase font-bold">ลิงค์แนะนำของคุณ</p>
+      <div className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2 border border-white/5">
+        <span className="text-xs text-yellow-500 font-mono">goldenbet.com/u/user888</span>
+        <Gift size={16} className="text-yellow-500 cursor-pointer hover:scale-110 transition-transform" />
       </div>
     </div>
   </div>
@@ -180,7 +201,7 @@ const GameCard = ({ title, provider, image, color, hot, type }: any) => {
           <button className="btn-green w-12 h-12 rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 delay-100">
             <Play fill="white" className="ml-1" size={20} />
           </button>
-          <span className="text-xs font-bold text-white tracking-widest translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-150">PLAY NOW</span>
+          <span className="text-xs font-bold text-white tracking-widest translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-150">เล่นเลย</span>
         </div>
 
         {/* Hot Badge */}
@@ -303,8 +324,17 @@ const HomeContent = ({ games }: any) => {
   })) : MOCK_GAMES;
 
   return (
-    <div className="animate-fade-in space-y-16">
-      <Banner />
+    <div className="animate-fade-in space-y-8">
+      {/* Hero Grid System */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          <Banner />
+        </div>
+        <div className="md:col-span-1">
+          <InviteCard />
+        </div>
+      </div>
+
       <JackpotBar />
 
       <div className="relative">
@@ -313,10 +343,10 @@ const HomeContent = ({ games }: any) => {
             <div className="w-10 h-10 rounded-lg bg-orange-500/20 border border-orange-500/40 flex items-center justify-center">
               <Flame className="text-orange-500 fill-orange-500 animate-pulse" />
             </div>
-            HIT GAMES <span className="text-sm font-normal text-slate-500 not-italic tracking-normal self-end mb-1 custom-font">Most played today</span>
+            เกมยอดฮิต <span className="text-sm font-normal text-slate-500 not-italic tracking-normal self-end mb-1 custom-font">ยอดนิยมวันนี้</span>
           </h2>
           <button className="text-sm font-bold text-yellow-500 hover:text-white transition-colors flex items-center gap-1 group">
-            VIEW ALL <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            ดูทั้งหมด <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
@@ -328,13 +358,13 @@ const HomeContent = ({ games }: any) => {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="md:col-span-1 hidden md:block">
-          <Sidebar title="TOP PROVIDERS" items={providers} active={null} />
+          <Sidebar title="ค่ายเกมชั้นนำ" items={providers} active={null} />
         </div>
         <div className="md:col-span-3">
           <div className="glass-card rounded-2xl p-8 relative overflow-hidden">
             <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
               <Trophy className="text-yellow-400" size={32} />
-              RECENT WINNERS
+              ผู้ชนะล่าสุด
               <span className="text-xs font-bold bg-green-500 text-black px-2 py-1 rounded ml-auto">LIVE FEED</span>
             </h3>
 
@@ -520,7 +550,7 @@ const Footer = () => (
             </h3>
           </div>
           <p className="text-sm font-light leading-7 text-slate-500 mb-6">
-            The world's leading premium online casino. Licensed and regulated for fair play. Experience the thrill of victory.
+            คาสิโนออนไลน์ชั้นนำระดับโลก ได้รับใบอนุญาตและกำกับดูแลอย่างถูกต้อง สัมผัสประสบการณ์แห่งชัยชนะได้ที่นี่
           </p>
           <div className="flex gap-4">
             {/* Social Icons Mockup */}
@@ -529,9 +559,9 @@ const Footer = () => (
         </div>
 
         <div>
-          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-gradient-gold w-fit">Platform</h4>
+          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-gradient-gold w-fit">แพลตฟอร์ม</h4>
           <ul className="space-y-4 text-sm font-medium">
-            {['Online Slots', 'Live Casino', 'Sports Betting', 'Lottery', 'Promotions'].map(item => (
+            {['สล็อตออนไลน์', 'คาสิโนสด', 'เดิมพันกีฬา', 'หวย', 'โปรโมชั่น'].map(item => (
               <li key={item} className="hover:text-yellow-400 cursor-pointer transition-colors flex items-center gap-2 group">
                 <div className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-yellow-400 transition-colors"></div>
                 {item}
@@ -541,9 +571,9 @@ const Footer = () => (
         </div>
 
         <div>
-          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-gradient-green w-fit">Support</h4>
+          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-gradient-green w-fit">ช่วยเหลือ</h4>
           <ul className="space-y-4 text-sm font-medium">
-            {['Help Center', 'Payment Methods', 'VIP Program', 'Contact Us', 'Terms of Service'].map(item => (
+            {['ศูนย์ช่วยเหลือ', 'วิธีการฝากถอน', 'VIP คลับ', 'ติดต่อเรา', 'เงื่อนไขการใช้งาน'].map(item => (
               <li key={item} className="hover:text-green-400 cursor-pointer transition-colors flex items-center gap-2 group">
                 <div className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-green-400 transition-colors"></div>
                 {item}
@@ -553,7 +583,7 @@ const Footer = () => (
         </div>
 
         <div>
-          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-blue-400 w-fit">Secure Payment</h4>
+          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-blue-400 w-fit">การชำระเงินที่ปลอดภัย</h4>
           <div className="grid grid-cols-3 gap-3">
             {['KBANK', 'SCB', 'BBL', 'KTB', 'TRUE', 'VISA'].map(bank => (
               <div key={bank} className="h-10 bg-[#1e293b] rounded flex items-center justify-center text-[10px] font-bold border border-slate-700 hover:border-white transition-all hover:scale-105 cursor-pointer shadow-sm">
@@ -567,17 +597,17 @@ const Footer = () => (
             </div>
             <div>
               <div className="text-xs font-bold text-green-400">SSL ENCRYPTED</div>
-              <div className="text-[10px] text-green-500/70">100% Safe & Secure Transactions</div>
+              <div className="text-[10px] text-green-500/70">100% ปลอดภัย & มั่นคง</div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="border-t border-slate-800 pt-8 text-center md:text-left flex flex-col md:flex-row justify-between items-center text-xs text-slate-600 font-medium">
-        <p>&copy; 2026 GoldenBet. All rights reserved.</p>
+        <p>&copy; 2026 GoldenBet. สงวนลิขสิทธิ์.</p>
         <div className="flex gap-6 mt-4 md:mt-0">
-          <span>Privacy Policy</span>
-          <span>Responsible Gambling</span>
+          <span>นโยบายความเป็นส่วนตัว</span>
+          <span>การเล่นเกมอย่างรับผิดชอบ</span>
         </div>
       </div>
     </div>
@@ -737,29 +767,29 @@ function HomePageLogic() {
             <button onClick={() => setShowLogin(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
 
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-black text-white italic tracking-tighter">WELCOME BACK</h2>
-              <p className="text-slate-400 text-sm mt-2">Sign in to continue to GoldenBet</p>
+              <h2 className="text-3xl font-black text-white italic tracking-tighter">ยินดีต้อนรับกลับมา</h2>
+              <p className="text-slate-400 text-sm mt-2">ลงชื่อเข้าใช้เพื่อดำเนินการต่อ</p>
             </div>
 
             {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
 
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">PHONE NUMBER</label>
+                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เบอร์โทรศัพท์</label>
                 <input type="tel" placeholder="08x-xxx-xxxx" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.phone} onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })} required />
               </div>
               <div>
-                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">PASSWORD</label>
+                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน</label>
                 <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} required />
               </div>
               <button type="submit" disabled={loading} className="btn-gold w-full py-4 rounded-xl text-lg font-black tracking-wide uppercase mt-4">
-                {loading ? "Logging in..." : "LOG IN NOW"}
+                {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบทันที"}
               </button>
             </form>
 
             <div className="text-center mt-8 pt-6 border-t border-white/5">
-              <span className="text-slate-500 text-sm">Don't have an account? </span>
-              <button onClick={() => { setShowLogin(false); setShowRegister(true) }} className="text-yellow-500 font-bold hover:underline ml-1">REGISTER HERE</button>
+              <span className="text-slate-500 text-sm">ยังไม่มีบัญชี? </span>
+              <button onClick={() => { setShowLogin(false); setShowRegister(true) }} className="text-yellow-500 font-bold hover:underline ml-1">สมัครสมาชิกที่นี่</button>
             </div>
           </div>
         </div>
@@ -772,8 +802,8 @@ function HomePageLogic() {
             <button onClick={() => setShowRegister(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
 
             <div className="text-center mb-6">
-              <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-600 italic tracking-tighter">CREATE ACCOUNT</h2>
-              <p className="text-slate-400 text-sm mt-2">Join now and claim your 100% Bonus</p>
+              <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-600 italic tracking-tighter">สร้างบัญชีใหม่</h2>
+              <p className="text-slate-400 text-sm mt-2">สมัครวันนี้รับโบนัส 100%</p>
             </div>
 
             {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
@@ -781,18 +811,18 @@ function HomePageLogic() {
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">PHONE NUMBER</label>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เบอร์โทรศัพท์</label>
                   <input type="tel" placeholder="08x-xxx-xxxx" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.phone} onChange={e => setRegisterForm({ ...registerForm, phone: e.target.value })} required />
                 </div>
                 <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">FULL NAME</label>
-                  <input type="text" placeholder="Thai Name" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.fullName} onChange={e => setRegisterForm({ ...registerForm, fullName: e.target.value })} required />
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ชื่อ - นามสกุล</label>
+                  <input type="text" placeholder="ชื่อภาษาไทย" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.fullName} onChange={e => setRegisterForm({ ...registerForm, fullName: e.target.value })} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">BANK</label>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ธนาคาร</label>
                   <select className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none appearance-none" value={registerForm.bankName} onChange={e => setRegisterForm({ ...registerForm, bankName: e.target.value })}>
                     <option value="KBANK">KBANK</option>
                     <option value="SCB">SCB</option>
@@ -802,23 +832,23 @@ function HomePageLogic() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ACCOUNT NO.</label>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เลขบัญชี</label>
                   <input type="text" placeholder="xxx-x-xxxxx-x" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.bankAccount} onChange={e => setRegisterForm({ ...registerForm, bankAccount: e.target.value })} required />
                 </div>
               </div>
 
               <div>
-                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">PASSWORD</label>
+                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน</label>
                 <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.password} onChange={e => setRegisterForm({ ...registerForm, password: e.target.value })} required />
               </div>
               <div>
-                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">CONFIRM PASSWORD</label>
+                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ยืนยันรหัสผ่าน</label>
                 <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.confirmPassword} onChange={e => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })} required />
               </div>
 
               <div className="pt-2">
                 <button type="submit" disabled={loading} className="btn-green w-full py-4 rounded-xl text-lg font-black tracking-wide uppercase shadow-green-500/20 transform active:scale-[0.98] transition-transform">
-                  {loading ? "Creating Account..." : "REGISTER NOW"}
+                  {loading ? "กำลังสมัคร..." : "สมัครสมาชิก"}
                 </button>
               </div>
             </form>

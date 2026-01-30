@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search, Menu, User, Gamepad2, Dices, Trophy, Gift, Wallet, Home,
   ChevronRight, Play, CreditCard, Smartphone, Flame, Star, Users, X,
-  MonitorPlay, Sparkles
+  MonitorPlay, Sparkles, LogOut
 } from 'lucide-react';
 import axios from "axios";
 
@@ -80,6 +80,10 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
                 <span className="text-xs text-green-400 block">Balance</span>
                 <span className="font-mono font-bold text-gradient-gold text-lg">฿{Number(user.balance).toLocaleString()}</span>
               </div>
+              {/* Logout Button */}
+              <button onClick={(e) => { e.stopPropagation(); onLogout(); }} className="ml-2 p-2 rounded-full bg-red-500/10 hover:bg-red-500/30 border border-red-500/30 text-red-400 hover:text-red-300 transition-all" title="ออกจากระบบ">
+                <LogOut size={18} />
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 w-full md:flex md:items-center mt-1 md:mt-0">
@@ -922,11 +926,18 @@ function HomePageLogic() {
             <span className="text-[10px] mt-1 font-medium font-sans">กิจกรรม</span>
           </button>
 
-          {/* 5. Profile */}
-          <button onClick={() => !user ? setShowLogin(true) : setActiveTab('profile')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'profile' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
-            <User size={20} className={activeTab === 'profile' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">โปรไฟล์</span>
-          </button>
+          {/* 5. Profile / Logout */}
+          {user ? (
+            <button onClick={handleLogout} className="flex flex-col items-center justify-center h-full rounded-lg transition-colors text-red-400 hover:text-red-300">
+              <LogOut size={20} />
+              <span className="text-[10px] mt-1 font-medium font-sans">ออก</span>
+            </button>
+          ) : (
+            <button onClick={() => setShowLogin(true)} className="flex flex-col items-center justify-center h-full rounded-lg transition-colors text-slate-500 hover:text-white">
+              <User size={20} />
+              <span className="text-[10px] mt-1 font-medium font-sans">โปรไฟล์</span>
+            </button>
+          )}
 
         </div>
       </div>

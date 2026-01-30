@@ -375,31 +375,27 @@ const HomeContent = ({ games, banners, providers }: any) => {
       <TopBanner banners={banners} />
 
       {/* Hero Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 animate-fade-in">
-        <div className="md:col-span-2 h-40 md:h-[300px]">
-          <Banner banners={banners.filter((b: any) => !b.position || b.position === 'TOP')} />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12 animate-fade-in">
+        <div className="md:col-span-3">
+          {/* Small Banners Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+            {banners.filter((b: any) => b.position === 'SIDE').length > 0 ? (
+              banners.filter((b: any) => b.position === 'SIDE').map((banner: any, idx: number) => (
+                <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-40 md:h-[200px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
+                  <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
+                  <img src={banner.image} alt={banner.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                </div>
+              ))
+            ) : (
+              /* Fallback if no side banners - maybe show generic banner or keep empty? */
+              <Banner banners={banners.filter((b: any) => !b.position || b.position === 'TOP')} />
+            )}
+          </div>
         </div>
-        <div className="block h-full mt-4 md:mt-0">
+        <div className="block h-full mt-4 md:mt-0 md:col-span-1">
           <InviteCard />
         </div>
       </div>
-
-      {/* Small Banners (Side/Bottom) */}
-      {banners.filter((b: any) => b.position === 'SIDE').length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in">
-          {banners.filter((b: any) => b.position === 'SIDE').map((banner: any, idx: number) => (
-            <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer" onClick={() => banner.link && window.open(banner.link, '_blank')}>
-              <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
-              <img src={banner.image} alt={banner.title} className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500" />
-              {banner.title && (
-                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                  <p className="text-white text-sm font-bold truncate">{banner.title}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
 
       <JackpotBar />
 

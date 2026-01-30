@@ -270,7 +270,7 @@ const JackpotBar = () => {
           </div>
           <div>
             <h3 className="text-yellow-500 font-bold tracking-[0.3em] text-xs mb-1">MEGA JACKPOT</h3>
-            <div className="text-5xl md:text-6xl font-black font-mono text-gradient-gold tracking-tighter tabular-nums drop-shadow-lg">
+            <div className="text-3xl md:text-6xl font-black font-mono text-gradient-gold tracking-tighter tabular-nums drop-shadow-lg">
               ฿ {jackpot.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
           </div>

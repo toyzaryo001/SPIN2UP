@@ -20,10 +20,10 @@ router.get('/', requirePermission('banners', 'view'), async (req, res) => {
 // POST /api/admin/banners (ต้องมีสิทธิ์ banners.create)
 router.post('/', requirePermission('banners', 'create'), async (req, res) => {
     try {
-        const { title, image, link, sortOrder, isActive } = req.body;
+        const { title, image, link, sortOrder, isActive, position } = req.body;
 
         const banner = await prisma.banner.create({
-            data: { title, image, link, sortOrder: sortOrder || 0, isActive: isActive ?? true },
+            data: { title, image, link, sortOrder: sortOrder || 0, isActive: isActive ?? true, position: position || 'TOP' },
         });
 
         res.status(201).json({ success: true, data: banner });

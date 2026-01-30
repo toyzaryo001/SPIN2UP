@@ -49,15 +49,23 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
           </div>
         </div>
 
-        {/* Modern Search */}
-        <div className="flex-1 max-w-lg mx-8 hidden md:block relative group">
-          <div className="absolute inset-0 bg-blue-500/10 blur-md rounded-full group-hover:bg-blue-500/20 transition-all"></div>
-          <input
-            type="text"
-            placeholder="ค้นหาเกมโปรดของคุณ..."
-            className="w-full bg-[#0f172a]/80 text-white border border-white/10 rounded-full py-3 pl-12 pr-4 focus:outline-none focus:border-blue-500/50 transition-all relative z-10 placeholder-slate-500"
-          />
-          <Search className="absolute left-4 top-3.5 text-slate-400 w-5 h-5 z-20 group-hover:text-blue-400 transition-colors" />
+        {/* Central Navigation (Desktop Only) */}
+        <div className="flex-1 hidden md:flex items-center justify-center gap-2 lg:gap-8">
+          {[
+            { label: 'หน้าหลัก', href: '/', icon: Home },
+            { label: 'ฝาก/ถอน', href: '/deposit', icon: Wallet },
+            { label: 'กิจกรรม', href: '/activities', icon: Gift },
+            { label: 'โปรไฟล์', href: '/profile', icon: User },
+          ].map((item, index) => (
+            <button
+              key={index}
+              onClick={() => window.location.href = item.href}
+              className="flex items-center gap-2 text-slate-300 hover:text-white hover:bg-white/5 py-2 px-4 rounded-full transition-all group"
+            >
+              <item.icon className="w-4 h-4 text-slate-400 group-hover:text-yellow-400 transition-colors" />
+              <span className="font-bold text-sm lg:text-base">{item.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Auth / User Area */}

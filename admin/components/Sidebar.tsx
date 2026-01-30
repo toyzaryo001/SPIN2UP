@@ -264,7 +264,7 @@ export default function Sidebar() {
     <div className="w-64 bg-slate-900 text-white h-screen flex flex-col shrink-0">
       <div className="p-6 border-b border-slate-800 flex justify-center items-center">
         {logoUrl ? (
-          <img src={logoUrl} alt={brandName} className="h-10 object-contain" />
+          <img src={logoUrl} alt={brandName} className="h-20 w-auto object-contain" />
         ) : (
           <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
             {brandName}

@@ -24,7 +24,7 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
         {/* Logo Area */}
         <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => window.location.href = '/'}>
           {logoUrl ? (
-            <img src={logoUrl} alt={siteName} className="h-16 md:h-28 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+            <img src={logoUrl} alt={siteName} className="h-16 md:h-20 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
           ) : (
             <div className="flex items-center gap-2 md:gap-3">
               <div className="relative">
@@ -378,14 +378,14 @@ const HomeContent = ({ games, banners, providers }: any) => {
       {/* Top Main Banner - Dynamic from API */}
       <TopBanner banners={banners} />
 
-      {/* Hero Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12 animate-fade-in">
-        <div className="md:col-span-3">
+      {/* Hero Section: Small Banners + InviteCard (4:1 Ratio) */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6 mb-8 md:mb-12 animate-fade-in">
+        <div className="md:col-span-4">
           {/* Small Banners Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+          <div className="grid grid-cols-3 gap-2 md:gap-4 h-full">
             {banners.filter((b: any) => b.position === 'SIDE').length > 0 ? (
               banners.filter((b: any) => b.position === 'SIDE').map((banner: any, idx: number) => (
-                <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-40 md:h-[200px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
+                <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-32 md:h-[200px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
                   <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
                   <img src={banner.image} alt={banner.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
                 </div>

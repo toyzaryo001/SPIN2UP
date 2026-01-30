@@ -125,7 +125,7 @@ const NavBar = ({ activeTab, setActiveTab, categories }: any) => {
   ];
 
   return (
-    <nav className="sticky top-20 z-40 bg-[#0f172a]/90 backdrop-blur-md border-b border-white/5 py-2 overflow-x-auto">
+    <nav className="hidden md:block sticky top-20 z-40 bg-[#0f172a]/90 backdrop-blur-md border-b border-white/5 py-2 overflow-x-auto">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center gap-2 min-w-max">
           {navItems.map((menu) => (
@@ -411,25 +411,25 @@ const HomeContent = ({ games, banners, providers }: any) => {
         <div className="md:col-span-1 grid grid-cols-2 gap-2 md:gap-3 h-full">
 
           {/* 1. แนะนำเพื่อน (Top Left) */}
-          <button onClick={() => window.location.href = '/commission'} className="aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-900/40 border border-blue-500/30 hover:border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all group">
+          <button onClick={() => window.location.href = '/commission'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-900/40 border border-blue-500/30 hover:border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all group">
             <Users className="text-blue-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
             <span className="text-[10px] md:text-xs font-bold text-blue-100 group-hover:text-white">แนะนำเพื่อน</span>
           </button>
 
           {/* 2. ฝากต่อเนื่อง (Top Right) */}
-          <button onClick={() => window.location.href = '/streak'} className="aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-green-600/20 to-green-900/40 border border-green-500/30 hover:border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] transition-all group">
+          <button onClick={() => window.location.href = '/streak'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-green-600/20 to-green-900/40 border border-green-500/30 hover:border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] transition-all group">
             <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📅</span>
             <span className="text-[10px] md:text-xs font-bold text-green-100 group-hover:text-white">ฝากต่อเนื่อง</span>
           </button>
 
           {/* 3. คืนยอดเสีย (Bottom Left) */}
-          <button onClick={() => window.location.href = '/cashback'} className="aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-red-600/20 to-red-900/40 border border-red-500/30 hover:border-red-400 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all group">
+          <button onClick={() => window.location.href = '/cashback'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-red-600/20 to-red-900/40 border border-red-500/30 hover:border-red-400 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all group">
             <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">💸</span>
             <span className="text-[10px] md:text-xs font-bold text-red-100 group-hover:text-white">คืนยอดเสีย</span>
           </button>
 
           {/* 4. RANK (Bottom Right) */}
-          <button onClick={() => window.location.href = '/rank'} className="aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-yellow-600/20 to-yellow-900/40 border border-yellow-500/30 hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all group">
+          <button onClick={() => window.location.href = '/rank'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-yellow-600/20 to-yellow-900/40 border border-yellow-500/30 hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all group">
             <Trophy className="text-yellow-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
             <span className="text-[10px] md:text-xs font-bold text-yellow-100 group-hover:text-white">RANK</span>
           </button>

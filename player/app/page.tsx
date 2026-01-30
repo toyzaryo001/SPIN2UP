@@ -15,7 +15,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
   <header className="sticky top-0 z-50 glass-card border-b-0">
-    <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+    <div className="max-w-7xl mx-auto px-2 md:px-4 h-16 md:h-20 flex items-center justify-between">
       {/* Logo Area */}
       <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.location.href = '/'}>
         <div className="relative">
@@ -23,7 +23,7 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
           <Gamepad2 className="w-10 h-10 text-gradient-gold relative z-10" />
         </div>
         <div>
-          <h1 className="text-3xl font-black italic tracking-tighter text-white">
+          <h1 className="text-xl md:text-3xl font-black italic tracking-tighter text-white">
             GOLDEN<span className="text-gradient-gold">BET</span>
           </h1>
           <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
@@ -61,13 +61,13 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 md:gap-3">
-            <button onClick={onLogin} className="px-4 md:px-6 py-2 md:py-2.5 rounded-full font-bold text-sm md:text-base text-white hover:text-yellow-400 transition-colors relative group overflow-hidden">
+          <div className="flex items-center gap-2">
+            <button onClick={onLogin} className="px-3 md:px-6 py-1.5 md:py-2.5 rounded-full font-bold text-xs md:text-base text-white hover:text-yellow-400 transition-colors relative group overflow-hidden border border-white/10 md:border-0">
               <span className="relative z-10">เข้าสู่ระบบ</span>
               <div className="absolute inset-0 bg-white/5 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
             </button>
-            <button onClick={onRegister} className="btn-gold px-4 md:px-8 py-2 md:py-2.5 rounded-full relative overflow-hidden group">
-              <span className="relative z-10 flex items-center gap-1 md:gap-2 text-sm md:text-base">สมัครสมาชิก <ChevronRight size={16} className="hidden md:block" /></span>
+            <button onClick={onRegister} className="btn-gold px-3 md:px-8 py-1.5 md:py-2.5 rounded-full relative overflow-hidden group shadow-md">
+              <span className="relative z-10 flex items-center gap-1 md:gap-2 text-xs md:text-base whitespace-nowrap">สมัครสมาชิก <ChevronRight size={14} className="hidden md:block" /></span>
               <div className="absolute inset-0 bg-white/20 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
           </div>
@@ -115,7 +115,7 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
 };
 
 const Banner = () => (
-  <div className="relative rounded-3xl overflow-hidden h-full min-h-[220px] md:min-h-[300px] flex items-center group border border-white/10">
+  <div className="relative rounded-2xl md:rounded-3xl overflow-hidden h-full min-h-[180px] md:min-h-[300px] flex items-center group border border-white/10">
     {/* Cinematic Background */}
     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-[10s] group-hover:scale-110"></div>
     <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a] via-[#0f172a]/80 to-transparent"></div>
@@ -139,8 +139,8 @@ const Banner = () => (
         <span className="text-gradient-gold">โบนัส 100%</span>
       </h2>
 
-      <p className="text-slate-300 text-sm md:text-base mb-6 font-light animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        ฝากครั้งแรกรับโบนัสทันที สูงสุด 5,000 บาท ทำเทิร์นน้อย ถอนไม่อั้น
+      <p className="text-slate-300 text-xs md:text-base mb-4 md:mb-6 font-light animate-slide-up" style={{ animationDelay: '0.2s' }}>
+        ฝากครั้งแรกรับโบนัสทันที สูงสุด 5,000 บาท
       </p>
 
       <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
@@ -726,7 +726,7 @@ function HomePageLogic() {
 
       <NavBar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="w-full px-4 py-8 max-w-7xl mx-auto">
+      <main className="w-full px-2 md:px-4 py-4 md:py-8 max-w-7xl mx-auto">
         {renderContent()}
       </main>
 

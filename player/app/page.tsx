@@ -378,61 +378,68 @@ const HomeContent = ({ games, banners, providers }: any) => {
       {/* Top Main Banner - Dynamic from API */}
       <TopBanner banners={banners} />
 
-      {/* Small Banners Row (3 Banners in grid-cols-4, taking first 3 cols) */}
-      <div className="grid grid-cols-4 gap-2 md:gap-3 mb-2 md:mb-3 animate-fade-in">
-        {(() => {
-          const sideBanners = banners.filter((b: any) => b.position === 'SIDE');
-          return sideBanners.length > 0 ? (
-            <>
-              {sideBanners.slice(0, 3).map((banner: any, idx: number) => (
-                <div key={idx} className="relative rounded-lg md:rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-16 md:h-24" onClick={() => banner.link && window.open(banner.link, '_blank')}>
-                  <img src={banner.image} alt={banner.title} className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
-                </div>
-              ))}
-              {/* Fill remaining slots if less than 3 banners */}
-              {sideBanners.length < 3 && Array(3 - sideBanners.length).fill(0).map((_, idx) => (
-                <div key={`empty-${idx}`} className="rounded-lg md:rounded-xl bg-slate-800/50 border border-white/5 h-16 md:h-24"></div>
-              ))}
-            </>
-          ) : (
-            <>
-              <div className="col-span-3 rounded-lg md:rounded-xl bg-slate-800/50 border border-white/5 h-16 md:h-24 flex items-center justify-center text-slate-600 text-xs">ไม่มีแบนเนอร์</div>
-            </>
-          );
-        })()}
-        {/* RANK Button - 4th column */}
-        <button onClick={() => window.location.href = '/rank'} className="flex flex-col items-center justify-center rounded-lg md:rounded-xl bg-gradient-to-br from-yellow-500/20 to-yellow-900/30 border border-yellow-500/30 hover:border-yellow-400 hover:shadow-lg hover:shadow-yellow-500/20 transition-all group h-16 md:h-24">
-          <Trophy className="text-yellow-400 mb-1" size={20} />
-          <span className="text-[10px] md:text-xs font-bold text-yellow-400 group-hover:text-yellow-300">RANK</span>
-        </button>
-      </div>
+      {/* Secondary Banner & Activity Board Section */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 mb-8 md:mb-12 animate-fade-in">
 
-      {/* Activity Buttons Row (4 Columns) */}
-      <div className="grid grid-cols-4 gap-2 md:gap-3 mb-6 md:mb-10 animate-fade-in">
-        {/* ยอดเสีย */}
-        <button onClick={() => window.location.href = '/cashback'} className="flex flex-col items-center justify-center p-2 md:p-4 rounded-lg md:rounded-xl bg-gradient-to-br from-red-500/20 to-red-900/30 border border-red-500/30 hover:border-red-400 hover:shadow-lg hover:shadow-red-500/20 transition-all group h-16 md:h-24">
-          <span className="text-lg md:text-xl mb-1">💸</span>
-          <span className="text-[10px] md:text-xs font-bold text-red-400 group-hover:text-red-300">ยอดเสีย</span>
-        </button>
+        {/* Left: Secondary Banners (Takes 3/4 width on desktop) */}
+        <div className="md:col-span-3 h-full min-h-[160px]">
+          {(() => {
+            const sideBanners = banners.filter((b: any) => b.position === 'SIDE');
+            return sideBanners.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2 h-full">
+                {/* Show up to 3 banners, filling height */}
+                {sideBanners.slice(0, 3).map((banner: any, idx: number) => (
+                  <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-full min-h-[120px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
+                    <img src={banner.image} alt={banner.title} className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-blue-900/10 group-hover:bg-transparent transition-colors"></div>
+                  </div>
+                ))}
+                {/* If only 1 banner, expand to fill */}
+                {sideBanners.length === 1 && (
+                  <div className="col-span-2 hidden md:block rounded-xl bg-slate-800/30 border border-white/5"></div>
+                )}
+                {/* If only 2 banners, fill remaining */}
+                {sideBanners.length === 2 && (
+                  <div className="hidden md:block rounded-xl bg-slate-800/30 border border-white/5"></div>
+                )}
+              </div>
+            ) : (
+              /* Fallback if no side banners - Show Placeholder or Nothing */
+              <div className="w-full h-full min-h-[160px] rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center">
+                <span className="text-slate-600 font-bold">SECONDARY BANNER</span>
+              </div>
+            );
+          })()}
+        </div>
 
-        {/* แนะนำเพื่อน */}
-        <button onClick={() => window.location.href = '/commission'} className="flex flex-col items-center justify-center p-2 md:p-4 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-900/30 border border-blue-500/30 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 transition-all group h-16 md:h-24">
-          <Users className="text-blue-400 mb-1" size={20} />
-          <span className="text-[10px] md:text-xs font-bold text-blue-400 group-hover:text-blue-300">แนะนำเพื่อน</span>
-        </button>
+        {/* Right: Activity Buttons Grid 2x2 (Takes 1/4 width on desktop) */}
+        <div className="md:col-span-1 grid grid-cols-2 gap-2 md:gap-3 h-full">
 
-        {/* ฝากต่อเนื่อง */}
-        <button onClick={() => window.location.href = '/streak'} className="flex flex-col items-center justify-center p-2 md:p-4 rounded-lg md:rounded-xl bg-gradient-to-br from-green-500/20 to-green-900/30 border border-green-500/30 hover:border-green-400 hover:shadow-lg hover:shadow-green-500/20 transition-all group h-16 md:h-24">
-          <span className="text-lg md:text-xl mb-1">📅</span>
-          <span className="text-[10px] md:text-xs font-bold text-green-400 group-hover:text-green-300">ฝากต่อเนื่อง</span>
-        </button>
+          {/* 1. แนะนำเพื่อน (Top Left) */}
+          <button onClick={() => window.location.href = '/commission'} className="aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-900/40 border border-blue-500/30 hover:border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all group">
+            <Users className="text-blue-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
+            <span className="text-[10px] md:text-xs font-bold text-blue-100 group-hover:text-white">แนะนำเพื่อน</span>
+          </button>
 
-        {/* Placeholder or Extra Button */}
-        <button onClick={() => window.location.href = '/promotions'} className="flex flex-col items-center justify-center p-2 md:p-4 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-900/30 border border-purple-500/30 hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/20 transition-all group h-16 md:h-24">
-          <Gift className="text-purple-400 mb-1" size={20} />
-          <span className="text-[10px] md:text-xs font-bold text-purple-400 group-hover:text-purple-300">โปรโมชั่น</span>
-        </button>
+          {/* 2. ฝากต่อเนื่อง (Top Right) */}
+          <button onClick={() => window.location.href = '/streak'} className="aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-green-600/20 to-green-900/40 border border-green-500/30 hover:border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] transition-all group">
+            <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📅</span>
+            <span className="text-[10px] md:text-xs font-bold text-green-100 group-hover:text-white">ฝากต่อเนื่อง</span>
+          </button>
+
+          {/* 3. คืนยอดเสีย (Bottom Left) */}
+          <button onClick={() => window.location.href = '/cashback'} className="aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-red-600/20 to-red-900/40 border border-red-500/30 hover:border-red-400 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all group">
+            <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">💸</span>
+            <span className="text-[10px] md:text-xs font-bold text-red-100 group-hover:text-white">คืนยอดเสีย</span>
+          </button>
+
+          {/* 4. RANK (Bottom Right) */}
+          <button onClick={() => window.location.href = '/rank'} className="aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-yellow-600/20 to-yellow-900/40 border border-yellow-500/30 hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all group">
+            <Trophy className="text-yellow-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
+            <span className="text-[10px] md:text-xs font-bold text-yellow-100 group-hover:text-white">RANK</span>
+          </button>
+        </div>
+
       </div>
 
       <JackpotBar />

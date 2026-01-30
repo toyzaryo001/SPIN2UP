@@ -61,13 +61,13 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
-            <button onClick={onLogin} className="px-6 py-2.5 rounded-full font-bold text-white hover:text-yellow-400 transition-colors relative group overflow-hidden">
+          <div className="flex items-center gap-2 md:gap-3">
+            <button onClick={onLogin} className="px-4 md:px-6 py-2 md:py-2.5 rounded-full font-bold text-sm md:text-base text-white hover:text-yellow-400 transition-colors relative group overflow-hidden">
               <span className="relative z-10">เข้าสู่ระบบ</span>
               <div className="absolute inset-0 bg-white/5 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
             </button>
-            <button onClick={onRegister} className="btn-gold px-8 py-2.5 rounded-full relative overflow-hidden group">
-              <span className="relative z-10 flex items-center gap-2">สมัครสมาชิก <ChevronRight size={16} /></span>
+            <button onClick={onRegister} className="btn-gold px-4 md:px-8 py-2 md:py-2.5 rounded-full relative overflow-hidden group">
+              <span className="relative z-10 flex items-center gap-1 md:gap-2 text-sm md:text-base">สมัครสมาชิก <ChevronRight size={16} className="hidden md:block" /></span>
               <div className="absolute inset-0 bg-white/20 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
           </div>
@@ -115,7 +115,7 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
 };
 
 const Banner = () => (
-  <div className="relative rounded-3xl overflow-hidden h-full min-h-[300px] flex items-center group border border-white/10">
+  <div className="relative rounded-3xl overflow-hidden h-full min-h-[220px] md:min-h-[300px] flex items-center group border border-white/10">
     {/* Cinematic Background */}
     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-[10s] group-hover:scale-110"></div>
     <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a] via-[#0f172a]/80 to-transparent"></div>
@@ -134,7 +134,7 @@ const Banner = () => (
         <span className="text-xs font-bold text-green-400 tracking-wider">โปรโมชั่นสุดฮิต</span>
       </div>
 
-      <h2 className="text-4xl md:text-5xl font-black text-white leading-[0.9] mb-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+      <h2 className="text-3xl md:text-5xl font-black text-white leading-[0.9] mb-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
         สมัครใหม่รับ <br />
         <span className="text-gradient-gold">โบนัส 100%</span>
       </h2>
@@ -737,25 +737,25 @@ function HomePageLogic() {
         <div className="grid grid-cols-5 gap-1 items-end h-[60px]">
           <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'home' ? 'text-yellow-400' : 'text-slate-500'}`}>
             <Play size={20} className={activeTab === 'home' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">Lobby</span>
+            <span className="text-[10px] mt-1 font-medium font-sans">หน้าหลัก</span>
           </button>
           <button onClick={() => setActiveTab('slots')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'slots' ? 'text-yellow-400' : 'text-slate-500'}`}>
             <Gamepad2 size={20} className={activeTab === 'slots' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">Slots</span>
+            <span className="text-[10px] mt-1 font-medium font-sans">สล็อต</span>
           </button>
           <div className="relative flex justify-center h-full items-center">
             <button onClick={() => !user ? setShowLogin(true) : null} className="absolute -top-6 w-14 h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 border-4 border-[#0b1120] flex items-center justify-center text-white shadow-lg shadow-green-500/40 transform active:scale-95 transition-transform hover:scale-105">
               <Wallet size={24} />
             </button>
-            <span className="text-[10px] text-slate-400 mt-8 font-medium font-sans">Wallet</span>
+            <span className="text-[10px] text-slate-400 mt-8 font-medium font-sans">กระเป๋า</span>
           </div>
           <button onClick={() => setActiveTab('casino')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'casino' ? 'text-yellow-400' : 'text-slate-500'}`}>
             <Dices size={20} className={activeTab === 'casino' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">Casino</span>
+            <span className="text-[10px] mt-1 font-medium font-sans">คาสิโน</span>
           </button>
           <button onClick={() => !user ? setShowLogin(true) : null} className="flex flex-col items-center justify-center h-full rounded-lg text-slate-500 hover:text-white transition-colors">
             <User size={20} />
-            <span className="text-[10px] mt-1 font-medium font-sans">Account</span>
+            <span className="text-[10px] mt-1 font-medium font-sans">บัญชี</span>
           </button>
         </div>
       </div>

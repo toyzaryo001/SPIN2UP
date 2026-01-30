@@ -378,17 +378,15 @@ const HomeContent = ({ games, banners, providers }: any) => {
       {/* Top Main Banner - Dynamic from API */}
       <TopBanner banners={banners} />
 
-      {/* Hero Section: Small Banners (Full Width) */}
+      {/* Hero Section: Small Banners (Fixed Height, Always 3 Cols) */}
       <div className="mb-6 md:mb-8 animate-fade-in">
-        {/* Small Banners Grid - Adapts to content count */}
+        {/* Small Banners Grid - Always 3 columns */}
         {(() => {
           const sideBanners = banners.filter((b: any) => b.position === 'SIDE');
-          const count = sideBanners.length;
-          const gridCols = count === 1 ? 'grid-cols-1' : count === 2 ? 'grid-cols-2' : 'grid-cols-3';
-          return count > 0 ? (
-            <div className={`grid ${gridCols} gap-2 md:gap-4`}>
-              {sideBanners.map((banner: any, idx: number) => (
-                <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer aspect-[16/9]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
+          return sideBanners.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+              {sideBanners.slice(0, 3).map((banner: any, idx: number) => (
+                <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-24 md:h-40" onClick={() => banner.link && window.open(banner.link, '_blank')}>
                   <img src={banner.image} alt={banner.title} className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
                 </div>

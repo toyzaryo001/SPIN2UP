@@ -323,30 +323,75 @@ const JackpotBar = () => {
 // --- 3. MAIN LOGIC & MODALS ---
 
 const TopBanner = ({ banners }: { banners: any[] }) => {
-  // Use the first banner as the main hero banner (assuming sortOrder defines priority)
-  // If no banners are active/exist, we don't render this section or render a fallback if preferred.
-  // User requested "open/close from admin", so if no active banners, we hide it.
-  if (!banners || banners.length === 0) return null;
+  const [current, setCurrent] = useState(0);
 
-  const mainBanner = banners[0];
+  // Filter only TOP banners (or all if no position defined, assuming passed banners are already filtered or we filter here)
+  // The parent likely passes all banners, so let's filter just in case, or use as is if strictly passed.
+  // Based on usage: <TopBanner banners={banners} /> in HomeContent, likely raw list.
+  // But strictly, we should safe check.
+  const displayBanners = banners?.length > 0 ? banners.filter(b => !b.position || b.position === 'TOP') : [];
+
+  useEffect(() => {
+    if (displayBanners.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % displayBanners.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [displayBanners.length]);
+
+  if (displayBanners.length === 0) return null;
 
   return (
-    // Added mt-4 to separate from Nav
     <div className="w-full relative rounded-xl md:rounded-3xl overflow-hidden mb-4 md:mb-6 mt-4 md:mt-0 group border border-white/10 shadow-2xl">
       {/* Aspect Ratio 1200/400 = 3/1 */}
       <div className="aspect-[3/1] w-full relative">
-        <img
-          src={mainBanner.image || "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&h=400&auto=format&fit=crop"}
-          alt={mainBanner.title || "Main Banner"}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
+        <div
+          className="flex transition-transform duration-700 ease-out h-full"
+          style={{ transform: `translateX(-${current * 100}%)` }}
+        >
+          {displayBanners.map((banner, idx) => (
+            <div key={idx} className="min-w-full h-full relative">
+              <img
+                src={banner.image || "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&h=400&auto=format&fit=crop"}
+                alt={banner.title || "Main Banner"}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
+            </div>
+          ))}
+        </div>
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
+        {/* Navigation Dots */}
+        {displayBanners.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            {displayBanners.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrent(idx)}
+                className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all ${current === idx ? "bg-yellow-400 w-4 md:w-6" : "bg-white/50 hover:bg-white"
+                  }`}
+              />
+            ))}
+          </div>
+        )}
 
-        {/* Text Content */}
-        {/* Text Content Removed as per user request */}
-        {/* {mainBanner.title && ( ... )} */}
+        {/* Arrays (Desktop Only) */}
+        {displayBanners.length > 1 && (
+          <>
+            <button
+              onClick={() => setCurrent((curr) => (curr === 0 ? displayBanners.length - 1 : curr - 1))}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hidden md:block"
+            >
+              <ChevronRight className="rotate-180" size={24} />
+            </button>
+            <button
+              onClick={() => setCurrent((curr) => (curr + 1) % displayBanners.length)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hidden md:block"
+            >
+              <ChevronRight size={24} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

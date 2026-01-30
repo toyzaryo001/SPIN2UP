@@ -24,7 +24,7 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
         {/* Logo Area */}
         <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => window.location.href = '/'}>
           {logoUrl ? (
-            <img src={logoUrl} alt={siteName} className="h-24 md:h-40 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+            <img src={logoUrl} alt={siteName} className="h-16 md:h-28 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
           ) : (
             <div className="flex items-center gap-2 md:gap-3">
               <div className="relative">
@@ -658,7 +658,7 @@ const Footer = ({ settings }: any) => (
           <div className="flex items-center gap-2 mb-6">
             <Gamepad2 className="text-yellow-400" size={32} />
             <h3 className="text-2xl font-black text-white italic tracking-tighter">
-              GOLDEN<span className="text-gradient-gold">BET</span>
+              {settings?.siteName || "GOLDENBET"}
             </h3>
           </div>
           <p className="text-sm font-light leading-7 text-slate-500 mb-6">

@@ -53,16 +53,32 @@
   }
 
   /* Buttons */
+  /* Buttons */
   .btn-gold {
-    @apply bg-gradient-to-b from-[#fcd34d] to-[#d97706] text-black font-bold shadow-[0_0_15px_rgba(251, 191, 36, 0.3)] hover:shadow-[0_0_25px_rgba(251, 191, 36, 0.5)] active:scale-95 transition-all;
+    @apply bg-gradient-to-b from-[#fcd34d] to-[#d97706] text-black font-bold active:scale-95 transition-all;
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+  }
+
+  .btn-gold:hover {
+    box-shadow: 0 0 25px rgba(251, 191, 36, 0.5);
   }
 
   .btn-green {
-    @apply bg-gradient-to-b from-[#4ade80] to-[#15803d] text-white font-bold shadow-[0_0_15px_rgba(34, 197, 94, 0.3)] hover:shadow-[0_0_25px_rgba(34, 197, 94, 0.5)] active:scale-95 transition-all;
+    @apply bg-gradient-to-b from-[#4ade80] to-[#15803d] text-white font-bold active:scale-95 transition-all;
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+  }
+
+  .btn-green:hover {
+    box-shadow: 0 0 25px rgba(34, 197, 94, 0.5);
   }
 
   .btn-blue {
-    @apply bg-gradient-to-b from-[#60a5fa] to-[#1e40af] text-white font-bold shadow-[0_0_15px_rgba(59, 130, 246, 0.3)] hover:shadow-[0_0_25px_rgba(59, 130, 246, 0.5)] active:scale-95 transition-all;
+    @apply bg-gradient-to-b from-[#60a5fa] to-[#1e40af] text-white font-bold active:scale-95 transition-all;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-blue:hover {
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
   }
 
   /* Utilities */

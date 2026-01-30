@@ -14,61 +14,66 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 // --- 1. VISUAL COMPONENTS (Premium UI) ---
 
 const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
-  <header className="bg-[#0f172a] border-b border-slate-800 sticky top-0 z-50 shadow-2xl shadow-black/50">
-    <div className="w-full px-4 h-16 flex items-center justify-between gap-4" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+  <header className="sticky top-0 z-50 glass-card border-b-0">
+    <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
       {/* Logo Area */}
-      <div className="flex items-center gap-2 cursor-pointer group" onClick={() => window.location.href = '/'}>
-        <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.4)] group-hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300">
-          <Gamepad2 className="text-white w-6 h-6 drop-shadow-md" />
+      <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.location.href = '/'}>
+        <div className="relative">
+          <div className="absolute inset-0 bg-yellow-400 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
+          <Gamepad2 className="w-10 h-10 text-gradient-gold relative z-10" />
         </div>
-        <div className="hidden md:block">
-          <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300 drop-shadow-sm tracking-tight font-sans">
-            GOLDEN<span className="text-green-400">BET</span>
+        <div>
+          <h1 className="text-3xl font-black italic tracking-tighter text-white">
+            GOLDEN<span className="text-gradient-gold">BET</span>
           </h1>
+          <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex-1 max-w-xl hidden md:block px-4">
-        <div className="relative group">
-          <input
-            type="text"
-            placeholder="ค้นหาเกมโปรดของคุณ..."
-            className="w-full bg-slate-900/80 text-slate-200 border border-slate-700 rounded-full py-2.5 pl-11 pr-4 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/50 transition-all placeholder-slate-500 shadow-inner font-sans"
-          />
-          <Search className="absolute left-4 top-3 text-slate-500 w-4 h-4 group-hover:text-green-400 transition-colors" />
-        </div>
+      {/* Modern Search */}
+      <div className="flex-1 max-w-lg mx-8 hidden md:block relative group">
+        <div className="absolute inset-0 bg-blue-500/10 blur-md rounded-full group-hover:bg-blue-500/20 transition-all"></div>
+        <input
+          type="text"
+          placeholder="Search your favorite game..."
+          className="w-full bg-[#0f172a]/80 text-white border border-white/10 rounded-full py-3 pl-12 pr-4 focus:outline-none focus:border-blue-500/50 transition-all relative z-10 placeholder-slate-500"
+        />
+        <Search className="absolute left-4 top-3.5 text-slate-400 w-5 h-5 z-20 group-hover:text-blue-400 transition-colors" />
       </div>
 
-      {/* Auth Buttons */}
-      <div className="flex items-center gap-3">
+      {/* Auth / User Area */}
+      <div className="flex items-center gap-4">
         {user ? (
-          <div className="flex items-center gap-3 animate-fade-in">
-            <div className="hidden md:flex flex-col items-end mr-1">
-              <span className="text-[10px] text-slate-400 font-sans uppercase tracking-wider">Welcome</span>
-              <span className="text-sm font-bold text-yellow-400 font-sans leading-none">{user.username || user.phone}</span>
+          <div className="flex items-center gap-4 bg-white/5 rounded-full p-1.5 pr-6 border border-white/10 hover:border-white/20 transition-all cursor-pointer group">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 p-0.5 shadow-lg">
+              <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
+                <User size={20} className="text-yellow-400" />
+              </div>
             </div>
-            <div className="flex items-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-1.5 rounded-full border border-slate-700 shadow-inner">
-              <span className="text-green-400 text-sm font-bold font-mono">฿{Number(user.balance || 0).toLocaleString()}</span>
+            <div className="flex flex-col">
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">Vip Level 1</span>
+              <span className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors">{user.username}</span>
             </div>
-            <button onClick={onLogout} className="p-2 text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 transition-all bg-slate-800 rounded-lg border border-slate-700">
-              <User size={20} />
-            </button>
+            <div className="h-8 w-[1px] bg-white/10 mx-2"></div>
+            <div className="text-right">
+              <span className="text-xs text-green-400 block">Balance</span>
+              <span className="font-mono font-bold text-gradient-gold text-lg">฿{Number(user.balance).toLocaleString()}</span>
+            </div>
           </div>
         ) : (
-          <>
-            <button onClick={onLogin} className="hidden sm:flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-slate-900 bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 shadow-[0_4px_12px_rgba(234,179,8,0.2)] transition-all transform hover:-translate-y-0.5 active:translate-y-0 font-sans">
-              <User size={18} />
-              <span>เข้าสู่ระบบ</span>
+          <div className="flex items-center gap-3">
+            <button onClick={onLogin} className="px-6 py-2.5 rounded-full font-bold text-white hover:text-yellow-400 transition-colors relative group overflow-hidden">
+              <span className="relative z-10">LOGIN</span>
+              <div className="absolute inset-0 bg-white/5 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
             </button>
-            <button onClick={onRegister} className="flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-white bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 shadow-[0_4px_12px_rgba(34,197,94,0.3)] transition-all transform hover:-translate-y-0.5 active:translate-y-0 font-sans">
-              <Wallet size={18} />
-              <span>สมัครสมาชิก</span>
+            <button onClick={onRegister} className="btn-gold px-8 py-2.5 rounded-full relative overflow-hidden group">
+              <span className="relative z-10 flex items-center gap-2">REGISTER <ChevronRight size={16} /></span>
+              <div className="absolute inset-0 bg-white/20 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
-          </>
+          </div>
         )}
-        <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-slate-700 ml-1 cursor-pointer hover:border-white transition-all shadow-md">
-          <img src="https://flagcdn.com/w40/th.png" alt="TH" className="w-full h-full object-cover" />
+        <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden hover:scale-110 transition-transform cursor-pointer shadow-lg">
+          <img src="https://flagcdn.com/w80/th.png" alt="TH" className="w-full h-full object-cover opacity-80 hover:opacity-100" />
         </div>
       </div>
     </div>
@@ -77,33 +82,30 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
 
 const NavBar = ({ activeTab, setActiveTab }: any) => {
   const menus = [
-    { id: 'home', label: 'หน้าหลัก', icon: <Play size={20} /> },
-    { id: 'slots', label: 'สล็อต', icon: <Gamepad2 size={20} /> },
-    { id: 'casino', label: 'คาสิโน', icon: <Dices size={20} /> },
-    { id: 'sports', label: 'กีฬา', icon: <Trophy size={20} /> },
-    { id: 'lotto', label: 'หวย', icon: <Gift size={20} /> },
-    { id: 'promotions', label: 'โปรโมชั่น', icon: <Star size={20} /> },
+    { id: 'home', label: 'LOBBY', icon: <Play size={18} /> },
+    { id: 'slots', label: 'SLOTS', icon: <Gamepad2 size={18} /> },
+    { id: 'casino', label: 'LIVE CASINO', icon: <Dices size={18} /> },
+    { id: 'sports', label: 'SPORTS', icon: <Trophy size={18} /> },
+    { id: 'lotto', label: 'LOTTO', icon: <Gift size={18} /> },
+    { id: 'promotions', label: 'PROMO', icon: <Star size={18} /> },
   ];
 
   return (
-    <nav className="bg-[#1e293b] border-b border-slate-700 shadow-lg sticky top-16 z-40">
-      <div className="w-full px-4" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <div className="flex overflow-x-auto no-scrollbar scroll-smooth">
+    <nav className="sticky top-20 z-40 bg-[#0f172a]/90 backdrop-blur-md border-b border-white/5 py-2 overflow-x-auto">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center gap-2 min-w-max">
           {menus.map((menu) => (
             <button
               key={menu.id}
               onClick={() => setActiveTab(menu.id)}
-              className={`flex flex-col md:flex-row items-center justify-center gap-2 px-6 py-4 min-w-[100px] md:min-w-0 transition-all border-b-[3px] flex-shrink-0 relative overflow-hidden group
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all duration-300 font-bold text-sm tracking-wide
                 ${activeTab === menu.id
-                  ? 'border-yellow-500 text-yellow-400 bg-slate-800'
-                  : 'border-transparent text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(250,204,21,0.4)] scale-105'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
             >
-              <div className={`transition-transform duration-300 ${activeTab === menu.id ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'}`}>
-                {menu.icon}
-              </div>
-              <span className="text-sm font-bold whitespace-nowrap font-sans">{menu.label}</span>
-              {activeTab === menu.id && <div className="absolute inset-0 bg-yellow-400/5 z-0 animate-pulse"></div>}
+              {menu.icon}
+              <span className="font-sans">{menu.label}</span>
             </button>
           ))}
         </div>
@@ -113,114 +115,91 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
 };
 
 const Banner = () => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div className="md:col-span-2 relative h-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl group cursor-pointer border border-blue-900/50">
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-900 via-[#0f172a] to-[#0f172a] z-0"></div>
-      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
-      <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-blue-600/30 rounded-full blur-[80px]"></div>
-      <div className="absolute top-10 right-20 w-40 h-40 bg-purple-600/20 rounded-full blur-[60px]"></div>
+  <div className="relative rounded-3xl overflow-hidden mb-12 min-h-[400px] flex items-center group border border-white/10">
+    {/* Cinematic Background */}
+    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-[10s] group-hover:scale-110"></div>
+    <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a] via-[#0f172a]/80 to-transparent"></div>
+    <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
 
-      <div className="relative z-10 h-full flex flex-col justify-center px-8 md:px-12 transition-transform group-hover:scale-[1.01] duration-500">
-        <span className="inline-flex items-center px-3 py-1 bg-yellow-500 text-slate-900 text-[10px] font-black tracking-wider uppercase rounded-sm w-fit mb-3 animate-pulse font-sans">
-          <Flame size={12} className="mr-1" /> Hot Promotion
-        </span>
-        <h2 className="text-4xl md:text-6xl font-black text-white mb-2 drop-shadow-xl italic tracking-tighter font-sans">
-          สมัครใหม่รับ <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">100%</span>
-        </h2>
-        <p className="text-blue-100/80 mb-8 max-w-lg text-sm md:text-base font-light leading-relaxed font-sans">
-          ฝากครั้งแรกรับโบนัสทันที สูงสุด 5,000 บาท ทำเทิร์นน้อย ถอนไม่อั้น การันตีความมั่นคง
-        </p>
-        <button className="w-fit px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-500/30 transition-all flex items-center gap-2 transform group-hover:translate-x-2 font-sans">
-          รับโบนัสเลย <ChevronRight size={20} />
-        </button>
-      </div>
+    {/* Floating Particles */}
+    <div className="absolute inset-0 opacity-30">
+      <Sparkles className="absolute top-10 right-20 text-yellow-400 animate-pulse" size={40} />
+      <div className="absolute bottom-20 right-40 w-32 h-32 bg-blue-500 rounded-full blur-[100px] animate-float"></div>
     </div>
 
-    <div className="relative h-56 md:h-72 bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 flex flex-col group hover:border-blue-500 transition-all cursor-pointer shadow-lg">
-      <div className="p-6 relative z-10 flex flex-col h-full justify-between">
-        <div>
-          <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2 font-sans">
-            <div className="p-2 bg-blue-500/20 rounded-lg"><Users className="text-blue-400" size={20} /></div>
-            ชวนเพื่อนรับรายได้
-          </h3>
-          <p className="text-slate-400 text-xs mt-2 leading-relaxed font-sans">
-            เพียงแชร์ลิงค์ชวนเพื่อน รับคอมมิชชั่น 0.8% จากทุกยอดการเล่นของเพื่อน สร้างรายได้มหาศาล
-          </p>
-        </div>
+    {/* Content */}
+    <div className="relative z-10 px-8 md:px-16 max-w-2xl">
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-6 animate-slide-up">
+        <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+        <span className="text-xs font-bold text-green-400 tracking-wider">NEW MEMBER EXCLUSIVE</span>
+      </div>
 
-        <div className="mt-4 p-4 bg-slate-900/80 rounded-xl border border-slate-700 backdrop-blur-sm">
-          <p className="text-[10px] text-slate-500 mb-2 uppercase tracking-wider font-bold font-sans">Your Affiliate Link</p>
-          <div className="flex items-center justify-between bg-black/30 rounded-lg p-3 border border-slate-700 group-hover:border-slate-500 transition-colors">
-            <span className="text-green-400 text-sm font-mono truncate">goldenbet.com/u/user888</span>
-            <button className="text-slate-400 hover:text-white transition-colors">
-              <Gift size={18} />
-            </button>
-          </div>
-        </div>
+      <h2 className="text-5xl md:text-7xl font-black text-white leading-[0.9] mb-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        WELCOME <br />
+        <span className="text-gradient-gold">BONUS 100%</span>
+      </h2>
+
+      <p className="text-slate-300 text-lg mb-8 font-light max-w-md animate-slide-up" style={{ animationDelay: '0.2s' }}>
+        Experience the ultimate luxury gambling. Deposit now and get double the value instantly.
+      </p>
+
+      <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+        <button className="btn-green px-8 py-4 rounded-full text-lg shadow-lg hover:shadow-green-500/30 flex items-center gap-2 group/btn">
+          CLAIM BONUS <ChevronRight className="group-hover/btn:translate-x-1 transition-transform" />
+        </button>
+        <button className="px-8 py-4 rounded-full text-white font-bold border border-white/20 hover:bg-white/10 transition-all">
+          View Details
+        </button>
       </div>
-      <div className="absolute top-0 right-0 p-4 opacity-[0.03]">
-        <Users size={180} className="text-white" />
-      </div>
-      <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-900/50 to-transparent"></div>
     </div>
   </div>
 );
 
 // --- PREMIUM GAME CARD (Fixes the "dry" look) ---
+// --- PREMIUM GAME CARD ---
 const GameCard = ({ title, provider, image, color, hot, type }: any) => {
-  // Logic to determine background: if image fails or missing, use the gradient color
   const hasImage = image && image !== "";
-
   return (
-    <div className="group relative bg-[#1e293b] rounded-xl overflow-hidden border border-slate-700 hover:border-yellow-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.4)] cursor-pointer">
-      {/* Image/Placeholder Area */}
-      <div className={`h-36 w-full relative overflow-hidden ${!hasImage ? (color || 'bg-slate-800') : ''}`}>
-
+    <div className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-2">
+      <div className={`h-40 w-full relative overflow-hidden ${!hasImage ? (color || 'bg-slate-800') : ''}`}>
         {hasImage ? (
-          <div className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style={{ backgroundImage: `url(${image})` }}></div>
+          <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url(${image})` }}></div>
         ) : (
-          <>
-            {/* Fallback Premium Gradient Background */}
-            <div className="absolute inset-0 bg-gradient-to-br opacity-80 from-white/10 to-transparent pointer-events-none"></div>
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-
-            {/* Icon in Center */}
-            <div className="absolute inset-0 flex items-center justify-center transform group-hover:scale-110 transition-transform duration-500">
-              {type === 'slot'
-                ? <Gamepad2 size={56} className="text-white/20 group-hover:text-white/40 drop-shadow-lg transition-colors" />
-                : <Dices size={56} className="text-white/20 group-hover:text-white/40 drop-shadow-lg transition-colors" />
-              }
-            </div>
-          </>
-        )}
-
-        {/* Overlay Darken on Hover */}
-        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
-
-        {/* Hot Badge */}
-        {hot && (
-          <div className="absolute top-2 right-2 bg-gradient-to-r from-red-600 to-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse flex items-center gap-1 z-10 font-sans">
-            <Flame size={10} fill="white" /> HOT
+          <div className="absolute inset-0 flex items-center justify-center">
+            {/* Premium Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+            {type === 'slot'
+              ? <Gamepad2 size={48} className="text-white/20 group-hover:text-white/60 transition-colors duration-500" />
+              : <Dices size={48} className="text-white/20 group-hover:text-white/60 transition-colors duration-500" />
+            }
           </div>
         )}
 
-        {/* Play Button Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-90 group-hover:scale-100 backdrop-blur-[1px]">
-          <button className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full p-3 shadow-lg shadow-green-500/40 border border-green-400/50">
-            <Play size={24} className="ml-1 fill-white" />
+        {/* Hover Action Overlay */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
+          <button className="btn-green w-12 h-12 rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 delay-100">
+            <Play fill="white" className="ml-1" size={20} />
           </button>
+          <span className="text-xs font-bold text-white tracking-widest translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-150">PLAY NOW</span>
         </div>
+
+        {/* Hot Badge */}
+        {hot && (
+          <div className="absolute top-0 right-0 bg-gradient-to-l from-red-600 to-transparent pl-4 pr-1 py-1">
+            <div className="flex items-center gap-1 text-white text-[10px] font-black uppercase italic pr-1">
+              <Flame size={12} fill="white" className="animate-pulse" /> HOT
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Card Info */}
-      <div className="p-3 bg-[#1e293b] relative z-20">
-        <h3 className="text-white font-bold text-sm truncate group-hover:text-yellow-400 transition-colors font-sans">{title}</h3>
-        <div className="flex justify-between items-center mt-1.5">
-          <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 font-sans truncate max-w-[60%]">{provider}</span>
-          <div className="flex gap-0.5">
-            {[1, 2, 3, 4, 5].map(i => (
-              <Star key={i} size={8} className={`${i <= 4 ? "text-yellow-500 fill-yellow-500" : "text-slate-600"} drop-shadow-sm`} />
-            ))}
+      {/* Card Details */}
+      <div className="bg-[#1e293b] p-3 border-t border-white/5 relative z-20 group-hover:bg-[#253248] transition-colors">
+        <h3 className="text-slate-100 font-bold text-sm truncate group-hover:text-yellow-400 transition-colors font-sans">{title}</h3>
+        <div className="flex justify-between items-center mt-2">
+          <span className="text-[10px] text-blue-400 uppercase tracking-wider font-bold">{provider}</span>
+          <div className="flex gap-0.5 opacity-50 group-hover:opacity-100 transition-opacity">
+            {[1, 2, 3, 4, 5].map(i => <Star key={i} size={8} fill={i <= 4 ? "#fbbf24" : "none"} className={i <= 4 ? "text-yellow-400" : "text-slate-600"} />)}
           </div>
         </div>
       </div>
@@ -229,30 +208,27 @@ const GameCard = ({ title, provider, image, color, hot, type }: any) => {
 };
 
 const Sidebar = ({ title, items, active, setActive }: any) => (
-  <div className="bg-[#1e293b] rounded-xl overflow-hidden border border-slate-700 h-fit sticky top-36 shadow-lg">
-    <div className="p-4 bg-[#0f172a] border-b border-slate-700 flex justify-between items-center">
-      <h3 className="text-lg font-bold text-white border-l-4 border-yellow-500 pl-3 font-sans">{title}</h3>
-      <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700 font-sans">{items.length} ค่าย</span>
+  <div className="glass-card rounded-2xl overflow-hidden sticky top-36">
+    <div className="p-5 border-b border-white/10 bg-white/5">
+      <h3 className="text-lg font-black text-white border-l-4 border-yellow-500 pl-3 uppercase italic tracking-wider">{title}</h3>
     </div>
-    <div className="p-2 grid grid-cols-2 md:grid-cols-1 gap-1 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+    <div className="p-3 flex flex-col gap-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
       {items.map((item: any, idx: number) => (
         <button
           key={idx}
           onClick={() => setActive && setActive(item)}
-          className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-between w-full group
+          className={`px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between w-full group relative overflow-hidden
             ${active === item
-              ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md border border-blue-500/50'
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'
+              ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg'
+              : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
         >
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold shrink-0 transition-colors
-                ${active === item ? 'bg-white text-blue-700' : 'bg-slate-700 text-slate-300 group-hover:bg-slate-600'}`}>
-              {item.substring(0, 2).toUpperCase()}
-            </div>
-            <span className="truncate font-sans">{item}</span>
+          <div className="flex items-center gap-3 relative z-10">
+            {active === item && <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>}
+            <span>{item}</span>
           </div>
-          {active === item && <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]"></div>}
+          {active === item && <ChevronRight size={16} className="text-yellow-400" />}
+          {active !== item && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>}
         </button>
       ))}
     </div>
@@ -263,36 +239,37 @@ const JackpotBar = () => {
   const [jackpot, setJackpot] = useState(48291045.50);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setJackpot(prev => prev + (Math.random() * 25));
-    }, 80);
+    const interval = setInterval(() => { setJackpot(prev => prev + (Math.random() * 25)); }, 80);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="relative bg-[#0b1120] py-5 mb-8 border-y border-yellow-500/20 overflow-hidden group">
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-
-      {/* Moving Light Effect */}
-      <div className="absolute top-0 left-[-100%] w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-70 animate-[slideRight_3s_linear_infinite]"></div>
-      <div className="absolute bottom-0 right-[-100%] w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-70 animate-[slideLeft_3s_linear_infinite]"></div>
-
-      <div className="w-full px-4 flex flex-col md:flex-row items-center justify-between gap-4 relative z-10" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <div className="flex items-center gap-3 bg-slate-900/50 px-4 py-1.5 rounded-full border border-slate-700 backdrop-blur-md">
-          <Trophy className="text-yellow-400 animate-bounce" size={20} />
-          <div className="flex flex-col">
-            <span className="text-yellow-500 font-black text-[10px] tracking-[0.2em] uppercase leading-none font-sans">Progressive</span>
-            <span className="text-white text-xs font-bold leading-none font-sans">JACKPOT</span>
+    <div className="relative rounded-2xl overflow-hidden mb-16 bg-black border border-yellow-500/30 shadow-[0_0_50px_rgba(234,179,8,0.15)] group">
+      <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between px-8 py-6 gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/50">
+            <Trophy className="text-yellow-400 animate-bounce" />
+          </div>
+          <div>
+            <h3 className="text-yellow-500 font-bold tracking-[0.3em] text-xs mb-1">MEGA JACKPOT</h3>
+            <div className="text-5xl md:text-6xl font-black font-mono text-gradient-gold tracking-tighter tabular-nums drop-shadow-lg">
+              ฿ {jackpot.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </div>
           </div>
         </div>
 
-        <div className="font-mono text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-100 via-yellow-400 to-yellow-700 drop-shadow-[0_2px_10px_rgba(234,179,8,0.3)] tracking-tighter tabular-nums">
-          ฿ {jackpot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </div>
-
-        <div className="flex items-center gap-2 text-[10px] text-green-400 bg-green-900/20 px-3 py-1 rounded-full border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.1)] font-sans">
-          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div>
-          REAL-TIME PAYOUTS
+        <div className="flex flex-col items-end">
+          <div className="flex -space-x-2 mb-2">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0f172a] bg-slate-700"></div>
+            ))}
+            <div className="w-8 h-8 rounded-full border-2 border-[#0f172a] bg-slate-800 flex items-center justify-center text-[10px] text-white font-bold">+99</div>
+          </div>
+          <div className="text-green-400 text-xs font-bold flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+            Recent Winners
+          </div>
         </div>
       </div>
     </div>
@@ -304,23 +281,18 @@ const JackpotBar = () => {
 const HomeContent = ({ games }: any) => {
   const providers = ["PG Soft", "Joker", "Pragmatic", "Jili", "Spadegaming", "Red Tiger", "Habanero", "Blueprint"];
 
-  // Mock Games with Gradient Colors fallback
+  // Mock Games with Strict Green/Yellow/Blue Palette
   const MOCK_GAMES = [
-    { title: "Treasures of Aztec", provider: "PG Soft", color: "bg-gradient-to-br from-[#166534] to-[#022c22]", hot: true, type: 'slot' },
-    { title: "Roma Legacy", provider: "Joker", color: "bg-gradient-to-br from-[#991b1b] to-[#450a0a]", hot: true, type: 'slot' },
-    { title: "Sweet Bonanza", provider: "Pragmatic", color: "bg-gradient-to-br from-[#9d174d] to-[#4c0519]", hot: true, type: 'slot' },
-    { title: "Lucky Neko", provider: "PG Soft", color: "bg-gradient-to-br from-[#ea580c] to-[#7c2d12]", hot: false, type: 'slot' },
-    { title: "Baccarat Live", provider: "SA Gaming", color: "bg-gradient-to-br from-[#1e40af] to-[#1e3a8a]", hot: true, type: 'casino' },
-    { title: "Sexy Gaming", provider: "AE Sexy", color: "bg-gradient-to-br from-[#6b21a8] to-[#581c87]", hot: false, type: 'casino' },
-    { title: "Mahjong Ways 2", provider: "PG Soft", color: "bg-gradient-to-br from-[#15803d] to-[#14532d]", hot: true, type: 'slot' },
-    { title: "Fortune Ox", provider: "PG Soft", color: "bg-gradient-to-br from-[#854d0e] to-[#422006]", hot: true, type: 'slot' },
-    { title: "Caishen Wins", provider: "PG Soft", color: "bg-gradient-to-br from-[#b91c1c] to-[#7f1d1d]", hot: false, type: 'slot' },
-    { title: "Wild Bandito", provider: "PG Soft", color: "bg-gradient-to-br from-[#be185d] to-[#831843]", hot: true, type: 'slot' },
-    { title: "Dragon Hatch", provider: "PG Soft", color: "bg-gradient-to-br from-[#1d4ed8] to-[#1e3a8a]", hot: false, type: 'slot' },
-    { title: "Ganesha Gold", provider: "PG Soft", color: "bg-gradient-to-br from-[#7e22ce] to-[#581c87]", hot: false, type: 'slot' },
+    { title: "Treasures of Aztec", provider: "PG Soft", color: "bg-gradient-to-br from-green-800 to-green-950", hot: true, type: 'slot' },
+    { title: "Roma Legacy", provider: "Joker", color: "bg-gradient-to-br from-yellow-700 to-yellow-900", hot: true, type: 'slot' },
+    { title: "Sweet Bonanza", provider: "Pragmatic", color: "bg-gradient-to-br from-blue-600 to-blue-900", hot: true, type: 'slot' },
+    { title: "Lucky Neko", provider: "PG Soft", color: "bg-gradient-to-br from-yellow-600 to-yellow-800", hot: false, type: 'slot' },
+    { title: "Baccarat Live", provider: "SA Gaming", color: "bg-gradient-to-br from-blue-800 to-slate-900", hot: true, type: 'casino' },
+    { title: "Sexy Gaming", provider: "AE Sexy", color: "bg-gradient-to-br from-green-700 to-green-900", hot: false, type: 'casino' },
+    { title: "Mahjong Ways 2", provider: "PG Soft", color: "bg-gradient-to-br from-red-900 to-slate-900", hot: true, type: 'slot' }, // Keep red for variety but dark
+    { title: "Fortune Ox", provider: "PG Soft", color: "bg-gradient-to-br from-yellow-500 to-orange-700", hot: true, type: 'slot' },
   ];
 
-  // Merge Data
   const displayGames = games && games.length > 0 ? games.map((g: any, i: number) => ({
     title: g.name,
     provider: g.provider?.name || "Game",
@@ -331,64 +303,61 @@ const HomeContent = ({ games }: any) => {
   })) : MOCK_GAMES;
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in space-y-16">
       <Banner />
       <JackpotBar />
 
-      <div className="mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2 font-sans">
-            <div className="p-1.5 bg-orange-500/20 rounded-lg border border-orange-500/30">
-              <Flame className="text-orange-500 fill-orange-500" size={20} />
+      <div className="relative">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-orange-500/20 border border-orange-500/40 flex items-center justify-center">
+              <Flame className="text-orange-500 fill-orange-500 animate-pulse" />
             </div>
-            เกมฮิตช่วงนี้
+            HIT GAMES <span className="text-sm font-normal text-slate-500 not-italic tracking-normal self-end mb-1 custom-font">Most played today</span>
           </h2>
-          <button className="text-xs font-bold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full transition-all flex items-center gap-1 border border-slate-700 font-sans">
-            ดูทั้งหมด <ChevronRight size={14} />
+          <button className="text-sm font-bold text-yellow-500 hover:text-white transition-colors flex items-center gap-1 group">
+            VIEW ALL <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-5">
-          {displayGames.slice(0, 12).map((game: any, i: number) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          {displayGames.slice(0, 10).map((game: any, i: number) => (
             <GameCard key={i} {...game} />
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="md:col-span-1 hidden md:block">
-          <Sidebar title="ค่ายเกมยอดฮิต" items={providers} active={null} />
+          <Sidebar title="TOP PROVIDERS" items={providers} active={null} />
         </div>
         <div className="md:col-span-3">
-          <div className="bg-[#1e293b] rounded-xl p-6 border border-slate-700 shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-              <Trophy size={150} />
-            </div>
-            <div className="flex items-center justify-between mb-6 relative z-10">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
-                <Trophy className="text-yellow-400" /> ผู้โชคดีล่าสุด
-              </h3>
-              <span className="text-[10px] bg-green-900/30 text-green-400 px-2 py-1 rounded border border-green-500/30 flex items-center gap-1 font-sans">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div> Real-time
-              </span>
-            </div>
+          <div className="glass-card rounded-2xl p-8 relative overflow-hidden">
+            <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
+              <Trophy className="text-yellow-400" size={32} />
+              RECENT WINNERS
+              <span className="text-xs font-bold bg-green-500 text-black px-2 py-1 rounded ml-auto">LIVE FEED</span>
+            </h3>
 
-            <div className="space-y-3 relative z-10">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center justify-between bg-[#0f172a] p-3 rounded-lg border border-slate-800 hover:border-green-500/30 transition-colors group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 font-bold group-hover:border-yellow-500/50 group-hover:text-yellow-500 transition-all">
-                      <User size={18} />
+            <div className="space-y-4 max-h-[500px] overflow-hidden relative">
+              <div className="absolute top-0 w-full h-10 bg-gradient-to-b from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
+              <div className="absolute bottom-0 w-full h-10 bg-gradient-to-t from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
+
+              {/* Vertical Marquee simulation */}
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-all group hover:bg-white/10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center relative">
+                      <User className="text-blue-400 group-hover:text-white transition-colors" />
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black border-2 border-[#0f172a]">#{i}</div>
                     </div>
                     <div>
-                      <div className="text-slate-200 text-sm font-bold font-sans">user08**{i}</div>
-                      <div className="text-[10px] text-slate-500 font-sans">Mahjong Ways 2</div>
+                      <div className="text-white font-bold tracking-wide">User888***{i}</div>
+                      <div className="text-xs text-slate-400">{i % 2 === 0 ? "Mahjong Ways 2" : "Baccarat"}</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-green-400 font-mono font-bold text-lg drop-shadow-sm">+฿{(Math.random() * 50000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
-                    <div className="text-[10px] text-slate-500 flex items-center justify-end gap-1 font-sans">
-                      ถอนสำเร็จ <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                    </div>
+                    <div className="text-gradient-green font-mono font-black text-xl">+฿{(Math.random() * 50000).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div className="text-[10px] text-slate-500">Just now</div>
                   </div>
                 </div>
               ))}
@@ -533,7 +502,87 @@ const CasinoContent = () => {
   );
 };
 
-// --- Main App Logic (with Modals) ---
+// --- 3. MAIN LOGIC & MODALS ---
+
+const Footer = () => (
+  <footer className="bg-[#0b1120] border-t border-slate-800 text-slate-400 py-16 mt-20 relative overflow-hidden">
+    {/* Background Glow */}
+    <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[128px]"></div>
+    <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-yellow-600/10 rounded-full blur-[128px]"></div>
+
+    <div className="max-w-7xl mx-auto px-6 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+        <div className="md:col-span-1">
+          <div className="flex items-center gap-2 mb-6">
+            <Gamepad2 className="text-yellow-400" size={32} />
+            <h3 className="text-2xl font-black text-white italic tracking-tighter">
+              GOLDEN<span className="text-gradient-gold">BET</span>
+            </h3>
+          </div>
+          <p className="text-sm font-light leading-7 text-slate-500 mb-6">
+            The world's leading premium online casino. Licensed and regulated for fair play. Experience the thrill of victory.
+          </p>
+          <div className="flex gap-4">
+            {/* Social Icons Mockup */}
+            {[1, 2, 3].map(i => <div key={i} className="w-8 h-8 rounded-full bg-slate-800 hover:bg-white/10 transition-colors cursor-pointer border border-white/5"></div>)}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-gradient-gold w-fit">Platform</h4>
+          <ul className="space-y-4 text-sm font-medium">
+            {['Online Slots', 'Live Casino', 'Sports Betting', 'Lottery', 'Promotions'].map(item => (
+              <li key={item} className="hover:text-yellow-400 cursor-pointer transition-colors flex items-center gap-2 group">
+                <div className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-yellow-400 transition-colors"></div>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-gradient-green w-fit">Support</h4>
+          <ul className="space-y-4 text-sm font-medium">
+            {['Help Center', 'Payment Methods', 'VIP Program', 'Contact Us', 'Terms of Service'].map(item => (
+              <li key={item} className="hover:text-green-400 cursor-pointer transition-colors flex items-center gap-2 group">
+                <div className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-green-400 transition-colors"></div>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest text-blue-400 w-fit">Secure Payment</h4>
+          <div className="grid grid-cols-3 gap-3">
+            {['KBANK', 'SCB', 'BBL', 'KTB', 'TRUE', 'VISA'].map(bank => (
+              <div key={bank} className="h-10 bg-[#1e293b] rounded flex items-center justify-center text-[10px] font-bold border border-slate-700 hover:border-white transition-all hover:scale-105 cursor-pointer shadow-sm">
+                {bank}
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 p-4 bg-green-900/10 rounded-xl border border-green-500/20 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+              <span className="text-green-400 text-lg">🔒</span>
+            </div>
+            <div>
+              <div className="text-xs font-bold text-green-400">SSL ENCRYPTED</div>
+              <div className="text-[10px] text-green-500/70">100% Safe & Secure Transactions</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-800 pt-8 text-center md:text-left flex flex-col md:flex-row justify-between items-center text-xs text-slate-600 font-medium">
+        <p>&copy; 2026 GoldenBet. All rights reserved.</p>
+        <div className="flex gap-6 mt-4 md:mt-0">
+          <span>Privacy Policy</span>
+          <span>Responsible Gambling</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+);
 
 function HomePageLogic() {
   const router = useRouter();
@@ -561,9 +610,7 @@ function HomePageLogic() {
       try {
         const gameRes = await axios.get(`${API_URL}/public/games`);
         if (Array.isArray(gameRes.data)) setGames(gameRes.data);
-      } catch (err) {
-        console.error("Failed to fetch games", err);
-      }
+      } catch (err) { console.error("Failed to fetch games", err); }
     };
     fetchData();
   }, []);
@@ -573,12 +620,8 @@ function HomePageLogic() {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
     if (token && userData && userData !== "undefined") {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (e) {
-        console.error("Failed to parse user data", e);
-        localStorage.removeItem("user");
-      }
+      try { setUser(JSON.parse(userData)); }
+      catch (e) { localStorage.removeItem("user"); }
     }
   }, []);
 
@@ -602,26 +645,24 @@ function HomePageLogic() {
         setShowLogin(false);
         router.replace("/");
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "เกิดข้อผิดพลาด");
-    } finally { setLoading(false); }
+    } catch (err: any) { setError(err.response?.data?.message || "Login failed"); }
+    finally { setLoading(false); }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (registerForm.password !== registerForm.confirmPassword) { setError("รหัสผ่านไม่ตรงกัน"); return; }
+    if (registerForm.password !== registerForm.confirmPassword) { setError("Passwords do not match"); return; }
     setLoading(true);
     try {
       const res = await axios.post(`${API_URL}/auth/register`, { ...registerForm });
       if (res.data.success) {
-        setSuccess("สมัครสมาชิกสำเร็จ!");
+        setSuccess("Registration successful!");
         setShowRegister(false);
         setShowLogin(true);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "เกิดข้อผิดพลาด");
-    } finally { setLoading(false); }
+    } catch (err: any) { setError(err.response?.data?.message || "Registration failed"); }
+    finally { setLoading(false); }
   };
 
   const handleLogout = () => {
@@ -643,181 +684,152 @@ function HomePageLogic() {
             <div className="absolute -top-2 -right-2 bg-yellow-500 text-slate-900 text-[10px] px-2 py-0.5 rounded font-bold">SOON</div>
           </div>
           <h2 className="text-xl font-bold text-slate-400 font-sans">Coming Soon</h2>
-          <p className="mt-2 text-xs text-slate-600 font-sans">หมวดหมู่ {activeTab} กำลังเปิดให้บริการเร็วๆ นี้</p>
+          <p className="mt-2 text-xs text-slate-600 font-sans">{activeTab} category is under construction.</p>
         </div>
       );
     }
   };
 
-  // Styles for Modal
-  const overlayStyle: React.CSSProperties = {
-    position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(5px)",
-    display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px"
-  };
-  const modalStyle: React.CSSProperties = {
-    background: "#1e293b", borderRadius: "16px", padding: "32px", width: "100%",
-    maxWidth: "420px", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)", position: "relative", border: "1px solid #334155"
-  };
-  const inputStyle = {
-    width: "100%", padding: "12px 14px", background: "#0f172a", border: "1px solid #334155", borderRadius: "8px",
-    color: "#fff", fontSize: "14px", marginBottom: "16px", outline: "none", fontFamily: 'sans-serif', transition: 'border-color 0.2s'
-  };
-  const btnPrimary = {
-    width: "100%", padding: "14px", background: "linear-gradient(to right, #eab308, #ca8a04)",
-    color: "#000", border: "none", borderRadius: "8px", fontSize: "16px", fontWeight: "bold" as const, cursor: "pointer",
-    fontFamily: 'sans-serif', boxShadow: '0 4px 12px rgba(234, 179, 8, 0.3)'
-  };
-
   return (
-    <div className="min-h-screen bg-[#0b1120] text-slate-200 font-sans selection:bg-yellow-500 selection:text-black">
-      <Header
-        onLogin={() => setShowLogin(true)}
-        onRegister={() => setShowRegister(true)}
-        user={user}
-        onLogout={handleLogout}
-      />
+    <div className="min-h-screen bg-[#0b1120] text-slate-200 font-sans selection:bg-yellow-500 selection:text-black pb-20">
+      <Header onLogin={() => setShowLogin(true)} onRegister={() => setShowRegister(true)} user={user} onLogout={handleLogout} />
 
       <NavBar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="w-full px-4 py-6 pb-28 md:pb-12 max-w-7xl mx-auto">
+      <main className="w-full px-4 py-8 max-w-7xl mx-auto">
         {renderContent()}
       </main>
+
+      <Footer />
 
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0f172a]/95 backdrop-blur-md border-t border-slate-800 px-2 py-1 z-50 pb-safe">
         <div className="grid grid-cols-5 gap-1 items-end h-[60px]">
           <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'home' ? 'text-yellow-400' : 'text-slate-500'}`}>
             <Play size={20} className={activeTab === 'home' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">หน้าหลัก</span>
+            <span className="text-[10px] mt-1 font-medium font-sans">Lobby</span>
           </button>
           <button onClick={() => setActiveTab('slots')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'slots' ? 'text-yellow-400' : 'text-slate-500'}`}>
             <Gamepad2 size={20} className={activeTab === 'slots' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">สล็อต</span>
+            <span className="text-[10px] mt-1 font-medium font-sans">Slots</span>
           </button>
           <div className="relative flex justify-center h-full items-center">
             <button onClick={() => !user ? setShowLogin(true) : null} className="absolute -top-6 w-14 h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 border-4 border-[#0b1120] flex items-center justify-center text-white shadow-lg shadow-green-500/40 transform active:scale-95 transition-transform hover:scale-105">
               <Wallet size={24} />
             </button>
-            <span className="text-[10px] text-slate-400 mt-8 font-medium font-sans">ฝาก-ถอน</span>
+            <span className="text-[10px] text-slate-400 mt-8 font-medium font-sans">Wallet</span>
           </div>
           <button onClick={() => setActiveTab('casino')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'casino' ? 'text-yellow-400' : 'text-slate-500'}`}>
             <Dices size={20} className={activeTab === 'casino' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">คาสิโน</span>
+            <span className="text-[10px] mt-1 font-medium font-sans">Casino</span>
           </button>
           <button onClick={() => !user ? setShowLogin(true) : null} className="flex flex-col items-center justify-center h-full rounded-lg text-slate-500 hover:text-white transition-colors">
             <User size={20} />
-            <span className="text-[10px] mt-1 font-medium font-sans">บัญชี</span>
+            <span className="text-[10px] mt-1 font-medium font-sans">Account</span>
           </button>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-[#0f172a] border-t border-slate-800 text-slate-400 py-12 hidden md:block mt-12">
-        <div className="w-full px-4 grid grid-cols-4 gap-12" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <div>
-            <h3 className="text-white font-bold mb-6 flex items-center gap-2 text-lg font-sans">
-              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-slate-900 shadow-lg shadow-yellow-500/20"><Gamepad2 size={18} /></div>
-              GOLDENBET
-            </h3>
-            <p className="text-sm leading-7 text-slate-500 font-sans">
-              เว็บพนันออนไลน์อันดับ 1 มั่นคง ปลอดภัย ฝาก-ถอน รวดเร็วด้วยระบบอัตโนมัติ 24 ชั่วโมง รองรับทุกธนาคารชั้นนำ
-            </p>
-          </div>
-          <div>
-            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider border-b border-slate-700 pb-2 w-fit font-sans">บริการ</h3>
-            <ul className="text-sm space-y-3 text-slate-500 font-sans">
-              <li className="hover:text-yellow-400 cursor-pointer transition-colors flex items-center gap-2"><ChevronRight size={12} /> สล็อตออนไลน์</li>
-              <li className="hover:text-yellow-400 cursor-pointer transition-colors flex items-center gap-2"><ChevronRight size={12} /> คาสิโนสด</li>
-              <li className="hover:text-yellow-400 cursor-pointer transition-colors flex items-center gap-2"><ChevronRight size={12} /> เดิมพันกีฬา</li>
-              <li className="hover:text-yellow-400 cursor-pointer transition-colors flex items-center gap-2"><ChevronRight size={12} /> หวยออนไลน์</li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider border-b border-slate-700 pb-2 w-fit font-sans">ช่วยเหลือ</h3>
-            <ul className="text-sm space-y-3 text-slate-500 font-sans">
-              <li className="hover:text-white cursor-pointer transition-colors">เกี่ยวกับเรา</li>
-              <li className="hover:text-white cursor-pointer transition-colors">เงื่อนไขการใช้งาน</li>
-              <li className="hover:text-white cursor-pointer transition-colors">นโยบายความเป็นส่วนตัว</li>
-              <li className="hover:text-white cursor-pointer transition-colors">ติดต่อเรา</li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider border-b border-slate-700 pb-2 w-fit font-sans">ธนาคารที่รองรับ</h3>
-            <div className="flex gap-2 flex-wrap">
-              {['KBANK', 'SCB', 'BBL', 'KTB', 'TRUE'].map((bank) => (
-                <div key={bank} className="w-10 h-10 bg-slate-800 rounded flex items-center justify-center text-slate-400 text-[10px] font-bold border border-slate-700 hover:border-white hover:text-white transition-all cursor-pointer shadow-sm font-sans">
-                  {bank}
-                </div>
-              ))}
-            </div>
-            <div className="mt-6">
-              <div className="text-xs text-slate-500 mb-2 font-sans">ปลอดภัย 100%</div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <div className="h-6 w-10 bg-slate-800 rounded"></div>
-                <div className="h-6 w-10 bg-slate-800 rounded"></div>
-                <div className="h-6 w-10 bg-slate-800 rounded"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="text-center mt-12 pt-8 border-t border-slate-800 text-xs font-sans text-slate-600">
-          © 2024 GoldenBet. All rights reserved. Gambling involves risk. Please play responsibly.
-        </div>
-      </footer>
-
-      {/* Modals */}
+      {/* LOGIN MODAL */}
       {showLogin && (
-        <div style={overlayStyle} onClick={() => setShowLogin(false)}>
-          <div style={modalStyle} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowLogin(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><X size={24} /></button>
-            <h2 className="text-3xl font-black text-yellow-500 text-center mb-8 tracking-tight font-sans">เข้าสู่ระบบ</h2>
-            {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg mb-6 text-sm text-center font-sans">{error}</div>}
-            <form onSubmit={handleLogin}>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-slate-400 text-xs mb-1 block ml-1 font-sans">เบอร์โทรศัพท์</label>
-                  <input type="tel" placeholder="08x-xxx-xxxx" style={inputStyle} value={loginForm.phone} onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })} required />
-                </div>
-                <div>
-                  <label className="text-slate-400 text-xs mb-1 block ml-1 font-sans">รหัสผ่าน</label>
-                  <input type="password" placeholder="••••••••" style={{ ...inputStyle, marginBottom: '24px' }} value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} required />
-                </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowLogin(false)}>
+          <div className="glass-card w-full max-w-md p-8 rounded-2xl relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowLogin(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
+
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-black text-white italic tracking-tighter">WELCOME BACK</h2>
+              <p className="text-slate-400 text-sm mt-2">Sign in to continue to GoldenBet</p>
+            </div>
+
+            {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">PHONE NUMBER</label>
+                <input type="tel" placeholder="08x-xxx-xxxx" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.phone} onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })} required />
               </div>
-              <button type="submit" style={btnPrimary} disabled={loading} className="transform active:scale-[0.98] transition-transform">
-                {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+              <div>
+                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">PASSWORD</label>
+                <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} required />
+              </div>
+              <button type="submit" disabled={loading} className="btn-gold w-full py-4 rounded-xl text-lg font-black tracking-wide uppercase mt-4">
+                {loading ? "Logging in..." : "LOG IN NOW"}
               </button>
             </form>
-            <div className="text-center mt-6 text-sm text-slate-400 font-sans">
-              ยังไม่มีบัญชี? <button onClick={() => { setShowLogin(false); setShowRegister(true) }} className="text-yellow-500 font-bold hover:underline ml-1">สมัครสมาชิก</button>
+
+            <div className="text-center mt-8 pt-6 border-t border-white/5">
+              <span className="text-slate-500 text-sm">Don't have an account? </span>
+              <button onClick={() => { setShowLogin(false); setShowRegister(true) }} className="text-yellow-500 font-bold hover:underline ml-1">REGISTER HERE</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* REGISTER MODAL */}
       {showRegister && (
-        <div style={overlayStyle} onClick={() => setShowRegister(false)}>
-          <div style={{ ...modalStyle, maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowRegister(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><X size={24} /></button>
-            <h2 className="text-3xl font-black text-green-500 text-center mb-8 tracking-tight font-sans">สมัครสมาชิก</h2>
-            {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg mb-6 text-sm text-center font-sans">{error}</div>}
-            <form onSubmit={handleRegister} className="grid grid-cols-2 gap-4">
-              <input type="text" placeholder="ชื่อ-นามสกุล" style={inputStyle} className="col-span-2" value={registerForm.fullName} onChange={e => setRegisterForm({ ...registerForm, fullName: e.target.value })} />
-              <input type="tel" placeholder="เบอร์โทรศัพท์" style={inputStyle} className="col-span-2" value={registerForm.phone} onChange={e => setRegisterForm({ ...registerForm, phone: e.target.value })} />
-              <input type="text" placeholder="เลขบัญชี" style={inputStyle} className="col-span-2" value={registerForm.bankAccount} onChange={e => setRegisterForm({ ...registerForm, bankAccount: e.target.value })} />
-              <input type="password" placeholder="รหัสผ่าน" style={inputStyle} value={registerForm.password} onChange={e => setRegisterForm({ ...registerForm, password: e.target.value })} />
-              <input type="password" placeholder="ยืนยันรหัส" style={inputStyle} value={registerForm.confirmPassword} onChange={e => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })} />
-              <button type="submit" style={{ ...btnPrimary, background: "linear-gradient(to right, #22c55e, #16a34a)", color: "white", boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)' }} className="col-span-2 transform active:scale-[0.98] transition-transform" disabled={loading}>
-                {loading ? "กำลังสมัคร..." : "สมัครสมาชิก"}
-              </button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowRegister(false)}>
+          <div className="glass-card w-full max-w-lg p-8 rounded-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowRegister(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
+
+            <div className="text-center mb-6">
+              <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-600 italic tracking-tighter">CREATE ACCOUNT</h2>
+              <p className="text-slate-400 text-sm mt-2">Join now and claim your 100% Bonus</p>
+            </div>
+
+            {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
+
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">PHONE NUMBER</label>
+                  <input type="tel" placeholder="08x-xxx-xxxx" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.phone} onChange={e => setRegisterForm({ ...registerForm, phone: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">FULL NAME</label>
+                  <input type="text" placeholder="Thai Name" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.fullName} onChange={e => setRegisterForm({ ...registerForm, fullName: e.target.value })} required />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">BANK</label>
+                  <select className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none appearance-none" value={registerForm.bankName} onChange={e => setRegisterForm({ ...registerForm, bankName: e.target.value })}>
+                    <option value="KBANK">KBANK</option>
+                    <option value="SCB">SCB</option>
+                    <option value="BBL">BBL</option>
+                    <option value="KTB">KTB</option>
+                    <option value="TRUE">TRUE WALLET</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ACCOUNT NO.</label>
+                  <input type="text" placeholder="xxx-x-xxxxx-x" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.bankAccount} onChange={e => setRegisterForm({ ...registerForm, bankAccount: e.target.value })} required />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">PASSWORD</label>
+                <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.password} onChange={e => setRegisterForm({ ...registerForm, password: e.target.value })} required />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">CONFIRM PASSWORD</label>
+                <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.confirmPassword} onChange={e => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })} required />
+              </div>
+
+              <div className="pt-2">
+                <button type="submit" disabled={loading} className="btn-green w-full py-4 rounded-xl text-lg font-black tracking-wide uppercase shadow-green-500/20 transform active:scale-[0.98] transition-transform">
+                  {loading ? "Creating Account..." : "REGISTER NOW"}
+                </button>
+              </div>
             </form>
             <div className="text-center mt-6 text-sm text-slate-400 font-sans">
               มีบัญชีแล้ว? <button onClick={() => { setShowRegister(false); setShowLogin(true) }} className="text-green-500 font-bold hover:underline ml-1">เข้าสู่ระบบ</button>
             </div>
-          </div>
-        </div>
+          </div >
+        </div >
       )}
 
-    </div>
+    </div >
   );
 }
 

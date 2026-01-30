@@ -14,19 +14,29 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 // --- 1. VISUAL COMPONENTS (Premium UI) ---
 
 const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
-  <header className="sticky top-0 z-50 glass-card border-b-0">
-    <div className="max-w-7xl mx-auto px-2 md:px-4 h-16 md:h-20 flex items-center justify-between">
+  <header className="sticky top-0 z-50 glass-card border-b-0 transition-all duration-300">
+    <div className="max-w-7xl mx-auto px-4 py-3 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0">
+
       {/* Logo Area */}
-      <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.location.href = '/'}>
-        <div className="relative">
-          <div className="absolute inset-0 bg-yellow-400 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
-          <Gamepad2 className="w-10 h-10 text-gradient-gold relative z-10" />
+      <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group" onClick={() => window.location.href = '/'}>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="absolute inset-0 bg-yellow-400 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
+            <Gamepad2 className="w-10 h-10 md:w-10 md:h-10 text-gradient-gold relative z-10" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black italic tracking-tighter text-white">
+              GOLDEN<span className="text-gradient-gold">BET</span>
+            </h1>
+            <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl md:text-3xl font-black italic tracking-tighter text-white">
-            GOLDEN<span className="text-gradient-gold">BET</span>
-          </h1>
-          <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
+
+        {/* Mobile Language Flag (Absolute Right) */}
+        <div className="md:hidden absolute right-0 top-1/2 -translate-y-1/2">
+          <div className="w-8 h-8 rounded-full border border-white/10 overflow-hidden shadow-lg">
+            <img src="https://flagcdn.com/w80/th.png" alt="TH" className="w-full h-full object-cover" />
+          </div>
         </div>
       </div>
 
@@ -42,40 +52,43 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
       </div>
 
       {/* Auth / User Area */}
-      <div className="flex items-center gap-4">
+      <div className="w-full md:w-auto">
         {user ? (
-          <div className="flex items-center gap-4 bg-white/5 rounded-full p-1.5 pr-6 border border-white/10 hover:border-white/20 transition-all cursor-pointer group">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 p-0.5 shadow-lg">
-              <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
-                <User size={20} className="text-yellow-400" />
+          <div className="flex items-center justify-between md:justify-end gap-4 bg-white/5 rounded-full p-1.5 pr-6 border border-white/10 hover:border-white/20 transition-all cursor-pointer group">
+            {/* ... User Logged in state same as before but flex adjusted ... */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 p-0.5 shadow-lg">
+                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
+                  <User size={20} className="text-yellow-400" />
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">Vip Level 1</span>
+                <span className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors">{user.username}</span>
               </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">Vip Level 1</span>
-              <span className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors">{user.username}</span>
-            </div>
-            <div className="h-8 w-[1px] bg-white/10 mx-2"></div>
             <div className="text-right">
               <span className="text-xs text-green-400 block">Balance</span>
               <span className="font-mono font-bold text-gradient-gold text-lg">฿{Number(user.balance).toLocaleString()}</span>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <button onClick={onLogin} className="px-3 md:px-6 py-1.5 md:py-2.5 rounded-full font-bold text-xs md:text-base text-white hover:text-yellow-400 transition-colors relative group overflow-hidden border border-white/10 md:border-0">
-              <span className="relative z-10">เข้าสู่ระบบ</span>
-              <div className="absolute inset-0 bg-white/5 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+          <div className="grid grid-cols-2 gap-3 w-full md:flex md:items-center">
+            <button onClick={onLogin} className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-black bg-gradient-to-r from-yellow-400 to-yellow-500 hover:to-yellow-300 transition-all shadow-lg shadow-yellow-500/20">
+              เข้าสู่ระบบ
             </button>
-            <button onClick={onRegister} className="btn-gold px-3 md:px-8 py-1.5 md:py-2.5 rounded-full relative overflow-hidden group shadow-md">
-              <span className="relative z-10 flex items-center gap-1 md:gap-2 text-xs md:text-base whitespace-nowrap">สมัครสมาชิก <ChevronRight size={14} className="hidden md:block" /></span>
-              <div className="absolute inset-0 bg-white/20 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <button onClick={onRegister} className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-slate-200 border border-white/20 bg-white/5 hover:bg-white/10 transition-all">
+              สมัครสมาชิก
             </button>
           </div>
         )}
-        <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden hover:scale-110 transition-transform cursor-pointer shadow-lg">
-          <img src="https://flagcdn.com/w80/th.png" alt="TH" className="w-full h-full object-cover opacity-80 hover:opacity-100" />
-        </div>
       </div>
+
+      {/* Desktop Language Flag */}
+      <div className="hidden md:block ml-4 w-10 h-10 rounded-full border border-white/10 overflow-hidden hover:scale-110 transition-transform cursor-pointer shadow-lg">
+        <img src="https://flagcdn.com/w80/th.png" alt="TH" className="w-full h-full object-cover opacity-80 hover:opacity-100" />
+      </div>
+
     </div>
   </header>
 );

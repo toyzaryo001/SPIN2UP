@@ -106,7 +106,7 @@ export default function Header() {
                         {[
                             { label: 'หน้าหลัก', href: '/', icon: Home },
                             { label: 'ฝาก/ถอน', href: '/deposit', icon: Wallet },
-                            { label: 'กิจกรรม', href: '/activities', icon: Gift },
+                            { label: 'กิจกรรม', href: '/activity', icon: Gift },
                             { label: 'โปรไฟล์', href: '/profile', icon: User },
                         ].map((item, index) => (
                             <button

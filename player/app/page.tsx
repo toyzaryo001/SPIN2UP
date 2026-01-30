@@ -13,24 +13,28 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 // --- 1. VISUAL COMPONENTS (Premium UI) ---
 
-const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
+const Header = ({ onLogin, onRegister, user, onLogout, logo }: any) => (
   <header className="sticky top-0 z-50 glass-card border-b-0 transition-all duration-300">
     <div className="max-w-7xl mx-auto px-4 py-3 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0 relative">
 
-      {/* Logo Area - Absolute Center for Mobile */}
+      {/* Logo Area */}
       <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => window.location.href = '/'}>
-        <div className="flex items-center gap-2 md:gap-3">
-          <div className="relative">
-            <div className="absolute inset-0 bg-yellow-400 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
-            <Gamepad2 className="w-8 h-8 md:w-10 md:h-10 text-gradient-gold relative z-10" />
+        {logo ? (
+          <img src={logo} alt="Logo" className="h-10 md:h-14 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+        ) : (
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-yellow-400 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
+              <Gamepad2 className="w-8 h-8 md:w-10 md:h-10 text-gradient-gold relative z-10" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white">
+                GOLDEN<span className="text-gradient-gold">BET</span>
+              </h1>
+              <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white">
-              GOLDEN<span className="text-gradient-gold">BET</span>
-            </h1>
-            <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Mobile Language Flag (Absolute Right) */}
@@ -655,11 +659,13 @@ function HomePageLogic() {
   const [showRegister, setShowRegister] = useState(false);
 
   // Auth & Data State
+  // Auth & Data State
   const [user, setUser] = useState<any>(null);
   const [games, setGames] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [providers, setProviders] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -674,17 +680,19 @@ function HomePageLogic() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [gameRes, bannerRes, providerRes, catRes] = await Promise.all([
+        const [gameRes, bannerRes, providerRes, catRes, settingRes] = await Promise.all([
           axios.get(`${API_URL}/public/games`),
           axios.get(`${API_URL}/public/banners`),
           axios.get(`${API_URL}/public/providers`),
-          axios.get(`${API_URL}/public/categories`)
+          axios.get(`${API_URL}/public/categories`),
+          axios.get(`${API_URL}/public/settings`)
         ]);
 
         if (Array.isArray(gameRes.data)) setGames(gameRes.data);
         if (Array.isArray(bannerRes.data)) setBanners(bannerRes.data);
         if (Array.isArray(providerRes.data)) setProviders(providerRes.data);
         if (Array.isArray(catRes.data)) setCategories(catRes.data);
+        if (settingRes.data && settingRes.data.settings) setSettings(settingRes.data.settings);
       } catch (err) { console.error("Failed to fetch public data", err); }
     };
     fetchData();
@@ -767,7 +775,7 @@ function HomePageLogic() {
 
   return (
     <div className="min-h-screen bg-[#0b1120] text-slate-200 font-sans selection:bg-yellow-500 selection:text-black pb-20">
-      <Header onLogin={() => setShowLogin(true)} onRegister={() => setShowRegister(true)} user={user} onLogout={handleLogout} />
+      <Header onLogin={() => setShowLogin(true)} onRegister={() => setShowRegister(true)} user={user} onLogout={handleLogout} logo={settings.siteLogo || settings.logo} />
 
       <NavBar activeTab={activeTab} setActiveTab={setActiveTab} categories={categories} />
 

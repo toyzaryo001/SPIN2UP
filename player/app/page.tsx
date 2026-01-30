@@ -539,6 +539,12 @@ const CasinoContent = ({ games, category }: any) => {
   // Filter Casino Providers
   const providerList = providers.map((p: any) => p.name);
 
+  // Filter Casino Games
+  const filteredGames = games.filter((g: any) =>
+    (g.provider?.name === activeProvider || !activeProvider) &&
+    (g.type === 'casino' || g.type === 'live-casino' || g.categoryId === category?.id)
+  );
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
       <div className="md:col-span-1 hidden md:block">
@@ -555,6 +561,22 @@ const CasinoContent = ({ games, category }: any) => {
       </div>
 
       <div className="md:col-span-3">
+        {/* Header Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 bg-[#1e293b] p-4 rounded-xl border border-slate-700 gap-4 shadow-md">
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
+              <Dices className="text-yellow-400" />
+              เกม: <span className="text-green-400">{activeProvider}</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-1 font-sans">เกมทั้งหมด {filteredGames.length > 0 ? filteredGames.length : 0} เกม</p>
+          </div>
+          <div className="flex gap-2">
+            <button className="px-4 py-1.5 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 font-sans">ล่าสุด</button>
+            <button className="px-4 py-1.5 text-xs bg-yellow-500 text-slate-900 rounded-lg font-bold shadow-lg shadow-yellow-500/20 hover:bg-yellow-400 transition-colors font-sans">ยอดนิยม</button>
+          </div>
+        </div>
+
+        {/* Hero Banner for Casino */}
         <div className="bg-gradient-to-r from-blue-900 via-blue-950 to-slate-900 rounded-xl p-6 mb-6 border border-blue-800/50 relative overflow-hidden shadow-xl">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-20 rounded-full blur-3xl translate-x-10 -translate-y-10"></div>
           <div className="relative z-10">
@@ -566,10 +588,24 @@ const CasinoContent = ({ games, category }: any) => {
         </div>
 
         {/* Display Casino Tables/Games from API */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="col-span-full py-10 text-center text-slate-500">
-            ⚠️ เชื่อมต่อ API เรียบร้อย (รอข้อมูลเกมคาสิโนจากระบบ)
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          {filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
+            <GameCard
+              key={i}
+              title={game.name}
+              provider={activeProvider}
+              image={game.image}
+              color={`bg-gradient-to-br from-slate-700 to-slate-800`}
+              hot={game.isHot}
+              type="casino"
+            />
+          )) : (
+            <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
+              <Dices size={48} className="mx-auto mb-4 opacity-20" />
+              <p>ไม่พบเกมในหมวดหมู่นี้</p>
+              <p className="text-xs mt-2 text-slate-600">โปรดลองเลือกค่ายอื่น</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

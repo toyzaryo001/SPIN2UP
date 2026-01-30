@@ -31,7 +31,17 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
             return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
         }
 
-        res.json({ success: true, data: user });
+        const depositAgg = await prisma.transaction.aggregate({
+            _sum: { amount: true },
+            where: {
+                userId: req.user!.userId,
+                type: 'DEPOSIT',
+                status: 'APPROVED'
+            }
+        });
+        const totalDeposit = depositAgg._sum.amount || 0;
+
+        res.json({ success: true, data: { ...user, totalDeposit } });
     } catch (error) {
         console.error('Get user error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });

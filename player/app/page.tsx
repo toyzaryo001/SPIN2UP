@@ -8,6 +8,7 @@ import {
   MonitorPlay, Sparkles, LogOut
 } from 'lucide-react';
 import axios from "axios";
+import ContactDrawer from "@/components/ContactDrawer";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -825,6 +826,7 @@ function HomePageLogic() {
   const [activeTab, setActiveTab] = useState('home');
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [showContact, setShowContact] = useState(false);
 
   // Auth & Data State
   // Auth & Data State
@@ -1133,6 +1135,37 @@ function HomePageLogic() {
           </div>
         )
       }
+
+
+
+      {/* Global Contact Button */}
+      <button
+        onClick={() => setShowContact(true)}
+        style={{
+          position: "fixed",
+          bottom: "80px",
+          right: "16px",
+          width: "56px",
+          height: "56px",
+          borderRadius: "14px",
+          background: "#21262D",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "2px",
+          zIndex: 90
+        }}
+      >
+        <span style={{ fontSize: "24px" }}>💬</span>
+        <span style={{ fontSize: "9px", fontWeight: 600, color: "#8B949E" }}>ติดต่อ</span>
+      </button>
+
+      {/* Contact Drawer */}
+      <ContactDrawer isOpen={showContact} onClose={() => setShowContact(false)} />
 
     </div >
   );

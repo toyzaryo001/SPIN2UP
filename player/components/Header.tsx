@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X, Globe, LogOut, Gift, MessageCircle, Home } from "lucide-react";
+import { X, Globe, LogOut, Gift, MessageCircle, Home, Wallet, User } from "lucide-react";
 
 export default function Header() {
     const router = useRouter();
@@ -84,74 +84,81 @@ export default function Header() {
 
     return (
         <>
-            <header className="sticky top-0 z-50 w-full bg-[#0D1117]/95 backdrop-blur-md border-b border-white/10 shadow-lg">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
-                        {/* Logo Area */}
-                        <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" className="flex items-center gap-2">
-                                {logoUrl ? (
-                                    <img
-                                        src={logoUrl}
-                                        alt={brandName}
-                                        className="h-10 w-auto object-contain"
-                                    />
-                                ) : (
-                                    <>
-                                        <span className="text-3xl">🎮</span>
-                                        <span className="text-xl font-black text-[#FFD700] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] tracking-wide">
-                                            {brandName}
-                                        </span>
-                                    </>
-                                )}
-                            </Link>
-                        </div>
+            <header className="sticky top-0 z-50 glass-card border-b-0 transition-all duration-300 bg-[#0D1117]/95 backdrop-blur-md">
+                <div className="max-w-7xl mx-auto px-4 py-3 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0 relative">
 
-                        {/* Right Section: User Info or Login/Register */}
-                        <div className="flex items-center gap-4">
-                            {user ? (
-                                <>
-                                    {/* Mobile/Tablet Balance (simplified) */}
-                                    <div className="flex items-center gap-2 bg-[#161B22]/80 backdrop-blur border border-white/10 rounded-full px-3 py-1.5">
-                                        <span className="text-[#FFD700] text-sm font-bold">฿{Number(user.balance || 0).toLocaleString()}</span>
-                                        <div className="w-px h-4 bg-white/20"></div>
-                                        <div
-                                            className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center cursor-pointer active:scale-95"
-                                            onClick={() => handleNavigate("/deposit")}
-                                        >
-                                            <span className="text-xs">💰</span>
+                    {/* Logo Area */}
+                    <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => router.push('/')}>
+                        {logoUrl ? (
+                            <img src={logoUrl} alt={brandName} className="h-16 md:h-20 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                        ) : (
+                            <div className="flex items-center gap-2 md:gap-3">
+                                <span className="text-3xl">🎮</span>
+                                <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white uppercase">
+                                    {brandName}
+                                </h1>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Central Navigation (Desktop Only) */}
+                    <div className="flex-1 hidden md:flex items-center justify-center gap-2 lg:gap-8">
+                        {[
+                            { label: 'หน้าหลัก', href: '/', icon: Home },
+                            { label: 'ฝาก/ถอน', href: '/deposit', icon: Wallet },
+                            { label: 'กิจกรรม', href: '/activities', icon: Gift },
+                            { label: 'โปรไฟล์', href: '/profile', icon: User },
+                        ].map((item, index) => (
+                            <button
+                                key={index}
+                                onClick={() => router.push(item.href)}
+                                className="flex items-center gap-2 text-slate-300 hover:text-white hover:bg-white/5 py-2 px-4 rounded-full transition-all group"
+                            >
+                                <item.icon className="w-4 h-4 text-slate-400 group-hover:text-yellow-400 transition-colors" />
+                                <span className="font-bold text-sm lg:text-base">{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Right Section: User Info or Login/Register */}
+                    <div className="w-full md:w-auto z-10 flex justify-center md:justify-end">
+                        {user ? (
+                            <div className="flex items-center justify-between md:justify-end gap-4 bg-white/5 rounded-full p-1.5 pr-6 border border-white/10 hover:border-white/20 transition-all cursor-pointer group">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 p-0.5 shadow-lg">
+                                        <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
+                                            <User size={20} className="text-yellow-400" />
                                         </div>
                                     </div>
-
-                                    {/* Mobile Menu Button */}
-                                    <button
-                                        onClick={() => setShowMenu(true)}
-                                        className="p-2 rounded-lg border border-[#FFD700]/30 bg-[#FFD700]/10 text-[#FFD700]"
-                                    >
-                                        <div className="flex flex-col gap-[5px]">
-                                            <div className="w-5 h-0.5 bg-[#FFD700] rounded-full"></div>
-                                            <div className="w-5 h-0.5 bg-[#FFD700] rounded-full"></div>
-                                            <div className="w-5 h-0.5 bg-[#FFD700] rounded-full"></div>
-                                        </div>
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="flex items-center gap-3">
-                                    <Link
-                                        href="/?action=login"
-                                        className="hidden md:inline-flex px-6 py-2.5 rounded-full border border-white/20 text-white font-bold text-sm hover:bg-white/10 transition-all"
-                                    >
-                                        เข้าสู่ระบบ
-                                    </Link>
-                                    <Link
-                                        href="/?action=register"
-                                        className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#FFD700] to-[#FFC000] text-[#0D1117] font-bold text-sm hover:shadow-[0_0_20px_rgba(255,215,0,0.4)] transition-all transform hover:-translate-y-0.5"
-                                    >
-                                        สมัครสมาชิก
-                                    </Link>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">Member</span>
+                                        <span className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors">{user.username}</span>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
+                                <div className="text-right hidden sm:block">
+                                    <span className="text-xs text-green-400 block">Balance</span>
+                                    <span className="font-mono font-bold text-gradient-gold text-lg">฿{Number(user.balance).toLocaleString()}</span>
+                                </div>
+                                <button onClick={handleLogout} className="ml-2 p-2 rounded-full bg-red-500/10 hover:bg-red-500/30 border border-red-500/30 text-red-400 hover:text-red-300 transition-all" title="ออกจากระบบ">
+                                    <LogOut size={18} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3 w-full md:flex md:items-center mt-1 md:mt-0 max-w-sm mx-auto md:max-w-none">
+                                <button
+                                    onClick={() => router.push('/?action=login')}
+                                    className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:to-blue-500 transition-all shadow-lg shadow-blue-500/20 border border-blue-500/50"
+                                >
+                                    เข้าสู่ระบบ
+                                </button>
+                                <button
+                                    onClick={() => router.push('/?action=register')}
+                                    className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-white bg-gradient-to-r from-green-500 to-green-600 hover:to-green-400 transition-all shadow-lg shadow-green-500/30 border border-green-400/50"
+                                >
+                                    สมัครสมาชิก
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>

@@ -115,7 +115,7 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
 };
 
 const Banner = () => (
-  <div className="relative rounded-2xl md:rounded-3xl overflow-hidden h-full min-h-[180px] md:min-h-[300px] flex items-center group border border-white/10">
+  <div className="relative rounded-2xl md:rounded-3xl overflow-hidden h-full min-h-[160px] md:min-h-[300px] flex items-center group border border-white/10">
     {/* Cinematic Background */}
     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-[10s] group-hover:scale-110"></div>
     <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a] via-[#0f172a]/80 to-transparent"></div>
@@ -128,24 +128,20 @@ const Banner = () => (
     </div>
 
     {/* Content */}
-    <div className="relative z-10 px-8 max-w-lg">
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-4 animate-slide-up">
-        <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
-        <span className="text-xs font-bold text-green-400 tracking-wider">โปรโมชั่นสุดฮิต</span>
+    <div className="relative z-10 px-3 md:px-8 max-w-lg">
+      <div className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 py-0.5 md:py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-2 md:mb-4 animate-slide-up">
+        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500 animate-ping"></span>
+        <span className="text-[8px] md:text-xs font-bold text-green-400 tracking-wider">โปรโมชั่น</span>
       </div>
 
-      <h2 className="text-3xl md:text-5xl font-black text-white leading-[0.9] mb-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-        สมัครใหม่รับ <br />
+      <h2 className="text-lg md:text-5xl font-black text-white leading-[0.9] mb-2 md:mb-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        สมัครรับ <br />
         <span className="text-gradient-gold">โบนัส 100%</span>
       </h2>
 
-      <p className="text-slate-300 text-xs md:text-base mb-4 md:mb-6 font-light animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        ฝากครั้งแรกรับโบนัสทันที สูงสุด 5,000 บาท
-      </p>
-
       <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-        <button className="btn-green px-6 py-3 rounded-xl text-base shadow-lg hover:shadow-green-500/30 flex items-center gap-2 group/btn">
-          รับโบนัสเลย <ChevronRight className="group-hover/btn:translate-x-1 transition-transform" />
+        <button className="btn-green px-3 md:px-6 py-1.5 md:py-3 rounded-lg md:rounded-xl text-[10px] md:text-base shadow-lg hover:shadow-green-500/30 flex items-center gap-1 md:gap-2 group/btn">
+          รับโบนัส <ChevronRight size={12} className="group-hover/btn:translate-x-1 transition-transform md:text-base" />
         </button>
       </div>
     </div>
@@ -153,24 +149,24 @@ const Banner = () => (
 );
 
 const InviteCard = () => (
-  <div className="glass-card h-full rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between group border border-white/10">
-    <div className="absolute top-0 right-0 p-4 opacity-50">
-      <Users size={80} className="text-white/5" />
+  // Min size reduced for mobile
+  <div className="glass-card h-full rounded-2xl md:rounded-3xl p-3 md:p-6 relative overflow-hidden flex flex-col justify-between group border border-white/10 min-h-[160px]">
+    <div className="absolute top-0 right-0 p-2 md:p-4 opacity-50">
+      <Users size={60} className="text-white/5" />
     </div>
 
     <div>
-      <div className="flex items-center gap-2 mb-2">
-        <Users className="text-blue-400" />
-        <h3 className="text-xl font-bold text-white">ชวนเพื่อนรับรายได้</h3>
+      <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
+        <Users className="text-blue-400 w-4 h-4 md:w-6 md:h-6" />
+        <h3 className="text-xs md:text-xl font-bold text-white">ชวนเพื่อน</h3>
       </div>
-      <p className="text-slate-400 text-sm">รับคอมมิชชั่น 0.8% ทุกยอดเล่น</p>
+      <p className="text-slate-400 text-[10px] md:text-sm">คอมมิชชั่น 0.8%</p>
     </div>
 
-    <div className="bg-[#0f172a]/50 p-4 rounded-xl border border-white/5 mt-4">
-      <p className="text-[10px] text-slate-500 mb-2 uppercase font-bold">ลิงค์แนะนำของคุณ</p>
-      <div className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2 border border-white/5">
-        <span className="text-xs text-yellow-500 font-mono">goldenbet.com/u/user888</span>
-        <Gift size={16} className="text-yellow-500 cursor-pointer hover:scale-110 transition-transform" />
+    <div className="bg-[#0f172a]/50 p-2 md:p-4 rounded-lg md:rounded-xl border border-white/5 mt-2 md:mt-4">
+      <div className="flex items-center justify-between bg-black/30 rounded md:rounded-lg px-2 py-1 md:px-3 md:py-2 border border-white/5">
+        <span className="text-[8px] md:text-xs text-yellow-500 font-mono truncate">goldenbet...</span>
+        <Gift size={12} className="text-yellow-500 cursor-pointer md:w-4 md:h-4" />
       </div>
     </div>
   </div>
@@ -300,11 +296,13 @@ const JackpotBar = () => {
 // --- 3. MAIN LOGIC & MODALS ---
 
 const TopBanner = () => (
-  <div className="w-full relative rounded-2xl md:rounded-3xl overflow-hidden mb-6 group border border-white/10 shadow-2xl">
-    <div className="aspect-[1920/500] w-full relative">
-      {/* Placeholder Image 1920x500 */}
+  // Added mt-4 to separate from Nav
+  <div className="w-full relative rounded-xl md:rounded-3xl overflow-hidden mb-4 md:mb-6 mt-4 md:mt-0 group border border-white/10 shadow-2xl">
+    {/* Aspect Ratio 1200/400 = 3/1 */}
+    <div className="aspect-[3/1] w-full relative">
+      {/* Placeholder Image 1200x400 */}
       <img
-        src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1920&h=500&auto=format&fit=crop"
+        src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&h=400&auto=format&fit=crop"
         alt="Main Banner"
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
       />
@@ -313,12 +311,12 @@ const TopBanner = () => (
       <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
 
       {/* Text Content */}
-      <div className="absolute bottom-0 left-0 p-4 md:p-12 max-w-3xl">
-        <div className="inline-block px-3 py-1 rounded-full bg-red-600 text-white text-[10px] md:text-sm font-bold mb-2 animate-pulse">
+      <div className="absolute bottom-0 left-0 p-3 md:p-12 max-w-3xl">
+        <div className="inline-block px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-red-600 text-white text-[8px] md:text-sm font-bold mb-1 md:mb-2 animate-pulse">
           HOT EVENT
         </div>
-        <h2 className="text-2xl md:text-5xl font-black text-white italic tracking-tighter mb-2 text-shadow-lg">
-          มหกรรมคาสิโนออนไลน์ <span className="text-yellow-400">อันดับ 1</span>
+        <h2 className="text-sm md:text-5xl font-black text-white italic tracking-tighter mb-1 text-shadow-lg">
+          มหกรรมคาสิโน <span className="text-yellow-400">#1</span>
         </h2>
         <p className="text-slate-200 text-xs md:text-lg font-light hidden md:block">
           ร่วมสนุกกับกิจกรรมพิเศษลุ้นรับของรางวัลมากมายมูลค่ากว่า 10,000,000 บาท
@@ -357,12 +355,12 @@ const HomeContent = ({ games }: any) => {
       {/* Top Main Banner 1920x500 */}
       <TopBanner />
 
-      {/* Hero Grid System */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
+      {/* Hero Grid System: Modified to split 50/50 on Mobile */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-6">
+        <div className="col-span-1 md:col-span-2">
           <Banner />
         </div>
-        <div className="md:col-span-1">
+        <div className="col-span-1">
           <InviteCard />
         </div>
       </div>

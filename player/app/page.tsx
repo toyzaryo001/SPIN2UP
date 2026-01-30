@@ -297,7 +297,36 @@ const JackpotBar = () => {
   );
 }
 
-// --- Content Sections ---
+// --- 3. MAIN LOGIC & MODALS ---
+
+const TopBanner = () => (
+  <div className="w-full relative rounded-2xl md:rounded-3xl overflow-hidden mb-6 group border border-white/10 shadow-2xl">
+    <div className="aspect-[1920/500] w-full relative">
+      {/* Placeholder Image 1920x500 */}
+      <img
+        src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1920&h=500&auto=format&fit=crop"
+        alt="Main Banner"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+      />
+
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
+
+      {/* Text Content */}
+      <div className="absolute bottom-0 left-0 p-4 md:p-12 max-w-3xl">
+        <div className="inline-block px-3 py-1 rounded-full bg-red-600 text-white text-[10px] md:text-sm font-bold mb-2 animate-pulse">
+          HOT EVENT
+        </div>
+        <h2 className="text-2xl md:text-5xl font-black text-white italic tracking-tighter mb-2 text-shadow-lg">
+          มหกรรมคาสิโนออนไลน์ <span className="text-yellow-400">อันดับ 1</span>
+        </h2>
+        <p className="text-slate-200 text-xs md:text-lg font-light hidden md:block">
+          ร่วมสนุกกับกิจกรรมพิเศษลุ้นรับของรางวัลมากมายมูลค่ากว่า 10,000,000 บาท
+        </p>
+      </div>
+    </div>
+  </div>
+);
 
 const HomeContent = ({ games }: any) => {
   const providers = ["PG Soft", "Joker", "Pragmatic", "Jili", "Spadegaming", "Red Tiger", "Habanero", "Blueprint"];
@@ -324,7 +353,10 @@ const HomeContent = ({ games }: any) => {
   })) : MOCK_GAMES;
 
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className="animate-fade-in space-y-6 md:space-y-8">
+      {/* Top Main Banner 1920x500 */}
+      <TopBanner />
+
       {/* Hero Grid System */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">

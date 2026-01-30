@@ -464,13 +464,32 @@ const HomeContent = ({ games, banners, providers }: any) => {
   );
 };
 
-const SlotsContent = ({ games, category }: any) => {
-  const providers = category?.providers || [];
-  const firstProviderName = providers.length > 0 ? providers[0].name : "PG Soft";
+const SlotsContent = ({ games, category, providers: globalProviders }: any) => {
+  const allProviders = category?.providers || globalProviders || [];
+
+  // Filter providers that actually have SLOT games
+  const validProviders = allProviders.filter((p: any) => {
+    // If we have access to game count from backend, use it. Otherwise derive from local games list.
+    // For now, let's look at the 'games' prop to see if this provider has any 'slot' games.
+    return games.some((g: any) =>
+      g.provider?.name === p.name && (g.type === 'slot' || g.categoryId === category?.id)
+    );
+  });
+
+  // Fallback: If no providers valid (maybe generic category), show all or none.
+  // Ideally show only valid. If empty, show full list? No, better to show 'No Games' if 0 valid.
+  const displayProviders = validProviders.length > 0 ? validProviders : allProviders;
+
+  const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "PG Soft";
   const [activeProvider, setActiveProvider] = useState(firstProviderName);
 
-  // Use providers from category
-  const providerList = providers.map((p: any) => p.name);
+  // Update active provider if the list changes and current one isn't in it?
+  // For simplicity, just rely on initial state or user selection. 
+  // But if 'activeProvider' is invalid, we should ideally switch. 
+  // React state doesn't auto-update on re-render of defaults.
+
+  // Provider Names List
+  const providerList = displayProviders.map((p: any) => p.name);
 
   // Filter Games by Active Provider
   const filteredGames = games.filter((g: any) =>
@@ -520,7 +539,7 @@ const SlotsContent = ({ games, category }: any) => {
               type="slot"
             />
           )) : (
-            <div className="col-span-full text-center py-20 text-slate-500 bg-white/5 rounded-xl border border-white/5">
+            <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
               <Gamepad2 size={48} className="mx-auto mb-4 opacity-20" />
               <p>ไม่พบเกมในหมวดหมู่นี้</p>
             </div>
@@ -531,13 +550,25 @@ const SlotsContent = ({ games, category }: any) => {
   );
 };
 
-const CasinoContent = ({ games, category }: any) => {
-  const providers = category?.providers || [];
-  const firstProviderName = providers.length > 0 ? providers[0].name : "SA Gaming";
+const CasinoContent = ({ games, category, providers: globalProviders }: any) => {
+  const allProviders = category?.providers || globalProviders || [];
+
+  // Filter providers that actually have CASINO/LIVE-CASINO games
+  const validProviders = allProviders.filter((p: any) => {
+    return games.some((g: any) =>
+      g.provider?.name === p.name && (g.type === 'casino' || g.type === 'live-casino' || g.categoryId === category?.id)
+    );
+  });
+
+  const displayProviders = validProviders.length > 0 ? validProviders : allProviders;
+  const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "SA Gaming";
+
+  // Ensure activeProvider is initialized to a valid one
   const [activeProvider, setActiveProvider] = useState(firstProviderName);
 
-  // Filter Casino Providers
-  const providerList = providers.map((p: any) => p.name);
+  // If local list updates, we might want to reset activeProvider, but for now relies on initial render.
+
+  const providerList = displayProviders.map((p: any) => p.name);
 
   // Filter Casino Games
   const filteredGames = games.filter((g: any) =>

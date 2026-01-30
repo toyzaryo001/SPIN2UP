@@ -392,8 +392,8 @@ const HomeContent = ({ games, banners, providers }: any) => {
               <div className={`grid ${gridCols} gap-2 h-full`}>
                 {/* Show up to 3 banners, filling height */}
                 {sideBanners.slice(0, 3).map((banner: any, idx: number) => (
-                  <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-full min-h-[120px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
-                    <img src={banner.image} alt={banner.title} className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                  <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer md:h-full md:min-h-[120px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
+                    <img src={banner.image} alt={banner.title} className="w-full h-auto md:absolute md:inset-0 md:h-full md:object-cover transform group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-blue-900/10 group-hover:bg-transparent transition-colors"></div>
                   </div>
                 ))}

@@ -113,7 +113,7 @@ const NavBar = ({ activeTab, setActiveTab }: any) => {
             <button
               key={menu.id}
               onClick={() => setActiveTab(menu.id)}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all duration-300 font-bold text-sm tracking-wide
+              className={`flex items-center gap-2 px-4 py-1.5 md:px-6 md:py-2.5 rounded-full transition-all duration-300 font-bold text-xs md:text-sm tracking-wide whitespace-nowrap
                 ${activeTab === menu.id
                   ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(250,204,21,0.4)] scale-105'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'

@@ -113,10 +113,10 @@ router.get('/agent', requirePermission('settings', 'agents'), async (req, res) =
 // POST /api/admin/settings/agent (ต้องมีสิทธิ์ settings.agents)
 router.post('/agent', requirePermission('settings', 'agents'), async (req, res) => {
     try {
-        const { name, apiKey, apiSecret, callbackUrl, rtp, minBet, maxBet } = req.body;
+        const { name, apiKey, apiSecret, callbackUrl, rtp, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance } = req.body;
 
         const config = await prisma.agentConfig.create({
-            data: { name, apiKey, apiSecret, callbackUrl, rtp: rtp || 0.96, minBet, maxBet },
+            data: { name, apiKey, apiSecret, callbackUrl, rtp: rtp || 0.96, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance },
         });
 
         res.status(201).json({ success: true, data: config });

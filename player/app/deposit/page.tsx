@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PlayerLayout from "@/components/PlayerLayout";
 import { Wallet, ArrowDownToLine, Copy, Check, Building2, Smartphone, QrCode, AlertCircle } from "lucide-react";
+import BankLogo from "@/components/BankLogo";
 
 const channels = [
     { id: "bank", label: "ธนาคาร", icon: Building2, emoji: "🏦" },
@@ -269,9 +270,13 @@ export default function DepositPage() {
                                                         cursor: "pointer",
                                                         fontWeight: 700,
                                                         fontSize: "13px",
-                                                        color: "#FFFFFF"
+                                                        color: "#FFFFFF",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "8px"
                                                     }}
                                                 >
+                                                    <BankLogo bankCode={bank.bankName} width={24} height={24} />
                                                     {bank.bankName}
                                                 </button>
                                             ))}
@@ -293,7 +298,7 @@ export default function DepositPage() {
                                             width: "64px",
                                             height: "64px",
                                             margin: "0 auto 12px",
-                                            background: bankColors[selectedBank.bankName] || "linear-gradient(135deg, #22C55E, #16A34A)",
+                                            background: "rgba(255,255,255,0.05)",
                                             borderRadius: "16px",
                                             display: "flex",
                                             alignItems: "center",
@@ -303,7 +308,7 @@ export default function DepositPage() {
                                             color: "white",
                                             boxShadow: "0 6px 20px rgba(0,0,0,0.2)"
                                         }}>
-                                            {selectedBank.bankName}
+                                            <BankLogo bankCode={selectedBank.bankName} width={48} height={48} />
                                         </div>
                                         <h3 style={{ fontWeight: 700, fontSize: "18px", color: "#FFD700", marginBottom: "16px" }}>
                                             {selectedBank.bankName === "KBANK" ? "ธนาคารกสิกรไทย" :
@@ -431,7 +436,7 @@ export default function DepositPage() {
                                     <div style={{
                                         width: "42px",
                                         height: "42px",
-                                        background: bankColors[user?.bankName] || "#22C55E",
+                                        background: "rgba(255,255,255,0.05)",
                                         borderRadius: "10px",
                                         display: "flex",
                                         alignItems: "center",
@@ -439,9 +444,9 @@ export default function DepositPage() {
                                         color: "white",
                                         fontSize: "11px",
                                         fontWeight: 700,
-                                        boxShadow: "0 4px 12px rgba(34,197,94,0.3)"
+                                        boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
                                     }}>
-                                        {user?.bankName || "N/A"}
+                                        <BankLogo bankCode={user?.bankName} width={32} height={32} />
                                     </div>
                                     <div>
                                         <p style={{ fontWeight: 700, color: "#FFFFFF", fontSize: "14px" }}>{user?.bankAccount || "-"}</p>

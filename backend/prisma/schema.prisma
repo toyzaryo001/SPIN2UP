@@ -297,8 +297,12 @@ model Announcement {
 model AgentConfig {
   id          Int      @id @default(autoincrement())
   name        String
-  apiKey      String?
+  apiKey      String? // Used as API Endpoint for Betflix
   apiSecret   String?
+  upline      String? // Replaces 'prefix' conceptually for Betflix
+  xApiKey     String? // For Betflix
+  xApiCat     String? // For Betflix
+  gameEntrance String? // For Betflix
   callbackUrl String?
   rtp         Float    @default(0.96)
   minBet      Decimal  @default(1)

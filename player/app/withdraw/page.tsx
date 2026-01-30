@@ -4,6 +4,7 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import { ArrowDownToLine, AlertCircle, CheckCircle2 } from "lucide-react";
+import BankLogo from "@/components/BankLogo";
 
 export default function WithdrawPage() {
     const [amount, setAmount] = useState("");
@@ -76,8 +77,8 @@ export default function WithdrawPage() {
                                 key={amt}
                                 onClick={() => setAmount(amt.toString())}
                                 className={`py-3 rounded-xl text-sm font-bold transition-all ${amount === amt.toString()
-                                        ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg shadow-yellow-500/30"
-                                        : "bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5"
+                                    ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg shadow-yellow-500/30"
+                                    : "bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5"
                                     }`}
                             >
                                 {amt}
@@ -89,8 +90,8 @@ export default function WithdrawPage() {
                     <div className="bg-black/30 rounded-xl p-4 border border-white/5">
                         <p className="text-xs text-slate-400 mb-3 font-medium">บัญชีรับเงิน</p>
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-lg">
-                                KBANK
+                            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-lg overflow-hidden">
+                                <BankLogo bankCode="KBANK" width={48} height={48} />
                             </div>
                             <div>
                                 <p className="font-bold text-white text-lg">123-4-56789-0</p>

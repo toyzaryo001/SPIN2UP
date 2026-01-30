@@ -8,8 +8,12 @@ import toast from "react-hot-toast";
 interface Agent {
     id: number;
     name: string;
-    prefix: string;
-    apiKey?: string;
+    // prefix: string; // Deprecated or mapped to upline?
+    upline?: string; // New field
+    apiKey?: string; // Endpoint
+    xApiKey?: string;
+    xApiCat?: string;
+    gameEntrance?: string;
     callbackUrl?: string;
     rtp: number;
     minBet: number;
@@ -26,9 +30,12 @@ export default function AgentsPage() {
     const [deletingAgent, setDeletingAgent] = useState<Agent | null>(null);
 
     const [formData, setFormData] = useState({
-        name: "",
-        prefix: "",
-        apiKey: "",
+        name: "BETFLIX", // Default to BETFLIX
+        upline: "",
+        apiKey: "https://api.bfx.fail",
+        xApiKey: "",
+        xApiCat: "",
+        gameEntrance: "",
         callbackUrl: "",
         rtp: "95",
         minBet: "1",
@@ -59,8 +66,11 @@ export default function AgentsPage() {
             setEditingAgent(agent);
             setFormData({
                 name: agent.name,
-                prefix: agent.prefix,
-                apiKey: agent.apiKey || "",
+                upline: agent.upline || "",
+                apiKey: agent.apiKey || "https://api.bfx.fail",
+                xApiKey: agent.xApiKey || "",
+                xApiCat: agent.xApiCat || "",
+                gameEntrance: agent.gameEntrance || "",
                 callbackUrl: agent.callbackUrl || "",
                 rtp: (agent.rtp * 100).toString(),
                 minBet: agent.minBet.toString(),
@@ -69,7 +79,19 @@ export default function AgentsPage() {
             });
         } else {
             setEditingAgent(null);
-            setFormData({ name: "", prefix: "", apiKey: "", callbackUrl: "", rtp: "95", minBet: "1", maxBet: "10000", isActive: true });
+            setFormData({
+                name: "BETFLIX",
+                upline: "",
+                apiKey: "https://api.bfx.fail",
+                xApiKey: "",
+                xApiCat: "",
+                gameEntrance: "",
+                callbackUrl: "",
+                rtp: "95",
+                minBet: "1",
+                maxBet: "10000",
+                isActive: true
+            });
         }
         setIsModalOpen(true);
     };
@@ -80,10 +102,14 @@ export default function AgentsPage() {
     };
 
     const handleSave = async () => {
-        if (!formData.name.trim() || !formData.prefix.trim()) {
-            toast.error("กรุณากรอกชื่อและ Prefix");
+        if (!formData.name.trim()) {
+            toast.error("กรุณาเลือก Agent");
             return;
         }
+        // if (!formData.upline.trim()) {
+        //     toast.error("กรุณากรอก Upline"); // Optional validation
+        //     return;
+        // }
         setIsSaving(true);
         try {
             const payload = {
@@ -100,6 +126,7 @@ export default function AgentsPage() {
             }
             setIsModalOpen(false);
             fetchAgents();
+            toast.success("บันทึกสำเร็จ");
         } catch (error) {
             console.error("Save error:", error);
             toast.error("เกิดข้อผิดพลาด");
@@ -114,6 +141,7 @@ export default function AgentsPage() {
             await api.delete(`/admin/settings/agent/${deletingAgent.id}`);
             setIsDeleteModalOpen(false);
             fetchAgents();
+            toast.success("ลบสำเร็จ");
         } catch (error) {
             console.error("Delete error:", error);
             toast.error("ไม่สามารถลบได้");
@@ -149,27 +177,25 @@ export default function AgentsPage() {
                         <thead className="bg-slate-50 text-slate-500 font-medium">
                             <tr>
                                 <th className="px-6 py-4">ชื่อ Agent</th>
-                                <th className="px-6 py-4">Prefix</th>
+                                <th className="px-6 py-4">Upline</th>
+                                <th className="px-6 py-4">Endpoint</th>
                                 <th className="px-6 py-4 text-center">RTP</th>
-                                <th className="px-6 py-4 text-center">Min Bet</th>
-                                <th className="px-6 py-4 text-center">Max Bet</th>
                                 <th className="px-6 py-4 text-center">สถานะ</th>
                                 <th className="px-6 py-4 text-center">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {agents.length === 0 ? (
-                                <tr><td colSpan={7} className="text-center py-12 text-slate-400">ไม่พบข้อมูล Agent</td></tr>
+                                <tr><td colSpan={6} className="text-center py-12 text-slate-400">ไม่พบข้อมูล Agent</td></tr>
                             ) : (
                                 agents.map((agent) => (
                                     <tr key={agent.id} className="hover:bg-slate-50">
                                         <td className="px-6 py-4 font-bold text-slate-800">{agent.name}</td>
-                                        <td className="px-6 py-4 font-mono text-slate-600">{agent.prefix}</td>
+                                        <td className="px-6 py-4 font-mono text-slate-600">{agent.upline || "-"}</td>
+                                        <td className="px-6 py-4 font-mono text-xs text-slate-500 truncate max-w-[150px]">{agent.apiKey || "-"}</td>
                                         <td className="px-6 py-4 text-center">
                                             <span className="font-bold text-yellow-600">{(agent.rtp * 100).toFixed(0)}%</span>
                                         </td>
-                                        <td className="px-6 py-4 text-center">{agent.minBet}</td>
-                                        <td className="px-6 py-4 text-center">{agent.maxBet.toLocaleString()}</td>
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => toggleStatus(agent)}
@@ -208,21 +234,91 @@ export default function AgentsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อ Agent</label>
-                                    <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
+                                    <select
+                                        value={formData.name}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const updates: any = { name: val };
+                                            if (val === 'BETFLIX' && !formData.apiKey) {
+                                                updates.apiKey = "https://api.bfx.fail";
+                                            }
+                                            setFormData({ ...formData, ...updates });
+                                        }}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 bg-white"
+                                    >
+                                        <option value="BETFLIX">BETFLIX</option>
+                                        {/* Future: Add more providers option */}
+                                    </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Prefix</label>
-                                    <input type="text" value={formData.prefix} onChange={(e) => setFormData({ ...formData, prefix: e.target.value })} placeholder="SPIN" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Upline (Prefix)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.upline}
+                                        onChange={(e) => setFormData({ ...formData, upline: e.target.value })}
+                                        placeholder="เช่น px89"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    />
                                 </div>
                             </div>
+
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">API Key</label>
-                                <input type="text" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900" />
+                                <label className="block text-sm font-medium text-slate-700 mb-1">API Endpoint</label>
+                                <input
+                                    type="text"
+                                    value={formData.apiKey}
+                                    onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900 bg-slate-50"
+                                />
                             </div>
+
+                            {/* Betflix Specific Fields */}
+                            {formData.name === 'BETFLIX' && (
+                                <>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">x-api-key</label>
+                                            <input
+                                                type="text"
+                                                value={formData.xApiKey}
+                                                onChange={(e) => setFormData({ ...formData, xApiKey: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">x-api-cat</label>
+                                            <input
+                                                type="text"
+                                                value={formData.xApiCat}
+                                                onChange={(e) => setFormData({ ...formData, xApiCat: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Game Entrance URL</label>
+                                        <input
+                                            type="text"
+                                            value={formData.gameEntrance}
+                                            onChange={(e) => setFormData({ ...formData, gameEntrance: e.target.value })}
+                                            placeholder="https://..."
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Callback URL</label>
-                                <input type="text" value={formData.callbackUrl} onChange={(e) => setFormData({ ...formData, callbackUrl: e.target.value })} placeholder="https://..." className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Callback URL (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={formData.callbackUrl}
+                                    onChange={(e) => setFormData({ ...formData, callbackUrl: e.target.value })}
+                                    placeholder="https://..."
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                />
                             </div>
+
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">RTP (%)</label>

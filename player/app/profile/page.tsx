@@ -5,6 +5,7 @@ import PlayerLayout from "@/components/PlayerLayout";
 import { LogOut, ChevronRight, Eye, EyeOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import BankLogo from "@/components/BankLogo";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -197,7 +198,12 @@ export default function ProfilePage() {
                     </h3>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <InfoRow label="ธนาคาร" value={BANK_NAMES[user.bankName] || user.bankName} />
+                        <InfoRow label="ธนาคาร" value={
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <BankLogo bankCode={user.bankName} width={24} height={24} />
+                                <span>{BANK_NAMES[user.bankName.toUpperCase()] || user.bankName}</span>
+                            </div>
+                        } />
                         <InfoRow label="เลขบัญชี" value={user.bankAccount} />
                     </div>
                 </div>
@@ -410,7 +416,7 @@ export default function ProfilePage() {
 }
 
 // Info Row Component
-function InfoRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function InfoRow({ label, value, highlight }: { label: string; value: string | React.ReactNode; highlight?: boolean }) {
     return (
         <div style={{
             display: "flex",

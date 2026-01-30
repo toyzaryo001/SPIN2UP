@@ -24,7 +24,7 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
         {/* Logo Area */}
         <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => window.location.href = '/'}>
           {logoUrl ? (
-            <img src={logoUrl} alt={siteName} className="h-10 md:h-14 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+            <img src={logoUrl} alt={siteName} className="h-24 md:h-40 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
           ) : (
             <div className="flex items-center gap-2 md:gap-3">
               <div className="relative">
@@ -165,22 +165,8 @@ const Banner = ({ banners }: { banners: any[] }) => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 px-3 md:px-8 max-w-lg">
-        <div className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 py-0.5 md:py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-2 md:mb-4 animate-slide-up">
-          <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500 animate-ping"></span>
-          <span className="text-[8px] md:text-xs font-bold text-green-400 tracking-wider">โปรโมชั่น</span>
-        </div>
-
-        <h2 className="text-lg md:text-5xl font-black text-white leading-[0.9] mb-2 md:mb-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          {mainBanner ? mainBanner.title : <>สมัครรับ <br /><span className="text-gradient-gold">โบนัส 100%</span></>}
-        </h2>
-
-        <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-          <button className="btn-green px-3 md:px-6 py-1.5 md:py-3 rounded-lg md:rounded-xl text-[10px] md:text-base shadow-lg hover:shadow-green-500/30 flex items-center gap-1 md:gap-2 group/btn">
-            {mainBanner ? (mainBanner.buttonText || "ดูเพิ่มเติม") : "รับโบนัส"} <ChevronRight size={12} className="group-hover/btn:translate-x-1 transition-transform md:text-base" />
-          </button>
-        </div>
-      </div>
+      {/* Content Removed as per user request to hide text overlay */}
+      {/* <div className="relative z-10 px-3 md:px-8 max-w-lg"> ... </div> */}
     </div>
   );
 };
@@ -355,16 +341,8 @@ const TopBanner = ({ banners }: { banners: any[] }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
 
         {/* Text Content */}
-        {mainBanner.title && (
-          <div className="absolute bottom-0 left-0 p-3 md:p-12 max-w-3xl">
-            <div className="inline-block px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-red-600 text-white text-[8px] md:text-sm font-bold mb-1 md:mb-2 animate-pulse">
-              HOT EVENT
-            </div>
-            <h2 className="text-sm md:text-5xl font-black text-white italic tracking-tighter mb-1 text-shadow-lg">
-              {mainBanner.title}
-            </h2>
-          </div>
-        )}
+        {/* Text Content Removed as per user request */}
+        {/* {mainBanner.title && ( ... )} */}
       </div>
     </div>
   );
@@ -401,7 +379,7 @@ const HomeContent = ({ games, banners, providers }: any) => {
         <div className="md:col-span-2 h-40 md:h-[300px]">
           <Banner banners={banners.filter((b: any) => !b.position || b.position === 'TOP')} />
         </div>
-        <div className="hidden md:block h-full">
+        <div className="block h-full mt-4 md:mt-0">
           <InviteCard />
         </div>
       </div>

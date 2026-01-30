@@ -378,32 +378,62 @@ const HomeContent = ({ games, banners, providers }: any) => {
       {/* Top Main Banner - Dynamic from API */}
       <TopBanner banners={banners} />
 
-      {/* Hero Section: Small Banners + InviteCard (4:1 Ratio) */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6 mb-8 md:mb-12 animate-fade-in">
-        <div className="md:col-span-4">
-          {/* Small Banners Grid - Adapts to content count */}
-          {(() => {
-            const sideBanners = banners.filter((b: any) => b.position === 'SIDE');
-            const count = sideBanners.length;
-            const gridCols = count === 1 ? 'grid-cols-1' : count === 2 ? 'grid-cols-2' : 'grid-cols-3';
-            return count > 0 ? (
-              <div className={`grid ${gridCols} gap-2 md:gap-4 h-full`}>
-                {sideBanners.map((banner: any, idx: number) => (
-                  <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-32 md:h-[200px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
-                    <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
-                    <img src={banner.image} alt={banner.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              /* Fallback if no side banners */
-              <Banner banners={banners.filter((b: any) => !b.position || b.position === 'TOP')} />
-            );
-          })()}
-        </div>
-        <div className="block h-full mt-4 md:mt-0 md:col-span-1">
-          <InviteCard />
-        </div>
+      {/* Hero Section: Small Banners (Full Width) */}
+      <div className="mb-6 md:mb-8 animate-fade-in">
+        {/* Small Banners Grid - Adapts to content count */}
+        {(() => {
+          const sideBanners = banners.filter((b: any) => b.position === 'SIDE');
+          const count = sideBanners.length;
+          const gridCols = count === 1 ? 'grid-cols-1' : count === 2 ? 'grid-cols-2' : 'grid-cols-3';
+          return count > 0 ? (
+            <div className={`grid ${gridCols} gap-2 md:gap-4`}>
+              {sideBanners.map((banner: any, idx: number) => (
+                <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer aspect-[16/9]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
+                  <img src={banner.image} alt={banner.title} className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Fallback if no side banners */
+            <Banner banners={banners.filter((b: any) => !b.position || b.position === 'TOP')} />
+          );
+        })()}
+      </div>
+
+      {/* Activity Buttons Row */}
+      <div className="grid grid-cols-4 gap-2 md:gap-4 mb-8 md:mb-12 animate-fade-in">
+        {/* ยอดเสีย */}
+        <button onClick={() => window.location.href = '/cashback'} className="flex flex-col items-center justify-center p-3 md:p-6 rounded-xl bg-gradient-to-br from-red-500/20 to-red-900/30 border border-red-500/30 hover:border-red-400 hover:shadow-lg hover:shadow-red-500/20 transition-all group">
+          <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-red-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+            <span className="text-xl md:text-2xl">💸</span>
+          </div>
+          <span className="text-[10px] md:text-sm font-bold text-red-400 group-hover:text-red-300">ยอดเสีย</span>
+        </button>
+
+        {/* แนะนำเพื่อน */}
+        <button onClick={() => window.location.href = '/commission'} className="flex flex-col items-center justify-center p-3 md:p-6 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-900/30 border border-blue-500/30 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/20 transition-all group">
+          <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-blue-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+            <Users className="text-blue-400" size={20} />
+          </div>
+          <span className="text-[10px] md:text-sm font-bold text-blue-400 group-hover:text-blue-300">แนะนำเพื่อน</span>
+        </button>
+
+        {/* ฝากต่อเนื่อง */}
+        <button onClick={() => window.location.href = '/streak'} className="flex flex-col items-center justify-center p-3 md:p-6 rounded-xl bg-gradient-to-br from-green-500/20 to-green-900/30 border border-green-500/30 hover:border-green-400 hover:shadow-lg hover:shadow-green-500/20 transition-all group">
+          <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-green-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+            <span className="text-xl md:text-2xl">📅</span>
+          </div>
+          <span className="text-[10px] md:text-sm font-bold text-green-400 group-hover:text-green-300">ฝากต่อเนื่อง</span>
+        </button>
+
+        {/* RANK */}
+        <button onClick={() => window.location.href = '/rank'} className="flex flex-col items-center justify-center p-3 md:p-6 rounded-xl bg-gradient-to-br from-yellow-500/20 to-yellow-900/30 border border-yellow-500/30 hover:border-yellow-400 hover:shadow-lg hover:shadow-yellow-500/20 transition-all group">
+          <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-yellow-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+            <Trophy className="text-yellow-400" size={20} />
+          </div>
+          <span className="text-[10px] md:text-sm font-bold text-yellow-400 group-hover:text-yellow-300">RANK</span>
+        </button>
       </div>
 
       <JackpotBar />

@@ -120,6 +120,8 @@ const allMenuItems: MenuItem[] = [
       { label: 'ตั้งค่ายอดเสีย', href: '/activities/cashback' },
       { label: 'ตั้งค่าฝากสะสม', href: '/activities/streak' },
       { label: 'ตั้งค่าคอมมิชชั่น', href: '/activities/commission' },
+      { label: 'จัดการแนะนำเพื่อน', href: '/activities/referral' },
+      { label: 'จัดการ Rank', href: '/activities/ranks' },
     ]
   },
   {

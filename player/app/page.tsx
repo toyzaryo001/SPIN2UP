@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Search, Menu, User, Gamepad2, Dices, Trophy, Gift, Wallet,
+  Search, Menu, User, Gamepad2, Dices, Trophy, Gift, Wallet, Home,
   ChevronRight, Play, CreditCard, Smartphone, Flame, Star, Users, X,
   MonitorPlay, Sparkles
 } from 'lucide-react';
@@ -326,36 +326,43 @@ const JackpotBar = () => {
 
 // --- 3. MAIN LOGIC & MODALS ---
 
-const TopBanner = () => (
-  // Added mt-4 to separate from Nav
-  <div className="w-full relative rounded-xl md:rounded-3xl overflow-hidden mb-4 md:mb-6 mt-4 md:mt-0 group border border-white/10 shadow-2xl">
-    {/* Aspect Ratio 1200/400 = 3/1 */}
-    <div className="aspect-[3/1] w-full relative">
-      {/* Placeholder Image 1200x400 */}
-      <img
-        src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&h=400&auto=format&fit=crop"
-        alt="Main Banner"
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-      />
+const TopBanner = ({ banners }: { banners: any[] }) => {
+  // Use the first banner as the main hero banner (assuming sortOrder defines priority)
+  // If no banners are active/exist, we don't render this section or render a fallback if preferred.
+  // User requested "open/close from admin", so if no active banners, we hide it.
+  if (!banners || banners.length === 0) return null;
 
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
+  const mainBanner = banners[0];
 
-      {/* Text Content */}
-      <div className="absolute bottom-0 left-0 p-3 md:p-12 max-w-3xl">
-        <div className="inline-block px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-red-600 text-white text-[8px] md:text-sm font-bold mb-1 md:mb-2 animate-pulse">
-          HOT EVENT
-        </div>
-        <h2 className="text-sm md:text-5xl font-black text-white italic tracking-tighter mb-1 text-shadow-lg">
-          มหกรรมคาสิโน <span className="text-yellow-400">#1</span>
-        </h2>
-        <p className="text-slate-200 text-xs md:text-lg font-light hidden md:block">
-          ร่วมสนุกกับกิจกรรมพิเศษลุ้นรับของรางวัลมากมายมูลค่ากว่า 10,000,000 บาท
-        </p>
+  return (
+    // Added mt-4 to separate from Nav
+    <div className="w-full relative rounded-xl md:rounded-3xl overflow-hidden mb-4 md:mb-6 mt-4 md:mt-0 group border border-white/10 shadow-2xl">
+      {/* Aspect Ratio 1200/400 = 3/1 */}
+      <div className="aspect-[3/1] w-full relative">
+        <img
+          src={mainBanner.image || "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&h=400&auto=format&fit=crop"}
+          alt={mainBanner.title || "Main Banner"}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
+
+        {/* Text Content */}
+        {mainBanner.title && (
+          <div className="absolute bottom-0 left-0 p-3 md:p-12 max-w-3xl">
+            <div className="inline-block px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-red-600 text-white text-[8px] md:text-sm font-bold mb-1 md:mb-2 animate-pulse">
+              HOT EVENT
+            </div>
+            <h2 className="text-sm md:text-5xl font-black text-white italic tracking-tighter mb-1 text-shadow-lg">
+              {mainBanner.title}
+            </h2>
+          </div>
+        )}
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const HomeContent = ({ games, banners, providers }: any) => {
   // Helper to get providers names
@@ -380,8 +387,8 @@ const HomeContent = ({ games, banners, providers }: any) => {
 
   return (
     <div className="animate-fade-in space-y-6 md:space-y-8">
-      {/* Top Main Banner 1200x400 - Static for now as requested, or could use banners[0] if intended */}
-      <TopBanner />
+      {/* Top Main Banner - Dynamic from API */}
+      <TopBanner banners={banners} />
 
       {/* Hero Grid System: Modified to split 50/50 on Mobile */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-6">
@@ -738,7 +745,11 @@ function HomePageLogic() {
     if (registerForm.password !== registerForm.confirmPassword) { setError("Passwords do not match"); return; }
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/auth/register`, { ...registerForm });
+      // Map 'referrer' from state to 'referrerCode' for backend
+      const payload = { ...registerForm, referrerCode: registerForm.referrer };
+      delete (payload as any).referrer; // Clean up excess field
+
+      const res = await axios.post(`${API_URL}/auth/register`, payload);
       if (res.data.success) {
         setSuccess("Registration successful!");
         setShowRegister(false);
@@ -797,6 +808,18 @@ function HomePageLogic() {
         {/* Fallback for hardcoded tabs if API fails or specific slugs match */}
         {activeTab === 'slots' && !categories.some(c => c.slug === 'slots') && <SlotsContent games={games} providers={providers} />}
         {activeTab === 'casino' && !categories.some(c => c.slug === 'casino') && <CasinoContent games={games} providers={providers} />}
+
+        {/* Fallback for New Tabs (Deposit, Profile, etc.) */}
+        {!['home', 'slots', 'casino'].includes(activeTab) && !categories.some(c => c.slug === activeTab) && (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500 min-h-[50vh] animate-fade-in">
+            <div className="relative">
+              <Gamepad2 size={64} className="mb-4 opacity-10" />
+              <div className="absolute -top-2 -right-2 bg-yellow-500 text-slate-900 text-[10px] px-2 py-0.5 rounded font-bold">SOON</div>
+            </div>
+            <h2 className="text-xl font-bold text-slate-400 font-sans">Coming Soon</h2>
+            <p className="mt-2 text-xs text-slate-600 font-sans">{activeTab} page is under development.</p>
+          </div>
+        )}
       </main>
 
       <Footer />
@@ -804,129 +827,144 @@ function HomePageLogic() {
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0f172a]/95 backdrop-blur-md border-t border-slate-800 px-2 py-1 z-50 pb-safe">
         <div className="grid grid-cols-5 gap-1 items-end h-[60px]">
-          <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'home' ? 'text-yellow-400' : 'text-slate-500'}`}>
-            <Play size={20} className={activeTab === 'home' ? 'fill-current' : ''} />
+
+          {/* 1. Home */}
+          <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'home' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
+            <Home size={20} className={activeTab === 'home' ? 'fill-current' : ''} />
             <span className="text-[10px] mt-1 font-medium font-sans">หน้าหลัก</span>
           </button>
-          <button onClick={() => setActiveTab('slots')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'slots' ? 'text-yellow-400' : 'text-slate-500'}`}>
-            <Gamepad2 size={20} className={activeTab === 'slots' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">สล็อต</span>
+
+          {/* 2. Deposit/Withdraw */}
+          <button onClick={() => !user ? setShowLogin(true) : setActiveTab('deposit')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'deposit' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
+            <Wallet size={20} className={activeTab === 'deposit' ? 'fill-current' : ''} />
+            <span className="text-[10px] mt-1 font-medium font-sans">ฝากถอน</span>
           </button>
+
+          {/* 3. Play Game (Center Prominent) */}
           <div className="relative flex justify-center h-full items-center">
-            <button onClick={() => !user ? setShowLogin(true) : null} className="absolute -top-6 w-14 h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 border-4 border-[#0b1120] flex items-center justify-center text-white shadow-lg shadow-green-500/40 transform active:scale-95 transition-transform hover:scale-105">
-              <Wallet size={24} />
+            <button onClick={() => setActiveTab('slots')} className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1">
+              <Gamepad2 size={24} className="animate-pulse" />
+              <span className="text-[8px] font-black mt-0.5">เล่นเกม</span>
             </button>
-            <span className="text-[10px] text-slate-400 mt-8 font-medium font-sans">กระเป๋า</span>
           </div>
-          <button onClick={() => setActiveTab('casino')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'casino' ? 'text-yellow-400' : 'text-slate-500'}`}>
-            <Dices size={20} className={activeTab === 'casino' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">คาสิโน</span>
+
+          {/* 4. Activities */}
+          <button onClick={() => setActiveTab('promotions')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'promotions' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
+            <Gift size={20} className={activeTab === 'promotions' ? 'fill-current' : ''} />
+            <span className="text-[10px] mt-1 font-medium font-sans">กิจกรรม</span>
           </button>
-          <button onClick={() => !user ? setShowLogin(true) : null} className="flex flex-col items-center justify-center h-full rounded-lg text-slate-500 hover:text-white transition-colors">
-            <User size={20} />
-            <span className="text-[10px] mt-1 font-medium font-sans">บัญชี</span>
+
+          {/* 5. Profile */}
+          <button onClick={() => !user ? setShowLogin(true) : setActiveTab('profile')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'profile' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
+            <User size={20} className={activeTab === 'profile' ? 'fill-current' : ''} />
+            <span className="text-[10px] mt-1 font-medium font-sans">โปรไฟล์</span>
           </button>
+
         </div>
       </div>
 
       {/* LOGIN MODAL */}
-      {showLogin && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowLogin(false)}>
-          <div className="glass-card w-full max-w-md p-8 rounded-2xl relative" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowLogin(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
+      {
+        showLogin && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowLogin(false)}>
+            <div className="glass-card w-full max-w-md p-8 rounded-2xl relative" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setShowLogin(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
 
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-black text-white italic tracking-tighter">ยินดีต้อนรับกลับมา</h2>
-              <p className="text-slate-400 text-sm mt-2">ลงชื่อเข้าใช้เพื่อดำเนินการต่อ</p>
-            </div>
-
-            {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เบอร์โทรศัพท์</label>
-                <input type="tel" placeholder="08x-xxx-xxxx" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.phone} onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })} required />
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-black text-white italic tracking-tighter">ยินดีต้อนรับกลับมา</h2>
+                <p className="text-slate-400 text-sm mt-2">ลงชื่อเข้าใช้เพื่อดำเนินการต่อ</p>
               </div>
-              <div>
-                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน</label>
-                <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} required />
-              </div>
-              <button type="submit" disabled={loading} className="btn-gold w-full py-4 rounded-xl text-lg font-black tracking-wide uppercase mt-4">
-                {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบทันที"}
-              </button>
-            </form>
 
-            <div className="text-center mt-8 pt-6 border-t border-white/5">
-              <span className="text-slate-500 text-sm">ยังไม่มีบัญชี? </span>
-              <button onClick={() => { setShowLogin(false); setShowRegister(true) }} className="text-yellow-500 font-bold hover:underline ml-1">สมัครสมาชิกที่นี่</button>
+              {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
+
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เบอร์โทรศัพท์ (หรือ Username)</label>
+                  <input type="text" placeholder="08x-xxx-xxxx / users..." className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.phone} onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน</label>
+                  <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} required />
+                </div>
+                <button type="submit" disabled={loading} className="btn-gold w-full py-4 rounded-xl text-lg font-black tracking-wide uppercase mt-4">
+                  {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบทันที"}
+                </button>
+              </form>
+
+              <div className="text-center mt-8 pt-6 border-t border-white/5">
+                <span className="text-slate-500 text-sm">ยังไม่มีบัญชี? </span>
+                <button onClick={() => { setShowLogin(false); setShowRegister(true) }} className="text-yellow-500 font-bold hover:underline ml-1">สมัครสมาชิกที่นี่</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* REGISTER MODAL */}
-      {showRegister && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowRegister(false)}>
-          <div className="glass-card w-full max-w-lg p-8 rounded-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowRegister(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
+      {
+        showRegister && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowRegister(false)}>
+            <div className="glass-card w-full max-w-lg p-8 rounded-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setShowRegister(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
 
-            <div className="text-center mb-6">
-              <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-600 italic tracking-tighter">สร้างบัญชีใหม่</h2>
-              <p className="text-slate-400 text-sm mt-2">สมัครวันนี้รับโบนัส 100%</p>
+              <div className="text-center mb-6">
+                <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-600 italic tracking-tighter">สร้างบัญชีใหม่</h2>
+                <p className="text-slate-400 text-sm mt-2">สมัครวันนี้รับโบนัส 100%</p>
+              </div>
+
+              {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
+
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เบอร์โทรศัพท์</label>
+                    <input type="tel" placeholder="08x-xxx-xxxx" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.phone} onChange={e => setRegisterForm({ ...registerForm, phone: e.target.value })} required />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ชื่อ - นามสกุล</label>
+                    <input type="text" placeholder="ชื่อภาษาไทย" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.fullName} onChange={e => setRegisterForm({ ...registerForm, fullName: e.target.value })} required />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ธนาคาร</label>
+                    <select className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none appearance-none" value={registerForm.bankName} onChange={e => setRegisterForm({ ...registerForm, bankName: e.target.value })}>
+                      <option value="KBANK">KBANK</option>
+                      <option value="SCB">SCB</option>
+                      <option value="BBL">BBL</option>
+                      <option value="KTB">KTB</option>
+                      <option value="TRUE">TRUE WALLET</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เลขบัญชี</label>
+                    <input type="text" placeholder="xxx-x-xxxxx-x" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.bankAccount} onChange={e => setRegisterForm({ ...registerForm, bankAccount: e.target.value })} required />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน</label>
+                  <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.password} onChange={e => setRegisterForm({ ...registerForm, password: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ยืนยันรหัสผ่าน</label>
+                  <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.confirmPassword} onChange={e => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })} required />
+                </div>
+
+                <div className="pt-2">
+                  <button type="submit" disabled={loading} className="btn-green w-full py-4 rounded-xl text-lg font-black tracking-wide uppercase shadow-green-500/20 transform active:scale-[0.98] transition-transform">
+                    {loading ? "กำลังสมัคร..." : "สมัครสมาชิก"}
+                  </button>
+                </div>
+              </form>
+              <div className="text-center mt-6 text-sm text-slate-400 font-sans">
+                มีบัญชีแล้ว? <button onClick={() => { setShowRegister(false); setShowLogin(true) }} className="text-green-500 font-bold hover:underline ml-1">เข้าสู่ระบบ</button>
+              </div>
             </div>
-
-            {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
-
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เบอร์โทรศัพท์</label>
-                  <input type="tel" placeholder="08x-xxx-xxxx" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.phone} onChange={e => setRegisterForm({ ...registerForm, phone: e.target.value })} required />
-                </div>
-                <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ชื่อ - นามสกุล</label>
-                  <input type="text" placeholder="ชื่อภาษาไทย" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.fullName} onChange={e => setRegisterForm({ ...registerForm, fullName: e.target.value })} required />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ธนาคาร</label>
-                  <select className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none appearance-none" value={registerForm.bankName} onChange={e => setRegisterForm({ ...registerForm, bankName: e.target.value })}>
-                    <option value="KBANK">KBANK</option>
-                    <option value="SCB">SCB</option>
-                    <option value="BBL">BBL</option>
-                    <option value="KTB">KTB</option>
-                    <option value="TRUE">TRUE WALLET</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เลขบัญชี</label>
-                  <input type="text" placeholder="xxx-x-xxxxx-x" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.bankAccount} onChange={e => setRegisterForm({ ...registerForm, bankAccount: e.target.value })} required />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน</label>
-                <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.password} onChange={e => setRegisterForm({ ...registerForm, password: e.target.value })} required />
-              </div>
-              <div>
-                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ยืนยันรหัสผ่าน</label>
-                <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.confirmPassword} onChange={e => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })} required />
-              </div>
-
-              <div className="pt-2">
-                <button type="submit" disabled={loading} className="btn-green w-full py-4 rounded-xl text-lg font-black tracking-wide uppercase shadow-green-500/20 transform active:scale-[0.98] transition-transform">
-                  {loading ? "กำลังสมัคร..." : "สมัครสมาชิก"}
-                </button>
-              </div>
-            </form>
-            <div className="text-center mt-6 text-sm text-slate-400 font-sans">
-              มีบัญชีแล้ว? <button onClick={() => { setShowRegister(false); setShowLogin(true) }} className="text-green-500 font-bold hover:underline ml-1">เข้าสู่ระบบ</button>
-            </div>
-          </div >
-        </div >
-      )}
+          </div>
+        )
+      }
 
     </div >
   );

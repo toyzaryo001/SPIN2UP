@@ -95,21 +95,26 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
   </header>
 );
 
-const NavBar = ({ activeTab, setActiveTab }: any) => {
-  const menus = [
+const NavBar = ({ activeTab, setActiveTab, categories }: any) => {
+  // Static Home + Dynamic Categories
+  const navItems = [
     { id: 'home', label: 'หน้าหลัก', icon: <Play size={18} /> },
-    { id: 'slots', label: 'สล็อต', icon: <Gamepad2 size={18} /> },
-    { id: 'casino', label: 'คาสิโนสด', icon: <Dices size={18} /> },
-    { id: 'sports', label: 'กีฬา', icon: <Trophy size={18} /> },
-    { id: 'lotto', label: 'หวย', icon: <Gift size={18} /> },
-    { id: 'promotions', label: 'โปรโมชั่น', icon: <Star size={18} /> },
+    ...(categories || []).map((cat: any) => ({
+      id: cat.slug || cat.id.toString(), // Use slug if available for URL friendliness, else ID
+      label: cat.name,
+      icon: cat.slug === 'casino' ? <Dices size={18} /> :
+        cat.slug === 'sport' ? <Trophy size={18} /> :
+          cat.slug === 'lotto' ? <Gift size={18} /> :
+            <Gamepad2 size={18} />, // Default icon
+      original: cat // Keep original object for reference
+    }))
   ];
 
   return (
     <nav className="sticky top-20 z-40 bg-[#0f172a]/90 backdrop-blur-md border-b border-white/5 py-2 overflow-x-auto">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center gap-2 min-w-max">
-          {menus.map((menu) => (
+          {navItems.map((menu) => (
             <button
               key={menu.id}
               onClick={() => setActiveTab(menu.id)}
@@ -448,24 +453,24 @@ const HomeContent = ({ games, banners, providers }: any) => {
   );
 };
 
-const SlotsContent = ({ games, providers }: any) => {
-  const [activeProvider, setActiveProvider] = useState("PG Soft");
+const SlotsContent = ({ games, category }: any) => {
+  const providers = category?.providers || [];
+  const firstProviderName = providers.length > 0 ? providers[0].name : "PG Soft";
+  const [activeProvider, setActiveProvider] = useState(firstProviderName);
 
-  // Filter Slot Providers (assuming categoryId or slug logic, for now use generic list or filter from props)
-  // If providers prop is empty, fallback to static list
-  const providerList = providers.length > 0 ? providers.map((p: any) => p.name) : ["PG Soft", "Joker", "Pragmatic", "Jili", "XO Slot"];
+  // Use providers from category
+  const providerList = providers.map((p: any) => p.name);
 
-  // Filter Games by Active Provider & Type 'slot'
-  // Note: Adjust logic if API returns provider ID instead of name
+  // Filter Games by Active Provider
   const filteredGames = games.filter((g: any) =>
     (g.provider?.name === activeProvider || !activeProvider) &&
-    (g.type === 'slot' || g.categoryId === 1) // Adjust based on actual API response
+    (g.type === 'slot' || g.categoryId === category?.id)
   );
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
       <div className="md:col-span-1 hidden md:block">
-        <Sidebar title="ค่ายสล็อต" items={providerList} active={activeProvider} setActive={setActiveProvider} />
+        <Sidebar title={`ค่าย${category?.name || 'สล็อต'}`} items={providerList} active={activeProvider} setActive={setActiveProvider} />
       </div>
       <div className="md:hidden col-span-1">
         <select
@@ -473,7 +478,7 @@ const SlotsContent = ({ games, providers }: any) => {
           value={activeProvider}
           onChange={(e) => setActiveProvider(e.target.value)}
         >
-          {providerList.map((p: string) => <option key={p} value={p}>{p}</option>)}
+          {providerList.length > 0 ? providerList.map((p: string) => <option key={p} value={p}>{p}</option>) : <option>ไม่มีค่ายเกม</option>}
         </select>
       </div>
 
@@ -482,7 +487,7 @@ const SlotsContent = ({ games, providers }: any) => {
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
               <Gamepad2 className="text-yellow-400" />
-              เกมสล็อต: <span className="text-green-400">{activeProvider}</span>
+              เกม: <span className="text-green-400">{activeProvider}</span>
             </h2>
             <p className="text-xs text-slate-400 mt-1 font-sans">เกมทั้งหมด {filteredGames.length > 0 ? filteredGames.length : 0} เกม</p>
           </div>
@@ -515,23 +520,32 @@ const SlotsContent = ({ games, providers }: any) => {
   );
 };
 
-const CasinoContent = ({ games, providers }: any) => {
-  const [activeProvider, setActiveProvider] = useState("SA Gaming");
+const CasinoContent = ({ games, category }: any) => {
+  const providers = category?.providers || [];
+  const firstProviderName = providers.length > 0 ? providers[0].name : "SA Gaming";
+  const [activeProvider, setActiveProvider] = useState(firstProviderName);
 
   // Filter Casino Providers
-  const providerList = providers.length > 0 ? providers.map((p: any) => p.name) : ["SA Gaming", "AE Sexy", "Evolution", "Dream Gaming"];
+  const providerList = providers.map((p: any) => p.name);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
       <div className="md:col-span-1 hidden md:block">
-        <Sidebar title="ค่ายคาสิโน" items={providerList} active={activeProvider} setActive={setActiveProvider} />
+        <Sidebar title={`ค่าย${category?.name || 'คาสิโน'}`} items={providerList} active={activeProvider} setActive={setActiveProvider} />
       </div>
-      {/* ... (Keep select dropdown logic if needed, adapting similar to above) ... */}
+      <div className="md:hidden col-span-1">
+        <select
+          className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg p-3 outline-none focus:border-yellow-500 font-sans"
+          value={activeProvider}
+          onChange={(e) => setActiveProvider(e.target.value)}
+        >
+          {providerList.length > 0 ? providerList.map((p: string) => <option key={p} value={p}>{p}</option>) : <option>ไม่มีค่ายเกม</option>}
+        </select>
+      </div>
 
       <div className="md:col-span-3">
-        {/* ... (Keep Banner logic) ... */}
         <div className="bg-gradient-to-r from-blue-900 via-blue-950 to-slate-900 rounded-xl p-6 mb-6 border border-blue-800/50 relative overflow-hidden shadow-xl">
-          {/* ... banner content ... */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-20 rounded-full blur-3xl translate-x-10 -translate-y-10"></div>
           <div className="relative z-10">
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2 font-sans">
               {activeProvider} Live <span className="px-2 py-0.5 bg-red-600 text-[10px] rounded text-white animate-pulse shadow-lg shadow-red-600/40 font-sans">LIVE</span>
@@ -541,9 +555,7 @@ const CasinoContent = ({ games, providers }: any) => {
         </div>
 
         {/* Display Casino Tables/Games from API */}
-        {/* Since Casino games might be rooms, if API game list has them, we show them. Else we show static rooms for now if API lacks 'rooms' logic */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Show valid games if any, otherwise fallback to show "No games available" */}
           <div className="col-span-full py-10 text-center text-slate-500">
             ⚠️ เชื่อมต่อ API เรียบร้อย (รอข้อมูลเกมคาสิโนจากระบบ)
           </div>
@@ -647,6 +659,7 @@ function HomePageLogic() {
   const [games, setGames] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [providers, setProviders] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -661,15 +674,17 @@ function HomePageLogic() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [gameRes, bannerRes, providerRes] = await Promise.all([
+        const [gameRes, bannerRes, providerRes, catRes] = await Promise.all([
           axios.get(`${API_URL}/public/games`),
           axios.get(`${API_URL}/public/banners`),
-          axios.get(`${API_URL}/public/providers`)
+          axios.get(`${API_URL}/public/providers`),
+          axios.get(`${API_URL}/public/categories`)
         ]);
 
         if (Array.isArray(gameRes.data)) setGames(gameRes.data);
         if (Array.isArray(bannerRes.data)) setBanners(bannerRes.data);
         if (Array.isArray(providerRes.data)) setProviders(providerRes.data);
+        if (Array.isArray(catRes.data)) setCategories(catRes.data);
       } catch (err) { console.error("Failed to fetch public data", err); }
     };
     fetchData();
@@ -754,10 +769,26 @@ function HomePageLogic() {
     <div className="min-h-screen bg-[#0b1120] text-slate-200 font-sans selection:bg-yellow-500 selection:text-black pb-20">
       <Header onLogin={() => setShowLogin(true)} onRegister={() => setShowRegister(true)} user={user} onLogout={handleLogout} />
 
-      <NavBar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <NavBar activeTab={activeTab} setActiveTab={setActiveTab} categories={categories} />
 
       <main className="w-full px-2 md:px-4 py-4 md:py-8 max-w-7xl mx-auto">
-        {renderContent()}
+        {activeTab === 'home' && <HomeContent games={games} banners={banners} providers={providers} />}
+
+        {/* Render Dynamic Categories */}
+        {categories.map(cat => {
+          if (activeTab === (cat.slug || cat.id.toString()) && (cat.slug === 'slots' || cat.slug === 'slot')) {
+            return <SlotsContent key={cat.id} games={games} category={cat} />
+          }
+          if (activeTab === (cat.slug || cat.id.toString()) && (cat.slug === 'casino' || cat.slug === 'live-casino')) {
+            return <CasinoContent key={cat.id} games={games} category={cat} />
+          }
+          // Default generic category view can be added here if needed
+          return null;
+        })}
+
+        {/* Fallback for hardcoded tabs if API fails or specific slugs match */}
+        {activeTab === 'slots' && !categories.some(c => c.slug === 'slots') && <SlotsContent games={games} providers={providers} />}
+        {activeTab === 'casino' && !categories.some(c => c.slug === 'casino') && <CasinoContent games={games} providers={providers} />}
       </main>
 
       <Footer />

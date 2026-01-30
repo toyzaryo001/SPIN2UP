@@ -15,7 +15,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 // --- 1. VISUAL COMPONENTS (Premium UI) ---
 
 const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
-  const siteName = settings?.siteName || "GOLDENBET";
+  const siteName = settings?.siteName;
   const logoUrl = settings?.logoUrl;
 
   return (
@@ -25,8 +25,8 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
         {/* Logo Area */}
         <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => window.location.href = '/'}>
           {logoUrl ? (
-            <img src={logoUrl} alt={siteName} className="h-20 md:h-24 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
-          ) : (
+            <img src={logoUrl} alt={siteName || "Logo"} className="h-20 md:h-24 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+          ) : siteName ? (
             <div className="flex items-center gap-2 md:gap-3">
               <div className="relative">
                 <div className="absolute inset-0 bg-yellow-400 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
@@ -40,6 +40,8 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
                 <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
               </div>
             </div>
+          ) : (
+            <div className="h-10 w-32 bg-white/5 rounded animate-pulse" />
           )}
         </div>
 

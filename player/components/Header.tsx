@@ -9,7 +9,7 @@ export default function Header() {
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [showMenu, setShowMenu] = useState(false);
-    const [brandName, setBrandName] = useState("CASINO"); // Default
+    const [brandName, setBrandName] = useState(""); // Default empty to show skeleton
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -90,14 +90,16 @@ export default function Header() {
                     {/* Logo Area */}
                     <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => router.push('/')}>
                         {logoUrl ? (
-                            <img src={logoUrl} alt={brandName} className="h-20 md:h-24 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
-                        ) : (
+                            <img src={logoUrl} alt={brandName || "Logo"} className="h-20 md:h-24 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                        ) : brandName ? (
                             <div className="flex items-center gap-2 md:gap-3">
                                 <span className="text-3xl">🎮</span>
                                 <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white uppercase">
                                     {brandName}
                                 </h1>
                             </div>
+                        ) : (
+                            <div className="h-10 w-32 bg-white/5 rounded animate-pulse" />
                         )}
                     </div>
 

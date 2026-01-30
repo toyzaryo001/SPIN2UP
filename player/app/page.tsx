@@ -15,28 +15,28 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
   <header className="sticky top-0 z-50 glass-card border-b-0 transition-all duration-300">
-    <div className="max-w-7xl mx-auto px-4 py-3 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0">
+    <div className="max-w-7xl mx-auto px-4 py-3 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0 relative">
 
-      {/* Logo Area */}
-      <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group" onClick={() => window.location.href = '/'}>
-        <div className="flex items-center gap-3">
+      {/* Logo Area - Absolute Center for Mobile */}
+      <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => window.location.href = '/'}>
+        <div className="flex items-center gap-2 md:gap-3">
           <div className="relative">
             <div className="absolute inset-0 bg-yellow-400 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
-            <Gamepad2 className="w-10 h-10 md:w-10 md:h-10 text-gradient-gold relative z-10" />
+            <Gamepad2 className="w-8 h-8 md:w-10 md:h-10 text-gradient-gold relative z-10" />
           </div>
           <div>
-            <h1 className="text-3xl font-black italic tracking-tighter text-white">
+            <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white">
               GOLDEN<span className="text-gradient-gold">BET</span>
             </h1>
             <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
           </div>
         </div>
+      </div>
 
-        {/* Mobile Language Flag (Absolute Right) */}
-        <div className="md:hidden absolute right-0 top-1/2 -translate-y-1/2">
-          <div className="w-8 h-8 rounded-full border border-white/10 overflow-hidden shadow-lg">
-            <img src="https://flagcdn.com/w80/th.png" alt="TH" className="w-full h-full object-cover" />
-          </div>
+      {/* Mobile Language Flag (Absolute Right) */}
+      <div className="md:hidden absolute right-4 top-4 z-20">
+        <div className="w-7 h-7 rounded-full border border-white/10 overflow-hidden shadow-lg">
+          <img src="https://flagcdn.com/w80/th.png" alt="TH" className="w-full h-full object-cover" />
         </div>
       </div>
 
@@ -52,10 +52,10 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
       </div>
 
       {/* Auth / User Area */}
-      <div className="w-full md:w-auto">
+      <div className="w-full md:w-auto z-10">
         {user ? (
           <div className="flex items-center justify-between md:justify-end gap-4 bg-white/5 rounded-full p-1.5 pr-6 border border-white/10 hover:border-white/20 transition-all cursor-pointer group">
-            {/* ... User Logged in state same as before but flex adjusted ... */}
+            {/* ... User Logged in state ... */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 p-0.5 shadow-lg">
                 <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
@@ -73,11 +73,13 @@ const Header = ({ onLogin, onRegister, user, onLogout }: any) => (
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 w-full md:flex md:items-center">
-            <button onClick={onLogin} className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-black bg-gradient-to-r from-yellow-400 to-yellow-500 hover:to-yellow-300 transition-all shadow-lg shadow-yellow-500/20">
+          <div className="grid grid-cols-2 gap-3 w-full md:flex md:items-center mt-1 md:mt-0">
+            {/* Login Button (Blue) */}
+            <button onClick={onLogin} className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:to-blue-500 transition-all shadow-lg shadow-blue-500/20 border border-blue-500/50">
               เข้าสู่ระบบ
             </button>
-            <button onClick={onRegister} className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-slate-200 border border-white/20 bg-white/5 hover:bg-white/10 transition-all">
+            {/* Register Button (Green) - Primary Priority */}
+            <button onClick={onRegister} className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-white bg-gradient-to-r from-green-500 to-green-600 hover:to-green-400 transition-all shadow-lg shadow-green-500/30 border border-green-400/50">
               สมัครสมาชิก
             </button>
           </div>

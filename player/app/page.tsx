@@ -25,7 +25,7 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
         {/* Logo Area */}
         <div className="w-full md:w-auto flex justify-center md:justify-start relative cursor-pointer group z-10" onClick={() => window.location.href = '/'}>
           {logoUrl ? (
-            <img src={logoUrl} alt={siteName} className="h-16 md:h-20 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+            <img src={logoUrl} alt={siteName} className="h-20 md:h-24 object-contain animate-fade-in drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
           ) : (
             <div className="flex items-center gap-2 md:gap-3">
               <div className="relative">

@@ -200,7 +200,7 @@ const GameCard = ({ title, provider, image, color, hot, type }: any) => {
   const hasImage = image && image !== "";
   return (
     <div className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-2">
-      <div className={`h-40 w-full relative overflow-hidden ${!hasImage ? (color || 'bg-slate-800') : ''}`}>
+      <div className={`h-56 w-full relative overflow-hidden ${!hasImage ? (color || 'bg-slate-800') : ''}`}>
         {hasImage ? (
           <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url(${image})` }}></div>
         ) : (
@@ -396,10 +396,9 @@ const HomeContent = ({ games, banners, providers }: any) => {
             เกมยอดฮิต <span className="text-sm font-normal text-slate-500 not-italic tracking-normal self-end mb-1 custom-font">ยอดนิยมวันนี้</span>
           </h2>
           <button className="text-sm font-bold text-yellow-500 hover:text-white transition-colors flex items-center gap-1 group">
-            ดูทั้งหมด <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
           {displayGames.slice(0, 10).map((game: any, i: number) => (
             <GameCard key={i} {...game} />
           ))}

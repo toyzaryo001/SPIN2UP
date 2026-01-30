@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import ToastProvider from "@/components/ToastProvider";
-
-const inter = Inter({ subsets: ["latin"] });
-
 import { headers } from "next/headers";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <Providers>
           <ToastProvider />
           {children}
@@ -50,4 +46,3 @@ export default function RootLayout({
     </html>
   );
 }
-

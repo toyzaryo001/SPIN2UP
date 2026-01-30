@@ -381,20 +381,25 @@ const HomeContent = ({ games, banners, providers }: any) => {
       {/* Hero Section: Small Banners + InviteCard (4:1 Ratio) */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6 mb-8 md:mb-12 animate-fade-in">
         <div className="md:col-span-4">
-          {/* Small Banners Grid */}
-          <div className="grid grid-cols-3 gap-2 md:gap-4 h-full">
-            {banners.filter((b: any) => b.position === 'SIDE').length > 0 ? (
-              banners.filter((b: any) => b.position === 'SIDE').map((banner: any, idx: number) => (
-                <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-32 md:h-[200px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
-                  <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
-                  <img src={banner.image} alt={banner.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
-                </div>
-              ))
+          {/* Small Banners Grid - Adapts to content count */}
+          {(() => {
+            const sideBanners = banners.filter((b: any) => b.position === 'SIDE');
+            const count = sideBanners.length;
+            const gridCols = count === 1 ? 'grid-cols-1' : count === 2 ? 'grid-cols-2' : 'grid-cols-3';
+            return count > 0 ? (
+              <div className={`grid ${gridCols} gap-2 md:gap-4 h-full`}>
+                {sideBanners.map((banner: any, idx: number) => (
+                  <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-32 md:h-[200px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
+                    <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-transparent transition-colors"></div>
+                    <img src={banner.image} alt={banner.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                ))}
+              </div>
             ) : (
-              /* Fallback if no side banners - maybe show generic banner or keep empty? */
+              /* Fallback if no side banners */
               <Banner banners={banners.filter((b: any) => !b.position || b.position === 'TOP')} />
-            )}
-          </div>
+            );
+          })()}
         </div>
         <div className="block h-full mt-4 md:mt-0 md:col-span-1">
           <InviteCard />

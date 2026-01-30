@@ -385,8 +385,11 @@ const HomeContent = ({ games, banners, providers }: any) => {
         <div className="md:col-span-3 h-full min-h-[160px]">
           {(() => {
             const sideBanners = banners.filter((b: any) => b.position === 'SIDE');
-            return sideBanners.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2 h-full">
+            const count = sideBanners.length;
+            const gridCols = count === 1 ? 'grid-cols-1' : count === 2 ? 'grid-cols-2' : 'grid-cols-3';
+
+            return count > 0 ? (
+              <div className={`grid ${gridCols} gap-2 h-full`}>
                 {/* Show up to 3 banners, filling height */}
                 {sideBanners.slice(0, 3).map((banner: any, idx: number) => (
                   <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer h-full min-h-[120px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
@@ -394,14 +397,6 @@ const HomeContent = ({ games, banners, providers }: any) => {
                     <div className="absolute inset-0 bg-blue-900/10 group-hover:bg-transparent transition-colors"></div>
                   </div>
                 ))}
-                {/* If only 1 banner, expand to fill */}
-                {sideBanners.length === 1 && (
-                  <div className="col-span-2 hidden md:block rounded-xl bg-slate-800/30 border border-white/5"></div>
-                )}
-                {/* If only 2 banners, fill remaining */}
-                {sideBanners.length === 2 && (
-                  <div className="hidden md:block rounded-xl bg-slate-800/30 border border-white/5"></div>
-                )}
               </div>
             ) : (
               /* Fallback if no side banners - Show Placeholder or Nothing */

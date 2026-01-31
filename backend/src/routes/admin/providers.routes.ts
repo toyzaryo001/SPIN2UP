@@ -139,6 +139,17 @@ router.post('/sync/all', requirePermission('games', 'edit'), async (req, res) =>
     }
 });
 
+// POST /api/admin/providers/sync/clear - Clear All Games
+router.post('/sync/clear', requirePermission('games', 'edit'), async (req, res) => {
+    try {
+        await GameSyncService.clearAllGames();
+        res.json({ success: true, message: 'ล้างข้อมูลเกมทั้งหมดเรียบร้อยแล้ว' });
+    } catch (error: any) {
+        console.error('Clear all games error:', error);
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการล้างข้อมูล' });
+    }
+});
+
 // POST /api/admin/providers/sync/:code - Sync Specific Provider
 router.post('/sync/:code', requirePermission('games', 'edit'), async (req, res) => {
     try {
@@ -148,17 +159,6 @@ router.post('/sync/:code', requirePermission('games', 'edit'), async (req, res) 
     } catch (error: any) {
         console.error(`Sync provider ${req.params.code} error:`, error);
         res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
-    }
-});
-
-// POST /api/admin/providers/sync/clear - Clear All Games
-router.post('/sync/clear', requirePermission('games', 'edit'), async (req, res) => {
-    try {
-        await GameSyncService.clearAllGames();
-        res.json({ success: true, message: 'ล้างข้อมูลเกมทั้งหมดเรียบร้อยแล้ว' });
-    } catch (error: any) {
-        console.error('Clear all games error:', error);
-        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการล้างข้อมูล' });
     }
 });
 

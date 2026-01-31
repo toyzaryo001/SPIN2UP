@@ -41,7 +41,8 @@ const PROVIDER_FILE_MAPPING: { [key: string]: string } = {
     nlc: 'nlc.txt',
     ga: 'ga.txt',
     png: 'png.txt',
-    jili: 'jili.txt',
+    jili: 'jl.txt', // User requested JILI -> jl
+    jl: 'jl.txt',
     pug: 'pug.txt',
     fng: 'fng.txt',
     nge: 'nge.txt',

@@ -275,7 +275,7 @@ export class BetflixService {
                 'sexy': 'sexy',
                 'dreamgaming': 'dg',
                 'dg': 'dg',
-                'jili': 'jili',
+                'jili': 'jl', // User requested JILI -> jl
                 'jl': 'jl',
                 'fc': 'fc',
                 'fachai': 'fc',

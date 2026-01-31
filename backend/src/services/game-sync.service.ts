@@ -1,7 +1,6 @@
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/db';
 
-const prisma = new PrismaClient();
 
 // Default mapping for provider text files (based on PHP reference)
 const PROVIDER_FILE_MAPPING: { [key: string]: string } = {

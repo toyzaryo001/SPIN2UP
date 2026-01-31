@@ -557,13 +557,10 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
 };
 
 const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: any) => {
-  const allProviders = category?.providers || globalProviders || [];
-
-  // Filter providers that actually have SLOT games
-  const validProviders = allProviders.filter((p: any) => p.categoryId === category?.id);
-
-  // Fallback: If no providers valid (maybe generic category), show all or none.
-  const displayProviders = validProviders.length > 0 ? validProviders : allProviders;
+  // Optimize: Use category.providers directly if available (already filtered by backend relations)
+  const displayProviders = (category?.providers && category.providers.length > 0)
+    ? category.providers
+    : (globalProviders || []);
 
   const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "PG Soft";
   const [activeProvider, setActiveProvider] = useState(firstProviderName);
@@ -637,17 +634,10 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
 };
 
 const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: any) => {
-  const allProviders = category?.providers || globalProviders || [];
-
-  // Filter providers that actually have CASINO/LIVE-CASINO games
-  const validProviders = allProviders.filter((p: any) => p.categoryId === category?.id);
-
-  // Fallback defaults if API returns nothing or filter is too strict
-  const defaultCasinoProviders = [
-    { name: "SA Gaming" }, { name: "Sexy Baccarat" }, { name: "Dream Gaming" }, { name: "WM Casino" }, { name: "Asia Gaming" }
-  ];
-
-  const displayProviders = validProviders.length > 0 ? validProviders : (globalProviders.length > 0 ? globalProviders : defaultCasinoProviders);
+  // Optimize: Use category.providers directly if available
+  const displayProviders = (category?.providers && category.providers.length > 0)
+    ? category.providers
+    : (globalProviders || []);
   const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "SA Gaming";
 
   // Ensure activeProvider is initialized to a valid one

@@ -170,17 +170,28 @@ export class GameSyncService {
                 }
             }
 
-            console.log(`[GameSync] Found ${gamesToUpsert.length} games for ${providerCode}`);
+            // Deduplicate gamesToUpsert based on code (Game files sometimes have duplicates)
+            const uniqueGames = new Map();
+            for (const g of gamesToUpsert) {
+                if (!uniqueGames.has(g.code)) {
+                    uniqueGames.set(g.code, g);
+                }
+            }
+            gamesToUpsert = Array.from(uniqueGames.values());
 
-            // 4. Batch Upsert (Prisma doesn't support batch onConflict update easily for SQLite/general, doing loop for safety or strict upsert)
-            // Transaction for atomicity is good, or just loop. Loop is safer for minimal locking.
+            console.log(`[GameSync] Found ${gamesToUpsert.length} unique games for ${providerCode}`);
+
+            // 4. Batch Upsert
             let newCount = 0;
             let updateCount = 0;
 
             for (const game of gamesToUpsert) {
+                // Scope slug by provider to ensure uniqueness across providers
+                const safeSlug = `${provider.slug.toLowerCase()}-${game.code}`;
+
                 const existing = await prisma.game.findFirst({
                     where: {
-                        slug: game.code, // Assuming slug is gameCode. If not, we might need a separate gameCode field, but schema uses slug @unique
+                        slug: safeSlug,
                         providerId: provider.id
                     }
                 });
@@ -198,12 +209,12 @@ export class GameSyncService {
                 } else {
                     await prisma.game.create({
                         data: {
-                            slug: game.code,
+                            slug: safeSlug,
                             name: game.name,
                             providerId: provider.id,
                             thumbnail: game.image,
-                            isActive: true,
-                            minBet: 1, // Default
+                            isActive: true, // Default active
+                            minBet: 1,
                             maxBet: 10000
                         }
                     });

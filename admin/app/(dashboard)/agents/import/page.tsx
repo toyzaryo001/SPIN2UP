@@ -24,7 +24,7 @@ export default function GameImportPage() {
         setResults(null);
 
         try {
-            toast.info('Starting game synchronization...');
+            toast('Starting game synchronization...', { icon: 'ℹ️' });
             const res = await api.post('/admin/providers/sync/all');
 
             if (res.data.success) {

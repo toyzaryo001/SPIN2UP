@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import { formatBaht } from "@/lib/utils";
 import toast from "react-hot-toast";
+import BankLogo from "@/components/BankLogo";
 
 export default function BankAccountsPage() {
     const [banks, setBanks] = useState<any[]>([]);
@@ -96,13 +97,18 @@ export default function BankAccountsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {banks.map((bank) => (
-                    <div key={bank.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div key={bank.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden">
+                        {/* Background Logo Effect */}
+                        <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
+                            <BankLogo bankCode={bank.bankName} width={120} height={120} />
+                        </div>
+
                         <div className="flex justify-between items-start mb-4">
                             <div className={`px-3 py-1 rounded-full text-xs font-medium ${bank.type === 'deposit' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                                 }`}>
                                 {bank.type === 'deposit' ? 'บัญชีฝาก' : 'บัญชีถอน'}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 relative z-10">
                                 <button onClick={() => openEdit(bank)} className="text-slate-400 hover:text-blue-600">
                                     <Edit2 size={18} />
                                 </button>
@@ -112,9 +118,17 @@ export default function BankAccountsPage() {
                             </div>
                         </div>
 
-                        <h3 className="text-xl font-bold text-slate-800">{bank.bankName}</h3>
-                        <p className="text-slate-500 mt-1">{bank.accountName}</p>
-                        <p className="text-lg font-mono text-slate-700 mt-2 bg-slate-50 p-2 rounded text-center">
+                        <div className="flex items-center gap-4 mb-3">
+                            <div className="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center p-2 border border-slate-100">
+                                <BankLogo bankCode={bank.bankName} width={40} height={40} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-800">{bank.bankName}</h3>
+                                <p className="text-slate-500 text-sm">{bank.accountName}</p>
+                            </div>
+                        </div>
+
+                        <p className="text-lg font-mono text-slate-700 bg-slate-50 p-2 rounded text-center border border-slate-100">
                             {bank.accountNumber}
                         </p>
 
@@ -132,31 +146,43 @@ export default function BankAccountsPage() {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl max-w-md w-full p-6">
+                    <div className="bg-white rounded-xl max-w-md w-full p-6 relative">
+                        <div className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer" onClick={() => setIsModalOpen(false)}>
+                            <X size={24} />
+                        </div>
                         <h3 className="text-xl font-bold mb-6">{editingBank ? 'แก้ไขบัญชี' : 'เพิ่มบัญชีใหม่'}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">ธนาคาร</label>
-                                <select
-                                    required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900"
-                                    value={formData.bankName}
-                                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                                >
-                                    <option value="">-- เลือกธนาคาร --</option>
-                                    <option value="KBANK">ธนาคารกสิกรไทย (KBANK)</option>
-                                    <option value="SCB">ธนาคารไทยพาณิชย์ (SCB)</option>
-                                    <option value="BBL">ธนาคารกรุงเทพ (BBL)</option>
-                                    <option value="KTB">ธนาคารกรุงไทย (KTB)</option>
-                                    <option value="BAY">ธนาคารกรุงศรีอยุธยา (BAY)</option>
-                                    <option value="TMB">ธนาคารทหารไทยธนชาต (TTB)</option>
-                                    <option value="GSB">ธนาคารออมสิน (GSB)</option>
-                                    <option value="BAAC">ธ.ก.ส. (BAAC)</option>
-                                    <option value="LHBANK">ธนาคารแลนด์แอนด์เฮ้าส์ (LH)</option>
-                                    <option value="CIMB">ธนาคารซีไอเอ็มบี (CIMB)</option>
-                                    <option value="UOB">ธนาคารยูโอบี (UOB)</option>
-                                    <option value="TISCO">ธนาคารทิสโก้ (TISCO)</option>
-                                </select>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">ธนาคาร (โลโก้แสดงอัตโนมัติ)</label>
+                                <div className="space-y-2">
+                                    <select
+                                        required
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900"
+                                        value={formData.bankName}
+                                        onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                                    >
+                                        <option value="">-- เลือกธนาคาร --</option>
+                                        <option value="KBANK">ธนาคารกสิกรไทย (KBANK)</option>
+                                        <option value="SCB">ธนาคารไทยพาณิชย์ (SCB)</option>
+                                        <option value="BBL">ธนาคารกรุงเทพ (BBL)</option>
+                                        <option value="KTB">ธนาคารกรุงไทย (KTB)</option>
+                                        <option value="BAY">ธนาคารกรุงศรีอยุธยา (BAY)</option>
+                                        <option value="TMB">ธนาคารทหารไทยธนชาต (TTB)</option>
+                                        <option value="GSB">ธนาคารออมสิน (GSB)</option>
+                                        <option value="BAAC">ธ.ก.ส. (BAAC)</option>
+                                        <option value="LHBANK">ธนาคารแลนด์แอนด์เฮ้าส์ (LH)</option>
+                                        <option value="CIMB">ธนาคารซีไอเอ็มบี (CIMB)</option>
+                                        <option value="UOB">ธนาคารยูโอบี (UOB)</option>
+                                        <option value="TISCO">ธนาคารทิสโก้ (TISCO)</option>
+                                    </select>
+
+                                    {formData.bankName && (
+                                        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                            <BankLogo bankCode={formData.bankName} width={40} height={40} />
+                                            <span className="text-sm font-medium text-slate-600">ตัวอย่างโลโก้</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">เลขบัญชี</label>

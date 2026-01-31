@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import api from '@/lib/api';
 import { Loader2, Download, Gamepad2, CheckCircle2, XCircle, RefreshCcw } from 'lucide-react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 
 type SyncResult = {
     provider: string;

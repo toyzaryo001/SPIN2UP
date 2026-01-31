@@ -9,6 +9,7 @@ let configCache: {
     apiKey: string;
     apiCat: string;
     prefix: string;
+    gameEntrance: string; // Added gameEntrance
     timestamp: number;
 } | null = null;
 
@@ -39,6 +40,7 @@ export class BetflixService {
                     apiKey: process.env.BETFLIX_API_KEY || '',
                     apiCat: process.env.BETFLIX_API_CAT || '',
                     prefix: process.env.BETFLIX_USER_PREFIX || 'CHKK',
+                    gameEntrance: '',
                     timestamp: 0 // Don't cache fallback indefinitely
                 };
             }
@@ -49,6 +51,7 @@ export class BetflixService {
                 apiKey: config.xApiKey || '',
                 apiCat: config.xApiCat || '',
                 prefix: config.upline || '', // Mapping upline to prefix
+                gameEntrance: config.gameEntrance || '',
                 timestamp: Date.now()
             };
 
@@ -218,11 +221,42 @@ export class BetflixService {
     }
 
     /**
+     * Seamless: Auto Transfer IN (Create User -> Deposit)
+     */
+    static async autoTransferIn(phone: string, amount: number): Promise<{ success: boolean; username?: string }> {
+        // 1. Ensure User Exists
+        const creds = await this.register(phone);
+        if (!creds) return { success: false };
+
+        // 2. Deposit if amount > 0
+        if (amount > 0) {
+            const success = await this.transfer(creds.username, amount, `DEP_${Date.now()}`);
+            return { success, username: creds.username };
+        }
+
+        return { success: true, username: creds.username };
+    }
+
+    /**
+     * Seamless: Pull All Balance (Reference: W_PULL_...)
+     */
+    static async pullAllBalance(username: string): Promise<number> {
+        const balance = await this.getBalance(username);
+        if (balance > 0.5) { // Minimum withdraw threshold
+            const ref = `W_PULL_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            const success = await this.transfer(username, -balance, ref);
+            return success ? balance : 0;
+        }
+        return 0;
+    }
+
+    /**
      * Direct Game Launch (Ported from PHP launchGame)
      * Supports Provider Mapping, QTech, and GameCode Variants
      */
     static async launchGame(username: string, providerCode: string, gameCode: string = '', lang: string = 'thai'): Promise<string | null> {
         try {
+            const config = await this.getConfig();
             const api = await this.getApi();
 
             // 1. Provider Mapping (Normalize)
@@ -316,8 +350,20 @@ export class BetflixService {
                 try {
                     // console.log(`Attempting Launch: ${attempt.provider} / ${attempt.gamecode}`);
                     const res = await api.post('/v4/play/login', params);
-                    if (res.data.status === 'success' && res.data.data && res.data.data.url) {
-                        return res.data.data.url;
+                    if (res.data.status === 'success' && res.data.data) {
+                        if (res.data.data.url) {
+                            return res.data.data.url;
+                        }
+
+                        // Token Fallback (Critical for providers like Joker/PP)
+                        if (res.data.data.login_token && config.gameEntrance) {
+                            const entrance = config.gameEntrance.startsWith('http')
+                                ? config.gameEntrance
+                                : `https://${config.gameEntrance}`;
+
+                            // Remove trailing slash and append path
+                            return `${entrance.replace(/\/$/, '')}/play/login?token=${res.data.data.login_token}`;
+                        }
                     }
                 } catch (e) {
                     // Log and continue

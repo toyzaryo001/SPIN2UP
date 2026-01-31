@@ -90,13 +90,13 @@ export default function ConnectionTestPage() {
                 <div className="md:col-span-2 grid gap-4">
 
                     {/* 1. Server Status */}
-                    <div className={`p-5 rounded-xl border transition-all duration-300 ${!result ? 'bg-slate-900 border-slate-800' :
-                            result.server.success ? 'bg-green-950/20 border-green-900/50' : 'bg-red-950/20 border-red-900/50'
+                    <div className={`p-5 rounded-xl border transition-all duration-300 bg-slate-900 ${!result ? 'border-slate-800' :
+                        result.server.success ? 'border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.1)]' : 'border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
                         }`}>
                         <div className="flex items-start justify-between">
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${!result ? 'bg-slate-800 text-slate-500' :
-                                        result.server.success ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                                    result.server.success ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
                                     }`}>
                                     <Server className="w-6 h-6" />
                                 </div>
@@ -117,22 +117,22 @@ export default function ConnectionTestPage() {
                             )}
                         </div>
                         {result && !result.server.success && (
-                            <div className="mt-4 p-3 bg-red-900/20 border border-red-900/30 rounded text-sm text-red-300">
+                            <div className="mt-4 p-3 bg-red-950/50 border border-red-900/50 rounded text-sm text-red-200">
                                 Error: {result.server.message}
                             </div>
                         )}
                     </div>
 
                     {/* 2. Auth Status */}
-                    <div className={`p-5 rounded-xl border transition-all duration-300 ${!result ? 'bg-slate-900 border-slate-800' :
-                            result.auth.success ? 'bg-green-950/20 border-green-900/50' :
-                                result.auth.message.includes('Skipped') ? 'bg-slate-900 border-slate-800' : 'bg-red-950/20 border-red-900/50'
+                    <div className={`p-5 rounded-xl border transition-all duration-300 bg-slate-900 ${!result ? 'border-slate-800' :
+                        result.auth.success ? 'border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.1)]' :
+                            result.auth.message.includes('Skipped') ? 'border-slate-800' : 'border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
                         }`}>
                         <div className="flex items-start justify-between">
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${!result ? 'bg-slate-800 text-slate-500' :
-                                        result.auth.success ? 'bg-green-500/20 text-green-500' :
-                                            result.auth.message.includes('Skipped') ? 'bg-slate-800 text-slate-500' : 'bg-red-500/20 text-red-500'
+                                    result.auth.success ? 'bg-green-500/20 text-green-500' :
+                                        result.auth.message.includes('Skipped') ? 'bg-slate-800 text-slate-500' : 'bg-red-500/20 text-red-500'
                                     }`}>
                                     <ShieldCheck className="w-6 h-6" />
                                 </div>
@@ -146,7 +146,7 @@ export default function ConnectionTestPage() {
                             {result && (
                                 <div className="text-right">
                                     <div className={`text-lg font-bold ${result.auth.success ? 'text-green-500' :
-                                            result.auth.message.includes('Skipped') ? 'text-slate-500' : 'text-red-500'
+                                        result.auth.message.includes('Skipped') ? 'text-slate-500' : 'text-red-500'
                                         }`}>
                                         {result.auth.success ? 'Authorized' :
                                             result.auth.message.includes('Skipped') ? 'Skipped' : 'Failed'}

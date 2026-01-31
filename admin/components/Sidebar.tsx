@@ -133,6 +133,7 @@ const allMenuItems: MenuItem[] = [
       { label: 'หมวดหมู่เกม', href: '/agents/categories' },
       { label: 'ค่ายเกม', href: '/agents/providers' },
       { label: 'จัดการเกม', href: '/agents/games' },
+      { label: 'ทดสอบเชื่อมต่อ', href: '/agents/connection-test' },
     ]
   },
   {

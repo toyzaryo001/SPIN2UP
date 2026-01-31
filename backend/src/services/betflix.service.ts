@@ -122,4 +122,27 @@ export class BetflixService {
             return null;
         }
     }
+    /**
+     * Check Connection Status and Latency
+     */
+    static async checkStatus(): Promise<{ success: boolean; message: string; latency: number }> {
+        const start = Date.now();
+        try {
+            const res = await api.get('/v4/status');
+            const latency = Date.now() - start;
+
+            if (res.data.status === 'success') {
+                return { success: true, message: 'Connected', latency };
+            } else {
+                return { success: false, message: res.data.msg || 'Unknown Error', latency };
+            }
+        } catch (error: any) {
+            const latency = Date.now() - start;
+            return {
+                success: false,
+                message: error.response?.data?.msg || error.message || 'Connection Failed',
+                latency
+            };
+        }
+    }
 }

@@ -48,18 +48,15 @@ export class BetLogSyncService {
 
             while (round < maxRounds) {
                 round++;
-                const params = new URLSearchParams();
-                params.append('id', lastId.toString());
 
-                // Endpoint: /v4/get_bet_log
-                const res = await api.post('/v4/get_bet_log', params);
+                // Use robust getBetLog from Service
+                const logs = await BetflixService.getBetLog(lastId);
 
-                if (res.data.status !== 'success' || !res.data.data || res.data.data.length === 0) {
+                if (!logs || logs.length === 0) {
                     console.log(`[Sync] No new logs (Round ${round})`);
                     break;
                 }
 
-                const logs = res.data.data;
                 console.log(`[Sync] Fetched ${logs.length} logs.`);
 
                 let batchMaxId = lastId;

@@ -92,6 +92,11 @@ export class GameSyncService {
             throw new Error('Game Entrance URL not configured in AgentConfig');
         }
 
+        // Ensure protocol
+        if (!config.gameEntrance.startsWith('http')) {
+            config.gameEntrance = `https://${config.gameEntrance}`;
+        }
+
         const providerCodeLower = providerCode.toLowerCase();
         const filename = PROVIDER_FILE_MAPPING[providerCodeLower] || `${providerCodeLower}.txt`;
         const url = `${config.gameEntrance.replace(/\/$/, '')}/games_share/${filename}`;
@@ -137,9 +142,14 @@ export class GameSyncService {
             const rawData = response.data;
 
             // Check for HTML (Common 404 or Default Page)
-            if (typeof rawData === 'string' && rawData.trim().startsWith('<')) {
-                console.warn(`[GameSync] Received HTML for ${providerCode} (likely 404 or error page). URL: ${url}`);
-                return { success: false, error: 'Received HTML instead of Game List (Check URL/File existence)' };
+            if (typeof rawData === 'string' && (rawData.trim().startsWith('<html') || rawData.trim().startsWith('<!DOCTYPE'))) {
+                const isSuspended = rawData.toLowerCase().includes('domain suspended');
+                const errorMsg = isSuspended
+                    ? `Domain Suspended: ${url}`
+                    : `Invalid Game List URL (HTML Response): ${url}`;
+
+                console.warn(`[GameSync] ${errorMsg}`);
+                return { success: false, error: errorMsg };
             }
 
             let gamesToUpsert: { code: string, name: string, image?: string }[] = [];

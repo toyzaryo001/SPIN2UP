@@ -11,29 +11,49 @@ const router = Router();
 // GET /api/games - รายการเกมทั้งหมด
 router.get('/', async (req, res) => {
     try {
-        const { providerId } = req.query;
+        const { providerId, limit = 1500, page = 1, search } = req.query;
 
         const where: any = { isActive: true };
         if (providerId) where.providerId = Number(providerId);
+        if (search) {
+            where.name = { contains: String(search), mode: 'insensitive' };
+        }
 
-        const games = await prisma.game.findMany({
-            where,
-            orderBy: { sortOrder: 'asc' },
-            select: {
-                id: true,
-                name: true,
-                slug: true,
-                providerId: true,
-                provider: true,
-                thumbnail: true,
-                minBet: true,
-                maxBet: true,
-                isHot: true,
-                isNew: true,
-            },
+        const take = Number(limit);
+        const skip = (Number(page) - 1) * take;
+
+        const [games, total] = await Promise.all([
+            prisma.game.findMany({
+                where,
+                orderBy: { sortOrder: 'asc' },
+                take,
+                skip,
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    providerId: true,
+                    provider: true,
+                    thumbnail: true,
+                    minBet: true,
+                    maxBet: true,
+                    isHot: true,
+                    isNew: true,
+                },
+            }),
+            prisma.game.count({ where })
+        ]);
+
+        res.json({
+            success: true,
+            data: games,
+            pagination: {
+                page: Number(page),
+                limit: take,
+                total,
+                totalPages: Math.ceil(total / take)
+            }
         });
-
-        res.json({ success: true, data: games });
     } catch (error) {
         console.error('Get games error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });

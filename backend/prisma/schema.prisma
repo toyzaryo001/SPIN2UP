@@ -26,6 +26,8 @@ model User {
   status        String        @default("ACTIVE") // UserStatus: ACTIVE, SUSPENDED
   balance       Decimal       @default(0)
   bonusBalance  Decimal       @default(0)
+  betflixUsername String?     @unique
+  betflixPassword String?
   lastLoginAt   DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

@@ -234,13 +234,20 @@ export class GameSyncService {
                 const lines = rawData.split('\n');
                 for (const line of lines) {
                     const trimmed = line.trim();
-                    if (!trimmed || trimmed.startsWith('#')) continue;
+
+                    // Critical Security & Data Integrity Checks
+                    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+                    if (trimmed.startsWith('<') || trimmed.includes('>') || trimmed.includes('<')) continue; // Reject HTML
+                    if (trimmed.includes('Domain Suspended')) continue; // Reject Error Pages
+                    if (trimmed.length > 200) continue; // Reject unreasonably long lines
 
                     const parts = trimmed.split('|');
                     const code = parts[0]?.trim();
                     const name = parts[1]?.trim() || code;
 
-                    if (code) {
+                    // Ensure Valid Code Pattern (Alphanumeric, underscore, dash)
+                    // Allows some flexibility but rejects totally garbage lines
+                    if (code && /^[a-zA-Z0-9_\-\.]+$/.test(code)) {
                         gamesToUpsert.push({ code, name });
                     }
                 }
@@ -309,7 +316,13 @@ export class GameSyncService {
     /**
      * Sync all known providers
      */
+    /**
+     * Sync all known providers
+     */
     static async syncAll() {
+        // Run Cleanup First
+        await this.cleanGarbageData();
+
         const providers = Object.keys(PROVIDER_FILE_MAPPING);
         const results = [];
 
@@ -322,5 +335,28 @@ export class GameSyncService {
             }
         }
         return results;
+    }
+
+    /**
+     * Cleanup Function: Remove garbage data caused by HTML parsing leak
+     */
+    static async cleanGarbageData() {
+        console.log('[GameSync] Running garbage cleanup...');
+        try {
+            // Delete games where name starts with HTML tag identifiers or Suspended
+            const deleted = await prisma.game.deleteMany({
+                where: {
+                    OR: [
+                        { name: { startsWith: '<' } },
+                        { slug: { contains: '<' } },
+                        { name: { contains: 'Domain Suspended' } },
+                        { name: { contains: 'DOCTYPE' } }
+                    ]
+                }
+            });
+            console.log(`[GameSync] Cleaned up ${deleted.count} garbage game entries.`);
+        } catch (error) {
+            console.error('[GameSync] Cleanup failed:', error);
+        }
     }
 }

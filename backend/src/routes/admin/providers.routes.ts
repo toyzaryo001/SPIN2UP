@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { requirePermission } from '../../middlewares/auth.middleware.js';
+import { GameSyncService } from '../../services/game-sync.service.js';
 
 const router = Router();
 
@@ -123,6 +124,30 @@ router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
     } catch (error) {
         console.error('Reorder providers error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+
+// POST /api/admin/providers/sync - Sync All Providers
+router.post('/sync/all', requirePermission('games', 'edit'), async (req, res) => {
+    try {
+        const results = await GameSyncService.syncAll();
+        res.json({ success: true, data: results });
+    } catch (error: any) {
+        console.error('Sync all providers error:', error);
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
+    }
+});
+
+// POST /api/admin/providers/sync/:code - Sync Specific Provider
+router.post('/sync/:code', requirePermission('games', 'edit'), async (req, res) => {
+    try {
+        const { code } = req.params;
+        const result = await GameSyncService.syncGamesForProvider(code);
+        res.json({ success: true, data: { provider: code, ...result } });
+    } catch (error: any) {
+        console.error(`Sync provider ${req.params.code} error:`, error);
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
     }
 });
 

@@ -99,170 +99,213 @@ export class GameSyncService {
         }
 
         const providerCodeLower = providerCode.toLowerCase();
-        const filename = PROVIDER_FILE_MAPPING[providerCodeLower] || `${providerCodeLower}.txt`;
-        const url = `${config.gameEntrance.replace(/\/$/, '')}/games_share/${filename}`;
+        let filename = PROVIDER_FILE_MAPPING[providerCodeLower] || `${providerCodeLower}.txt`;
+        let url = `${config.gameEntrance.replace(/\/$/, '')}/games_share/${filename}`;
 
         console.log(`[GameSync] Fetching game list from: ${url}`);
 
+        let response;
         try {
-            const response = await axios.get(url, {
+            response = await axios.get(url, {
                 timeout: 10000,
-                responseType: 'text' // Handle both JSON text and raw text
+                responseType: 'text'
             });
 
-            // 2. Ensure Provider Exists
-            let provider = await prisma.gameProvider.findUnique({ where: { name: providerCode.toUpperCase() } });
+            // Check if response is HTML (Error/Suspended) -> Retry without .txt if applicable
+            if (typeof response.data === 'string' && response.data.trim().startsWith('<') && filename.endsWith('.txt')) {
+                console.warn(`[GameSync] HTML received for ${filename}, retrying without extension...`);
 
-            if (!provider) {
-                // Find or create category
-                const catSlug = CATEGORY_MAPPING[providerCodeLower] || 'slot';
-                let category = await prisma.gameCategory.findFirst({ where: { slug: catSlug } });
+                const filenameNoExt = filename.replace('.txt', '');
+                const urlNoExt = `${config.gameEntrance.replace(/\/$/, '')}/games_share/${filenameNoExt}`;
 
-                if (!category) {
-                    // Create default category if missing
-                    category = await prisma.gameCategory.create({
-                        data: {
-                            name: catSlug.toUpperCase(),
-                            slug: catSlug,
-                            isActive: true
-                        }
-                    });
+                try {
+                    const retryRes = await axios.get(urlNoExt, { timeout: 10000, responseType: 'text' });
+                    // If retry is JSON or Pipe-delimited (not HTML), use it
+                    if (typeof retryRes.data !== 'string' || !retryRes.data.trim().startsWith('<')) {
+                        console.log(`[GameSync] Retry success with: ${filenameNoExt}`);
+                        response = retryRes;
+                        url = urlNoExt; // Update URL for error reporting
+                    }
+                } catch (retryErr) {
+                    console.warn(`[GameSync] Retry failed for ${filenameNoExt}`);
+                    // Continue with original response (to be handled by HTML check below)
                 }
+            }
 
-                provider = await prisma.gameProvider.create({
+        } catch (error) {
+            // If 404, valid try without extension?
+            if (filename.endsWith('.txt')) {
+                console.warn(`[GameSync] Request failed for ${filename}, retrying without extension...`);
+                const filenameNoExt = filename.replace('.txt', '');
+                const urlNoExt = `${config.gameEntrance.replace(/\/$/, '')}/games_share/${filenameNoExt}`;
+
+                try {
+                    response = await axios.get(urlNoExt, { timeout: 10000, responseType: 'text' });
+                    url = urlNoExt;
+                } catch (e) {
+                    // Throw original error if both fail
+                    console.error(`[GameSync] Error syncing ${providerCode}:`, (error as Error).message);
+                    throw error;
+                }
+            } else {
+                console.error(`[GameSync] Error syncing ${providerCode}:`, (error as Error).message);
+                throw error;
+            }
+        }
+
+        // 2. Ensure Provider Exists
+        let provider = await prisma.gameProvider.findUnique({ where: { name: providerCode.toUpperCase() } });
+
+        if (!provider) {
+            // Find or create category
+            const catSlug = CATEGORY_MAPPING[providerCodeLower] || 'slot';
+            let category = await prisma.gameCategory.findFirst({ where: { slug: catSlug } });
+
+            if (!category) {
+                // Create default category if missing
+                category = await prisma.gameCategory.create({
                     data: {
-                        name: providerCode.toUpperCase(),
-                        slug: providerCode.toLowerCase(),
-                        categoryId: category.id,
+                        name: catSlug.toUpperCase(),
+                        slug: catSlug,
                         isActive: true
                     }
                 });
             }
 
-            // 3. Parse content
-            const rawData = response.data;
+            provider = await prisma.gameProvider.create({
+                data: {
+                    name: providerCode.toUpperCase(),
+                    slug: providerCode.toLowerCase(),
+                    categoryId: category.id,
+                    isActive: true
+                }
+            });
+        }
 
-            // Check for HTML (Common 404 or Default Page)
-            if (typeof rawData === 'string' && (rawData.trim().startsWith('<html') || rawData.trim().startsWith('<!DOCTYPE'))) {
-                const isSuspended = rawData.toLowerCase().includes('domain suspended');
-                const errorMsg = isSuspended
-                    ? `Domain Suspended: ${url}`
-                    : `Invalid Game List URL (HTML Response): ${url}`;
+        // 3. Parse content
+        const rawData = response.data;
 
-                console.warn(`[GameSync] ${errorMsg}`);
-                return { success: false, error: errorMsg };
+        // Check for HTML (Common 404 or Default Page)
+        if (typeof rawData === 'string' && (rawData.trim().startsWith('<html') || rawData.trim().startsWith('<!DOCTYPE'))) {
+            const isSuspended = rawData.toLowerCase().includes('domain suspended');
+            const errorMsg = isSuspended
+                ? `Domain Suspended: ${url}`
+                : `Invalid Game List URL (HTML Response): ${url}`;
+
+            console.warn(`[GameSync] ${errorMsg}`);
+            return { success: false, error: errorMsg };
+        }
+
+        let gamesToUpsert: { code: string, name: string, image?: string }[] = [];
+
+        // Attempt JSON parse
+        if (typeof rawData === 'object' || (typeof rawData === 'string' && (rawData.trim().startsWith('[') || rawData.trim().startsWith('{')))) {
+            try {
+                const json = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+                if (Array.isArray(json)) {
+                    gamesToUpsert = json.map((g: any) => ({
+                        code: g.code || g.game_code,
+                        name: g.name || g.game_name || g.code,
+                        image: g.img || g.banner || ''
+                    })).filter(g => g.code);
+                }
+            } catch (e) {
+                console.warn('[GameSync] JSON parse failed, trying text mode');
             }
+        }
 
-            let gamesToUpsert: { code: string, name: string, image?: string }[] = [];
+        // Fallback to Text Line Parsing (Pipe separated: CODE | NAME)
+        if (gamesToUpsert.length === 0 && typeof rawData === 'string') {
+            const lines = rawData.split('\n');
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith('#')) continue;
 
-            // Attempt JSON parse
-            if (typeof rawData === 'object' || (typeof rawData === 'string' && (rawData.trim().startsWith('[') || rawData.trim().startsWith('{')))) {
-                try {
-                    const json = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
-                    if (Array.isArray(json)) {
-                        gamesToUpsert = json.map((g: any) => ({
-                            code: g.code || g.game_code,
-                            name: g.name || g.game_name || g.code,
-                            image: g.img || g.banner || ''
-                        })).filter(g => g.code);
-                    }
-                } catch (e) {
-                    console.warn('[GameSync] JSON parse failed, trying text mode');
+                const parts = trimmed.split('|');
+                const code = parts[0]?.trim();
+                const name = parts[1]?.trim() || code;
+
+                if (code) {
+                    gamesToUpsert.push({ code, name });
                 }
             }
+        }
 
-            // Fallback to Text Line Parsing (Pipe separated: CODE | NAME)
-            if (gamesToUpsert.length === 0 && typeof rawData === 'string') {
-                const lines = rawData.split('\n');
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed || trimmed.startsWith('#')) continue;
-
-                    const parts = trimmed.split('|');
-                    const code = parts[0]?.trim();
-                    const name = parts[1]?.trim() || code;
-
-                    if (code) {
-                        gamesToUpsert.push({ code, name });
-                    }
-                }
+        // Deduplicate gamesToUpsert based on code (Game files sometimes have duplicates)
+        const uniqueGames = new Map();
+        for (const g of gamesToUpsert) {
+            if (!uniqueGames.has(g.code)) {
+                uniqueGames.set(g.code, g);
             }
+        }
+        gamesToUpsert = Array.from(uniqueGames.values());
 
-            // Deduplicate gamesToUpsert based on code (Game files sometimes have duplicates)
-            const uniqueGames = new Map();
-            for (const g of gamesToUpsert) {
-                if (!uniqueGames.has(g.code)) {
-                    uniqueGames.set(g.code, g);
+        console.log(`[GameSync] Found ${gamesToUpsert.length} unique games for ${providerCode}`);
+
+        // 4. Batch Upsert
+        let newCount = 0;
+        let updateCount = 0;
+
+        for (const game of gamesToUpsert) {
+            // Scope slug by provider to ensure uniqueness across providers
+            const safeSlug = `${provider.slug.toLowerCase()}-${game.code}`;
+
+            const existing = await prisma.game.findFirst({
+                where: {
+                    slug: safeSlug,
+                    providerId: provider.id
                 }
-            }
-            gamesToUpsert = Array.from(uniqueGames.values());
+            });
 
-            console.log(`[GameSync] Found ${gamesToUpsert.length} unique games for ${providerCode}`);
-
-            // 4. Batch Upsert
-            let newCount = 0;
-            let updateCount = 0;
-
-            for (const game of gamesToUpsert) {
-                // Scope slug by provider to ensure uniqueness across providers
-                const safeSlug = `${provider.slug.toLowerCase()}-${game.code}`;
-
-                const existing = await prisma.game.findFirst({
-                    where: {
-                        slug: safeSlug,
-                        providerId: provider.id
+            if (existing) {
+                await prisma.game.update({
+                    where: { id: existing.id },
+                    data: {
+                        name: game.name,
+                        thumbnail: game.image || existing.thumbnail,
+                        isActive: true
                     }
                 });
-
-                if (existing) {
-                    await prisma.game.update({
-                        where: { id: existing.id },
-                        data: {
-                            name: game.name,
-                            thumbnail: game.image || existing.thumbnail,
-                            isActive: true
-                        }
-                    });
-                    updateCount++;
-                } else {
-                    await prisma.game.create({
-                        data: {
-                            slug: safeSlug,
-                            name: game.name,
-                            providerId: provider.id,
-                            thumbnail: game.image,
-                            isActive: true, // Default active
-                            minBet: 1,
-                            maxBet: 10000
-                        }
-                    });
-                    newCount++;
-                }
+                updateCount++;
+            } else {
+                await prisma.game.create({
+                    data: {
+                        slug: safeSlug,
+                        name: game.name,
+                        providerId: provider.id,
+                        thumbnail: game.image,
+                        isActive: true, // Default active
+                        minBet: 1,
+                        maxBet: 10000
+                    }
+                });
+                newCount++;
             }
-
-            return { success: true, count: gamesToUpsert.length, new: newCount, updated: updateCount };
-
-        } catch (error: any) {
-            console.error(`[GameSync] Error syncing ${providerCode}:`, error.message);
-            throw error;
         }
+
+        return { success: true, count: gamesToUpsert.length, new: newCount, updated: updateCount };
+
+    } catch(error: any) {
+        console.error(`[GameSync] Error syncing ${providerCode}:`, error.message);
+        throw error;
     }
+}
 
     /**
      * Sync all known providers
      */
     static async syncAll() {
-        const providers = Object.keys(PROVIDER_FILE_MAPPING);
-        const results = [];
+    const providers = Object.keys(PROVIDER_FILE_MAPPING);
+    const results = [];
 
-        for (const p of providers) {
-            try {
-                const res = await this.syncGamesForProvider(p);
-                results.push({ provider: p, ...res });
-            } catch (e) {
-                results.push({ provider: p, success: false, error: (e as Error).message });
-            }
+    for (const p of providers) {
+        try {
+            const res = await this.syncGamesForProvider(p);
+            results.push({ provider: p, ...res });
+        } catch (e) {
+            results.push({ provider: p, success: false, error: (e as Error).message });
         }
-        return results;
     }
+    return results;
+}
 }

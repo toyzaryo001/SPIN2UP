@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import api from '@/lib/api';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2, XCircle, AlertCircle, Wifi } from 'lucide-react';
 
 export default function ConnectionTestPage() {
@@ -46,7 +44,7 @@ export default function ConnectionTestPage() {
 
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Control Card */}
-                <Card className="p-6 bg-slate-900 border-slate-800">
+                <div className="p-6 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
                     <div className="flex flex-col items-center justify-center space-y-6 py-8">
                         <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
                             <Wifi className="w-10 h-10 text-slate-400" />
@@ -59,11 +57,10 @@ export default function ConnectionTestPage() {
                             </p>
                         </div>
 
-                        <Button
-                            size="lg"
+                        <button
                             onClick={testConnection}
                             disabled={loading}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold min-w-[200px]"
+                            className={`flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 text-black font-semibold min-w-[200px] h-10 px-4 py-2 rounded-md transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             {loading ? (
                                 <>
@@ -73,12 +70,12 @@ export default function ConnectionTestPage() {
                             ) : (
                                 'เริ่มการทดสอบ'
                             )}
-                        </Button>
+                        </button>
                     </div>
-                </Card>
+                </div>
 
                 {/* Result Card */}
-                <Card className="p-6 bg-slate-900 border-slate-800 flex flex-col justify-center">
+                <div className="p-6 bg-slate-900 border border-slate-800 rounded-xl shadow-sm flex flex-col justify-center">
                     {!result && !loading && (
                         <div className="text-center text-slate-500 py-12">
                             <div className="mb-4 flex justify-center">
@@ -135,7 +132,7 @@ export default function ConnectionTestPage() {
                             </div>
                         </div>
                     )}
-                </Card>
+                </div>
             </div>
         </div>
     );

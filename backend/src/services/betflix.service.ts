@@ -77,6 +77,27 @@ export class BetflixService {
     }
 
     /**
+     * Helper: Apply Prefix
+     */
+    private static async applyPrefix(userCode: string): Promise<string> {
+        const config = await this.getConfig();
+        const raw = userCode.trim();
+        if (!raw) return raw;
+
+        // Skip prefix for CK+digits (game_username format)
+        if (/^CK\d{6,8}$/i.test(raw)) {
+            return raw;
+        }
+
+        const p = config.prefix.toLowerCase();
+        if (p && raw.toLowerCase().startsWith(p)) {
+            return raw;
+        }
+
+        return config.prefix + raw;
+    }
+
+    /**
      * Register a new user to Betflix
      * @param phone User's phone number
      * @returns The full username returned by Betflix (with agent prefix)
@@ -86,29 +107,59 @@ export class BetflixService {
             const config = await this.getConfig();
             const api = await this.getApi();
 
-            // Logic: Prefix + Last 6 digits
-            const shortUsername = config.prefix + phone.slice(-6);
-            const password = phone; // Use phone as password or valid random string
+            // Logic ported from PHP: Try multiple variants if first fails
+            // Variant 1: Prefix + Last 6 digits (Standard)
+            const phoneDigits = phone.replace(/\D/g, '');
+            const variants: string[] = [];
 
-            const params = new URLSearchParams();
-            params.append('username', shortUsername);
-            params.append('password', password);
-
-            const res = await api.post('/v4/user/register', params);
-
-            if (res.data.status === 'success' && res.data.data) {
-                return {
-                    username: res.data.data.username, // Full username from Betflix
-                    password: password
-                };
-            } else {
-                console.error('Betflix Register Error:', res.data);
-                // If error "Username already exists" (code 2), maybe we should try login or just return null
-                if (res.data.error_code === 2) {
-                    console.warn('User already exists in Betflix, might need to manually sync or handle.');
-                }
-                return null;
+            // 1. Prefix + Last 6 (Standard)
+            if (phoneDigits.length >= 6) {
+                variants.push(config.prefix + phoneDigits.slice(-6));
             }
+
+            // 2. Prefix + Full Phone
+            variants.push(config.prefix + phoneDigits);
+
+            // 3. Raw Phone (Some agents use phone as user)
+            variants.push(phoneDigits);
+
+            const password = phoneDigits; // Use phone as password
+
+            // Try variants
+            for (const username of variants) {
+                if (!username || username.length > 20) continue; // Skip invalid lengths
+
+                const params = new URLSearchParams();
+                params.append('username', username);
+                params.append('password', password);
+
+                try {
+                    const res = await api.post('/v4/user/register', params);
+
+                    if (res.data.status === 'success' || res.data.status === 1 || res.data.error_code === 0) {
+                        return {
+                            username: res.data.data?.username || username,
+                            password: password
+                        };
+                    }
+
+                    // Idempotency: If already exists, consider it a success and return credentials
+                    const msg = (res.data.msg || res.data.message || '').toLowerCase();
+                    if (msg.includes('exist') || msg.includes('duplicate') || msg.includes('already')) {
+                        return {
+                            username: username,
+                            password: password
+                        };
+                    }
+                } catch (e) {
+                    // Continue to next variant on error
+                    continue;
+                }
+            }
+
+            console.error('All Betflix register variants failed');
+            return null;
+
         } catch (error) {
             console.error('Betflix Register Exception:', error);
             return null;
@@ -123,6 +174,8 @@ export class BetflixService {
         try {
             const api = await this.getApi();
             const params = new URLSearchParams();
+            // Ensure username has prefix if needed (though stored username usually has it)
+            // We assume 'username' passed here is the full betflix username from DB
             params.append('username', username);
 
             const res = await api.post('/v4/user/balance', params);
@@ -148,7 +201,7 @@ export class BetflixService {
             const api = await this.getApi();
             const params = new URLSearchParams();
             params.append('username', username);
-            params.append('amount', amount.toString());
+            params.append('amount', amount.toString()); // API handles negative for withdraw
             params.append('ref', ref || Date.now().toString());
 
             const res = await api.post('/v4/user/transfer', params);
@@ -165,29 +218,128 @@ export class BetflixService {
     }
 
     /**
-     * Get Direct Play URL
+     * Direct Game Launch (Ported from PHP launchGame)
+     * Supports Provider Mapping, QTech, and GameCode Variants
      */
-    static async getPlayUrl(username: string): Promise<string | null> {
+    static async launchGame(username: string, providerCode: string, gameCode: string = '', lang: string = 'thai'): Promise<string | null> {
         try {
             const api = await this.getApi();
-            const params = new URLSearchParams();
-            params.append('username', username);
 
-            const res = await api.post('/v4/play/login', params);
+            // 1. Provider Mapping (Normalize)
+            const providerMap: Record<string, string> = {
+                'amb': 'askmebet',
+                'pgsoft': 'pg',
+                'pgsoft_mix': 'pg',
+                'pg': 'pg',
+                'pragmatic': 'pp',
+                'pp': 'pp',
+                'joker': 'joker',
+                'jokergaming': 'joker',
+                'sa': 'sa',
+                'sagaming': 'sa',
+                'wm': 'wm',
+                'sexy': 'sexy',
+                'dreamgaming': 'dg',
+                'dg': 'dg',
+                'jili': 'jili',
+                'jl': 'jl',
+                'fc': 'fc',
+                'fachai': 'fc',
+                // QTech Sub-providers
+                'qtech': 'qtech',
+                'nlc': 'qtech', 'hab': 'qtech', 'ygg': 'qtech', 'png': 'qtech',
+                'elk': 'qtech', 'bng': 'qtech', 'bpg': 'qtech', 'kgl': 'qtech',
+                'rlx': 'qtech', 'red': 'qtech', 'qs': 'qtech', 'ids': 'qtech',
+                'tk': 'qtech', 'ds': 'qtech', 'ga': 'qtech', 'evoplay': 'ep'
+            };
 
-            if (res.data.status === 'success' && res.data.data && res.data.data.url) {
-                return res.data.data.url;
+            const inputProvider = providerCode.toLowerCase().trim();
+            const apiProvider = providerMap[inputProvider] || inputProvider;
+
+            // 2. Build Attempt Templates (Provider + GameCode Combinations)
+            const attempts: Array<{ provider: string, gamecode: string }> = [];
+
+            if (apiProvider === 'qtech') {
+                // QTech Logic: Handle prefixes like GA-crypcrusade
+                // If gameCode has prefix (e.g., GA-...), use it.
+                // If inputProvider is 'ga' but gameCode is 'crypcrusade', prepend 'GA-'.
+
+                const qtechPrefixMap: Record<string, string> = { 'ga': 'GA', 'gamatron': 'GA' };
+                const derivedPrefix = qtechPrefixMap[inputProvider] || '';
+
+                const candidates: string[] = [];
+                if (gameCode) {
+                    candidates.push(gameCode);
+                    if (derivedPrefix && !gameCode.includes('-')) {
+                        candidates.push(`${derivedPrefix}-${gameCode}`);
+                    }
+                } else {
+                    // Lobby
+                    attempts.push({ provider: 'qtech', gamecode: '' });
+                }
+
+                candidates.forEach(gc => attempts.push({ provider: 'qtech', gamecode: gc }));
+
+            } else {
+                // Standard Logic
+                // Variants for Provider: JILI -> [jl, jili]
+                let provVars = [apiProvider];
+                if (apiProvider === 'jili' || apiProvider === 'jl') provVars = ['jl', 'jili'];
+                if (apiProvider === 'fc') provVars = ['fc'];
+
+                // Variants for GameCode: Try raw, then underscore/hyphen swap
+                let gameVars = gameCode ? [gameCode] : [''];
+                if (gameCode && gameCode.includes('_')) {
+                    gameVars.push(gameCode.replace(/_/g, '-'));
+                }
+
+                for (const p of provVars) {
+                    for (const g of gameVars) {
+                        attempts.push({ provider: p, gamecode: g });
+                    }
+                }
             }
+
+            // Add Lobby Fallback if specific game fails
+            attempts.push({ provider: apiProvider, gamecode: '' });
+
+            // 3. Execution Loop
+            for (const attempt of attempts) {
+                const params = new URLSearchParams();
+                params.append('username', username);
+                params.append('provider', attempt.provider);
+                if (attempt.gamecode) params.append('game', attempt.gamecode);
+                params.append('lang', lang);
+
+                // Use /v4/play/login (Unified endpoint)
+                // Note: PHP uses /play/login which handles game specific launching
+                try {
+                    // console.log(`Attempting Launch: ${attempt.provider} / ${attempt.gamecode}`);
+                    const res = await api.post('/v4/play/login', params);
+                    if (res.data.status === 'success' && res.data.data && res.data.data.url) {
+                        return res.data.data.url;
+                    }
+                } catch (e) {
+                    // Log and continue
+                    // console.warn(`Launch failed for ${attempt.provider}/${attempt.gamecode}`);
+                }
+            }
+
             return null;
+
         } catch (error) {
-            console.error('Betflix Play URL Error:', error);
+            console.error('Betflix Launch Game Error:', error);
             return null;
         }
     }
 
     /**
-     * Check Connection Status and Latency
+     * Get Play URL (Lobby Legacy Support)
      */
+    static async getPlayUrl(username: string): Promise<string | null> {
+        return this.launchGame(username, 'all'); // Fallback to 'all' or specific default
+    }
+
     /**
      * Check Connection Status and Latency (Server + Auth)
      */
@@ -223,8 +375,6 @@ export class BetflixService {
         if (serverResult.success) {
             try {
                 // Try to check balance for a dummy user to verify Signature/Keys
-                // We expect "User not found" or "Success" (0).
-                // If we get "Unauthorized", "Invalid API Key", etc., then Auth fail.
                 const params = new URLSearchParams();
                 params.append('username', `${config.prefix}_test_auth`); // Dummy
 
@@ -232,9 +382,7 @@ export class BetflixService {
                 authResult.latency = Date.now() - authStart;
 
                 const errorCode = res.data.error_code;
-
-                // Error Codes that mean Auth Failed:
-                // 1: API Key Invalid, 4: IP Not Authorized, 14: Auth Failure, 15: Invalid Config, 20: X-API-KEY Error
+                // Error Codes that mean Auth Failed: 1, 4, 14, 15, 20
                 const authFailCodes = [1, 4, 14, 15, 20];
 
                 if (res.data.status === 'success') {
@@ -245,7 +393,7 @@ export class BetflixService {
                     authResult.message = `Auth Failed: ${res.data.msg} (Code ${errorCode})`;
                     if (errorCode === 4) authResult.message = 'IP Not Whitelisted';
                 } else {
-                    // Other errors (e.g. User not found, System Error) imply Auth passed the check
+                    // Other errors (e.g. User not found) imply Auth passed the check
                     authResult.success = true;
                     authResult.message = 'Authorized (Service Error: ' + res.data.msg + ')';
                 }

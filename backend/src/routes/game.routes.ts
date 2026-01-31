@@ -201,6 +201,8 @@ router.get('/user/history', authMiddleware, async (req: AuthRequest, res) => {
 // POST /api/games/launch - เข้าเล่นเกม (Betflix Direct Play)
 router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
     try {
+        const { providerCode, gameCode, lang = 'thai' } = req.body;
+
         const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
         if (!user) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
 
@@ -218,9 +220,18 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
             }
         }
 
-        const url = await BetflixService.getPlayUrl(user.betflixUsername!);
+        // Use new launchGame method with fallback to lobby behavior if no valid game/provider
+        let url: string | null = null;
+
+        if (providerCode) {
+            url = await BetflixService.launchGame(user.betflixUsername!, providerCode, gameCode, lang);
+        } else {
+            // Legacy/Lobby mode
+            url = await BetflixService.getPlayUrl(user.betflixUsername!);
+        }
+
         if (!url) {
-            return res.status(500).json({ success: false, message: 'ไม่สามารถขอ URL เข้าเกมได้' });
+            return res.status(500).json({ success: false, message: 'ไม่สามารถขอ URL เข้าเกมได้ (กรุณาลองใหม่อีกครั้ง)' });
         }
 
         res.json({ success: true, data: { url } });

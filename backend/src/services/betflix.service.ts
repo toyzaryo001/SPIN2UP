@@ -188,28 +188,82 @@ export class BetflixService {
     /**
      * Check Connection Status and Latency
      */
-    static async checkStatus(): Promise<{ success: boolean; message: string; latency: number }> {
-        const start = Date.now();
-        try {
-            const api = await this.getApi();
-            const res = await api.get('/v4/status');
-            const latency = Date.now() - start;
+    /**
+     * Check Connection Status and Latency (Server + Auth)
+     */
+    static async checkStatus(): Promise<{
+        server: { success: boolean; message: string; latency: number };
+        auth: { success: boolean; message: string; latency: number };
+        config: { apiUrl: string; prefix: string };
+    }> {
+        const config = await this.getConfig();
+        const api = await this.getApi();
 
+        // 1. Check Server Reachability
+        const serverStart = Date.now();
+        let serverResult = { success: false, message: '', latency: 0 };
+        try {
+            const res = await api.get('/v4/status');
+            serverResult.latency = Date.now() - serverStart;
             if (res.data.status === 'success') {
-                return { success: true, message: 'Connected', latency };
+                serverResult.success = true;
+                serverResult.message = 'Online';
             } else {
-                return { success: false, message: res.data.msg || 'Unknown Error', latency };
+                serverResult.message = res.data.msg || 'Error';
             }
         } catch (error: any) {
-            const latency = Date.now() - start;
-            // More detailed info for debugging
-            const config = configCache;
-            const errorMsg = error.response?.data?.msg || error.message || 'Connection Failed';
-            return {
-                success: false,
-                message: `${errorMsg} (Target: ${config?.apiUrl})`,
-                latency
-            };
+            serverResult.latency = Date.now() - serverStart;
+            serverResult.message = error.response?.data?.msg || error.message || 'Unreachable';
         }
+
+        // 2. Check Authorization (Only if server is reachable)
+        const authStart = Date.now();
+        let authResult = { success: false, message: '', latency: 0 };
+
+        if (serverResult.success) {
+            try {
+                // Try to check balance for a dummy user to verify Signature/Keys
+                // We expect "User not found" or "Success" (0).
+                // If we get "Unauthorized", "Invalid API Key", etc., then Auth fail.
+                const params = new URLSearchParams();
+                params.append('username', `${config.prefix}_test_auth`); // Dummy
+
+                const res = await api.post('/v4/user/balance', params);
+                authResult.latency = Date.now() - authStart;
+
+                const errorCode = res.data.error_code;
+
+                // Error Codes that mean Auth Failed:
+                // 1: API Key Invalid, 4: IP Not Authorized, 14: Auth Failure, 15: Invalid Config, 20: X-API-KEY Error
+                const authFailCodes = [1, 4, 14, 15, 20];
+
+                if (res.data.status === 'success') {
+                    authResult.success = true;
+                    authResult.message = 'Authorized';
+                } else if (authFailCodes.includes(errorCode)) {
+                    authResult.success = false;
+                    authResult.message = `Auth Failed: ${res.data.msg} (Code ${errorCode})`;
+                    if (errorCode === 4) authResult.message = 'IP Not Whitelisted';
+                } else {
+                    // Other errors (e.g. User not found, System Error) imply Auth passed the check
+                    authResult.success = true;
+                    authResult.message = 'Authorized (Service Error: ' + res.data.msg + ')';
+                }
+            } catch (error: any) {
+                authResult.latency = Date.now() - authStart;
+                authResult.message = error.response?.data?.msg || error.message || 'Request Failed';
+            }
+        } else {
+            authResult.message = 'Skipped (Server Unreachable)';
+        }
+
+        return {
+            server: serverResult,
+            auth: authResult,
+            config: {
+                apiUrl: config.apiUrl,
+                prefix: config.prefix
+            }
+        };
     }
 }

@@ -53,8 +53,29 @@ const PROVIDER_FILE_MAPPING: { [key: string]: string } = {
 };
 
 const CATEGORY_MAPPING: { [key: string]: string } = {
+    // Casino / Live
     sa: 'casino', dg: 'casino', sexy: 'casino', wm: 'casino', bg: 'casino', ag: 'casino', eg: 'casino',
-    pg: 'slot', pp: 'slot', joker: 'slot', cq9: 'slot', jili: 'slot', fc: 'slot', km: 'slot', mg: 'slot'
+    allbet: 'casino', ct855: 'casino',
+
+    // Slots
+    pg: 'slot', pp: 'slot', joker: 'slot', cq9: 'slot', jili: 'slot', fc: 'slot', km: 'slot',
+    mg: 'slot', bs: 'slot', ng: 'slot', ep: 'slot', gamatron: 'slot', swg: 'slot', aws: 'slot',
+    funky: 'slot', gdg: 'slot', sp: 'slot', netent: 'slot', '1x2': 'slot',
+
+    // Fishing (ยิงปลา) - Some providers are famous for fishing, though they have slots too. 
+    // We prioritize primary category, or defaults.
+    // Note: Most "Fish" games are inside Slot providers (like JILI, FC, JOKER). 
+    // If we want a separate 'fishing' category, we might need game-level filters later.
+    // For now, we map providers known PRIMARILY for fishing if any, or keep them as slots.
+    // But commonly requested "Fishing" tab usually filters games, not just providers.
+    // However, simple provider mapping:
+    yl: 'fishing', // Youlian (example)
+
+    // Sports (กีฬา)
+    sbo: 'sport', saba: 'sport', ufa: 'sport', bfs: 'sport',
+
+    // Table / Card (เกมโต๊ะ)
+    kp: 'table', // King Poker (example)
 };
 
 export class GameSyncService {

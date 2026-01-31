@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission } from '../../middlewares/auth.middleware.js';
+import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import { BetflixService } from '../../services/betflix.service.js';
 
 const router = Router();
 
@@ -47,7 +49,13 @@ router.post('/deposit', async (req: AuthRequest, res) => {
         const balanceBefore = isBonus ? user.bonusBalance : user.balance;
         const balanceAfter = Number(balanceBefore) + Number(amount);
 
-        await prisma.$transaction(async (tx) => {
+        // Betflix Deposit
+        if (!isBonus && user.betflixUsername) {
+            const success = await BetflixService.transfer(user.betflixUsername, Number(amount), `MANUAL_${Date.now()}`);
+            if (!success) return res.status(500).json({ success: false, message: 'เติมเงินเข้ากระเป๋า Betflix ไม่สำเร็จ' });
+        }
+
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Update balance
             if (isBonus) {
                 await tx.user.update({ where: { id: user.id }, data: { bonusBalance: new Decimal(balanceAfter) } });
@@ -113,7 +121,13 @@ router.post('/deduct', requirePermission('manual', 'deduct'), async (req: AuthRe
 
         const balanceAfter = Number(balanceBefore) - Number(amount);
 
-        await prisma.$transaction(async (tx) => {
+        // Betflix Deduct
+        if (!isBonus && user.betflixUsername) {
+            const success = await BetflixService.transfer(user.betflixUsername, -Number(amount), `DEDUCT_${Date.now()}`);
+            if (!success) return res.status(500).json({ success: false, message: 'ดึงเงินจากกระเป๋า Betflix ไม่สำเร็จ' });
+        }
+
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             if (isBonus) {
                 await tx.user.update({ where: { id: user.id }, data: { bonusBalance: new Decimal(balanceAfter) } });
             } else {
@@ -173,7 +187,16 @@ router.post('/approve-withdrawal', requirePermission('manual', 'approve_withdraw
 
         const newBalance = Number(transaction.user.balance) - Number(transaction.amount);
 
-        await prisma.$transaction(async (tx) => {
+        // Betflix Deduct (Withdraw)
+        if (transaction.user.betflixUsername) {
+            const success = await BetflixService.transfer(transaction.user.betflixUsername, -Number(transaction.amount), `WD_${transaction.id}`);
+            if (!success) return res.status(500).json({ success: false, message: 'ดึงเงินจากกระเป๋า Betflix ไม่สำเร็จ' });
+        } else {
+            // If direct wallet, maybe we should fail if no betflix user? 
+            return res.status(400).json({ success: false, message: 'ผู้ใช้ยังไม่ได้เชื่อมต่อ Betflix' });
+        }
+
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.user.update({
                 where: { id: transaction.userId },
                 data: { balance: new Decimal(newBalance) },
@@ -229,7 +252,15 @@ router.post('/approve-deposit', requirePermission('manual', 'approve_deposit'), 
 
         const newBalance = Number(transaction.user.balance) + Number(transaction.amount);
 
-        await prisma.$transaction(async (tx) => {
+        // Betflix Deposit
+        if (transaction.user.betflixUsername) {
+            const success = await BetflixService.transfer(transaction.user.betflixUsername, Number(transaction.amount), `DEP_${transaction.id}`);
+            if (!success) return res.status(500).json({ success: false, message: 'เติมเงินเข้ากระเป๋า Betflix ไม่สำเร็จ' });
+        } else {
+            return res.status(400).json({ success: false, message: 'ผู้ใช้ยังไม่ได้เชื่อมต่อ Betflix' });
+        }
+
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.user.update({
                 where: { id: transaction.userId },
                 data: { balance: new Decimal(newBalance) },

@@ -212,10 +212,10 @@ const InviteCard = () => (
 
 // --- PREMIUM GAME CARD (Fixes the "dry" look) ---
 // --- PREMIUM GAME CARD ---
-const GameCard = ({ title, provider, image, color, hot, type }: any) => {
+const GameCard = ({ title, provider, image, color, hot, type, onPlay }: any) => {
   const hasImage = image && image !== "";
   return (
-    <div className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-2">
+    <div onClick={() => onPlay && onPlay()} className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-2">
       <div className={`h-56 w-full relative overflow-hidden ${!hasImage ? (color || 'bg-slate-800') : ''}`}>
         {hasImage ? (
           <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url(${image})` }}></div>
@@ -408,7 +408,7 @@ const TopBanner = ({ banners }: { banners: any[] }) => {
   );
 };
 
-const HomeContent = ({ games, banners, providers }: any) => {
+const HomeContent = ({ games, banners, providers, onPlay }: any) => {
   // Helper to get providers names
   const providerNames = providers.map((p: any) => p.name);
 
@@ -508,7 +508,7 @@ const HomeContent = ({ games, banners, providers }: any) => {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
           {displayGames.slice(0, 10).map((game: any, i: number) => (
-            <GameCard key={i} {...game} />
+            <GameCard key={i} {...game} onPlay={() => onPlay && onPlay(game)} />
           ))}
         </div>
       </div>
@@ -556,7 +556,7 @@ const HomeContent = ({ games, banners, providers }: any) => {
   );
 };
 
-const SlotsContent = ({ games, category, providers: globalProviders }: any) => {
+const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: any) => {
   const allProviders = category?.providers || globalProviders || [];
 
   // Filter providers that actually have SLOT games
@@ -629,6 +629,7 @@ const SlotsContent = ({ games, category, providers: globalProviders }: any) => {
               color={`bg-gradient-to-br from-slate-700 to-slate-800`}
               hot={game.isHot}
               type="slot"
+              onPlay={() => onPlay && onPlay(game)}
             />
           )) : (
             <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
@@ -642,7 +643,7 @@ const SlotsContent = ({ games, category, providers: globalProviders }: any) => {
   );
 };
 
-const CasinoContent = ({ games, category, providers: globalProviders }: any) => {
+const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: any) => {
   const allProviders = category?.providers || globalProviders || [];
 
   // Filter providers that actually have CASINO/LIVE-CASINO games
@@ -726,6 +727,7 @@ const CasinoContent = ({ games, category, providers: globalProviders }: any) => 
               color={`bg-gradient-to-br from-slate-700 to-slate-800`}
               hot={game.isHot}
               type="casino"
+              onPlay={() => onPlay && onPlay(game)}
             />
           )) : (
             <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
@@ -931,11 +933,37 @@ function HomePageLogic() {
     window.location.reload();
   };
 
+  const handlePlayGame = async (game?: any) => {
+    if (!user) {
+      setShowLogin(true);
+      return;
+    }
+
+    // Use toast or local loading state if needed, but for now just console or simple alert if fail
+    // Only launch via API
+    try {
+      // Optimistic UI or Loading spinner? 
+      // Ideally we show a loading overlay.
+      const res = await axios.post(`${API_URL}/games/launch`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (res.data.success && res.data.data.url) {
+        window.open(res.data.data.url, '_blank');
+      } else {
+        alert(res.data.message || 'Error launching game');
+      }
+    } catch (err: any) {
+      console.error("Launch error:", err);
+      alert(err.response?.data?.message || 'Failed to launch game');
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
-      case 'home': return <HomeContent games={games} banners={banners} providers={providers} />;
-      case 'slots': return <SlotsContent games={games} providers={providers} />;
-      case 'casino': return <CasinoContent games={games} providers={providers} />;
+      case 'home': return <HomeContent games={games} banners={banners} providers={providers} onPlay={handlePlayGame} />;
+      case 'slots': return <SlotsContent games={games} providers={providers} onPlay={handlePlayGame} />;
+      case 'casino': return <CasinoContent games={games} providers={providers} onPlay={handlePlayGame} />;
       default: return (
         <div className="flex flex-col items-center justify-center py-32 text-slate-500 min-h-[50vh]">
           <div className="relative">

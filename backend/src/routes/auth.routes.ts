@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import prisma from '../lib/db.js';
 import { signToken } from '../utils/jwt.js';
+import { BetflixService } from '../services/betflix.service.js';
 
 const router = Router();
 
@@ -97,6 +98,24 @@ router.post('/register', async (req, res) => {
                 referredBy,
             },
         });
+
+        // Register with Betflix
+        try {
+            const betflixUser = await BetflixService.register(phone);
+            if (betflixUser) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        betflixUsername: betflixUser.username,
+                        betflixPassword: betflixUser.password
+                    }
+                });
+                // Update local user object for response (optional, typescript might complain if not typed, but it's any/inferred)
+                (user as any).betflixUsername = betflixUser.username;
+            }
+        } catch (bfError) {
+            console.error('Betflix Auto-Register Failed:', bfError);
+        }
 
         // Generate token (all registrations are players, role is always USER)
         const token = signToken({ userId: user.id, role: 'USER' });

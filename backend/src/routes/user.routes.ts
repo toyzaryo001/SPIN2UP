@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../lib/db.js';
 import bcrypt from 'bcryptjs';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
+import { BetflixService } from '../services/betflix.service.js';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
                 bonusBalance: true,
                 lastLoginAt: true,
                 createdAt: true,
+                betflixUsername: true,
             },
         });
 
@@ -40,6 +42,12 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
             }
         });
         const totalDeposit = depositAgg._sum.amount || 0;
+
+        // Fetch Betflix Balance
+        if (user.betflixUsername) {
+            const betflixBalance = await BetflixService.getBalance(user.betflixUsername);
+            (user as any).balance = betflixBalance;
+        }
 
         res.json({ success: true, data: { ...user, totalDeposit } });
     } catch (error) {

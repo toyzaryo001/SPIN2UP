@@ -2,7 +2,9 @@ import { Router } from 'express';
 import prisma from '../lib/db.js';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 import { spinSlot } from '../services/slot-engine.js';
+import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import { BetflixService } from '../services/betflix.service.js';
 
 const router = Router();
 
@@ -101,7 +103,7 @@ router.post('/:slug/spin', authMiddleware, async (req: AuthRequest, res) => {
         const newBalance = Number(user.balance) - betAmount + result.totalWin;
 
         // Update user balance & create transactions
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Deduct bet
             await tx.user.update({
                 where: { id: user.id },
@@ -192,6 +194,38 @@ router.get('/user/history', authMiddleware, async (req: AuthRequest, res) => {
         });
     } catch (error) {
         console.error('Get history error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// POST /api/games/launch - เข้าเล่นเกม (Betflix Direct Play)
+router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+        if (!user) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+
+        if (!user.betflixUsername) {
+            // Auto-register if missing
+            const betflixUser = await BetflixService.register(user.phone);
+            if (betflixUser) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { betflixUsername: betflixUser.username, betflixPassword: betflixUser.password }
+                });
+                user.betflixUsername = betflixUser.username;
+            } else {
+                return res.status(400).json({ success: false, message: 'ไม่สามารถเชื่อมต่อระบบเกมได้ (Betflix Register Failed)' });
+            }
+        }
+
+        const url = await BetflixService.getPlayUrl(user.betflixUsername!);
+        if (!url) {
+            return res.status(500).json({ success: false, message: 'ไม่สามารถขอ URL เข้าเกมได้' });
+        }
+
+        res.json({ success: true, data: { url } });
+    } catch (error) {
+        console.error('Launch game error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });

@@ -56,10 +56,16 @@ router.get('/banks', requirePermission('settings', 'view'), async (req, res) => 
 // POST /api/admin/settings/banks (ต้องมีสิทธิ์แก้ไข)
 router.post('/banks', requirePermission('settings', 'edit'), async (req, res) => {
     try {
-        const { bankName, accountNumber, accountName, type } = req.body;
+        const { bankName, accountNumber, accountName, type, balance } = req.body;
 
         const bank = await prisma.bankAccount.create({
-            data: { bankName, accountNumber, accountName, type: type || 'deposit' },
+            data: {
+                bankName,
+                accountNumber,
+                accountName,
+                type: type || 'deposit',
+                balance: balance || 0
+            },
         });
 
         res.status(201).json({ success: true, data: bank });
@@ -72,11 +78,11 @@ router.post('/banks', requirePermission('settings', 'edit'), async (req, res) =>
 // PUT /api/admin/settings/banks/:id (ต้องมีสิทธิ์ settings.banks)
 router.put('/banks/:id', requirePermission('settings', 'banks'), async (req, res) => {
     try {
-        const { bankName, accountNumber, accountName, type, isActive } = req.body;
+        const { bankName, accountNumber, accountName, type, isActive, balance } = req.body;
 
         const bank = await prisma.bankAccount.update({
             where: { id: Number(req.params.id) },
-            data: { bankName, accountNumber, accountName, type, isActive },
+            data: { bankName, accountNumber, accountName, type, isActive, balance },
         });
 
         res.json({ success: true, data: bank });

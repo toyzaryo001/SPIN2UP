@@ -560,16 +560,9 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
   const allProviders = category?.providers || globalProviders || [];
 
   // Filter providers that actually have SLOT games
-  const validProviders = allProviders.filter((p: any) => {
-    // If we have access to game count from backend, use it. Otherwise derive from local games list.
-    // For now, let's look at the 'games' prop to see if this provider has any 'slot' games.
-    return games.some((g: any) =>
-      g.provider?.name === p.name && (g.provider?.categoryId === category?.id)
-    );
-  });
+  const validProviders = allProviders.filter((p: any) => p.categoryId === category?.id);
 
   // Fallback: If no providers valid (maybe generic category), show all or none.
-  // Ideally show only valid. If empty, show full list? No, better to show 'No Games' if 0 valid.
   const displayProviders = validProviders.length > 0 ? validProviders : allProviders;
 
   const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "PG Soft";
@@ -647,11 +640,7 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
   const allProviders = category?.providers || globalProviders || [];
 
   // Filter providers that actually have CASINO/LIVE-CASINO games
-  const validProviders = allProviders.filter((p: any) => {
-    return games.some((g: any) =>
-      g.provider?.name === p.name && (g.provider?.categoryId === category?.id)
-    );
-  });
+  const validProviders = allProviders.filter((p: any) => p.categoryId === category?.id);
 
   // Fallback defaults if API returns nothing or filter is too strict
   const defaultCasinoProviders = [

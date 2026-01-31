@@ -58,6 +58,8 @@ router.get('/games', async (req: Request, res: Response) => {
         if (hot === 'true') where.isHot = true;
         if (featured === 'true') where.isNew = true;
 
+        if (categoryId) where.provider = { categoryId: Number(categoryId) };
+
         // Filter by category through provider relation
         const include: any = {
             provider: {
@@ -69,13 +71,8 @@ router.get('/games', async (req: Request, res: Response) => {
             where,
             include,
             orderBy: { sortOrder: 'asc' },
-            take: limit ? parseInt(limit as string) : 100
+            take: limit ? parseInt(limit as string) : 1500
         });
-
-        // Filter by category if specified
-        if (categoryId) {
-            games = games.filter(g => g.provider && 'categoryId' in g.provider && g.provider.categoryId === Number(categoryId));
-        }
 
         // Only return games from active providers
         games = games.filter(g => !g.providerId || g.provider);

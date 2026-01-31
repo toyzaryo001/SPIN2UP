@@ -62,6 +62,11 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Root Health Check (for Railway/Load Balancers default check)
+app.get('/', (req, res) => {
+    res.send('OK');
+});
+
 // Server info (IP check)
 app.get('/api/server-info', (req, res) => {
     res.json({
@@ -83,6 +88,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`Health check available at http://0.0.0.0:${PORT}/api/health`);
 });
 
 export default app;

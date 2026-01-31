@@ -100,7 +100,13 @@ export class GameSyncService {
 
         const providerCodeLower = providerCode.toLowerCase();
         let filename = PROVIDER_FILE_MAPPING[providerCodeLower] || `${providerCodeLower}.txt`;
-        let url = `${config.gameEntrance.replace(/\/$/, '')}/games_share/${filename}`;
+
+        let baseUrl = config.gameEntrance.replace(/\/$/, '');
+        if (baseUrl.endsWith('/games_share')) {
+            baseUrl = baseUrl.replace('/games_share', '');
+        }
+
+        let url = `${baseUrl}/games_share/${filename}`;
 
         console.log(`[GameSync] Fetching game list from: ${url}`);
 
@@ -116,7 +122,10 @@ export class GameSyncService {
                 console.warn(`[GameSync] HTML received for ${filename}, retrying without extension...`);
 
                 const filenameNoExt = filename.replace('.txt', '');
-                const urlNoExt = `${config.gameEntrance.replace(/\/$/, '')}/games_share/${filenameNoExt}`;
+
+                // The baseUrl variable is already correctly processed to remove /games_share if present.
+                // Use it directly to avoid re-calculating and potential double /games_share.
+                const urlNoExt = `${baseUrl}/games_share/${filenameNoExt}`;
 
                 try {
                     const retryRes = await axios.get(urlNoExt, { timeout: 10000, responseType: 'text' });
@@ -137,7 +146,12 @@ export class GameSyncService {
             if (filename.endsWith('.txt')) {
                 console.warn(`[GameSync] Request failed for ${filename}, retrying without extension...`);
                 const filenameNoExt = filename.replace('.txt', '');
-                const urlNoExt = `${config.gameEntrance.replace(/\/$/, '')}/games_share/${filenameNoExt}`;
+
+                let baseUrl = config.gameEntrance.replace(/\/$/, '');
+                if (baseUrl.endsWith('/games_share')) {
+                    baseUrl = baseUrl.replace('/games_share', '');
+                }
+                const urlNoExt = `${baseUrl}/games_share/${filenameNoExt}`;
 
                 try {
                     response = await axios.get(urlNoExt, { timeout: 10000, responseType: 'text' });

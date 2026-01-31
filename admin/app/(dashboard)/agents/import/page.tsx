@@ -100,6 +100,33 @@ export default function GameImportPage() {
                                 </>
                             )}
                         </button>
+
+                        <button
+                            onClick={async () => {
+                                if (!confirm('คุณต้องการลบเกมทั้งหมดใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
+                                if (loading) return;
+                                setLoading(true);
+                                try {
+                                    const res = await api.post('/admin/providers/sync/clear');
+                                    if (res.data.success) {
+                                        toast.success('ล้างข้อมูลเกมทั้งหมดเรียบร้อย');
+                                        setResults(null);
+                                    } else {
+                                        toast.error(res.data.message);
+                                    }
+                                } catch (error) {
+                                    toast.error('เกิดข้อผิดพลาดในการล้างข้อมูล');
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                            disabled={loading}
+                            className={`flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-red-600/20 ${loading ? 'opacity-70 cursor-not-allowed hidden' : ''}`}
+                        >
+                            <span className="flex items-center">
+                                <span className="mr-2">🗑️</span> ล้างข้อมูลเกม
+                            </span>
+                        </button>
                     </div>
                 </div>
 

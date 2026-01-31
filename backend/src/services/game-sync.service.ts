@@ -359,4 +359,18 @@ export class GameSyncService {
             console.error('[GameSync] Cleanup failed:', error);
         }
     }
+
+    /**
+     * Clear all games from database (User Request)
+     */
+    static async clearAllGames() {
+        console.log('[GameSync] Clearing ALL games...');
+        try {
+            await prisma.game.deleteMany({});
+            return { success: true, message: 'All games deleted' };
+        } catch (error: any) {
+            console.error('[GameSync] Clear all failed:', error);
+            throw error;
+        }
+    }
 }

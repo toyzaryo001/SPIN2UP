@@ -130,6 +130,7 @@ const allMenuItems: MenuItem[] = [
     permissionKey: 'agents',
     submenu: [
       { label: 'ตั้งค่า Agent', href: '/agents' },
+      { label: 'ดึงข้อมูลเกม', href: '/agents/import' },
       { label: 'หมวดหมู่เกม', href: '/agents/categories' },
       { label: 'ค่ายเกม', href: '/agents/providers' },
       { label: 'จัดการเกม', href: '/agents/games' },

@@ -423,7 +423,7 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
   const displayGames = games && games.length > 0 ? games.map((g: any, i: number) => ({
     title: g.name,
     provider: g.provider?.name || "Game",
-    image: g.image, // Updated to use 'image' field from API usually
+    image: g.thumbnail || g.image || "", // Use thumbnail from DB
     color: MOCK_GAMES[i % MOCK_GAMES.length].color, // Keep styling logic
     hot: g.isHot,
     type: 'slot' // Default to slot for home mix
@@ -564,7 +564,7 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
     // If we have access to game count from backend, use it. Otherwise derive from local games list.
     // For now, let's look at the 'games' prop to see if this provider has any 'slot' games.
     return games.some((g: any) =>
-      g.provider?.name === p.name && (g.type === 'slot' || g.categoryId === category?.id)
+      g.provider?.name === p.name && (g.provider?.categoryId === category?.id)
     );
   });
 
@@ -586,7 +586,7 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
   // Filter Games by Active Provider
   const filteredGames = games.filter((g: any) =>
     (g.provider?.name === activeProvider || !activeProvider) &&
-    (g.type === 'slot' || g.categoryId === category?.id)
+    (g.provider?.categoryId === category?.id)
   );
 
   return (
@@ -649,7 +649,7 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
   // Filter providers that actually have CASINO/LIVE-CASINO games
   const validProviders = allProviders.filter((p: any) => {
     return games.some((g: any) =>
-      g.provider?.name === p.name && (g.type === 'casino' || g.type === 'live-casino' || g.categoryId === category?.id)
+      g.provider?.name === p.name && (g.provider?.categoryId === category?.id)
     );
   });
 
@@ -671,7 +671,7 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
   // Filter Casino Games
   const filteredGames = games.filter((g: any) =>
     (g.provider?.name === activeProvider || !activeProvider) &&
-    (g.type === 'casino' || g.type === 'live-casino' || g.categoryId === category?.id)
+    (g.provider?.categoryId === category?.id)
   );
 
   return (

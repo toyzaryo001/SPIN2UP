@@ -135,6 +135,13 @@ export class GameSyncService {
 
             // 3. Parse content
             const rawData = response.data;
+
+            // Check for HTML (Common 404 or Default Page)
+            if (typeof rawData === 'string' && rawData.trim().startsWith('<')) {
+                console.warn(`[GameSync] Received HTML for ${providerCode} (likely 404 or error page). URL: ${url}`);
+                return { success: false, error: 'Received HTML instead of Game List (Check URL/File existence)' };
+            }
+
             let gamesToUpsert: { code: string, name: string, image?: string }[] = [];
 
             // Attempt JSON parse

@@ -222,11 +222,17 @@ export class GameSyncService {
                 try {
                     const json = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
                     if (Array.isArray(json)) {
-                        gamesToUpsert = json.map((g: any) => ({
-                            code: g.code || g.game_code,
-                            name: g.name || g.game_name || g.code,
-                            image: g.img || g.banner || ''
-                        })).filter(g => g.code);
+                        gamesToUpsert = json.map((g: any) => {
+                            let img = g.img || g.banner || '';
+                            if (img && !img.startsWith('http')) {
+                                img = `https://ardmhzelxcmj.ocrazeckyunc.com${img}`;
+                            }
+                            return {
+                                code: g.code || g.game_code,
+                                name: g.name || g.game_name || g.code,
+                                image: img
+                            };
+                        }).filter(g => g.code);
                     }
                 } catch (e) {
                     console.warn('[GameSync] JSON parse failed, trying text mode');

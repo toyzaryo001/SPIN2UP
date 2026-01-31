@@ -1,23 +1,80 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
+import { PrismaClient } from '@prisma/client';
 
-const BETFLIX_API_URL = process.env.BETFLIX_API_URL || 'https://api.betflix.co'; // Placeholder
-const BETFLIX_API_KEY = process.env.BETFLIX_API_KEY || '';
-const BETFLIX_API_CAT = process.env.BETFLIX_API_CAT || '';
+const prisma = new PrismaClient();
 
-// Prefix for generating usernames (e.g., if phone is 0912345678, user sent is PREFIX+5678)
-// User instruction: "Send prefix+last6"
-const USER_PREFIX = process.env.BETFLIX_USER_PREFIX || 'CHKK';
+// Cache configuration to reduce DB hits
+let configCache: {
+    apiUrl: string;
+    apiKey: string;
+    apiCat: string;
+    prefix: string;
+    timestamp: number;
+} | null = null;
 
-const api = axios.create({
-    baseURL: BETFLIX_API_URL,
-    headers: {
-        'x-api-key': BETFLIX_API_KEY,
-        'x-api-cat': BETFLIX_API_CAT,
-        'Content-Type': 'application/x-www-form-urlencoded'
-    }
-});
+const CACHE_DURATION = 60 * 1000; // 60 seconds
 
 export class BetflixService {
+
+    /**
+     * Get Configuration from Database (with caching)
+     */
+    private static async getConfig() {
+        // Return cached config if valid
+        if (configCache && (Date.now() - configCache.timestamp < CACHE_DURATION)) {
+            return configCache;
+        }
+
+        try {
+            // Fetch from AgentConfig (assuming first record is the main one)
+            const config = await prisma.agentConfig.findFirst({
+                where: { isActive: true },
+                orderBy: { id: 'asc' }
+            });
+
+            if (!config) {
+                // Fallback to env if no DB config found (safety net)
+                return {
+                    apiUrl: process.env.BETFLIX_API_URL || 'https://api.betflix.co',
+                    apiKey: process.env.BETFLIX_API_KEY || '',
+                    apiCat: process.env.BETFLIX_API_CAT || '',
+                    prefix: process.env.BETFLIX_USER_PREFIX || 'CHKK',
+                    timestamp: 0 // Don't cache fallback indefinitely
+                };
+            }
+
+            // Update cache
+            configCache = {
+                apiUrl: config.apiKey || '', // Mapping apiKey field to API URL based on schema usage
+                apiKey: config.xApiKey || '',
+                apiCat: config.xApiCat || '',
+                prefix: config.upline || '', // Mapping upline to prefix
+                timestamp: Date.now()
+            };
+
+            return configCache;
+
+        } catch (error) {
+            console.error('Failed to fetch Betflix config from DB:', error);
+            // Return fallback or throw
+            throw new Error('Could not load Betflix configuration');
+        }
+    }
+
+    /**
+     * Create Axios instance with current config
+     */
+    private static async getApi(): Promise<AxiosInstance> {
+        const config = await this.getConfig();
+        return axios.create({
+            baseURL: config.apiUrl,
+            headers: {
+                'x-api-key': config.apiKey,
+                'x-api-cat': config.apiCat,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        });
+    }
 
     /**
      * Register a new user to Betflix
@@ -26,8 +83,11 @@ export class BetflixService {
      */
     static async register(phone: string): Promise<{ username: string, password: string } | null> {
         try {
+            const config = await this.getConfig();
+            const api = await this.getApi();
+
             // Logic: Prefix + Last 6 digits
-            const shortUsername = USER_PREFIX + phone.slice(-6);
+            const shortUsername = config.prefix + phone.slice(-6);
             const password = phone; // Use phone as password or valid random string
 
             const params = new URLSearchParams();
@@ -46,7 +106,6 @@ export class BetflixService {
                 // If error "Username already exists" (code 2), maybe we should try login or just return null
                 if (res.data.error_code === 2) {
                     console.warn('User already exists in Betflix, might need to manually sync or handle.');
-                    // In real world, we might want to return the expected username if we know the pattern
                 }
                 return null;
             }
@@ -62,6 +121,7 @@ export class BetflixService {
      */
     static async getBalance(username: string): Promise<number> {
         try {
+            const api = await this.getApi();
             const params = new URLSearchParams();
             params.append('username', username);
 
@@ -85,6 +145,7 @@ export class BetflixService {
      */
     static async transfer(username: string, amount: number, ref: string = ''): Promise<boolean> {
         try {
+            const api = await this.getApi();
             const params = new URLSearchParams();
             params.append('username', username);
             params.append('amount', amount.toString());
@@ -108,6 +169,7 @@ export class BetflixService {
      */
     static async getPlayUrl(username: string): Promise<string | null> {
         try {
+            const api = await this.getApi();
             const params = new URLSearchParams();
             params.append('username', username);
 
@@ -122,12 +184,14 @@ export class BetflixService {
             return null;
         }
     }
+
     /**
      * Check Connection Status and Latency
      */
     static async checkStatus(): Promise<{ success: boolean; message: string; latency: number }> {
         const start = Date.now();
         try {
+            const api = await this.getApi();
             const res = await api.get('/v4/status');
             const latency = Date.now() - start;
 
@@ -138,9 +202,12 @@ export class BetflixService {
             }
         } catch (error: any) {
             const latency = Date.now() - start;
+            // More detailed info for debugging
+            const config = configCache;
+            const errorMsg = error.response?.data?.msg || error.message || 'Connection Failed';
             return {
                 success: false,
-                message: error.response?.data?.msg || error.message || 'Connection Failed',
+                message: `${errorMsg} (Target: ${config?.apiUrl})`,
                 latency
             };
         }

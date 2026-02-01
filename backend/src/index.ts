@@ -32,7 +32,15 @@ async function fixDatabase() {
         // 3. Add Unique Index for betflixUsername
         await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_betflixUsername_key" ON "User"("betflixUsername");`);
 
-        console.log('✅ Database fixed: EditLog FK removed, User columns checked.');
+        // 4. Fix Invalid AgentConfig URL (api.bfx.fail -> api.betflix.co)
+        // Only update if it matches the known bad value, enabling correct API communication.
+        await prisma.$executeRawUnsafe(`
+            UPDATE "AgentConfig" 
+            SET "apiKey" = 'https://api.betflix.co' 
+            WHERE "apiKey" LIKE '%bfx.fail%'
+        `);
+
+        console.log('✅ Database fixed: EditLog FK removed, User columns checked, AgentConfig URL repaired.');
     } catch (error) {
         console.log('⚠️ DB Fix warning:', error);
     }

@@ -54,6 +54,13 @@ export class BetflixService {
                 timestamp: Date.now()
             };
 
+            console.log('Using Betflix Config:', {
+                apiUrl: configCache.apiUrl,
+                prefix: configCache.prefix,
+                hasKey: !!configCache.apiKey,
+                hasCat: !!configCache.apiCat
+            });
+
             return configCache;
 
         } catch (error) {

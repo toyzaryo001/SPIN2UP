@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware, adminMiddleware, AuthRequest } from '../../middlewares/auth.middleware.js';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../lib/db.js';
 
 // Import sub-routes
 import dashboardRoutes from './dashboard.routes.js';
@@ -19,9 +19,7 @@ import uploadRoutes from './upload.routes.js';
 import agentRoutes from './agent.routes.js';
 
 const router = Router();
-const prisma = new PrismaClient();
-
-// All admin routes require auth + admin role
+// Import sub-routes require auth + admin role
 router.use(authMiddleware, adminMiddleware);
 
 // GET /api/admin/me - Get current admin info with permissions

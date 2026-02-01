@@ -1,7 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import crypto from 'crypto';
+import prisma from '../lib/db.js';
 
 // Cache configuration to reduce DB hits
 let configCache: {

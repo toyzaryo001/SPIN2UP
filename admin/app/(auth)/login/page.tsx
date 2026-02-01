@@ -15,13 +15,14 @@ export default function LoginPage() {
     const [brandName, setBrandName] = useState("ADMIN");
     const [fixedPrefix, setFixedPrefix] = useState(false);
     const [isCheckingDomain, setIsCheckingDomain] = useState(true);
+    const [mounted, setMounted] = useState(false);
 
     // Auto-fix URL to ensure no double /api/api
     const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     const API_URL = rawApiUrl.replace(/\/$/, "").replace(/\/api$/, "");
 
     useEffect(() => {
-
+        setMounted(true);
 
         const checkDomain = async () => {
             try {
@@ -87,6 +88,8 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
+    if (!mounted) return null;
 
     if (isCheckingDomain) {
         return (

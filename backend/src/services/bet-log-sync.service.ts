@@ -1,8 +1,7 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import axios from 'axios';
 import { BetflixService } from './betflix.service';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/db.js';
 
 export class BetLogSyncService {
 

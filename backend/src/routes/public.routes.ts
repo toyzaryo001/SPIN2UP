@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/db.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // GET /api/public/settings - ดึงการตั้งค่าเว็บ
 router.get('/settings', async (req: Request, res: Response) => {

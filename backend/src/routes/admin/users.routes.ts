@@ -275,6 +275,34 @@ router.get('/:id/edit-logs', async (req, res) => {
     }
 });
 
+// DEBUG: Test Soft Delete Query validity (GET because browser can run it)
+router.get('/:id/debug-delete', requirePermission('members', 'list', 'manage'), async (req: AuthRequest, res) => {
+    try {
+        const userId = Number(req.params.id);
+        const targetUser = await prisma.user.findUnique({ where: { id: userId } });
+        if (!targetUser) return res.send("User not found");
+
+        const timestamp = Date.now();
+        const newUsername = `del_${timestamp}_${targetUser.username.slice(0, 10)}`;
+        const newPhone = `del_${timestamp}`;
+
+        // simulate update data
+        res.json({
+            step: "Check Query Validity",
+            target: { id: userId, username: targetUser.username },
+            updatePayload: {
+                username: newUsername,
+                phone: newPhone,
+                betflixUsername: null,
+                status: 'DELETED'
+            },
+            notes: "If you see this, the GET route works. Step 2: Try running Actual Delete."
+        });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message, stack: e.stack });
+    }
+});
+
 // DELETE /api/admin/users/:id - ลบสมาชิก (ต้องมีสิทธิ์ลบ)
 router.delete('/:id', requirePermission('members', 'list', 'manage'), async (req: AuthRequest, res) => {
     try {

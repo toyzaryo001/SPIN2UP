@@ -18,13 +18,23 @@ dotenv.config();
 // Fix FK constraint on startup
 async function fixDatabase() {
     try {
-        console.log('🔧 Checking EditLog FK constraint...');
+        console.log('🔧 Checking Database Schema & Constraints...');
+
+        // 1. Drop problematic EditLog FK
         await prisma.$executeRawUnsafe(`
             ALTER TABLE "EditLog" DROP CONSTRAINT IF EXISTS "EditLog_targetId_fkey"
         `);
-        console.log('✅ EditLog FK constraint fixed');
+
+        // 2. Add missing columns to User table (Migration drift fix)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "betflixUsername" TEXT;`);
+        await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "betflixPassword" TEXT;`);
+
+        // 3. Add Unique Index for betflixUsername
+        await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_betflixUsername_key" ON "User"("betflixUsername");`);
+
+        console.log('✅ Database fixed: EditLog FK removed, User columns checked.');
     } catch (error) {
-        console.log('⚠️ FK fix skipped (already removed or not exist)');
+        console.log('⚠️ DB Fix warning:', error);
     }
 }
 

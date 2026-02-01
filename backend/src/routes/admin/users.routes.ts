@@ -21,7 +21,11 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
                 { phone: { contains: search } },
             ];
         }
-        if (status) where.status = status;
+        if (status) {
+            where.status = status;
+        } else {
+            where.status = { not: 'DELETED' };
+        }
         // User table now only contains players (admins are in Admin table)
 
         const [users, total] = await Promise.all([
@@ -285,29 +289,43 @@ router.delete('/:id', requirePermission('members', 'list', 'manage'), async (req
         // Save user info for logging before deletion
         const userInfo = { id: userId, username: targetUser.username, fullName: targetUser.fullName };
 
-        // Delete related records first (foreign key constraints)
-        await prisma.transaction.deleteMany({ where: { userId } });
-        await prisma.editLog.deleteMany({ where: { targetId: userId, targetType: 'User' } });
-        await prisma.gameSession.deleteMany({ where: { userId } });
-        await prisma.promotionLog.deleteMany({ where: { userId } });
-
-        // Unlink referrals
-        await prisma.user.updateMany({
-            where: { referredBy: userId },
-            data: { referredBy: null }
+        // Soft Delete (Prevent FK Constraint verify fail from Polymorphic EditLog)
+        const timestamp = Date.now();
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                username: `del_${timestamp}_${targetUser.username.slice(0, 10)}`,
+                phone: `del_${timestamp}`,
+                betflixUsername: null,
+                status: 'DELETED'
+            }
         });
 
-        // Delete the user
-        await prisma.user.delete({ where: { id: userId } });
+        // Clean up heavy data
+        try {
+            await prisma.gameSession.deleteMany({ where: { userId } });
+            await prisma.transaction.deleteMany({ where: { userId } });
+            await prisma.promotionLog.deleteMany({ where: { userId } });
+            // Keep EditLog for audit or delete if you prefer:
+            // await prisma.editLog.deleteMany({ where: { targetId: userId, targetType: 'User' } });
 
-        // Log the deletion to AdminLog (not EditLog, since user is deleted)
+            // Unlink referrals
+            await prisma.user.updateMany({
+                where: { referredBy: userId },
+                data: { referredBy: null }
+            });
+        } catch (cleanupError) {
+            console.error('Soft delete cleanup error (non-fatal):', cleanupError);
+        }
+
+        // Log the deletion
         try {
             await prisma.adminLog.create({
                 data: {
                     adminId: req.user!.userId,
                     action: 'DELETE',
                     resource: 'USER',
-                    details: `Deleted user: ${userInfo.username} (${userInfo.fullName})`,
+                    details: `Soft Deleted user: ${userInfo.username}`,
                     ip: req.ip || 'unknown'
                 }
             });

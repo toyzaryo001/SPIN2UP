@@ -79,9 +79,11 @@ const PERMISSION_MATRIX = [
         label: 'จัดการ Agent',
         features: [
             { key: 'settings', label: 'ตั้งค่า Agent' },
+            { key: 'import', label: 'ดึงข้อมูลเกม' },
             { key: 'categories', label: 'หมวดหมู่เกม' },
             { key: 'providers', label: 'ค่ายเกม' },
             { key: 'games', label: 'จัดการเกม' },
+            { key: 'connection_test', label: 'ทดสอบเชื่อมต่อ' },
         ]
     },
     {
@@ -91,6 +93,8 @@ const PERMISSION_MATRIX = [
             { key: 'cashback', label: 'ตั้งค่ายอดเสีย' },
             { key: 'streak', label: 'ตั้งค่าฝากสะสม' },
             { key: 'commission', label: 'ตั้งค่าคอมมิชชั่น' },
+            { key: 'referral', label: 'แนะนำเพื่อน' },
+            { key: 'ranks', label: 'จัดการ Rank' },
         ]
     },
     {

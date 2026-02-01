@@ -76,7 +76,7 @@ async function getDailyData(start: Date, end: Date, getData: (date: Date) => Pro
 }
 
 // GET /api/admin/reports/new-users - 4.1 รายงานสมัครใหม่ (ต้องมีสิทธิ์ดู)
-router.get('/new-users', requirePermission('reports', 'view'), async (req, res) => {
+router.get('/new-users', requirePermission('reports', 'new_users', 'view'), async (req, res) => {
     try {
         const { preset = 'today', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
@@ -103,7 +103,7 @@ router.get('/new-users', requirePermission('reports', 'view'), async (req, res) 
 });
 
 // GET /api/admin/reports/new-users-deposit - 4.2 สมัครใหม่+ฝากในวัน (ต้องมีสิทธิ์ดู)
-router.get('/new-users-deposit', requirePermission('reports', 'view'), async (req, res) => {
+router.get('/new-users-deposit', requirePermission('reports', 'new_users_deposit', 'view'), async (req, res) => {
     try {
         const { preset = 'today', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
@@ -147,7 +147,7 @@ router.get('/new-users-deposit', requirePermission('reports', 'view'), async (re
 });
 
 // GET /api/admin/reports/deposits - 4.3 รายงานฝากเงิน (ต้องมีสิทธิ์ดู)
-router.get('/deposits', requirePermission('reports', 'view'), async (req, res) => {
+router.get('/deposits', requirePermission('reports', 'deposits', 'view'), async (req, res) => {
     try {
         const { preset = 'today', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
@@ -176,7 +176,7 @@ router.get('/deposits', requirePermission('reports', 'view'), async (req, res) =
 });
 
 // GET /api/admin/reports/withdrawals - 4.4 รายงานถอนเงิน (ต้องมีสิทธิ์ดู)
-router.get('/withdrawals', requirePermission('reports', 'view'), async (req, res) => {
+router.get('/withdrawals', requirePermission('reports', 'withdrawals', 'view'), async (req, res) => {
     try {
         const { preset = 'today', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
@@ -205,7 +205,7 @@ router.get('/withdrawals', requirePermission('reports', 'view'), async (req, res
 });
 
 // GET /api/admin/reports/bonus - 4.5 รายงานโบนัส (ต้องมีสิทธิ์ดู)
-router.get('/bonus', requirePermission('reports', 'view'), async (req, res) => {
+router.get('/bonus', requirePermission('reports', 'bonus', 'view'), async (req, res) => {
     try {
         const { preset = 'today', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
@@ -234,7 +234,7 @@ router.get('/bonus', requirePermission('reports', 'view'), async (req, res) => {
 });
 
 // GET /api/admin/reports/profit-loss - 4.6 กำไรขาดทุน (ต้องมีสิทธิ์ดู)
-router.get('/profit-loss', requirePermission('reports', 'view'), async (req, res) => {
+router.get('/profit-loss', requirePermission('reports', 'profit', 'view'), async (req, res) => {
     try {
         const { preset = 'today', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
@@ -288,7 +288,7 @@ router.get('/profit-loss', requirePermission('reports', 'view'), async (req, res
 });
 
 // GET /api/admin/reports/inactive-users - 4.7 ยูสไม่ออนไลน์ (ต้องมีสิทธิ์ดู)
-router.get('/inactive-users', requirePermission('reports', 'view'), async (req, res) => {
+router.get('/inactive-users', requirePermission('reports', 'inactive_users', 'view'), async (req, res) => {
     try {
         const { days = 7 } = req.query;
         const cutoffDate = new Date();
@@ -321,7 +321,7 @@ router.get('/inactive-users', requirePermission('reports', 'view'), async (req, 
 });
 
 // GET /api/admin/reports/user-win-lose/:userId - 4.8 ชนะ-แพ้รายบุคคล (ต้องมีสิทธิ์ดู)
-router.get('/user-win-lose/:userId', requirePermission('reports', 'view'), async (req, res) => {
+router.get('/user-win-lose/:userId', requirePermission('reports', 'win_lose', 'view'), async (req, res) => {
     try {
         const { preset = '7days', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);

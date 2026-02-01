@@ -262,8 +262,18 @@ export default function Sidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, loading]);
 
+  // Fix hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="w-64 bg-slate-900 border-r border-slate-800" />;
+  }
+
   return (
-    <div className="w-64 bg-slate-900 text-white h-screen flex flex-col shrink-0">
+    <div className="w-64 bg-slate-900 text-white h-screen flex flex-col shrink-0 border-r border-slate-800">
       <div className="p-6 border-b border-slate-800 flex justify-center items-center">
         {logoUrl ? (
           <img src={logoUrl} alt={brandName} className="h-20 w-auto object-contain" />

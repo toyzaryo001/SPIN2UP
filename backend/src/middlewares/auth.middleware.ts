@@ -51,8 +51,11 @@ export const PERMISSION_MAP = {
 };
 
 // Middleware to check specific permission
-// Usage: requirePermission('members', 'view') or requirePermission('members', 'delete')
-export function requirePermission(category: string, action: string) {
+// Middleware to check specific permission
+// Usage: 
+// Level 3 (New): requirePermission('members', 'list', 'view')
+// Level 2 (Legacy mapped): requirePermission('members', 'list') -> assumes 'view' if list has view/manage
+export function requirePermission(category: string, featureOrAction: string, actionOrNull?: string) {
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ success: false, message: 'ไม่พบ Token' });
@@ -64,7 +67,6 @@ export function requirePermission(category: string, action: string) {
         }
 
         try {
-            // Get admin with their role (now using Admin model, not User)
             const admin = await prisma.admin.findUnique({
                 where: { id: req.user.userId },
                 include: { role: true }
@@ -74,37 +76,56 @@ export function requirePermission(category: string, action: string) {
                 return res.status(401).json({ success: false, message: 'ไม่พบผู้ดูแลระบบ' });
             }
 
-            // Super admin bypass
             if (admin.isSuperAdmin) {
                 return next();
             }
 
-            // If no role, default behavior
             if (!admin.role) {
-                // ADMIN without role = view-only access
-                if (action === 'view') {
-                    return next();
-                }
-                return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์ดำเนินการนี้' });
+                // Read-only logic? For now assume strict.
+                return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์ดำเนินการนี้ (No Role)' });
             }
 
-            // Parse permissions from JSON string
-            let permissions: Record<string, Record<string, boolean>> = {};
+            // Parse permissions
+            let permissions: Record<string, Record<string, { view: boolean; manage: boolean }>> = {};
             try {
                 permissions = JSON.parse(admin.role.permissions || '{}');
             } catch (e) {
                 permissions = {};
             }
 
-            // Check if admin has the required permission
-            if (permissions[category]?.[action] === true) {
+            // Determine check type
+            let requiredAction = 'view';
+            let requiredFeature = featureOrAction;
+
+            if (actionOrNull) {
+                requiredFeature = featureOrAction;
+                requiredAction = actionOrNull; // 'view' or 'manage'
+            } else {
+                // Backward compatibility or 2-arg usage: ('members', 'view')?? 
+                // It's hard to map perfectly without refactoring all routes. 
+                // If we receive ('members', 'view'), 'view' is treated as feature? NO.
+                // We will REFACTOR ALL ROUTES to 3 args for safety.
+                // For now, if 2 args provided, assume feature=featureOrAction and action='view'.
+                requiredAction = 'view';
+            }
+
+            // Check
+            // permissions[category][feature][action]
+            const catPerms = permissions[category];
+            const featPerms = catPerms ? catPerms[requiredFeature as any] : undefined;
+
+            // Handle legacy structure if present (e.g. true/false instead of object)
+            // But new frontend saves {view: bool, manage: bool}.
+            const hasPerm = featPerms && (featPerms as any)[requiredAction] === true;
+
+            if (hasPerm) {
                 return next();
             }
 
             return res.status(403).json({
                 success: false,
-                message: `ไม่มีสิทธิ์: ${category}.${action}`,
-                requiredPermission: `${category}.${action}`
+                message: `ไม่มีสิทธิ์: ${category}.${requiredFeature}.${requiredAction}`,
+                requiredPermission: `${category}.${requiredFeature}.${requiredAction}`
             });
         } catch (error) {
             console.error('Permission check error:', error);

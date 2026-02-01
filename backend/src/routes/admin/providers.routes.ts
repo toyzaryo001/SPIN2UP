@@ -6,7 +6,7 @@ import { GameSyncService } from '../../services/game-sync.service.js';
 const router = Router();
 
 // GET /api/admin/providers - รายการค่ายเกม
-router.get('/', requirePermission('games', 'view'), async (req, res) => {
+router.get('/', requirePermission('agents', 'providers', 'view'), async (req, res) => {
     try {
         const { categoryId } = req.query;
         const where: any = {};
@@ -29,7 +29,7 @@ router.get('/', requirePermission('games', 'view'), async (req, res) => {
 });
 
 // POST /api/admin/providers - สร้างค่ายเกม
-router.post('/', requirePermission('games', 'edit'), async (req, res) => {
+router.post('/', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
     try {
         const { name, slug, logo, categoryId, isActive, sortOrder } = req.body;
 
@@ -56,7 +56,7 @@ router.post('/', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PUT /api/admin/providers/reorder - จัดลำดับ
-router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
+router.put('/reorder', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
     try {
         const { items } = req.body; // [{ id, sortOrder }, ...]
 
@@ -75,7 +75,7 @@ router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PUT /api/admin/providers/:id - แก้ไขค่ายเกม
-router.put('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.put('/:id', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
     try {
         const provider = await prisma.gameProvider.update({
             where: { id: Number(req.params.id) },
@@ -90,7 +90,7 @@ router.put('/:id', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PATCH /api/admin/providers/:id - Toggle/Partial update
-router.patch('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.patch('/:id', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
     try {
         const provider = await prisma.gameProvider.update({
             where: { id: Number(req.params.id) },
@@ -105,7 +105,7 @@ router.patch('/:id', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // DELETE /api/admin/providers/:id - ลบค่ายเกม
-router.delete('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.delete('/:id', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
     try {
         // Check if has games
         const count = await prisma.game.count({
@@ -148,7 +148,7 @@ router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
 
 
 // POST /api/admin/providers/sync - Sync All Providers
-router.post('/sync/all', requirePermission('games', 'edit'), async (req, res) => {
+router.post('/sync/all', requirePermission('agents', 'import', 'manage'), async (req, res) => {
     try {
         const results = await GameSyncService.syncAll();
         res.json({ success: true, data: results });
@@ -159,7 +159,7 @@ router.post('/sync/all', requirePermission('games', 'edit'), async (req, res) =>
 });
 
 // POST /api/admin/providers/sync/clear - Clear All Games
-router.post('/sync/clear', requirePermission('games', 'edit'), async (req, res) => {
+router.post('/sync/clear', requirePermission('agents', 'import', 'manage'), async (req, res) => {
     try {
         await GameSyncService.clearAllGames();
         res.json({ success: true, message: 'ล้างข้อมูลเกมทั้งหมดเรียบร้อยแล้ว' });
@@ -170,7 +170,7 @@ router.post('/sync/clear', requirePermission('games', 'edit'), async (req, res) 
 });
 
 // POST /api/admin/providers/sync/:code - Sync Specific Provider
-router.post('/sync/:code', requirePermission('games', 'edit'), async (req, res) => {
+router.post('/sync/:code', requirePermission('agents', 'import', 'manage'), async (req, res) => {
     try {
         const { code } = req.params;
         const result = await GameSyncService.syncGamesForProvider(code);

@@ -7,7 +7,7 @@ import { AuthRequest, requirePermission } from '../../middlewares/auth.middlewar
 const router = Router();
 
 // GET /api/admin/users - รายการผู้ใช้ (ต้องมีสิทธิ์ดู)
-router.get('/', requirePermission('members', 'view'), async (req, res) => {
+router.get('/', requirePermission('members', 'list', 'view'), async (req, res) => {
     try {
         const { page = 1, limit = 20, search, status, role } = req.query;
         const skip = (Number(page) - 1) * Number(limit);
@@ -60,7 +60,7 @@ router.get('/', requirePermission('members', 'view'), async (req, res) => {
 });
 
 // GET /api/admin/users/edit-logs - ประวัติแก้ไขทั้งหมด (MUST BE BEFORE /:id) (ต้องมีสิทธิ์ members.view_logs)
-router.get('/edit-logs', requirePermission('members', 'view_logs'), async (req, res) => {
+router.get('/edit-logs', requirePermission('members', 'history', 'view'), async (req, res) => {
     try {
         const logs = await prisma.editLog.findMany({
             where: { targetType: 'User' },
@@ -79,7 +79,7 @@ router.get('/edit-logs', requirePermission('members', 'view_logs'), async (req, 
 });
 
 // GET /api/admin/users/:id (ต้องมีสิทธิ์ members.view_detail)
-router.get('/:id', requirePermission('members', 'view_detail'), async (req, res) => {
+router.get('/:id', requirePermission('members', 'list', 'view'), async (req, res) => {
     try {
         const userId = Number(req.params.id);
         if (isNaN(userId)) {
@@ -106,7 +106,7 @@ router.get('/:id', requirePermission('members', 'view_detail'), async (req, res)
 });
 
 // POST /api/admin/users - สมัครสมาชิกจากหลังบ้าน (ต้องมีสิทธิ์ members.create)
-router.post('/', requirePermission('members', 'create'), async (req: AuthRequest, res) => {
+router.post('/', requirePermission('members', 'register', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { fullName, phone, bankName, bankAccount, password, lineId, referrerCode } = req.body;
 
@@ -170,7 +170,7 @@ router.post('/', requirePermission('members', 'create'), async (req: AuthRequest
 });
 
 // PUT /api/admin/users/:id
-router.put('/:id', requirePermission('members', 'edit'), async (req: AuthRequest, res) => {
+router.put('/:id', requirePermission('members', 'list', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { fullName, phone, bankName, bankAccount, status, lineId } = req.body;
         const userId = Number(req.params.id);
@@ -254,7 +254,7 @@ router.get('/:id/edit-logs', async (req, res) => {
 });
 
 // DELETE /api/admin/users/:id - ลบสมาชิก (ต้องมีสิทธิ์ลบ)
-router.delete('/:id', requirePermission('members', 'delete'), async (req: AuthRequest, res) => {
+router.delete('/:id', requirePermission('members', 'list', 'manage'), async (req: AuthRequest, res) => {
     try {
         const userId = Number(req.params.id);
 

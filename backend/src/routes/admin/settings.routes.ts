@@ -5,7 +5,7 @@ import { AuthRequest, requirePermission } from '../../middlewares/auth.middlewar
 const router = Router();
 
 // GET /api/admin/settings - ดูตั้งค่าทั้งหมด (ต้องมีสิทธิ์ดู)
-router.get('/', requirePermission('settings', 'view'), async (req, res) => {
+router.get('/', requirePermission('settings', 'general', 'view'), async (req, res) => {
     try {
         const settings = await prisma.setting.findMany();
         const settingsMap: Record<string, string> = {};
@@ -21,7 +21,7 @@ router.get('/', requirePermission('settings', 'view'), async (req, res) => {
 });
 
 // PUT /api/admin/settings - อัปเดตตั้งค่า (ต้องมีสิทธิ์แก้ไข)
-router.put('/', requirePermission('settings', 'edit'), async (req: AuthRequest, res) => {
+router.put('/', requirePermission('settings', 'general', 'manage'), async (req: AuthRequest, res) => {
     try {
         const settings = req.body; // { key1: value1, key2: value2, ... }
 
@@ -43,7 +43,7 @@ router.put('/', requirePermission('settings', 'edit'), async (req: AuthRequest, 
 // === Bank Accounts ===
 
 // GET /api/admin/settings/banks (ต้องมีสิทธิ์ดู)
-router.get('/banks', requirePermission('settings', 'view'), async (req, res) => {
+router.get('/banks', requirePermission('settings', 'banks', 'view'), async (req, res) => {
     try {
         const banks = await prisma.bankAccount.findMany({ orderBy: { createdAt: 'desc' } });
         res.json({ success: true, data: banks });
@@ -54,7 +54,7 @@ router.get('/banks', requirePermission('settings', 'view'), async (req, res) => 
 });
 
 // POST /api/admin/settings/banks (ต้องมีสิทธิ์แก้ไข)
-router.post('/banks', requirePermission('settings', 'edit'), async (req, res) => {
+router.post('/banks', requirePermission('settings', 'banks', 'manage'), async (req, res) => {
     try {
         const { bankName, accountNumber, accountName, type, balance } = req.body;
 
@@ -76,7 +76,7 @@ router.post('/banks', requirePermission('settings', 'edit'), async (req, res) =>
 });
 
 // PUT /api/admin/settings/banks/:id (ต้องมีสิทธิ์ settings.banks)
-router.put('/banks/:id', requirePermission('settings', 'banks'), async (req, res) => {
+router.put('/banks/:id', requirePermission('settings', 'banks', 'manage'), async (req, res) => {
     try {
         const { bankName, accountNumber, accountName, type, isActive, balance } = req.body;
 
@@ -93,7 +93,7 @@ router.put('/banks/:id', requirePermission('settings', 'banks'), async (req, res
 });
 
 // DELETE /api/admin/settings/banks/:id (ต้องมีสิทธิ์ settings.banks)
-router.delete('/banks/:id', requirePermission('settings', 'banks'), async (req, res) => {
+router.delete('/banks/:id', requirePermission('settings', 'banks', 'manage'), async (req, res) => {
     try {
         await prisma.bankAccount.delete({ where: { id: Number(req.params.id) } });
         res.json({ success: true, message: 'ลบสำเร็จ' });
@@ -106,7 +106,7 @@ router.delete('/banks/:id', requirePermission('settings', 'banks'), async (req, 
 // === Agent Config ===
 
 // GET /api/admin/settings/agent (ต้องมีสิทธิ์ settings.agents)
-router.get('/agent', requirePermission('settings', 'agents'), async (req, res) => {
+router.get('/agent', requirePermission('agents', 'settings', 'view'), async (req, res) => {
     try {
         const configs = await prisma.agentConfig.findMany();
         res.json({ success: true, data: configs });
@@ -117,7 +117,7 @@ router.get('/agent', requirePermission('settings', 'agents'), async (req, res) =
 });
 
 // POST /api/admin/settings/agent (ต้องมีสิทธิ์ settings.agents)
-router.post('/agent', requirePermission('settings', 'agents'), async (req, res) => {
+router.post('/agent', requirePermission('agents', 'settings', 'manage'), async (req, res) => {
     try {
         const { name, apiKey, apiSecret, callbackUrl, rtp, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance } = req.body;
 
@@ -133,7 +133,7 @@ router.post('/agent', requirePermission('settings', 'agents'), async (req, res) 
 });
 
 // PUT /api/admin/settings/agent/:id (ต้องมีสิทธิ์ settings.agents)
-router.put('/agent/:id', requirePermission('settings', 'agents'), async (req, res) => {
+router.put('/agent/:id', requirePermission('agents', 'settings', 'manage'), async (req, res) => {
     try {
         const config = await prisma.agentConfig.update({
             where: { id: Number(req.params.id) },
@@ -150,7 +150,7 @@ router.put('/agent/:id', requirePermission('settings', 'agents'), async (req, re
 // === TrueMoney Wallet ===
 
 // GET /api/admin/settings/truemoney (ต้องมีสิทธิ์ settings.truemoney)
-router.get('/truemoney', requirePermission('settings', 'truemoney'), async (req, res) => {
+router.get('/truemoney', requirePermission('settings', 'truemoney', 'view'), async (req, res) => {
     try {
         const wallets = await prisma.trueMoneyWallet.findMany({ orderBy: { createdAt: 'desc' } });
         res.json({ success: true, data: wallets });
@@ -161,7 +161,7 @@ router.get('/truemoney', requirePermission('settings', 'truemoney'), async (req,
 });
 
 // POST /api/admin/settings/truemoney (ต้องมีสิทธิ์ settings.truemoney)
-router.post('/truemoney', requirePermission('settings', 'truemoney'), async (req, res) => {
+router.post('/truemoney', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
         const { phoneNumber, accountName, isActive } = req.body;
 
@@ -177,7 +177,7 @@ router.post('/truemoney', requirePermission('settings', 'truemoney'), async (req
 });
 
 // PUT /api/admin/settings/truemoney/:id (ต้องมีสิทธิ์ settings.truemoney)
-router.put('/truemoney/:id', requirePermission('settings', 'truemoney'), async (req, res) => {
+router.put('/truemoney/:id', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
         const wallet = await prisma.trueMoneyWallet.update({
             where: { id: Number(req.params.id) },
@@ -192,7 +192,7 @@ router.put('/truemoney/:id', requirePermission('settings', 'truemoney'), async (
 });
 
 // DELETE /api/admin/settings/truemoney/:id (ต้องมีสิทธิ์ settings.truemoney)
-router.delete('/truemoney/:id', requirePermission('settings', 'truemoney'), async (req, res) => {
+router.delete('/truemoney/:id', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
         await prisma.trueMoneyWallet.delete({ where: { id: Number(req.params.id) } });
         res.json({ success: true, message: 'ลบสำเร็จ' });
@@ -205,7 +205,7 @@ router.delete('/truemoney/:id', requirePermission('settings', 'truemoney'), asyn
 // === Site Features (เปิด/ปิดฟีเจอร์) ===
 
 // GET /api/admin/settings/features (ต้องมีสิทธิ์ดู)
-router.get('/features', requirePermission('settings', 'view'), async (req, res) => {
+router.get('/features', requirePermission('settings', 'features', 'view'), async (req, res) => {
     try {
         const features = await prisma.siteFeature.findMany({ orderBy: { key: 'asc' } });
         res.json({ success: true, data: features });
@@ -216,7 +216,7 @@ router.get('/features', requirePermission('settings', 'view'), async (req, res) 
 });
 
 // POST /api/admin/settings/features/init - สร้าง default features (ต้องมีสิทธิ์เปิด/ปิดฟีเจอร์)
-router.post('/features/init', requirePermission('settings', 'features'), async (req: AuthRequest, res) => {
+router.post('/features/init', requirePermission('settings', 'features', 'manage'), async (req: AuthRequest, res) => {
     try {
         const defaultFeatures = [
             { key: 'registration', name: 'สมัครสมาชิก', description: 'อนุญาตให้ผู้ใช้สมัครสมาชิกใหม่' },
@@ -248,7 +248,7 @@ router.post('/features/init', requirePermission('settings', 'features'), async (
 });
 
 // PUT /api/admin/settings/features/:key - อัปเดต feature (ต้องมีสิทธิ์เปิด/ปิดฟีเจอร์)
-router.put('/features/:key', requirePermission('settings', 'features'), async (req: AuthRequest, res) => {
+router.put('/features/:key', requirePermission('settings', 'features', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { isEnabled } = req.body;
         const feature = await prisma.siteFeature.update({
@@ -265,7 +265,7 @@ router.put('/features/:key', requirePermission('settings', 'features'), async (r
 // === Contact Channels ===
 
 // GET /api/admin/settings/contacts - รายการช่องทางติดต่อ
-router.get('/contacts', requirePermission('settings', 'view'), async (req, res) => {
+router.get('/contacts', requirePermission('settings', 'contacts', 'view'), async (req, res) => {
     try {
         const contacts = await prisma.contactChannel.findMany({ orderBy: { sortOrder: 'asc' } });
         res.json({ success: true, data: contacts });
@@ -276,7 +276,7 @@ router.get('/contacts', requirePermission('settings', 'view'), async (req, res) 
 });
 
 // POST /api/admin/settings/contacts - เพิ่มช่องทางติดต่อ
-router.post('/contacts', requirePermission('settings', 'edit'), async (req, res) => {
+router.post('/contacts', requirePermission('settings', 'contacts', 'manage'), async (req, res) => {
     try {
         const { type, name, url, icon } = req.body;
         const contact = await prisma.contactChannel.create({
@@ -290,7 +290,7 @@ router.post('/contacts', requirePermission('settings', 'edit'), async (req, res)
 });
 
 // PUT /api/admin/settings/contacts/:id - แก้ไขช่องทางติดต่อ
-router.put('/contacts/:id', requirePermission('settings', 'edit'), async (req, res) => {
+router.put('/contacts/:id', requirePermission('settings', 'contacts', 'manage'), async (req, res) => {
     try {
         const { type, name, url, icon, isActive, sortOrder } = req.body;
         const contact = await prisma.contactChannel.update({
@@ -305,7 +305,7 @@ router.put('/contacts/:id', requirePermission('settings', 'edit'), async (req, r
 });
 
 // DELETE /api/admin/settings/contacts/:id - ลบช่องทางติดต่อ
-router.delete('/contacts/:id', requirePermission('settings', 'edit'), async (req, res) => {
+router.delete('/contacts/:id', requirePermission('settings', 'contacts', 'manage'), async (req, res) => {
     try {
         await prisma.contactChannel.delete({ where: { id: Number(req.params.id) } });
         res.json({ success: true, message: 'ลบช่องทางติดต่อสำเร็จ' });

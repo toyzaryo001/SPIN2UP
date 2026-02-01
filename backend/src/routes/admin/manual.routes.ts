@@ -33,10 +33,10 @@ router.post('/deposit', async (req: AuthRequest, res) => {
                 permissions = JSON.parse(admin?.role?.permissions || '{}');
             } catch (e) { }
 
-            if (permissions.manual?.[requiredPermission] !== true) {
+            if (permissions.manual?.[requiredPermission]?.manage !== true) {
                 return res.status(403).json({
                     success: false,
-                    message: `ไม่มีสิทธิ์: manual.${requiredPermission}`
+                    message: `ไม่มีสิทธิ์: manual.${requiredPermission}.manage`
                 });
             }
         }
@@ -116,7 +116,7 @@ router.post('/deposit', async (req: AuthRequest, res) => {
 });
 
 // POST /api/admin/manual/deduct - ลดเครดิต (ต้องมีสิทธิ์ deduct)
-router.post('/deduct', requirePermission('manual', 'deduct'), async (req: AuthRequest, res) => {
+router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { userId, amount, subType, note } = req.body;
 
@@ -185,7 +185,7 @@ router.post('/deduct', requirePermission('manual', 'deduct'), async (req: AuthRe
 });
 
 // POST /api/admin/manual/approve-withdrawal - อนุมัติถอน (ต้องมีสิทธิ์ approve_withdraw)
-router.post('/approve-withdrawal', requirePermission('manual', 'approve_withdraw'), async (req: AuthRequest, res) => {
+router.post('/approve-withdrawal', requirePermission('manual', 'withdraw', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { transactionId } = req.body;
 
@@ -237,7 +237,7 @@ router.post('/approve-withdrawal', requirePermission('manual', 'approve_withdraw
 });
 
 // POST /api/admin/manual/reject-withdrawal - ปฏิเสธถอน (ต้องมีสิทธิ์ reject_withdraw)
-router.post('/reject-withdrawal', requirePermission('manual', 'reject_withdraw'), async (req: AuthRequest, res) => {
+router.post('/reject-withdrawal', requirePermission('manual', 'withdraw', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { transactionId, note } = req.body;
 
@@ -254,7 +254,7 @@ router.post('/reject-withdrawal', requirePermission('manual', 'reject_withdraw')
 });
 
 // POST /api/admin/manual/approve-deposit - อนุมัติฝาก (ต้องมีสิทธิ์ approve_deposit)
-router.post('/approve-deposit', requirePermission('manual', 'approve_deposit'), async (req: AuthRequest, res) => {
+router.post('/approve-deposit', requirePermission('manual', 'deposit', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { transactionId } = req.body;
 

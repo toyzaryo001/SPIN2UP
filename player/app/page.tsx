@@ -212,7 +212,7 @@ const InviteCard = () => (
 
 // --- PREMIUM GAME CARD (Fixes the "dry" look) ---
 // --- PREMIUM GAME CARD ---
-const GameCard = ({ title, provider, image, color, hot, type, onPlay }: any) => {
+const GameCard = ({ title, provider, image, color, hot, isNew, type, onPlay }: any) => {
   const hasImage = image && image !== "";
   return (
     <div onClick={() => onPlay && onPlay()} className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-2">
@@ -243,6 +243,14 @@ const GameCard = ({ title, provider, image, color, hot, type, onPlay }: any) => 
           <div className="absolute top-0 right-0 bg-gradient-to-l from-red-600 to-transparent pl-4 pr-1 py-1">
             <div className="flex items-center gap-1 text-white text-[10px] font-black uppercase italic pr-1">
               <Flame size={12} fill="white" className="animate-pulse" /> HOT
+            </div>
+          </div>
+        )}
+        {/* New Badge */}
+        {!hot && isNew && (
+          <div className="absolute top-0 right-0 bg-gradient-to-l from-blue-500 to-transparent pl-4 pr-1 py-1">
+            <div className="flex items-center gap-1 text-white text-[10px] font-black uppercase italic pr-1">
+              <Sparkles size={12} fill="white" className="animate-pulse" /> NEW
             </div>
           </div>
         )}
@@ -426,6 +434,9 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
     image: g.thumbnail || g.image || "", // Use thumbnail from DB
     color: MOCK_GAMES[i % MOCK_GAMES.length].color, // Keep styling logic
     hot: g.isHot,
+    isNew: g.isNew,
+    slug: g.slug,
+    providerCode: g.provider?.slug,
     type: 'slot' // Default to slot for home mix
   })) : MOCK_GAMES;
 
@@ -618,6 +629,7 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
               image={game.thumbnail || game.image}
               color={`bg-gradient-to-br from-slate-700 to-slate-800`}
               hot={game.isHot}
+              isNew={game.isNew}
               type="slot"
               onPlay={() => onPlay && onPlay(game)}
             />
@@ -705,6 +717,7 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
               image={game.thumbnail || game.image}
               color={`bg-gradient-to-br from-slate-700 to-slate-800`}
               hot={game.isHot}
+              isNew={game.isNew}
               type="casino"
               onPlay={() => onPlay && onPlay(game)}
             />
@@ -923,7 +936,14 @@ function HomePageLogic() {
     try {
       // Optimistic UI or Loading spinner? 
       // Ideally we show a loading overlay.
-      const res = await axios.post(`${API_URL}/games/launch`, {}, {
+      const payload = {
+        providerCode: game.providerCode || game.provider?.slug,
+        gameCode: game.slug || game.code
+      };
+
+      console.log("Launching game with payload:", payload); // Debug
+
+      const res = await axios.post(`${API_URL}/games/launch`, payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 

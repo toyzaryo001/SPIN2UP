@@ -70,7 +70,11 @@ router.get('/games', async (req: Request, res: Response) => {
         let games = await prisma.game.findMany({
             where,
             include,
-            orderBy: { sortOrder: 'asc' },
+            orderBy: [
+                { isNew: 'desc' },
+                { isHot: 'desc' },
+                { sortOrder: 'asc' }
+            ],
             take: 50000 // Safety limit to prevent OOM
         });
 

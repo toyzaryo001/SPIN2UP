@@ -314,7 +314,12 @@ router.delete('/:id', requirePermission('members', 'list', 'manage'), async (req
             return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้', step: 1 });
         }
 
-        // Step 2: Minimal Soft Delete - ONLY change status
+        // Step 2: Delete EditLogs that reference this user (FK constraint fix)
+        await prisma.editLog.deleteMany({
+            where: { targetId: userId, targetType: 'User' }
+        });
+
+        // Step 3: Minimal Soft Delete - ONLY change status
         await prisma.user.update({
             where: { id: userId },
             data: { status: 'DELETED' }

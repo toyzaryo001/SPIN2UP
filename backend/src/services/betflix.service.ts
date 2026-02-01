@@ -254,7 +254,7 @@ export class BetflixService {
      * Direct Game Launch (Ported from PHP launchGame)
      * Supports Provider Mapping, QTech, and GameCode Variants
      */
-    static async launchGame(username: string, providerCode: string, gameCode: string = '', lang: string = 'thai'): Promise<string | null> {
+    static async launchGame(username: string, providerCode: string, gameCode: string = '', lang: string = 'thai', returnUrl: string = ''): Promise<string | null> {
         try {
             const config = await this.getConfig();
             const api = await this.getApi();
@@ -275,7 +275,7 @@ export class BetflixService {
                 'sexy': 'sexy',
                 'dreamgaming': 'dg',
                 'dg': 'dg',
-                'jili': 'jl', // User requested JILI -> jl
+                'jili': 'jl',
                 'jl': 'jl',
                 'fc': 'fc',
                 'fachai': 'fc',
@@ -294,10 +294,6 @@ export class BetflixService {
             const attempts: Array<{ provider: string, gamecode: string }> = [];
 
             if (apiProvider === 'qtech') {
-                // QTech Logic: Handle prefixes like GA-crypcrusade
-                // If gameCode has prefix (e.g., GA-...), use it.
-                // If inputProvider is 'ga' but gameCode is 'crypcrusade', prepend 'GA-'.
-
                 const qtechPrefixMap: Record<string, string> = { 'ga': 'GA', 'gamatron': 'GA' };
                 const derivedPrefix = qtechPrefixMap[inputProvider] || '';
 
@@ -308,20 +304,16 @@ export class BetflixService {
                         candidates.push(`${derivedPrefix}-${gameCode}`);
                     }
                 } else {
-                    // Lobby
                     attempts.push({ provider: 'qtech', gamecode: '' });
                 }
 
                 candidates.forEach(gc => attempts.push({ provider: 'qtech', gamecode: gc }));
 
             } else {
-                // Standard Logic
-                // Variants for Provider: JILI -> [jl, jili]
                 let provVars = [apiProvider];
                 if (apiProvider === 'jili' || apiProvider === 'jl') provVars = ['jl', 'jili'];
                 if (apiProvider === 'fc') provVars = ['fc'];
 
-                // Variants for GameCode: Try raw, then underscore/hyphen swap
                 let gameVars = gameCode ? [gameCode] : [''];
                 if (gameCode && gameCode.includes('_')) {
                     gameVars.push(gameCode.replace(/_/g, '-'));
@@ -334,7 +326,6 @@ export class BetflixService {
                 }
             }
 
-            // Add Lobby Fallback if specific game fails
             attempts.push({ provider: apiProvider, gamecode: '' });
 
             // 3. Execution Loop
@@ -344,30 +335,24 @@ export class BetflixService {
                 params.append('provider', attempt.provider);
                 if (attempt.gamecode) params.append('game', attempt.gamecode);
                 params.append('lang', lang);
+                if (returnUrl) params.append('return_url', returnUrl);
 
-                // Use /v4/play/login (Unified endpoint)
-                // Note: PHP uses /play/login which handles game specific launching
                 try {
-                    // console.log(`Attempting Launch: ${attempt.provider} / ${attempt.gamecode}`);
                     const res = await api.post('/v4/play/login', params);
                     if (res.data.status === 'success' && res.data.data) {
                         if (res.data.data.url) {
                             return res.data.data.url;
                         }
 
-                        // Token Fallback (Critical for providers like Joker/PP)
                         if (res.data.data.login_token && config.gameEntrance) {
                             const entrance = config.gameEntrance.startsWith('http')
                                 ? config.gameEntrance
                                 : `https://${config.gameEntrance}`;
-
-                            // Remove trailing slash and append path
                             return `${entrance.replace(/\/$/, '')}/play/login?token=${res.data.data.login_token}`;
                         }
                     }
                 } catch (e) {
-                    // Log and continue
-                    // console.warn(`Launch failed for ${attempt.provider}/${attempt.gamecode}`);
+                    // Continue
                 }
             }
 

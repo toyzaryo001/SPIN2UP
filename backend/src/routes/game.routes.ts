@@ -219,6 +219,7 @@ router.get('/user/history', authMiddleware, async (req: AuthRequest, res) => {
 });
 
 // POST /api/games/launch - เข้าเล่นเกม (Betflix Direct Play)
+// POST /api/games/launch - เข้าเล่นเกม (Betflix Direct Play)
 router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
     try {
         const { providerCode, gameCode, lang = 'thai' } = req.body;
@@ -240,14 +241,18 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
             }
         }
 
-        // Use new launchGame method with fallback to lobby behavior if no valid game/provider
-        let url: string | null = null;
+        const betflixUser = user.betflixUsername!;
 
+        // Use new launchGame method with fallback to lobby behavior if no valid game/provider
+        const referer = req.headers.referer || req.headers.origin || 'https://domain.com';
+        const returnUrl = `${referer}`;
+
+        let url: string | null = null;
         if (providerCode) {
-            url = await BetflixService.launchGame(user.betflixUsername!, providerCode, gameCode, lang);
+            url = await BetflixService.launchGame(betflixUser, providerCode, gameCode, lang, returnUrl);
         } else {
             // Legacy/Lobby mode
-            url = await BetflixService.getPlayUrl(user.betflixUsername!);
+            url = await BetflixService.getPlayUrl(betflixUser);
         }
 
         if (!url) {

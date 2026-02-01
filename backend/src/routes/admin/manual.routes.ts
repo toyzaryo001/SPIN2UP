@@ -50,9 +50,26 @@ router.post('/deposit', async (req: AuthRequest, res) => {
         const balanceAfter = Number(balanceBefore) + Number(amount);
 
         // Betflix Deposit
-        if (!isBonus && user.betflixUsername) {
-            const success = await BetflixService.transfer(user.betflixUsername, Number(amount), `MANUAL_${Date.now()}`);
-            if (!success) return res.status(500).json({ success: false, message: 'เติมเงินเข้ากระเป๋า Betflix ไม่สำเร็จ' });
+        if (!isBonus) {
+            let betflixUser = user.betflixUsername;
+            if (!betflixUser) {
+                const reg = await BetflixService.register(user.phone);
+                if (reg) {
+                    await prisma.user.update({ where: { id: user.id }, data: { betflixUsername: reg.username, betflixPassword: reg.password } });
+                    betflixUser = reg.username;
+                }
+            }
+
+            if (betflixUser) {
+                const success = await BetflixService.transfer(betflixUser, Number(amount), `MANUAL_${Date.now()}`);
+                if (!success) {
+                    // Decide: Fail or Continue? 
+                    // User says: "Pull from Agent... into User". If fail, we should probably fail the whole transaction.
+                    return res.status(502).json({ success: false, message: 'เติมเงินเข้ากระเป๋า Betflix ไม่สำเร็จ (API Error)' });
+                }
+            } else {
+                return res.status(400).json({ success: false, message: 'ไม่สามารถสร้างกระเป๋าเกมได้ (Register Failed)' });
+            }
         }
 
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -253,11 +270,20 @@ router.post('/approve-deposit', requirePermission('manual', 'approve_deposit'), 
         const newBalance = Number(transaction.user.balance) + Number(transaction.amount);
 
         // Betflix Deposit
-        if (transaction.user.betflixUsername) {
-            const success = await BetflixService.transfer(transaction.user.betflixUsername, Number(transaction.amount), `DEP_${transaction.id}`);
-            if (!success) return res.status(500).json({ success: false, message: 'เติมเงินเข้ากระเป๋า Betflix ไม่สำเร็จ' });
+        let betflixUser = transaction.user.betflixUsername;
+        if (!betflixUser) {
+            const reg = await BetflixService.register(transaction.user.phone);
+            if (reg) {
+                await prisma.user.update({ where: { id: transaction.userId }, data: { betflixUsername: reg.username, betflixPassword: reg.password } });
+                betflixUser = reg.username;
+            }
+        }
+
+        if (betflixUser) {
+            const success = await BetflixService.transfer(betflixUser, Number(transaction.amount), `DEP_${transaction.id}`);
+            if (!success) return res.status(502).json({ success: false, message: 'เติมเงินเข้ากระเป๋า Betflix ไม่สำเร็จ' });
         } else {
-            return res.status(400).json({ success: false, message: 'ผู้ใช้ยังไม่ได้เชื่อมต่อ Betflix' });
+            return res.status(400).json({ success: false, message: 'ไม่สามารถสร้างกระเป๋าเกมได้ (Register Failed)' });
         }
 
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {

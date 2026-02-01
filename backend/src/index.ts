@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import prisma from './lib/db.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -13,6 +14,22 @@ import publicRoutes from './routes/public.routes.js';
 import superAdminRoutes from './routes/super-admin/index.js';
 
 dotenv.config();
+
+// Fix FK constraint on startup
+async function fixDatabase() {
+    try {
+        console.log('🔧 Checking EditLog FK constraint...');
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "EditLog" DROP CONSTRAINT IF EXISTS "EditLog_targetId_fkey"
+        `);
+        console.log('✅ EditLog FK constraint fixed');
+    } catch (error) {
+        console.log('⚠️ FK fix skipped (already removed or not exist)');
+    }
+}
+
+// Run fix before starting server
+fixDatabase().catch(console.error);
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);

@@ -305,66 +305,47 @@ router.get('/:id/debug-delete', requirePermission('members', 'list', 'manage'), 
 
 // DELETE /api/admin/users/:id - ลบสมาชิก (ต้องมีสิทธิ์ลบ)
 router.delete('/:id', requirePermission('members', 'list', 'manage'), async (req: AuthRequest, res) => {
-    try {
-        const userId = Number(req.params.id);
+    const userId = Number(req.params.id);
 
-        // Check if target user exists
+    try {
+        // Step 1: Check if user exists
         const targetUser = await prisma.user.findUnique({ where: { id: userId } });
         if (!targetUser) {
-            return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+            return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้', step: 1 });
         }
 
-        // Save user info for logging before deletion
-        const userInfo = { id: userId, username: targetUser.username, fullName: targetUser.fullName };
-
-        // Soft Delete (Prevent FK Constraint verify fail from Polymorphic EditLog)
-        const timestamp = Date.now();
+        // Step 2: Minimal Soft Delete - ONLY change status
         await prisma.user.update({
             where: { id: userId },
-            data: {
-                username: `del_${timestamp}_${targetUser.username.slice(0, 10)}`,
-                phone: `del_${timestamp}`,
-                betflixUsername: null,
-                status: 'DELETED'
-            }
+            data: { status: 'DELETED' }
         });
 
-        // Clean up heavy data
+        // Step 3: Optional cleanup (wrapped in try-catch, won't block success)
         try {
-            await prisma.gameSession.deleteMany({ where: { userId } });
-            await prisma.transaction.deleteMany({ where: { userId } });
-            await prisma.promotionLog.deleteMany({ where: { userId } });
-            // Keep EditLog for audit or delete if you prefer:
-            // await prisma.editLog.deleteMany({ where: { targetId: userId, targetType: 'User' } });
-
-            // Unlink referrals
-            await prisma.user.updateMany({
-                where: { referredBy: userId },
-                data: { referredBy: null }
-            });
-        } catch (cleanupError) {
-            console.error('Soft delete cleanup error (non-fatal):', cleanupError);
-        }
-
-        // Log the deletion
-        try {
-            await prisma.adminLog.create({
+            const ts = Date.now();
+            await prisma.user.update({
+                where: { id: userId },
                 data: {
-                    adminId: req.user!.userId,
-                    action: 'DELETE',
-                    resource: 'USER',
-                    details: `Soft Deleted user: ${userInfo.username}`,
-                    ip: req.ip || 'unknown'
+                    username: `del_${ts}_${targetUser.username.slice(0, 8)}`,
+                    phone: `del_${ts}`,
+                    betflixUsername: null
                 }
             });
-        } catch (logError) {
-            console.error('Failed to create admin log:', logError);
+        } catch (renameErr: any) {
+            console.error('Rename failed (non-critical):', renameErr?.message);
         }
 
         res.json({ success: true, message: 'ลบสมาชิกสำเร็จ' });
     } catch (error: any) {
-        console.error('Delete user error:', error?.message || error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบสมาชิก', error: error?.message });
+        console.error('DELETE ERROR:', error);
+        res.status(500).json({
+            success: false,
+            message: 'เกิดข้อผิดพลาดในการลบสมาชิก',
+            errorName: error?.name,
+            errorMessage: error?.message,
+            errorCode: error?.code,
+            step: 'update_status'
+        });
     }
 });
 

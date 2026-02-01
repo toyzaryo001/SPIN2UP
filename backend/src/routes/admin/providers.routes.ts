@@ -55,6 +55,25 @@ router.post('/', requirePermission('games', 'edit'), async (req, res) => {
     }
 });
 
+// PUT /api/admin/providers/reorder - จัดลำดับ
+router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
+    try {
+        const { items } = req.body; // [{ id, sortOrder }, ...]
+
+        for (const item of items) {
+            await prisma.gameProvider.update({
+                where: { id: item.id },
+                data: { sortOrder: item.sortOrder },
+            });
+        }
+
+        res.json({ success: true, message: 'จัดลำดับสำเร็จ' });
+    } catch (error) {
+        console.error('Reorder providers error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 // PUT /api/admin/providers/:id - แก้ไขค่ายเกม
 router.put('/:id', requirePermission('games', 'edit'), async (req, res) => {
     try {

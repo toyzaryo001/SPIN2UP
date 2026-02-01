@@ -7,6 +7,7 @@ import { Wallet, RefreshCw } from "lucide-react";
 export default function Topbar() {
     const [balance, setBalance] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
 
     const fetchBalance = async () => {
         setLoading(true);
@@ -23,11 +24,14 @@ export default function Topbar() {
     };
 
     useEffect(() => {
+        setMounted(true);
         fetchBalance();
         // Auto refresh every 60 seconds
         const interval = setInterval(fetchBalance, 60000);
         return () => clearInterval(interval);
     }, []);
+
+    if (!mounted) return null;
 
     return (
         <div className="bg-white border-b border-slate-200 px-8 py-3 flex justify-end items-center shadow-sm">

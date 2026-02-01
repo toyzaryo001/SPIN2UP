@@ -35,7 +35,7 @@ model User {
 
   transactions  Transaction[]
   gameSessions  GameSession[]
-  editLogs      EditLog[]     @relation("TargetUser")
+  // Removed: editLogs relation (FK was removed from EditLog model)
   promotionLogs PromotionLog[]
 
   @@index([phone])
@@ -119,7 +119,8 @@ model EditLog {
   id         Int      @id @default(autoincrement())
   targetType String
   targetId   Int
-  targetUser User?    @relation("TargetUser", fields: [targetId], references: [id])
+  // Removed: targetUser relation (FK to User.id breaks polymorphic pattern)
+  // Use targetType + targetId for queries instead
   field      String
   oldValue   String?
   newValue   String?

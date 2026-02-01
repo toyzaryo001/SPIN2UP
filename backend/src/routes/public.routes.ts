@@ -71,13 +71,29 @@ router.get('/games', async (req: Request, res: Response) => {
             where,
             include,
             orderBy: { sortOrder: 'asc' },
-            take: limit ? parseInt(limit as string) : 1500
+            take: 50000 // Safety limit to prevent OOM
         });
 
         // Only return games from active providers
         games = games.filter(g => !g.providerId || g.provider);
 
-        res.json(games);
+        // Apply PER PROVIDER limit (default 1500)
+        // User Request: "Limit 1500 per provider, not global"
+        const maxPerProvider = limit ? parseInt(limit as string) : 1500;
+        const providerCounts: Record<number, number> = {};
+        const filteredGames: typeof games = [];
+
+        for (const game of games) {
+            const pId = game.providerId || 0;
+            if (!providerCounts[pId]) providerCounts[pId] = 0;
+
+            if (providerCounts[pId] < maxPerProvider) {
+                filteredGames.push(game);
+                providerCounts[pId]++;
+            }
+        }
+
+        res.json(filteredGames);
     } catch (error) {
         console.error('Public games error:', error);
         res.status(500).json({ error: 'Failed to fetch games' });

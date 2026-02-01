@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission } from '../../middlewares/auth.middleware.js';
+import { BetflixService } from '../../services/betflix.service.js';
 
 const router = Router();
 
@@ -88,10 +89,11 @@ router.get('/:id', requirePermission('members', 'list', 'view'), async (req, res
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            include: {
-                transactions: { take: 10, orderBy: { createdAt: 'desc' } },
-                gameSessions: { take: 10, orderBy: { playedAt: 'desc' }, include: { game: true } },
-            },
+            // Removed includes to prevent 500 error if relation tables are missing on production
+            // include: {
+            //    transactions: { take: 10, orderBy: { createdAt: 'desc' } },
+            //    gameSessions: { take: 10, orderBy: { playedAt: 'desc' }, include: { game: true } },
+            // },
         });
 
         if (!user) {
@@ -149,6 +151,22 @@ router.post('/', requirePermission('members', 'register', 'manage'), async (req:
                 referrerCode: `REF${Date.now().toString().slice(-8)}`,
             },
         });
+
+        // Register with Betflix (External Board)
+        try {
+            const betflixUser = await BetflixService.register(phone);
+            if (betflixUser) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        betflixUsername: betflixUser.username,
+                        betflixPassword: betflixUser.password
+                    }
+                });
+            }
+        } catch (bfError) {
+            console.error('Betflix Admin-Register Failed:', bfError);
+        }
 
         // Log edit
         await prisma.editLog.create({

@@ -185,9 +185,15 @@ router.post('/', requirePermission('members', 'register', 'manage'), async (req:
         });
 
         res.status(201).json({ success: true, message: 'สร้างสมาชิกสำเร็จ', data: { userId: user.id } });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Create user error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        res.status(500).json({
+            success: false,
+            message: 'เกิดข้อผิดพลาดในการสร้างสมาชิก',
+            errorName: error?.name,
+            errorMessage: error?.message,
+            errorCode: error?.code
+        });
     }
 });
 
@@ -255,7 +261,13 @@ router.put('/:id', requirePermission('members', 'list', 'manage'), async (req: A
         res.json({ success: true, message: 'อัปเดตสำเร็จ' });
     } catch (error: any) {
         console.error('Update user error:', error?.message || error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        res.status(500).json({
+            success: false,
+            message: 'เกิดข้อผิดพลาดในการแก้ไขสมาชิก',
+            errorName: error?.name,
+            errorMessage: error?.message,
+            errorCode: error?.code
+        });
     }
 });
 

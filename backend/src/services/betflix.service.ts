@@ -44,9 +44,9 @@ export class BetflixService {
                 };
             }
 
-            // Update cache
+            // Update cache - Use hardcoded API URL (not from DB)
             configCache = {
-                apiUrl: config.apiKey || '', // Mapping apiKey field to API URL based on schema usage
+                apiUrl: 'https://api.bfx.fail', // Hardcoded - correct Betflix API
                 apiKey: config.xApiKey || '',
                 apiCat: config.xApiCat || '',
                 prefix: config.upline || '', // Mapping upline to prefix

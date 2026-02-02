@@ -2,175 +2,303 @@
 
 import { useState } from 'react';
 import api from '@/lib/api';
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Wifi, ShieldCheck, Server, Globe } from 'lucide-react';
+import { Loader2, Server, ShieldCheck, UserPlus, Wallet, Gamepad2, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 
-type TestResult = {
-    server: { success: boolean; message: string; latency: number };
-    auth: { success: boolean; message: string; latency: number };
+type TestItem = {
+    success: boolean;
+    message: string;
+    latency: number;
+    data?: any;
+};
+
+type TestResults = {
+    server: TestItem;
+    auth: TestItem;
+    register: TestItem;
+    balance: TestItem;
+    game: TestItem;
     config: { apiUrl: string; prefix: string };
 };
 
-export default function ConnectionTestPage() {
-    const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState<TestResult | null>(null);
+const initialResult: TestItem = { success: false, message: 'รอทดสอบ...', latency: 0 };
 
+export default function ConnectionTestPage() {
+    const [loading, setLoading] = useState<string | null>(null);
+    const [results, setResults] = useState<TestResults>({
+        server: initialResult,
+        auth: initialResult,
+        register: initialResult,
+        balance: initialResult,
+        game: initialResult,
+        config: { apiUrl: '', prefix: '' }
+    });
+    const [testPhone, setTestPhone] = useState('0999999999');
+    const [testUsername, setTestUsername] = useState('');
+
+    // Test Connection (Server + Auth)
     const testConnection = async () => {
-        setLoading(true);
-        setResult(null);
+        setLoading('connection');
         try {
             const res = await api.get('/admin/agents/connection-test');
             if (res.data.success) {
-                setResult(res.data.data);
-            } else {
-                // Handle unexpected structure
-                setResult({
-                    server: { success: false, message: 'Invalid Response', latency: 0 },
-                    auth: { success: false, message: 'Invalid Response', latency: 0 },
-                    config: { apiUrl: 'Unknown', prefix: 'Unknown' }
-                });
+                setResults(prev => ({
+                    ...prev,
+                    server: res.data.data.server,
+                    auth: res.data.data.auth,
+                    config: res.data.data.config
+                }));
             }
         } catch (error: any) {
-            setResult({
-                server: { success: false, message: 'Request Failed', latency: 0 },
-                auth: { success: false, message: 'Skipped', latency: 0 },
-                config: { apiUrl: 'Unknown', prefix: 'Unknown' }
-            });
-        } finally {
-            setLoading(false);
+            setResults(prev => ({
+                ...prev,
+                server: { success: false, message: error.message, latency: 0 },
+                auth: { success: false, message: 'Skipped', latency: 0 }
+            }));
         }
+        setLoading(null);
+    };
+
+    // Test Register
+    const testRegister = async () => {
+        if (!testPhone) return;
+        setLoading('register');
+        try {
+            const res = await api.post('/admin/agents/test-register', { phone: testPhone });
+            setResults(prev => ({
+                ...prev,
+                register: {
+                    success: res.data.success,
+                    message: res.data.data?.message || res.data.message,
+                    latency: res.data.latency || 0,
+                    data: res.data.data
+                }
+            }));
+            if (res.data.data?.username) {
+                setTestUsername(res.data.data.username);
+            }
+        } catch (error: any) {
+            setResults(prev => ({
+                ...prev,
+                register: { success: false, message: error.message, latency: 0 }
+            }));
+        }
+        setLoading(null);
+    };
+
+    // Test Balance
+    const testBalance = async () => {
+        if (!testUsername) return;
+        setLoading('balance');
+        try {
+            const res = await api.post('/admin/agents/test-balance', { username: testUsername });
+            setResults(prev => ({
+                ...prev,
+                balance: {
+                    success: res.data.success,
+                    message: res.data.success ? `ยอดเงิน: ${res.data.data.balance}` : res.data.message,
+                    latency: res.data.latency || 0,
+                    data: res.data.data
+                }
+            }));
+        } catch (error: any) {
+            setResults(prev => ({
+                ...prev,
+                balance: { success: false, message: error.message, latency: 0 }
+            }));
+        }
+        setLoading(null);
+    };
+
+    // Test Game Launch
+    const testGame = async () => {
+        if (!testUsername) return;
+        setLoading('game');
+        try {
+            const res = await api.post('/admin/agents/test-game', { username: testUsername, provider: 'pg' });
+            setResults(prev => ({
+                ...prev,
+                game: {
+                    success: res.data.success,
+                    message: res.data.success ? 'สร้าง URL สำเร็จ' : res.data.message,
+                    latency: res.data.latency || 0,
+                    data: res.data.data
+                }
+            }));
+        } catch (error: any) {
+            setResults(prev => ({
+                ...prev,
+                game: { success: false, message: error.message, latency: 0 }
+            }));
+        }
+        setLoading(null);
+    };
+
+    // Run All Tests
+    const runAllTests = async () => {
+        await testConnection();
+        await testRegister();
+        await testBalance();
+        await testGame();
+    };
+
+    const TestCard = ({
+        title,
+        icon: Icon,
+        result,
+        testKey,
+        onTest,
+        children
+    }: {
+        title: string;
+        icon: any;
+        result: TestItem;
+        testKey: string;
+        onTest: () => void;
+        children?: React.ReactNode;
+    }) => {
+        const isLoading = loading === testKey;
+        const hasResult = result.message !== 'รอทดสอบ...';
+
+        return (
+            <div className={`p-5 rounded-xl border transition-all duration-300 bg-slate-900 ${!hasResult ? 'border-slate-800' :
+                    result.success ? 'border-green-500/50' : 'border-red-500/50'
+                }`}>
+                <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${!hasResult ? 'bg-slate-800 text-slate-500' :
+                                result.success ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                            }`}>
+                            <Icon className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-medium text-white">{title}</h3>
+                            <p className="text-xs text-slate-500">{result.latency}ms</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onTest}
+                        disabled={isLoading}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${isLoading ? 'bg-slate-700 text-slate-400' : 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                            }`}
+                    >
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'ทดสอบ'}
+                    </button>
+                </div>
+
+                {children}
+
+                <div className={`mt-3 p-3 rounded-lg text-sm ${!hasResult ? 'bg-slate-800/50 text-slate-400' :
+                        result.success ? 'bg-green-950/50 text-green-300' : 'bg-red-950/50 text-red-300'
+                    }`}>
+                    {hasResult && (result.success ? <CheckCircle2 className="w-4 h-4 inline mr-2" /> : <XCircle className="w-4 h-4 inline mr-2" />)}
+                    {result.message}
+                </div>
+
+                {result.data?.url && (
+                    <a
+                        href={result.data.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300"
+                    >
+                        <ExternalLink className="w-3 h-3" /> เปิดลิงก์เกม
+                    </a>
+                )}
+            </div>
+        );
     };
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto">
-            <div className="flex justify-between items-center bg-slate-800/50 p-6 rounded-xl border border-slate-700 backdrop-blur-sm">
+        <div className="space-y-6 max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="flex justify-between items-center bg-slate-800/50 p-6 rounded-xl border border-slate-700">
                 <div>
-                    <h1 className="text-2xl font-bold text-white mb-2">ทดสอบการเชื่อมต่อ (Connection Test)</h1>
-                    <p className="text-slate-400">ตรวจสอบสถานะ Server และสิทธิ์การเข้าถึง (Authorization)</p>
+                    <h1 className="text-2xl font-bold text-white mb-2">ทดสอบ API Betflix</h1>
+                    <p className="text-slate-400">ตรวจสอบการเชื่อมต่อ สมัคร เช็คยอด และเข้าเกม</p>
                 </div>
+                <button
+                    onClick={runAllTests}
+                    disabled={!!loading}
+                    className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold rounded-lg transition-all shadow-lg"
+                >
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'ทดสอบทั้งหมด'}
+                </button>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
-                {/* Control Card */}
-                <div className="md:col-span-1 p-6 bg-slate-900 border border-slate-800 rounded-xl shadow-sm h-full">
-                    <div className="flex flex-col items-center justify-center space-y-6 py-8 h-full">
-                        <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-inner">
-                            <Wifi className="w-10 h-10 text-slate-400" />
-                        </div>
-
-                        <div className="text-center space-y-2">
-                            <h3 className="text-lg font-medium text-white">Start Diagnostics</h3>
-                            <p className="text-sm text-slate-400">
-                                ระบบจะทำการตรวจสอบ:
-                            </p>
-                            <ul className="text-sm text-slate-500 text-left list-disc list-inside space-y-1">
-                                <li>การเชื่อมต่อ Server API</li>
-                                <li>ความถูกต้องของ API Key</li>
-                                <li>การยืนยันตัวตน IP Address</li>
-                            </ul>
-                        </div>
-
-                        <button
-                            onClick={testConnection}
-                            disabled={loading}
-                            className={`flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 text-black font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-yellow-500/20 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    กำลังตรวจสอบ...
-                                </>
-                            ) : (
-                                'เริ่มการทดสอบ'
-                            )}
-                        </button>
-                    </div>
+            {/* Config Info */}
+            {results.config.apiUrl && (
+                <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-lg flex items-center justify-between text-sm">
+                    <span className="text-slate-400">API Endpoint: <span className="text-white">{results.config.apiUrl}</span></span>
+                    <span className="text-slate-400">Prefix: <span className="text-yellow-400">{results.config.prefix}</span></span>
                 </div>
+            )}
 
-                {/* Results Area */}
-                <div className="md:col-span-2 grid gap-4">
+            {/* Test Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 
-                    {/* 1. Server Status */}
-                    <div className={`p-5 rounded-xl border transition-all duration-300 bg-slate-900 ${!result ? 'border-slate-800' :
-                        result.server.success ? 'border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.1)]' : 'border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
-                        }`}>
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${!result ? 'bg-slate-800 text-slate-500' :
-                                    result.server.success ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
-                                    }`}>
-                                    <Server className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-medium text-white">Server Reachability</h3>
-                                    <p className="text-sm text-slate-400">
-                                        {result ? result.config.apiUrl : 'Waiting for test...'}
-                                    </p>
-                                </div>
-                            </div>
-                            {result && (
-                                <div className="text-right">
-                                    <div className={`text-lg font-bold ${result.server.success ? 'text-green-500' : 'text-red-500'}`}>
-                                        {result.server.success ? 'Online' : 'Offline'}
-                                    </div>
-                                    <div className="text-xs text-slate-500">{result.server.latency} ms</div>
-                                </div>
-                            )}
-                        </div>
-                        {result && !result.server.success && (
-                            <div className="mt-4 p-3 bg-red-950/50 border border-red-900/50 rounded text-sm text-red-200">
-                                Error: {result.server.message}
-                            </div>
-                        )}
-                    </div>
+                {/* 1. Server Status */}
+                <TestCard
+                    title="เชื่อมต่อ Server"
+                    icon={Server}
+                    result={results.server}
+                    testKey="connection"
+                    onTest={testConnection}
+                />
 
-                    {/* 2. Auth Status */}
-                    <div className={`p-5 rounded-xl border transition-all duration-300 bg-slate-900 ${!result ? 'border-slate-800' :
-                        result.auth.success ? 'border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.1)]' :
-                            result.auth.message.includes('Skipped') ? 'border-slate-800' : 'border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
-                        }`}>
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${!result ? 'bg-slate-800 text-slate-500' :
-                                    result.auth.success ? 'bg-green-500/20 text-green-500' :
-                                        result.auth.message.includes('Skipped') ? 'bg-slate-800 text-slate-500' : 'bg-red-500/20 text-red-500'
-                                    }`}>
-                                    <ShieldCheck className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-medium text-white">Authorization & Rights</h3>
-                                    <p className="text-sm text-slate-400">
-                                        Checks API Key, Secret, and IP Whitelist
-                                    </p>
-                                </div>
-                            </div>
-                            {result && (
-                                <div className="text-right">
-                                    <div className={`text-lg font-bold ${result.auth.success ? 'text-green-500' :
-                                        result.auth.message.includes('Skipped') ? 'text-slate-500' : 'text-red-500'
-                                        }`}>
-                                        {result.auth.success ? 'Authorized' :
-                                            result.auth.message.includes('Skipped') ? 'Skipped' : 'Failed'}
-                                    </div>
-                                    <div className="text-xs text-slate-500">{result.auth.latency} ms</div>
-                                </div>
-                            )}
-                        </div>
-                        {result && !result.auth.success && !result.auth.message.includes('Skipped') && (
-                            <div className="mt-4 p-3 bg-red-900/20 border border-red-900/30 rounded text-sm text-red-300">
-                                {result.auth.message}
-                            </div>
-                        )}
-                    </div>
+                {/* 2. Auth Status */}
+                <TestCard
+                    title="ตรวจสอบสิทธิ์"
+                    icon={ShieldCheck}
+                    result={results.auth}
+                    testKey="connection"
+                    onTest={testConnection}
+                />
 
-                    {/* Config Summary (Optional) */}
-                    {result && (
-                        <div className="flex items-center justify-between px-4 py-2 text-xs text-slate-500 border-t border-slate-800 mt-2">
-                            <span>Testing with Prefix: <span className="text-slate-300">{result.config.prefix}</span></span>
-                            <span>Timestamp: {new Date().toLocaleTimeString()}</span>
-                        </div>
-                    )}
+                {/* 3. Register Test */}
+                <TestCard
+                    title="สมัครสมาชิก"
+                    icon={UserPlus}
+                    result={results.register}
+                    testKey="register"
+                    onTest={testRegister}
+                >
+                    <input
+                        type="text"
+                        value={testPhone}
+                        onChange={(e) => setTestPhone(e.target.value)}
+                        placeholder="เบอร์โทรทดสอบ"
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                    />
+                </TestCard>
 
-                </div>
+                {/* 4. Balance Test */}
+                <TestCard
+                    title="เช็คยอดเงิน"
+                    icon={Wallet}
+                    result={results.balance}
+                    testKey="balance"
+                    onTest={testBalance}
+                >
+                    <input
+                        type="text"
+                        value={testUsername}
+                        onChange={(e) => setTestUsername(e.target.value)}
+                        placeholder="Username (จากการสมัคร)"
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                    />
+                </TestCard>
+
+                {/* 5. Game Launch Test */}
+                <TestCard
+                    title="เข้าเกม (PG Slot)"
+                    icon={Gamepad2}
+                    result={results.game}
+                    testKey="game"
+                    onTest={testGame}
+                >
+                    <p className="text-xs text-slate-500">ใช้ Username: {testUsername || '-'}</p>
+                </TestCard>
+
             </div>
         </div>
     );

@@ -223,12 +223,16 @@ router.get('/user/history', authMiddleware, async (req: AuthRequest, res) => {
 router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
     try {
         const { providerCode, gameCode, lang = 'thai' } = req.body;
+        console.log('🎮 Launch Request:', { providerCode, gameCode, lang, userId: req.user?.userId });
 
         const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
         if (!user) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
 
+        console.log('👤 User found:', { id: user.id, phone: user.phone, betflixUsername: user.betflixUsername });
+
         if (!user.betflixUsername) {
             // Auto-register if missing
+            console.log('📝 No betflixUsername, auto-registering...');
             const betflixUser = await BetflixService.register(user.phone);
             if (betflixUser) {
                 await prisma.user.update({
@@ -236,12 +240,15 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
                     data: { betflixUsername: betflixUser.username, betflixPassword: betflixUser.password }
                 });
                 user.betflixUsername = betflixUser.username;
+                console.log('✅ Betflix user registered:', betflixUser.username);
             } else {
+                console.error('❌ Betflix register failed');
                 return res.status(400).json({ success: false, message: 'ไม่สามารถเชื่อมต่อระบบเกมได้ (Betflix Register Failed)' });
             }
         }
 
         const betflixUser = user.betflixUsername!;
+        console.log('🔑 Launching with betflixUsername:', betflixUser);
 
         // Use new launchGame method with fallback to lobby behavior if no valid game/provider
         const referer = req.headers.referer || req.headers.origin || 'https://domain.com';
@@ -249,16 +256,22 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
 
         let url: string | null = null;
         if (providerCode) {
+            console.log('🚀 Calling launchGame:', { betflixUser, providerCode, gameCode, lang, returnUrl });
             url = await BetflixService.launchGame(betflixUser, providerCode, gameCode, lang, returnUrl);
+            console.log('📍 launchGame result:', url);
         } else {
             // Legacy/Lobby mode
+            console.log('🏠 Calling getPlayUrl (lobby mode)');
             url = await BetflixService.getPlayUrl(betflixUser);
+            console.log('📍 getPlayUrl result:', url);
         }
 
         if (!url) {
+            console.error('❌ No URL returned from Betflix');
             return res.status(500).json({ success: false, message: 'ไม่สามารถขอ URL เข้าเกมได้ (กรุณาลองใหม่อีกครั้ง)' });
         }
 
+        console.log('✅ Returning game URL:', url);
         res.json({ success: true, data: { url } });
     } catch (error) {
         console.error('Launch game error:', error);

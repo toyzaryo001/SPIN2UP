@@ -35,7 +35,7 @@ export class BetflixService {
             if (!config) {
                 // Fallback to env if no DB config found (safety net)
                 return {
-                    apiUrl: process.env.BETFLIX_API_URL || 'https://api.betflix.co',
+                    apiUrl: process.env.BETFLIX_API_URL || 'https://api.bfx.fail',
                     apiKey: process.env.BETFLIX_API_KEY || '',
                     apiCat: process.env.BETFLIX_API_CAT || '',
                     prefix: process.env.BETFLIX_USER_PREFIX || 'CHKK',

@@ -417,9 +417,18 @@ export class BetflixService {
      */
     static async getAgentBalance(): Promise<number> {
         try {
+            const config = await this.getConfig();
             const api = await this.getApi();
-            // Reference: agent/balance (GET)
-            const res = await api.get('/v4/agent/balance');
+
+            // Reference: agent/balance (GET) - requires upline parameter like PHP
+            const params = new URLSearchParams();
+            if (config.prefix) {
+                params.append('upline', config.prefix);
+            }
+
+            const res = await api.get('/v4/agent/balance', { params });
+
+            console.log('Agent Balance Response:', res.data);
 
             if (res.data.status === 'success' && res.data.data) {
                 // Support both total_credit and balance fields

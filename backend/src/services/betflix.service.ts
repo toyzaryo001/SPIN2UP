@@ -334,31 +334,66 @@ export class BetflixService {
 
             attempts.push({ provider: apiProvider, gamecode: '' });
 
-            // 3. Execution Loop
+            // 3. Execution Loop (Enhanced with PHP-style Fallback)
             for (const attempt of attempts) {
                 const params = new URLSearchParams();
                 params.append('username', username);
                 params.append('provider', attempt.provider);
-                if (attempt.gamecode) params.append('game', attempt.gamecode);
-                params.append('lang', lang);
-                if (returnUrl) params.append('return_url', returnUrl);
+                if (attempt.gamecode) params.append('gamecode', attempt.gamecode);
+                params.append('language', lang);
+                params.append('openGame', 'true');
+                if (returnUrl) params.append('returnUrl', returnUrl);
 
                 try {
                     const res = await api.post('/v4/play/login', params);
-                    if (res.data.status === 'success' && res.data.data) {
-                        if (res.data.data.url) {
-                            return res.data.data.url;
+
+                    // Check if status is success (handle both 'success' string and 1 number)
+                    const isSuccess = res.data.status === 'success' || res.data.status === 1;
+
+                    if (isSuccess && res.data.data) {
+                        // Priority 1: Direct URL from API (launch_url, url, game_url)
+                        const directUrl = res.data.data.launch_url || res.data.data.url || res.data.data.game_url;
+                        if (directUrl) {
+                            console.log('LaunchGame: Got direct URL from API');
+                            return directUrl;
                         }
 
-                        if (res.data.data.login_token && config.gameEntrance) {
-                            const entrance = config.gameEntrance.startsWith('http')
-                                ? config.gameEntrance
-                                : `https://${config.gameEntrance}`;
-                            return `${entrance.replace(/\/$/, '')}/play/login?token=${res.data.data.login_token}`;
+                        // Priority 2: Token-based URL construction
+                        const token = res.data.data.login_token;
+                        if (token) {
+                            if (config.gameEntrance) {
+                                const entrance = config.gameEntrance.startsWith('http')
+                                    ? config.gameEntrance
+                                    : `https://${config.gameEntrance}`;
+                                const tokenUrl = `${entrance.replace(/\/$/, '')}/play/login?token=${token}`;
+                                console.log('LaunchGame: Built token URL:', tokenUrl);
+                                return tokenUrl;
+                            }
+
+                            // Fallback: Try openGame=false to get direct launch_url from API (PHP-style)
+                            console.log('LaunchGame: No gameEntrance, trying openGame=false fallback...');
+                            const fallbackParams = new URLSearchParams(params);
+                            fallbackParams.set('openGame', 'false');
+
+                            try {
+                                const fallbackRes = await api.post('/v4/play/login', fallbackParams);
+                                const fbIsSuccess = fallbackRes.data.status === 'success' || fallbackRes.data.status === 1;
+
+                                if (fbIsSuccess && fallbackRes.data.data) {
+                                    const fbUrl = fallbackRes.data.data.launch_url || fallbackRes.data.data.url || fallbackRes.data.data.game_url;
+                                    if (fbUrl) {
+                                        console.log('LaunchGame: Got URL from openGame=false fallback');
+                                        return fbUrl;
+                                    }
+                                }
+                            } catch (fbError) {
+                                console.error('LaunchGame: openGame=false fallback failed:', fbError);
+                            }
                         }
                     }
-                } catch (e) {
-                    // Continue
+                } catch (e: any) {
+                    console.error('LaunchGame: Attempt failed:', e.message);
+                    // Continue to next attempt
                 }
             }
 

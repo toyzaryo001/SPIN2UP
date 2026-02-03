@@ -357,6 +357,14 @@ export class BetflixService {
                     gameVars.push(gameCode.replace(/_/g, '-'));
                 }
 
+                // Try stripping provider prefix (e.g. pg-123 -> 123)
+                if (gameCode && (gameCode.toLowerCase().startsWith(apiProvider + '-') || gameCode.toLowerCase().startsWith(providerCode.toLowerCase() + '-'))) {
+                    const strip1 = gameCode.replace(new RegExp(`^${apiProvider}-`, 'i'), '');
+                    const strip2 = gameCode.replace(new RegExp(`^${providerCode}-`, 'i'), '');
+                    if (strip1 && !gameVars.includes(strip1)) gameVars.push(strip1);
+                    if (strip2 && !gameVars.includes(strip2)) gameVars.push(strip2);
+                }
+
                 for (const p of provVars) {
                     for (const g of gameVars) {
                         attempts.push({ provider: p, gamecode: g });

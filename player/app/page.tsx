@@ -232,7 +232,10 @@ const GameCard = ({ title, provider, image, color, hot, isNew, type, onPlay }: a
 
         {/* Hover Action Overlay */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
-          <button className="btn-green w-12 h-12 rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 delay-100">
+          <button
+            onClick={(e) => { e.stopPropagation(); onPlay && onPlay(); }}
+            className="btn-green w-12 h-12 rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 delay-100"
+          >
             <Play fill="white" className="ml-1" size={20} />
           </button>
           <span className="text-xs font-bold text-white tracking-widest translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-150">เล่นเลย</span>

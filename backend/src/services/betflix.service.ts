@@ -97,7 +97,7 @@ export class BetflixService {
      */
     private static async applyPrefix(userCode: string): Promise<string> {
         const config = await this.getConfig();
-        const raw = userCode.trim();
+        let raw = userCode.trim();
         if (!raw) return raw;
 
         // Skip prefix for CK+digits (game_username format)
@@ -106,8 +106,16 @@ export class BetflixService {
         }
 
         const p = config.prefix.toLowerCase();
+
+        // Check if already starts with prefix
         if (p && raw.toLowerCase().startsWith(p)) {
             return raw;
+        }
+
+        // If raw is a phone number (10 digits), take the last 6 digits
+        const phoneMatch = raw.replace(/\D/g, '').match(/(\d{6})$/);
+        if (phoneMatch) {
+            raw = phoneMatch[1]; // Use last 6 digits
         }
 
         return config.prefix + raw;

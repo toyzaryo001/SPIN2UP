@@ -361,34 +361,48 @@ export class BetflixService {
                         // Priority 2: Token-based URL construction
                         const token = res.data.data.login_token;
                         if (token) {
-                            if (config.gameEntrance) {
-                                const entrance = config.gameEntrance.startsWith('http')
-                                    ? config.gameEntrance
-                                    : `https://${config.gameEntrance}`;
-                                const tokenUrl = `${entrance.replace(/\/$/, '')}/play/login?token=${token}`;
-                                console.log('LaunchGame: Built token URL:', tokenUrl);
-                                return tokenUrl;
-                            }
+                            // Use gameEntrance from config, or fallback to default Betflix game entrance
+                            const gameEntranceUrl = config.gameEntrance
+                                || res.data.data.game_entrance
+                                || 'game.bfl88.com'; // Default Betflix game entrance
 
-                            // Fallback: Try openGame=false to get direct launch_url from API (PHP-style)
-                            console.log('LaunchGame: No gameEntrance, trying openGame=false fallback...');
-                            const fallbackParams = new URLSearchParams(params);
-                            fallbackParams.set('openGame', 'false');
+                            const entrance = gameEntranceUrl.startsWith('http')
+                                ? gameEntranceUrl
+                                : `https://${gameEntranceUrl}`;
 
-                            try {
-                                const fallbackRes = await api.post('/v4/play/login', fallbackParams);
-                                const fbIsSuccess = fallbackRes.data.status === 'success' || fallbackRes.data.status === 1;
+                            const tokenUrl = `${entrance.replace(/\/$/, '')}/play/login?token=${token}`;
+                            console.log('LaunchGame: Built token URL:', tokenUrl);
+                            return tokenUrl;
+                        }
 
-                                if (fbIsSuccess && fallbackRes.data.data) {
-                                    const fbUrl = fallbackRes.data.data.launch_url || fallbackRes.data.data.url || fallbackRes.data.data.game_url;
-                                    if (fbUrl) {
-                                        console.log('LaunchGame: Got URL from openGame=false fallback');
-                                        return fbUrl;
-                                    }
+                        // Fallback: Try openGame=false to get direct launch_url from API (PHP-style)
+                        console.log('LaunchGame: No token, trying openGame=false fallback...');
+                        const fallbackParams = new URLSearchParams(params);
+                        fallbackParams.set('openGame', 'false');
+
+                        try {
+                            const fallbackRes = await api.post('/v4/play/login', fallbackParams);
+                            const fbIsSuccess = fallbackRes.data.status === 'success' || fallbackRes.data.status === 1;
+
+                            if (fbIsSuccess && fallbackRes.data.data) {
+                                const fbUrl = fallbackRes.data.data.launch_url || fallbackRes.data.data.url || fallbackRes.data.data.game_url;
+                                if (fbUrl) {
+                                    console.log('LaunchGame: Got URL from openGame=false fallback');
+                                    return fbUrl;
                                 }
-                            } catch (fbError) {
-                                console.error('LaunchGame: openGame=false fallback failed:', fbError);
+
+                                // Try to build URL from fallback response token
+                                const fbToken = fallbackRes.data.data.login_token;
+                                const fbEntrance = fallbackRes.data.data.game_entrance || config.gameEntrance || 'game.bfl88.com';
+                                if (fbToken) {
+                                    const fbEntranceUrl = fbEntrance.startsWith('http') ? fbEntrance : `https://${fbEntrance}`;
+                                    const tokenUrl = `${fbEntranceUrl.replace(/\/$/, '')}/play/login?token=${fbToken}`;
+                                    console.log('LaunchGame: Built token URL from fallback:', tokenUrl);
+                                    return tokenUrl;
+                                }
                             }
+                        } catch (fbError) {
+                            console.error('LaunchGame: openGame=false fallback failed:', fbError);
                         }
                     }
                 } catch (e: any) {

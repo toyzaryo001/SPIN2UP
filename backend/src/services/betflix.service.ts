@@ -388,10 +388,16 @@ export class BetflixService {
 
                 candidates.forEach(gc => attempts.push({ provider: 'qtech', gamecode: gc }));
 
+                // [Fix] Gamatron Hybrid: Try Direct 'ga' provider if QTech fails logic
+                if (inputProvider === 'gamatron') {
+                    attempts.push({ provider: 'ga', gamecode: gameCode });
+                }
+
             } else {
                 let provVars = [apiProvider];
                 if (apiProvider === 'jili' || apiProvider === 'jl') provVars = ['jl', 'jili'];
                 if (apiProvider === 'fc') provVars = ['fc'];
+                if (apiProvider === 'gamatron') provVars = ['ga', 'gamatron']; // Fallback if not mapped to qtech
 
                 // Generate Robust Game Code Variants
                 const gameVars = this.generateGameCodeVariants(gameCode);

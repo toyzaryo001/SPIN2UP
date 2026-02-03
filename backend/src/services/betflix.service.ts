@@ -190,9 +190,9 @@ export class BetflixService {
         try {
             const api = await this.getApi();
             const params = new URLSearchParams();
-            // Ensure username has prefix if needed (though stored username usually has it)
-            // We assume 'username' passed here is the full betflix username from DB
-            params.append('username', username);
+            // Ensure username has prefix
+            const apiUser = await this.applyPrefix(username);
+            params.append('username', apiUser);
 
             const res = await api.post('/v4/user/balance', params);
 
@@ -216,7 +216,8 @@ export class BetflixService {
         try {
             const api = await this.getApi();
             const params = new URLSearchParams();
-            params.append('username', username);
+            const apiUser = await this.applyPrefix(username);
+            params.append('username', apiUser);
             params.append('amount', amount.toString()); // API handles negative for withdraw
             params.append('ref', ref || Date.now().toString());
 
@@ -271,6 +272,9 @@ export class BetflixService {
         try {
             const config = await this.getConfig();
             const api = await this.getApi();
+
+            // Ensure username has prefix
+            const apiUser = await this.applyPrefix(username);
 
             // 1. Provider Mapping (Normalize)
             const providerMap: Record<string, string> = {
@@ -344,7 +348,7 @@ export class BetflixService {
             // 3. Execution Loop (Enhanced with PHP-style Fallback)
             for (const attempt of attempts) {
                 const params = new URLSearchParams();
-                params.append('username', username);
+                params.append('username', apiUser);
                 params.append('provider', attempt.provider);
                 if (attempt.gamecode) params.append('gamecode', attempt.gamecode);
                 params.append('language', lang);

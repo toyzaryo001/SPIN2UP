@@ -8,7 +8,8 @@ let configCache: {
     apiKey: string;
     apiCat: string;
     prefix: string;
-    gameEntrance: string; // Added gameEntrance
+    sitePrefix: string; // Added field for Site Prefix (e.g., CHKK)
+    gameEntrance: string;
     timestamp: number;
 } | null = null;
 
@@ -26,11 +27,17 @@ export class BetflixService {
         }
 
         try {
-            // Fetch from AgentConfig (assuming first record is the main one)
+            // Fetch from AgentConfig
             const config = await prisma.agentConfig.findFirst({
                 where: { isActive: true },
                 orderBy: { id: 'asc' }
             });
+
+            // Fetch Site Setting (Prefix)
+            const siteSetting = await prisma.setting.findUnique({
+                where: { key: 'prefix' }
+            });
+            const sitePrefix = siteSetting ? siteSetting.value : (process.env.BETFLIX_USER_PREFIX || 'CHKK');
 
             if (!config) {
                 // Fallback to env if no DB config found (safety net)
@@ -38,18 +45,20 @@ export class BetflixService {
                     apiUrl: process.env.BETFLIX_API_URL || 'https://api.bfx.fail',
                     apiKey: process.env.BETFLIX_API_KEY || '',
                     apiCat: process.env.BETFLIX_API_CAT || '',
-                    prefix: process.env.BETFLIX_USER_PREFIX || 'CHKK',
-                    gameEntrance: '',
-                    timestamp: 0 // Don't cache fallback indefinitely
+                    prefix: 'be31kk', // Default fallback upline
+                    sitePrefix: sitePrefix,
+                    gameEntrance: 'game.bfl88.com',
+                    timestamp: 0
                 };
             }
 
-            // Update cache - Use hardcoded API URL (not from DB)
+            // Update cache
             configCache = {
-                apiUrl: 'https://api.bfx.fail', // Hardcoded - correct Betflix API
+                apiUrl: 'https://api.bfx.fail',
                 apiKey: config.xApiKey || '',
                 apiCat: config.xApiCat || '',
-                prefix: config.upline || '', // Mapping upline to prefix
+                prefix: config.upline || '', // Mapping upline to prefix (be31kk)
+                sitePrefix: sitePrefix,      // Site prefix (CHKK)
                 gameEntrance: config.gameEntrance || '',
                 timestamp: Date.now()
             };
@@ -57,6 +66,7 @@ export class BetflixService {
             console.log('Using Betflix Config:', {
                 apiUrl: configCache.apiUrl,
                 prefix: configCache.prefix,
+                sitePrefix: configCache.sitePrefix,
                 hasKey: !!configCache.apiKey,
                 hasCat: !!configCache.apiCat
             });
@@ -71,6 +81,7 @@ export class BetflixService {
                 apiKey: process.env.BETFLIX_API_KEY || '',
                 apiCat: process.env.BETFLIX_API_CAT || '',
                 prefix: process.env.BETFLIX_USER_PREFIX || 'CHKK',
+                sitePrefix: 'CHKK', // Fallback
                 gameEntrance: 'game.bfl88.com',
                 timestamp: 0
             };
@@ -106,9 +117,11 @@ export class BetflixService {
         }
 
         const p = config.prefix.toLowerCase();
+        const s = config.sitePrefix.toLowerCase();
+        const fullPrefix = p + s;
 
-        // Check if already starts with prefix
-        if (p && raw.toLowerCase().startsWith(p)) {
+        // Check if already starts with full prefix
+        if (raw.toLowerCase().startsWith(fullPrefix)) {
             return raw;
         }
 
@@ -118,7 +131,7 @@ export class BetflixService {
             raw = phoneMatch[1]; // Use last 6 digits
         }
 
-        return config.prefix + raw;
+        return config.prefix + config.sitePrefix + raw;
     }
 
     /**

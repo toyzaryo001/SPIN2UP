@@ -393,22 +393,10 @@ export class BetflixService {
                 if (apiProvider === 'fc') provVars = ['fc'];
 
                 // [Fixed] Gamatron Exhaustive Strategy
-                // [Fixed] Gamatron Exhaustive Strategy
-                // Try QTech (most common) then Direct Gamatron (fallback)
+                // [Fixed] Gamatron: Try both 'ga' and 'gamatron' directly
                 if (inputProvider === 'gamatron') {
-                    // 1. QTech with Prefix (Likely)
-                    attempts.push({ provider: 'qtech', gamecode: `GA-${gameCode}` });
-                    attempts.push({ provider: 'qtech', gamecode: `ga-${gameCode}` }); // Lowercase prefix
-                    attempts.push({ provider: 'qtech', gamecode: `gamatron-${gameCode}` }); // Full name prefix
-                    attempts.push({ provider: 'qtech', gamecode: `GMT-${gameCode}` }); // Alternative prefix
-
-                    // 2. QTech Raw
-                    attempts.push({ provider: 'qtech', gamecode: gameCode });
-
-                    // 3. Direct Gamatron Raw (Fallback)
+                    attempts.push({ provider: 'ga', gamecode: gameCode });
                     attempts.push({ provider: 'gamatron', gamecode: gameCode });
-                    // 4. Direct Gamatron with Prefix
-                    attempts.push({ provider: 'gamatron', gamecode: `GA-${gameCode}` });
                 } else {
                     // Standard Logic for others
                     const gameVars = this.generateGameCodeVariants(gameCode);

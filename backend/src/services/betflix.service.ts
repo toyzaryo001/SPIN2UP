@@ -286,6 +286,46 @@ export class BetflixService {
     }
 
     /**
+     * Helper: Generate Game Code Variants (Ported from Check24M)
+     * Handles Prefix Stripping, SLOT_ removal, and _ to - conversion
+     */
+    private static generateGameCodeVariants(gameCode: string): string[] {
+        const g = gameCode.trim();
+        if (!g) return [''];
+
+        const vars: string[] = [];
+        vars.push(g);
+
+        // 1. Remove Provider Prefix (e.g. PG_MAHJONG -> MAHJONG) via Regex
+        // Matches START + (Any uppercase chars) + _ + (Rest)
+        const output = g.match(/^[A-Z0-9]+_(.+)$/i);
+        if (output && output[1]) {
+            vars.push(output[1]);
+        }
+
+        // 2. Remove SLOT_ Prefix
+        if (g.toUpperCase().startsWith('SLOT_')) {
+            vars.push(g.substring(5));
+        }
+
+        // 3. Replace _ with -
+        vars.push(g.replace(/_/g, '-'));
+
+        // 4. Combined: Strip prefix AND Replace _ with -
+        if (output && output[1]) {
+            vars.push(output[1].replace(/_/g, '-'));
+        }
+
+        // 5. Special Case: Remove "pg-" manual prefix if present (common in our DB)
+        if (g.toLowerCase().startsWith('pg-')) {
+            vars.push(g.substring(3));
+        }
+
+        // Filter duplicates and empty strings
+        return [...new Set(vars)].filter(v => v);
+    }
+
+    /**
      * Direct Game Launch (Ported from PHP launchGame)
      * Supports Provider Mapping, QTech, and GameCode Variants
      */
@@ -352,18 +392,8 @@ export class BetflixService {
                 if (apiProvider === 'jili' || apiProvider === 'jl') provVars = ['jl', 'jili'];
                 if (apiProvider === 'fc') provVars = ['fc'];
 
-                let gameVars = gameCode ? [gameCode] : [''];
-                if (gameCode && gameCode.includes('_')) {
-                    gameVars.push(gameCode.replace(/_/g, '-'));
-                }
-
-                // Try stripping provider prefix (e.g. pg-123 -> 123)
-                if (gameCode && (gameCode.toLowerCase().startsWith(apiProvider + '-') || gameCode.toLowerCase().startsWith(providerCode.toLowerCase() + '-'))) {
-                    const strip1 = gameCode.replace(new RegExp(`^${apiProvider}-`, 'i'), '');
-                    const strip2 = gameCode.replace(new RegExp(`^${providerCode}-`, 'i'), '');
-                    if (strip1 && !gameVars.includes(strip1)) gameVars.push(strip1);
-                    if (strip2 && !gameVars.includes(strip2)) gameVars.push(strip2);
-                }
+                // Generate Robust Game Code Variants
+                const gameVars = this.generateGameCodeVariants(gameCode);
 
                 for (const p of provVars) {
                     for (const g of gameVars) {
@@ -372,9 +402,16 @@ export class BetflixService {
                 }
             }
 
-            attempts.push({ provider: apiProvider, gamecode: '' });
+            // Always add a fallback to the Lobby (empty gamecode) AS LAST RESORT
+            // But we prioritize specific game codes first
+            // Note: We don't push it here to avoid early exit to lobby if game fails. 
+            // The loop will handle it.
+
+            console.log(`Launching Game attempting variants:`, attempts);
 
             // 3. Execution Loop (Enhanced with PHP-style Fallback)
+            let lastError = null;
+
             for (const attempt of attempts) {
                 const params = new URLSearchParams();
                 params.append('username', apiUser);
@@ -394,7 +431,7 @@ export class BetflixService {
                         // Priority 1: Direct URL from API (launch_url, url, game_url)
                         const directUrl = res.data.data.launch_url || res.data.data.url || res.data.data.game_url;
                         if (directUrl) {
-                            console.log('LaunchGame: Got direct URL from API');
+                            console.log(`LaunchGame Success with: ${attempt.provider}/${attempt.gamecode}`);
                             return directUrl;
                         }
 
@@ -411,12 +448,12 @@ export class BetflixService {
                                 : `https://${gameEntranceUrl}`;
 
                             const tokenUrl = `${entrance.replace(/\/$/, '')}/play/login?token=${token}`;
-                            console.log('LaunchGame: Built token URL:', tokenUrl);
+                            console.log(`LaunchGame Success (Token) with: ${attempt.provider}/${attempt.gamecode}`);
                             return tokenUrl;
                         }
 
                         // Fallback: Try openGame=false to get direct launch_url from API (PHP-style)
-                        console.log('LaunchGame: No token, trying openGame=false fallback...');
+                        console.log(`LaunchGame: No token for ${attempt.provider}/${attempt.gamecode}, trying openGame=false fallback...`);
                         const fallbackParams = new URLSearchParams(params);
                         fallbackParams.set('openGame', 'false');
 
@@ -427,7 +464,7 @@ export class BetflixService {
                             if (fbIsSuccess && fallbackRes.data.data) {
                                 const fbUrl = fallbackRes.data.data.launch_url || fallbackRes.data.data.url || fallbackRes.data.data.game_url;
                                 if (fbUrl) {
-                                    console.log('LaunchGame: Got URL from openGame=false fallback');
+                                    console.log(`LaunchGame Success (Fallback) with: ${attempt.provider}/${attempt.gamecode}`);
                                     return fbUrl;
                                 }
 
@@ -437,21 +474,27 @@ export class BetflixService {
                                 if (fbToken) {
                                     const fbEntranceUrl = fbEntrance.startsWith('http') ? fbEntrance : `https://${fbEntrance}`;
                                     const tokenUrl = `${fbEntranceUrl.replace(/\/$/, '')}/play/login?token=${fbToken}`;
-                                    console.log('LaunchGame: Built token URL from fallback:', tokenUrl);
+                                    console.log(`LaunchGame Success (Fallback Token) with: ${attempt.provider}/${attempt.gamecode}`);
                                     return tokenUrl;
                                 }
                             }
                         } catch (fbError) {
                             console.error('LaunchGame: openGame=false fallback failed:', fbError);
                         }
+                    } else {
+                        // Log failure but continue
+                        // console.warn(`Launch attempt failed for ${attempt.provider}/${attempt.gamecode}:`, res.data);
+                        lastError = res.data;
                     }
                 } catch (e: any) {
-                    console.error('LaunchGame: Attempt failed:', e.message);
-                    // Continue to next attempt
+                    console.error(`Launch attempt exception for ${attempt.provider}/${attempt.gamecode}:`, e.message);
+                    lastError = e;
                 }
             }
 
-            return null;
+            // If we are here, all specific attempts failed.
+            console.error('All launch attempts failed. Last error:', lastError);
+            return null; // Let the caller decide (or maybe return a lobby link?)
 
         } catch (error) {
             console.error('Betflix Launch Game Error:', error);

@@ -1018,23 +1018,23 @@ function HomePageLogic() {
       <NavBar activeTab={activeTab} setActiveTab={setActiveTab} categories={categories} />
 
       <main className="w-full px-2 md:px-4 py-4 md:py-8 max-w-7xl mx-auto">
-        {activeTab === 'home' && <HomeContent games={games} banners={banners} providers={providers} />}
+        {activeTab === 'home' && <HomeContent games={games} banners={banners} providers={providers} onPlay={handlePlayGame} />}
 
         {/* Render Dynamic Categories */}
         {categories.map(cat => {
           if (activeTab === (cat.slug || cat.id.toString()) && (cat.slug === 'slots' || cat.slug === 'slot')) {
-            return <SlotsContent key={cat.id} games={games} category={cat} />
+            return <SlotsContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />
           }
           if (activeTab === (cat.slug || cat.id.toString()) && (cat.slug === 'casino' || cat.slug === 'live-casino')) {
-            return <CasinoContent key={cat.id} games={games} category={cat} />
+            return <CasinoContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />
           }
           // Default generic category view can be added here if needed
           return null;
         })}
 
         {/* Fallback for hardcoded tabs if API fails or specific slugs match */}
-        {activeTab === 'slots' && !categories.some(c => c.slug === 'slots') && <SlotsContent games={games} providers={providers} />}
-        {activeTab === 'casino' && !categories.some(c => c.slug === 'casino') && <CasinoContent games={games} providers={providers} />}
+        {activeTab === 'slots' && !categories.some(c => c.slug === 'slots') && <SlotsContent games={games} providers={providers} onPlay={handlePlayGame} />}
+        {activeTab === 'casino' && !categories.some(c => c.slug === 'casino') && <CasinoContent games={games} providers={providers} onPlay={handlePlayGame} />}
 
         {/* Fallback for New Tabs (Deposit, Profile, etc.) */}
         {!['home', 'slots', 'casino'].includes(activeTab) && !categories.some(c => c.slug === activeTab) && (

@@ -362,7 +362,8 @@ export class BetflixService {
                 'nlc': 'qtech', 'hab': 'qtech', 'ygg': 'qtech', 'png': 'qtech',
                 'elk': 'qtech', 'bng': 'qtech', 'bpg': 'qtech', 'kgl': 'qtech',
                 'rlx': 'qtech', 'red': 'qtech', 'qs': 'qtech', 'ids': 'qtech',
-                'tk': 'qtech', 'ds': 'qtech', 'ga': 'qtech', 'evoplay': 'ep'
+                'tk': 'qtech', 'ds': 'qtech', 'ga': 'qtech', 'evoplay': 'ep',
+                'gamatron': 'qtech'
             };
 
             const inputProvider = providerCode.toLowerCase().trim();

@@ -89,14 +89,21 @@ router.patch('/:id', requirePermission('games', 'edit'), async (req, res) => {
     }
 });
 
-// DELETE /api/admin/games/:id - ลบเกม
+// DELETE /api/admin/games/:id - ลบเกม (Cascade: Delete Sessions -> Delete Game)
 router.delete('/:id', requirePermission('games', 'edit'), async (req, res) => {
     try {
-        await prisma.game.delete({ where: { id: Number(req.params.id) } });
-        res.json({ success: true, message: 'ลบเกมสำเร็จ' });
+        const id = Number(req.params.id);
+
+        // 1. Delete all sessions for this game
+        await prisma.gameSession.deleteMany({ where: { gameId: id } });
+
+        // 2. Delete the game
+        await prisma.game.delete({ where: { id } });
+
+        res.json({ success: true, message: 'ลบเกมและประวัติการเล่นทั้งหมดสำเร็จ' });
     } catch (error) {
         console.error('Delete game error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบเกม' });
     }
 });
 

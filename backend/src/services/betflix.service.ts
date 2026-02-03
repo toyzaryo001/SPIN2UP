@@ -495,7 +495,7 @@ export class BetflixService {
                         }
                     } else {
                         // Log failure but continue
-                        // console.warn(`Launch attempt failed for ${attempt.provider}/${attempt.gamecode}:`, res.data);
+                        console.error(`Launch Failed [${attempt.provider}/${attempt.gamecode}]:`, res.data);
                         lastError = res.data;
                     }
                 } catch (e: any) {

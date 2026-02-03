@@ -65,8 +65,15 @@ export class BetflixService {
 
         } catch (error) {
             console.error('Failed to fetch Betflix config from DB:', error);
-            // Return fallback or throw
-            throw new Error('Could not load Betflix configuration');
+            // Return fallback instead of throwing
+            return {
+                apiUrl: process.env.BETFLIX_API_URL || 'https://api.bfx.fail',
+                apiKey: process.env.BETFLIX_API_KEY || '',
+                apiCat: process.env.BETFLIX_API_CAT || '',
+                prefix: process.env.BETFLIX_USER_PREFIX || 'CHKK',
+                gameEntrance: 'game.bfl88.com',
+                timestamp: 0
+            };
         }
     }
 

@@ -54,7 +54,7 @@ export class BetflixService {
 
             // Update cache
             configCache = {
-                apiUrl: 'https://api.bfx.fail',
+                apiUrl: config.apiKey || 'https://api.bfx.fail',
                 apiKey: config.xApiKey || '',
                 apiCat: config.xApiCat || '',
                 prefix: config.upline || '', // Mapping upline to prefix (be31kk)

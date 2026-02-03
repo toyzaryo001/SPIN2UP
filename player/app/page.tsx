@@ -214,8 +214,16 @@ const InviteCard = () => (
 // --- PREMIUM GAME CARD ---
 const GameCard = ({ title, provider, image, color, hot, isNew, type, onPlay }: any) => {
   const hasImage = image && image !== "";
+
+  const handleClick = () => {
+    console.log('🎮 GameCard clicked:', { title, provider });
+    if (onPlay) {
+      onPlay();
+    }
+  };
+
   return (
-    <div onClick={() => onPlay && onPlay()} className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-2">
+    <div onClick={handleClick} className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-2">
       <div className={`h-56 w-full relative overflow-hidden ${!hasImage ? (color || 'bg-slate-800') : ''}`}>
         {hasImage ? (
           <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url(${image})` }}></div>
@@ -230,10 +238,10 @@ const GameCard = ({ title, provider, image, color, hot, isNew, type, onPlay }: a
           </div>
         )}
 
-        {/* Hover Action Overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
+        {/* Hover Action Overlay - pointer-events-none when hidden */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
           <button
-            onClick={(e) => { e.stopPropagation(); onPlay && onPlay(); }}
+            onClick={(e) => { e.stopPropagation(); handleClick(); }}
             className="btn-green w-12 h-12 rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 delay-100"
           >
             <Play fill="white" className="ml-1" size={20} />

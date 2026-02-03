@@ -362,8 +362,7 @@ export class BetflixService {
                 'nlc': 'qtech', 'hab': 'qtech', 'ygg': 'qtech', 'png': 'qtech',
                 'elk': 'qtech', 'bng': 'qtech', 'bpg': 'qtech', 'kgl': 'qtech',
                 'rlx': 'qtech', 'red': 'qtech', 'qs': 'qtech', 'ids': 'qtech',
-                'tk': 'qtech', 'ds': 'qtech', 'ga': 'qtech', 'evoplay': 'ep',
-                'gamatron': 'qtech'
+                'tk': 'qtech', 'ds': 'qtech', 'ga': 'qtech', 'evoplay': 'ep'
             };
 
             const inputProvider = providerCode.toLowerCase().trim();
@@ -372,7 +371,7 @@ export class BetflixService {
             // 2. Build Attempt Templates (Provider + GameCode Combinations)
             const attempts: Array<{ provider: string, gamecode: string }> = [];
 
-            if (apiProvider === 'qtech') {
+            if (apiProvider === 'qtech' && inputProvider !== 'gamatron') {
                 const qtechPrefixMap: Record<string, string> = { 'ga': 'GA', 'gamatron': 'GA' };
                 const derivedPrefix = qtechPrefixMap[inputProvider] || '';
 
@@ -388,23 +387,29 @@ export class BetflixService {
 
                 candidates.forEach(gc => attempts.push({ provider: 'qtech', gamecode: gc }));
 
-                // [Fix] Gamatron Hybrid: Try Direct 'ga' provider if QTech fails logic
-                if (inputProvider === 'gamatron') {
-                    attempts.push({ provider: 'ga', gamecode: gameCode });
-                }
-
             } else {
                 let provVars = [apiProvider];
                 if (apiProvider === 'jili' || apiProvider === 'jl') provVars = ['jl', 'jili'];
                 if (apiProvider === 'fc') provVars = ['fc'];
-                if (apiProvider === 'gamatron') provVars = ['ga', 'gamatron']; // Fallback if not mapped to qtech
 
-                // Generate Robust Game Code Variants
-                const gameVars = this.generateGameCodeVariants(gameCode);
-
-                for (const p of provVars) {
-                    for (const g of gameVars) {
-                        attempts.push({ provider: p, gamecode: g });
+                // [Fixed] Gamatron Exhaustive Strategy
+                // Try QTech (most common) then Direct Gamatron (fallback)
+                if (inputProvider === 'gamatron') {
+                    // 1. QTech with Prefix (Likely)
+                    attempts.push({ provider: 'qtech', gamecode: `GA-${gameCode}` });
+                    // 2. QTech Raw
+                    attempts.push({ provider: 'qtech', gamecode: gameCode });
+                    // 3. Direct Gamatron Raw
+                    attempts.push({ provider: 'gamatron', gamecode: gameCode });
+                    // 4. Direct Gamatron with Prefix
+                    attempts.push({ provider: 'gamatron', gamecode: `GA-${gameCode}` });
+                } else {
+                    // Standard Logic for others
+                    const gameVars = this.generateGameCodeVariants(gameCode);
+                    for (const p of provVars) {
+                        for (const g of gameVars) {
+                            attempts.push({ provider: p, gamecode: g });
+                        }
                     }
                 }
             }

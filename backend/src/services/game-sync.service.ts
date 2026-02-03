@@ -283,10 +283,9 @@ export class GameSyncService {
                 // [MODIFIED] per user request: Use RAW game code to ensure API Compatibility.
                 const safeSlug = game.code; // Was: `${provider.slug.toLowerCase()}-${game.code}`;
 
-                const existing = await prisma.game.findFirst({
+                const existing = await prisma.game.findUnique({
                     where: {
-                        slug: safeSlug,
-                        providerId: provider.id
+                        slug: safeSlug
                     }
                 });
 

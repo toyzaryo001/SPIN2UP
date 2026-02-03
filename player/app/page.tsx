@@ -830,7 +830,31 @@ const Footer = ({ settings }: any) => (
 function HomePageLogic() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState('home');
+
+  // Read initial tab from URL query param
+  const tabFromUrl = searchParams.get('tab') || 'home';
+  const [activeTab, setActiveTabState] = useState(tabFromUrl);
+
+  // Sync activeTab with URL
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    // Update URL without full page reload
+    const url = tab === 'home' ? '/' : `/?tab=${tab}`;
+    window.history.pushState({}, '', url);
+  };
+
+  // Listen for browser back/forward
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab') || 'home';
+      setActiveTabState(tab);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showContact, setShowContact] = useState(false);

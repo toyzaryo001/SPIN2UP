@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ToastProvider } from "@/components/Toast";
 
 import { headers } from "next/headers";
 
@@ -44,7 +45,9 @@ export default function RootLayout({
         <meta name="theme-color" content="#0f0f1a" />
       </head>
       <body className="antialiased">
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

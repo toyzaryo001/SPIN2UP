@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import axios from "axios";
 import ContactDrawer from "@/components/ContactDrawer";
+import { useToast } from "@/components/Toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -830,6 +831,7 @@ const Footer = ({ settings }: any) => (
 function HomePageLogic() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
 
   // Read initial tab from URL query param
   const tabFromUrl = searchParams.get('tab') || 'home';
@@ -966,30 +968,40 @@ function HomePageLogic() {
       return;
     }
 
-    // Use toast or local loading state if needed, but for now just console or simple alert if fail
-    // Only launch via API
+    if (!game) {
+      console.error('No game data provided');
+      return;
+    }
+
+    // Show loading toast
+    const loadingId = toast.loading('กำลังเปิดเกม...', game.name || 'โปรดรอสักครู่');
+
     try {
-      // Optimistic UI or Loading spinner? 
-      // Ideally we show a loading overlay.
       const payload = {
         providerCode: game.providerCode || game.provider?.slug,
         gameCode: game.slug || game.code
       };
 
-      console.log("Launching game with payload:", payload); // Debug
+      console.log("Launching game with payload:", payload);
 
       const res = await axios.post(`${API_URL}/games/launch`, payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 
+      // Remove loading toast
+      toast.removeToast(loadingId);
+
       if (res.data.success && res.data.data.url) {
+        toast.success('เปิดเกมสำเร็จ!', 'กำลังเปิดหน้าต่างเกม...');
         window.open(res.data.data.url, '_blank');
       } else {
-        alert(res.data.message || 'Error launching game');
+        toast.error('เกิดข้อผิดพลาด', res.data.message || 'ไม่สามารถเปิดเกมได้');
       }
     } catch (err: any) {
+      toast.removeToast(loadingId);
       console.error("Launch error:", err);
-      alert(err.response?.data?.message || 'Failed to launch game');
+      const errorMsg = err.response?.data?.message || 'ไม่สามารถเชื่อมต่อระบบเกมได้';
+      toast.error('เกิดข้อผิดพลาด', errorMsg);
     }
   };
 

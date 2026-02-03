@@ -280,7 +280,8 @@ export class GameSyncService {
 
             for (const game of gamesToUpsert) {
                 // Scope slug by provider to ensure uniqueness across providers
-                const safeSlug = `${provider.slug.toLowerCase()}-${game.code}`;
+                // [MODIFIED] per user request: Use RAW game code to ensure API Compatibility.
+                const safeSlug = game.code; // Was: `${provider.slug.toLowerCase()}-${game.code}`;
 
                 const existing = await prisma.game.findFirst({
                     where: {

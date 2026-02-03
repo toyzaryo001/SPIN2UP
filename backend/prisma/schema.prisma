@@ -293,6 +293,7 @@ model Announcement {
   type      String   // popup, marquee
   title     String?
   content   String
+  image     String?  // URL from Cloudinary
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

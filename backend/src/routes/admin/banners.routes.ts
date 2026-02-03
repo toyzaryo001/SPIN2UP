@@ -75,10 +75,10 @@ router.get('/announcements', requirePermission('announcements', 'view'), async (
 // POST /api/admin/banners/announcements (ต้องมีสิทธิ์ announcements.create)
 router.post('/announcements', requirePermission('announcements', 'create'), async (req, res) => {
     try {
-        const { type, title, content, isActive } = req.body;
+        const { type, title, content, image, isActive } = req.body;
 
         const announcement = await prisma.announcement.create({
-            data: { type, title, content, isActive: isActive ?? true },
+            data: { type, title, content, image, isActive: isActive ?? true },
         });
 
         res.status(201).json({ success: true, data: announcement });

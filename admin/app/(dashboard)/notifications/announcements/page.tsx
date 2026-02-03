@@ -10,6 +10,7 @@ interface Announcement {
     type: string;
     title?: string;
     content: string;
+    image?: string;
     isActive: boolean;
 }
 
@@ -21,8 +22,9 @@ export default function AnnouncementsPage() {
     const [editingAnn, setEditingAnn] = useState<Announcement | null>(null);
     const [deletingAnn, setDeletingAnn] = useState<Announcement | null>(null);
 
-    const [formData, setFormData] = useState({ type: "MARQUEE", title: "", content: "", isActive: true });
+    const [formData, setFormData] = useState({ type: "MARQUEE", title: "", content: "", image: "", isActive: true });
     const [isSaving, setIsSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         fetchAnnouncements();
@@ -42,12 +44,42 @@ export default function AnnouncementsPage() {
     const openModal = (ann?: Announcement) => {
         if (ann) {
             setEditingAnn(ann);
-            setFormData({ type: ann.type, title: ann.title || "", content: ann.content, isActive: ann.isActive });
+            setFormData({
+                type: ann.type,
+                title: ann.title || "",
+                content: ann.content,
+                image: ann.image || "",
+                isActive: ann.isActive
+            });
         } else {
             setEditingAnn(null);
-            setFormData({ type: "MARQUEE", title: "", content: "", isActive: true });
+            setFormData({ type: "MARQUEE", title: "", content: "", image: "", isActive: true });
         }
         setIsModalOpen(true);
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            try {
+                const base64Image = reader.result;
+                const res = await api.post('/api/admin/upload', { image: base64Image, folder: 'announcements' });
+                if (res.data.success) {
+                    setFormData(prev => ({ ...prev, image: res.data.data.url }));
+                    toast.success('อัพโหลดรูปสำเร็จ');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                toast.error('อัพโหลดรูปไม่สำเร็จ');
+            } finally {
+                setUploading(false);
+            }
+        };
     };
 
     const handleSave = async () => {
@@ -64,6 +96,7 @@ export default function AnnouncementsPage() {
             }
             setIsModalOpen(false);
             fetchAnnouncements();
+            toast.success("บันทึกสำเร็จ");
         } catch (error) {
             console.error("Save error:", error);
             toast.error("เกิดข้อผิดพลาด");
@@ -78,8 +111,10 @@ export default function AnnouncementsPage() {
             await api.delete(`/admin/banners/announcements/${deletingAnn.id}`);
             setIsDeleteModalOpen(false);
             fetchAnnouncements();
+            toast.success("ลบสำเร็จ");
         } catch (error) {
             console.error("Delete error:", error);
+            toast.error("ลบไม่สำเร็จ");
         }
     };
 
@@ -109,6 +144,7 @@ export default function AnnouncementsPage() {
                     <table className="w-full text-sm">
                         <thead className="bg-slate-50 text-slate-500 font-medium">
                             <tr>
+                                <th className="px-6 py-4 text-left">รูปภาพ</th>
                                 <th className="px-6 py-4 text-left">ประเภท</th>
                                 <th className="px-6 py-4 text-left">ข้อความ</th>
                                 <th className="px-6 py-4 text-center">สถานะ</th>
@@ -118,6 +154,13 @@ export default function AnnouncementsPage() {
                         <tbody className="divide-y divide-slate-100">
                             {announcements.map(ann => (
                                 <tr key={ann.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4">
+                                        {ann.image ? (
+                                            <img src={ann.image} alt="" className="w-16 h-10 object-cover rounded border" />
+                                        ) : (
+                                            <span className="text-slate-300">-</span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded text-xs font-medium ${ann.type === 'POPUP' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                                             {ann.type === 'POPUP' ? 'Popup' : 'ข้อความวิ่ง'}
@@ -145,7 +188,7 @@ export default function AnnouncementsPage() {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
+                    <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold">{editingAnn ? 'แก้ไขประกาศ' : 'เพิ่มประกาศ'}</h3>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
@@ -158,6 +201,40 @@ export default function AnnouncementsPage() {
                                     <option value="POPUP">Popup</option>
                                 </select>
                             </div>
+
+                            {/* Image Upload for Popup */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">รูปภาพ (Popup)</label>
+                                <div className="flex items-start gap-4">
+                                    <div className="w-24 h-24 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden relative shrink-0">
+                                        {formData.image ? (
+                                            <>
+                                                <img src={formData.image} alt="" className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={() => setFormData({ ...formData, image: '' })}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <span className="text-xs text-slate-400">ไม่มีรูป</span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            disabled={uploading}
+                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+                                        />
+                                        <p className="mt-1 text-xs text-slate-400">รองรับไฟล์ JPG, PNG (แนะนำขนาด 800x600 px)</p>
+                                        {uploading && <p className="text-xs text-blue-500 mt-1">กำลังอัพโหลด...</p>}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ข้อความ *</label>
                                 <textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={4} className="w-full px-4 py-2 border border-slate-200 rounded-lg resize-none text-slate-900" placeholder="พิมพ์ข้อความประกาศ..." />
@@ -169,7 +246,7 @@ export default function AnnouncementsPage() {
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">ยกเลิก</button>
-                            <button onClick={handleSave} disabled={isSaving} className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 flex items-center justify-center gap-2">
+                            <button onClick={handleSave} disabled={isSaving || uploading} className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 flex items-center justify-center gap-2">
                                 <Save size={18} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
                             </button>
                         </div>

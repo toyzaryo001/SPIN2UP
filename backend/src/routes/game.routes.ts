@@ -255,10 +255,17 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
         const returnUrl = `${referer}`;
 
         let url: string | null = null;
+        let errorDetail = '';
+
         if (providerCode) {
             console.log('🚀 Calling launchGame:', { betflixUser, providerCode, gameCode, lang, returnUrl });
-            url = await BetflixService.launchGame(betflixUser, providerCode, gameCode, lang, returnUrl);
-            console.log('📍 launchGame result:', url);
+            try {
+                url = await BetflixService.launchGame(betflixUser, providerCode, gameCode, lang, returnUrl);
+                console.log('📍 launchGame result:', url);
+            } catch (launchError: any) {
+                console.error('❌ launchGame threw error:', launchError.message);
+                errorDetail = launchError.message;
+            }
         } else {
             // Legacy/Lobby mode
             console.log('🏠 Calling getPlayUrl (lobby mode)');
@@ -268,14 +275,22 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
 
         if (!url) {
             console.error('❌ No URL returned from Betflix');
-            return res.status(500).json({ success: false, message: 'ไม่สามารถขอ URL เข้าเกมได้ (กรุณาลองใหม่อีกครั้ง)' });
+            // Return detailed error message
+            const errorMsg = errorDetail
+                ? `ไม่สามารถเปิดเกมได้: ${errorDetail}`
+                : 'ไม่สามารถขอ URL เข้าเกมได้ - กรุณาตรวจสอบการตั้งค่า API หรือลองใหม่อีกครั้ง';
+            return res.status(500).json({
+                success: false,
+                message: errorMsg,
+                debug: { providerCode, gameCode, betflixUser }
+            });
         }
 
         console.log('✅ Returning game URL:', url);
         res.json({ success: true, data: { url } });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Launch game error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        res.status(500).json({ success: false, message: `เกิดข้อผิดพลาด: ${error.message || 'Unknown error'}` });
     }
 });
 

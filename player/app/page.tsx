@@ -288,24 +288,43 @@ const Sidebar = ({ title, items, active, setActive }: any) => (
       <h3 className="text-lg font-black text-white border-l-4 border-yellow-500 pl-3 uppercase italic tracking-wider">{title}</h3>
     </div>
     <div className="p-3 flex flex-col gap-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
-      {items.map((item: any, idx: number) => (
-        <button
-          key={idx}
-          onClick={() => setActive && setActive(item)}
-          className={`px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between w-full group relative overflow-hidden
-            ${active === item
-              ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg'
-              : 'text-slate-400 hover:bg-white/5 hover:text-white'
-            }`}
-        >
-          <div className="flex items-center gap-3 relative z-10">
-            {active === item && <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>}
-            <span>{item}</span>
-          </div>
-          {active === item && <ChevronRight size={16} className="text-yellow-400" />}
-          {active !== item && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>}
-        </button>
-      ))}
+      {items.map((item: any, idx: number) => {
+        // Handle both object and string for backward compatibility
+        const name = typeof item === 'object' ? item.name : item;
+        const logo = typeof item === 'object' ? item.logo : null;
+        const isActive = active === name;
+
+        return (
+          <button
+            key={idx}
+            onClick={() => setActive && setActive(name)}
+            className={`px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between w-full group relative overflow-hidden
+            ${isActive
+                ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+              }`}
+          >
+            <div className="flex items-center gap-3 relative z-10 overflow-hidden">
+              {isActive && <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0"></div>}
+
+              {/* Logo Implementation */}
+              {logo ? (
+                <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center shrink-0 p-0.5">
+                  <img src={logo} alt={name} className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center shrink-0">
+                  <Gamepad2 size={14} className="opacity-50" />
+                </div>
+              )}
+
+              <span className="truncate">{name}</span>
+            </div>
+            {isActive === name && <ChevronRight size={16} className="text-yellow-400 shrink-0" />}
+            {isActive !== name && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>}
+          </button>
+        );
+      })}
     </div>
   </div>
 );
@@ -538,7 +557,8 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="md:col-span-1 hidden md:block">
-          <Sidebar title="ค่ายเกมชั้นนำ" items={providerNames.slice(0, 10)} active={null} />
+          {/* Display Providers with Logos */}
+          <Sidebar title="ค่ายเกมชั้นนำ" items={providers.slice(0, 10)} active={null} />
         </div>
         <div className="md:col-span-3">
           <div className="glass-card rounded-2xl p-8 relative overflow-hidden">
@@ -593,8 +613,9 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
   // But if 'activeProvider' is invalid, we should ideally switch. 
   // React state doesn't auto-update on re-render of defaults.
 
-  // Provider Names List
-  const providerList = displayProviders.map((p: any) => p.name);
+  // Provider Names/Objects List
+  // Optimization: use displayProviders which already contains full objects
+  const providerList = displayProviders;
 
   // Filter Games by Active Provider
   const filteredGames = games.filter((g: any) =>
@@ -613,7 +634,9 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
           value={activeProvider}
           onChange={(e) => setActiveProvider(e.target.value)}
         >
-          {providerList.length > 0 ? providerList.map((p: string) => <option key={p} value={p}>{p}</option>) : <option>ไม่มีค่ายเกม</option>}
+          {providerList.length > 0 ? providerList.map((p: any) => (
+            <option key={p.name} value={p.name}>{p.name}</option>
+          )) : <option>ไม่มีค่ายเกม</option>}
         </select>
       </div>
 
@@ -669,7 +692,7 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
 
   // If local list updates, we might want to reset activeProvider, but for now relies on initial render.
 
-  const providerList = displayProviders.map((p: any) => p.name);
+  const providerList = displayProviders;
 
   // Filter Casino Games
   const filteredGames = games.filter((g: any) =>
@@ -688,7 +711,9 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
           value={activeProvider}
           onChange={(e) => setActiveProvider(e.target.value)}
         >
-          {providerList.length > 0 ? providerList.map((p: string) => <option key={p} value={p}>{p}</option>) : <option>ไม่มีค่ายเกม</option>}
+          {providerList.length > 0 ? providerList.map((p: any) => (
+            <option key={p.name} value={p.name}>{p.name}</option>
+          )) : <option>ไม่มีค่ายเกม</option>}
         </select>
       </div>
 

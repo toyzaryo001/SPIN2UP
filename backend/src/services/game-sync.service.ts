@@ -280,8 +280,8 @@ export class GameSyncService {
 
             for (const game of gamesToUpsert) {
                 // Scope slug by provider to ensure uniqueness across providers
-                // [MODIFIED] per user request: Use RAW game code to ensure API Compatibility.
-                const safeSlug = game.code; // Was: `${provider.slug.toLowerCase()}-${game.code}`;
+                // [MODIFIED] Use Provider Prefix to prevent duplicates (e.g. pg-mahjong vs joker-mahjong)
+                const safeSlug = `${provider.slug.toLowerCase()}-${game.code}`;
 
                 const existing = await prisma.game.findUnique({
                     where: {
@@ -382,5 +382,12 @@ export class GameSyncService {
             console.error('[GameSync] Clear all failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * Get list of available providers for sync
+     */
+    static getAvailableProviders() {
+        return Object.keys(PROVIDER_FILE_MAPPING);
     }
 }

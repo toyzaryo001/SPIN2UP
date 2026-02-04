@@ -21,26 +21,69 @@ export default function GameImportPage() {
     const startSync = async () => {
         if (loading) return;
         setLoading(true);
-        setResults(null);
+        setResults([]); // Clear previous results
 
         try {
-            toast('Starting game synchronization...', { icon: 'ℹ️' });
-            const res = await api.post('/admin/providers/sync/all');
+            toast('🔍 Fetching provider list...', { icon: 'ℹ️' });
 
-            if (res.data.success) {
-                setResults(res.data.data);
-                toast.success('Game synchronization completed!');
-            } else {
-                toast.error('Failed to sync games: ' + res.data.message);
+            // 1. Get List of Providers to Sync
+            const listRes = await api.get('/admin/providers/sync/available');
+            if (!listRes.data.success) throw new Error('Failed to get provider list');
+
+            const providers: string[] = listRes.data.data;
+            toast.success(`Found ${providers.length} providers. Starting sequential sync...`);
+
+            // 2. Sequential Sync
+            for (const provider of providers) {
+                // Add placeholder for current sync
+                setResults(prev => [
+                    ...(prev || []),
+                    { provider, success: false, error: 'Syncing...', count: 0, new: 0, updated: 0 }
+                ]);
+
+                try {
+                    const splitTime = Date.now();
+                    const res = await api.post(`/admin/providers/sync/${provider}`);
+                    const duration = Date.now() - splitTime;
+
+                    // Update result with success
+                    setResults(prev => {
+                        const next = [...(prev || [])];
+                        const idx = next.findIndex(r => r.provider === provider);
+                        if (idx !== -1) {
+                            next[idx] = {
+                                provider,
+                                success: res.data.success,
+                                count: res.data.data?.count || 0,
+                                new: res.data.data?.new || 0,
+                                updated: res.data.data?.updated || 0,
+                                error: res.data.success ? undefined : res.data.message
+                            };
+                        }
+                        return next;
+                    });
+
+                } catch (err: any) {
+                    // Update result with error
+                    setResults(prev => {
+                        const next = [...(prev || [])];
+                        const idx = next.findIndex(r => r.provider === provider);
+                        if (idx !== -1) {
+                            next[idx] = { provider, success: false, error: err.message || 'Failed' };
+                        }
+                        return next;
+                    });
+                }
+
+                // Small delay to prevent UI freezing / rate limits
+                await new Promise(r => setTimeout(r, 100));
             }
+
+            toast.success('Smart Sync Completed!');
+
         } catch (error: any) {
             console.error('Sync error:', error);
-            toast.error('An error occurred during synchronization.');
-            setResults([{
-                provider: 'System',
-                success: false,
-                error: error.message || 'Unknown network error'
-            }]);
+            toast.error('Critical error: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -91,12 +134,12 @@ export default function GameImportPage() {
                             {loading ? (
                                 <>
                                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    กำลังประมวลผล...
+                                    กำลังดึงข้อมูล...
                                 </>
                             ) : (
                                 <>
                                     <RefreshCcw className="mr-2 h-5 w-5" />
-                                    เริ่มดึงข้อมูล
+                                    Smart Sync (ดึงทีละค่าย)
                                 </>
                             )}
                         </button>

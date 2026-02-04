@@ -169,6 +169,17 @@ router.post('/sync/all', requirePermission('agents', 'import', 'manage'), async 
     }
 });
 
+// GET /api/admin/providers/sync/available - Get list of syncable providers
+router.get('/sync/available', requirePermission('agents', 'import', 'manage'), async (req, res) => {
+    try {
+        const providers = GameSyncService.getAvailableProviders();
+        res.json({ success: true, data: providers });
+    } catch (error: any) {
+        console.error('Get available sync providers error:', error);
+        res.status(500).json({ success: false, message: 'Failed to get provider list' });
+    }
+});
+
 // POST /api/admin/providers/sync/clear - Clear All Games
 router.post('/sync/clear', requirePermission('agents', 'import', 'manage'), async (req, res) => {
     try {

@@ -371,15 +371,28 @@ export class BetflixService {
             // 2. Build Attempt Templates (Provider + GameCode Combinations)
             const attempts: Array<{ provider: string, gamecode: string }> = [];
 
+            // [Smart Launch] Strip Provider Prefix if present (e.g. "pg-mahjong-ways" -> "mahjong-ways")
+            // This allows us to store unique slugs (pg-xxx) in DB but launch with raw code (xxx)
+            let rawGameCode = gameCode;
+            const prefix = `${inputProvider}-`; // e.g. "pg-", "joker-"
+
+            if (providerCode && gameCode && gameCode.startsWith(prefix)) {
+                rawGameCode = gameCode.substring(prefix.length);
+                console.log(`[SmartLaunch] Stripped prefix: ${gameCode} -> ${rawGameCode}`);
+            }
+
+            // Use rawGameCode for logic below
+            const targetGameCode = rawGameCode;
+
             if (apiProvider === 'qtech' && inputProvider !== 'gamatron') {
                 const qtechPrefixMap: Record<string, string> = { 'ga': 'GA', 'gamatron': 'GA' };
                 const derivedPrefix = qtechPrefixMap[inputProvider] || '';
 
                 const candidates: string[] = [];
-                if (gameCode) {
-                    candidates.push(gameCode);
-                    if (derivedPrefix && !gameCode.includes('-')) {
-                        candidates.push(`${derivedPrefix}-${gameCode}`);
+                if (targetGameCode) {
+                    candidates.push(targetGameCode);
+                    if (derivedPrefix && !targetGameCode.includes('-')) {
+                        candidates.push(`${derivedPrefix}-${targetGameCode}`);
                     }
                 } else {
                     attempts.push({ provider: 'qtech', gamecode: '' });
@@ -392,14 +405,13 @@ export class BetflixService {
                 if (apiProvider === 'jili' || apiProvider === 'jl') provVars = ['jl', 'jili'];
                 if (apiProvider === 'fc') provVars = ['fc'];
 
-                // [Fixed] Gamatron Exhaustive Strategy
                 // [Fixed] Gamatron: Try both 'ga' and 'gamatron' directly
                 if (inputProvider === 'gamatron') {
-                    attempts.push({ provider: 'ga', gamecode: gameCode });
-                    attempts.push({ provider: 'gamatron', gamecode: gameCode });
+                    attempts.push({ provider: 'ga', gamecode: targetGameCode });
+                    attempts.push({ provider: 'gamatron', gamecode: targetGameCode });
                 } else {
                     // Standard Logic for others
-                    const gameVars = this.generateGameCodeVariants(gameCode);
+                    const gameVars = this.generateGameCodeVariants(targetGameCode);
                     for (const p of provVars) {
                         for (const g of gameVars) {
                             attempts.push({ provider: p, gamecode: g });

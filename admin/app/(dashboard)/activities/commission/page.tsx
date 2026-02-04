@@ -2,56 +2,52 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Trophy, Save, RefreshCw } from "lucide-react";
+import { Settings, Save, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
-interface CommissionLevel {
+interface TurnoverSettings {
     id?: number;
-    level: number;
     rate: number;
-    description: string;
+    minTurnover: number;
+    maxReward: number;
     isActive: boolean;
 }
 
 export default function CommissionSettingsPage() {
-    const [settings, setSettings] = useState<CommissionLevel[]>([]);
+    const [settings, setSettings] = useState<TurnoverSettings>({
+        rate: 0.5,
+        minTurnover: 100,
+        maxReward: 10000,
+        isActive: true,
+    });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
     const fetchSettings = async () => {
         try {
             setLoading(true);
-            const res = await api.get("/admin/activities/commission");
+            const res = await api.get("/admin/rewards/settings/turnover");
             if (res.data.success) {
                 setSettings(res.data.data);
             }
         } catch (error) {
             console.error("Fetch error:", error);
+            toast.error("ดึงข้อมูลไม่สำเร็จ");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleUpdate = (level: number, field: keyof CommissionLevel, value: number | string | boolean) => {
-        setSettings(prev =>
-            prev.map(s => s.level === level ? { ...s, [field]: value } : s)
-        );
-    };
-
     const handleSave = async () => {
         try {
             setSaving(true);
-            for (const item of settings) {
-                await api.put(`/admin/activities/commission/${item.level}`, {
-                    rate: item.rate,
-                    description: item.description,
-                    isActive: item.isActive
-                });
+            const res = await api.post("/admin/rewards/settings/turnover", settings);
+            if (res.data.success) {
+                toast.success("บันทึกสำเร็จ");
             }
-            toast.success("บันทึกสำเร็จ");
         } catch (error) {
-            toast.error("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาดในการบันทึก");
         } finally {
             setSaving(false);
         }
@@ -65,98 +61,88 @@ export default function CommissionSettingsPage() {
         return <div className="p-6 text-center">กำลังโหลด...</div>;
     }
 
-    const levelColors = ['bg-yellow-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500'];
-
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        <Trophy className="text-yellow-500" />
-                        ตั้งค่าคอมมิชชั่น 4 ชั้น
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1">กำหนดเปอร์เซ็นต์ค่าคอมสำหรับแต่ละชั้น</p>
+                    <h2 className="text-2xl font-bold text-slate-800">ตั้งค่าคอมมิชชั่น (Turnover Rebate)</h2>
+                    <p className="text-slate-500 text-sm mt-1">กำหนดเปอร์เซ็นต์คืนค่าคอมมิชชั่นจากยอดเทิร์นโอเวอร์</p>
                 </div>
                 <Link href="/activities" className="text-blue-500 hover:underline text-sm">
                     ← กลับ
                 </Link>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">ชั้น</th>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">ค่าคอม (%)</th>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">คำอธิบาย</th>
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">เปิดใช้งาน</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {settings.map((item, index) => (
-                            <tr key={item.level} className="hover:bg-slate-50">
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${levelColors[index] || 'bg-slate-400'}`}>
-                                            {item.level}
-                                        </div>
-                                        <span className="font-medium">ชั้นที่ {item.level}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="number"
-                                            step="0.1"
-                                            value={item.rate}
-                                            onChange={(e) => handleUpdate(item.level, 'rate', parseFloat(e.target.value) || 0)}
-                                            className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
-                                        />
-                                        <span className="text-slate-500">%</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <input
-                                        type="text"
-                                        value={item.description || ''}
-                                        onChange={(e) => handleUpdate(item.level, 'description', e.target.value)}
-                                        className="w-48 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
-                                        placeholder="เช่น แนะนำตรง"
-                                    />
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={item.isActive}
-                                            onChange={(e) => handleUpdate(item.level, 'isActive', e.target.checked)}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
-                                    </label>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                <div className="grid grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            เปอร์เซ็นต์คืนค่าคอม (%)
+                        </label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={settings.rate}
+                            onChange={(e) => setSettings({ ...settings, rate: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                        />
+                        <p className="text-xs text-slate-400 mt-1">เช่น 0.5% ของยอดเทิร์น</p>
+                    </div>
 
-            <div className="flex gap-3">
-                <button
-                    onClick={fetchSettings}
-                    className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
-                >
-                    <RefreshCw size={18} />
-                    รีเซ็ต
-                </button>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
-                >
-                    <Save size={18} />
-                    {saving ? "กำลังบันทึก..." : "บันทึกทั้งหมด"}
-                </button>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            ยอดเทิร์นขั้นต่ำ (บาท)
+                        </label>
+                        <input
+                            type="number"
+                            value={settings.minTurnover}
+                            onChange={(e) => setSettings({ ...settings, minTurnover: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            คืนสูงสุด (บาท)
+                        </label>
+                        <input
+                            type="number"
+                            value={settings.maxReward}
+                            onChange={(e) => setSettings({ ...settings, maxReward: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                        />
+                    </div>
+                </div>
+
+                <div className="mt-6 flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={settings.isActive}
+                            onChange={(e) => setSettings({ ...settings, isActive: e.target.checked })}
+                            className="w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400"
+                        />
+                        <span className="text-sm font-medium text-slate-700">เปิดใช้งาน</span>
+                    </label>
+                </div>
+
+                <div className="flex gap-3 mt-8 pt-6 border-t border-slate-100">
+                    <button
+                        onClick={fetchSettings}
+                        className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                    >
+                        <RefreshCw size={18} />
+                        รีเซ็ต
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
+                    >
+                        <Save size={18} />
+                        {saving ? "กำลังบันทึก..." : "บันทึก"}
+                    </button>
+                </div>
             </div>
         </div>
     );

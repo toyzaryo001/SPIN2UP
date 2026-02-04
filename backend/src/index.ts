@@ -12,6 +12,7 @@ import adminRoutes from './routes/admin/index.js';
 import staffRoutes from './routes/staff.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import superAdminRoutes from './routes/super-admin/index.js';
+import adminRewardRoutes from './routes/admin/reward.routes.js';
 
 dotenv.config();
 

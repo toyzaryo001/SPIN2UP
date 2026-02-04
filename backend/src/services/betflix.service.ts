@@ -528,6 +528,30 @@ export class BetflixService {
     }
 
     /**
+     * Get Report Summary (Turnover, WinLoss, etc.)
+     * API: /v4/report/summaryNEW
+     */
+    static async getReportSummary(username: string, start: string, end: string) {
+        try {
+            const api = await this.getApi();
+            // Params: username, start, end
+            // Note: Betflix usually expects YYYY-MM-DD or YYYY-MM-DD HH:mm:ss
+            const res = await api.get('/v4/report/summaryNEW', {
+                params: { username, start, end }
+            });
+
+            if (res.data.status === 'success' && res.data.data) {
+                return res.data.data; // { turnover, valid_amount, winloss, commission, total }
+            }
+            return null;
+        } catch (error: any) {
+            console.error('Betflix Report Error:', error.response?.data || error.message);
+            // Don't throw, just return null to handle gracefully
+            return null;
+        }
+    }
+
+    /**
      * Get Agent Balance (Credit)
      */
     static async getAgentBalance(): Promise<number> {

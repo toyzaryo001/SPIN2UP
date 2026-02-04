@@ -35,6 +35,7 @@ model User {
 
   transactions  Transaction[]
   gameSessions  GameSession[]
+  rewards       RewardClaim[]
   // Removed: editLogs relation (FK was removed from EditLog model)
   promotionLogs PromotionLog[]
 
@@ -401,6 +402,34 @@ model CommissionSetting {
   isActive    Boolean  @default(true)
   updatedAt   DateTime @updatedAt
 }
+
+// ตั้งค่า Commission (Turnover Rebate - Personal)
+model TurnoverSetting {
+  id          Int      @id @default(autoincrement())
+  rate        Decimal  @default(0.5)    // % คืนยอดเทิร์น
+  minTurnover Decimal  @default(100)    // ยอดเทิร์นขั้นต่ำ
+  maxReward   Decimal  @default(10000)  // คืนสูงสุด
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+// ประวัติการรับรางวัล (Prevent Double Claim)
+model RewardClaim {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  type        String   // CASHBACK, COMMISSION
+  amount      Decimal
+  periodStart DateTime // Start of the calculation period
+  periodEnd   DateTime // End of the calculation period
+  claimedAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([claimedAt])
+}
+
+
 
 // =====================
 // MULTI-PREFIX SYSTEM

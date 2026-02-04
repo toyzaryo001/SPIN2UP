@@ -85,6 +85,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/super-admin', superAdminRoutes);
+app.use('/api/admin/rewards', adminRewardRoutes); // Register
 
 // Health check
 app.get('/api/health', (req, res) => {

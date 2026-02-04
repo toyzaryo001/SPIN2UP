@@ -10,6 +10,7 @@ import {
 import axios from "axios";
 import ContactDrawer from "@/components/ContactDrawer";
 import { useToast } from "@/components/Toast";
+import BankSelectDropdown from "@/components/BankSelectDropdown";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -1200,13 +1201,10 @@ function HomePageLogic() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ธนาคาร</label>
-                    <select className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none appearance-none" value={registerForm.bankName} onChange={e => setRegisterForm({ ...registerForm, bankName: e.target.value })}>
-                      <option value="KBANK">KBANK</option>
-                      <option value="SCB">SCB</option>
-                      <option value="BBL">BBL</option>
-                      <option value="KTB">KTB</option>
-                      <option value="TRUE">TRUE WALLET</option>
-                    </select>
+                    <BankSelectDropdown
+                      value={registerForm.bankName}
+                      onChange={(code) => setRegisterForm({ ...registerForm, bankName: code })}
+                    />
                   </div>
                   <div>
                     <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เลขบัญชี</label>

@@ -81,6 +81,7 @@ const allMenuItems: MenuItem[] = [
     submenu: [
       { label: 'บัญชีธนาคาร', href: '/bank-accounts' },
       { label: 'TrueMoney', href: '/bank-accounts/truemoney' },
+      { label: 'LogoBank', href: '/bank-accounts/logobank' },
     ]
   },
   {

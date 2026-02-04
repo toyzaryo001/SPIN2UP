@@ -357,12 +357,46 @@ export class BetflixService {
                 'jl': 'jl',
                 'fc': 'fc',
                 'fachai': 'fc',
-                // QTech Sub-providers
+                // Additional providers
+                'cq9': 'cq9',
+                'mg': 'mg',
+                'microgaming': 'mg',
+                'netent': 'netent',
+                'ttg': 'ttg',
+                'toptrend': 'ttg',
+                'ep': 'ep',
+                'evoplay': 'ep',
+                'gamatron': 'gamatron',
+                'ga': 'gamatron',
+                'funky': 'funky',
+                'funkygames': 'funky',
+                'km': 'km',
+                'kingmaker': 'km',
+                'sp': 'sp',
+                'spade': 'sp',
+                'spadegaming': 'sp',
+                'r88': 'r88',
+                'rich88': 'r88',
+                'swg': 'swg',
+                'swintt': 'swg',
+                'we': 'we',
+                'weworld': 'we',
+                'xg': 'xg',
+                'xprogaming': 'xg',
+                'bg': 'bg',
+                'biggaming': 'bg',
+                'hg': 'hg',
+                'hogaming': 'hg',
+                'ag': 'ag',
+                'asiagaming': 'ag',
+                // QTech Sub-providers (aggregated games)
                 'qtech': 'qtech',
                 'nlc': 'qtech', 'hab': 'qtech', 'ygg': 'qtech', 'png': 'qtech',
                 'elk': 'qtech', 'bng': 'qtech', 'bpg': 'qtech', 'kgl': 'qtech',
                 'rlx': 'qtech', 'red': 'qtech', 'qs': 'qtech', 'ids': 'qtech',
-                'tk': 'qtech', 'ds': 'qtech', 'ga': 'qtech', 'evoplay': 'ep'
+                'tk': 'qtech', 'ds': 'qtech',
+                // WAZ - likely QTech aggregated (try qtech first, fallback)
+                'waz': 'qtech',
             };
 
             const inputProvider = providerCode.toLowerCase().trim();

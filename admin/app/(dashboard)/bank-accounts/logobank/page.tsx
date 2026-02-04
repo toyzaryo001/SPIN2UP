@@ -94,9 +94,9 @@ export default function LogoBankPage() {
     const fetchSettings = async () => {
         try {
             setLoading(true);
-            const res = await api.get("/admin/settings/key/enabled_banks");
-            if (res.data.success && res.data.data?.value) {
-                setEnabledBanks(JSON.parse(res.data.data.value));
+            const res = await api.get("/admin/settings");
+            if (res.data.success && res.data.data?.enabled_banks) {
+                setEnabledBanks(JSON.parse(res.data.data.enabled_banks));
             } else {
                 // Default: enable top 5 banks
                 setEnabledBanks(["KBANK", "SCB", "KTB", "BBL", "TRUEMONEY"]);
@@ -118,9 +118,8 @@ export default function LogoBankPage() {
     const handleSave = async () => {
         try {
             setSaving(true);
-            await api.post("/admin/settings", {
-                key: "enabled_banks",
-                value: JSON.stringify(enabledBanks)
+            await api.put("/admin/settings", {
+                enabled_banks: JSON.stringify(enabledBanks)
             });
             toast.success("บันทึกสำเร็จ");
         } catch (error) {

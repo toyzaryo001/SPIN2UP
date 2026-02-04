@@ -374,13 +374,15 @@ model ContactChannel {
 
 // ตั้งค่าคืนยอดเสีย (Cashback)
 model CashbackSetting {
-  id          Int      @id @default(autoincrement())
-  rate        Decimal  @default(5)      // % คืนยอดเสีย
-  minLoss     Decimal  @default(100)    // ยอดเสียขั้นต่ำ
-  maxCashback Decimal  @default(10000)  // คืนสูงสุด
-  dayOfWeek   Int      @default(1)      // วันที่รับได้ (0=อาทิตย์, 1=จันทร์, ...)
-  isActive    Boolean  @default(true)
-  updatedAt   DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  rate            Decimal  @default(5)      // % คืนยอดเสีย
+  minLoss         Decimal  @default(100)    // ยอดเสียขั้นต่ำ
+  maxCashback     Decimal  @default(10000)  // คืนสูงสุด
+  dayOfWeek       Int      @default(1)      // วันที่รับได้ (0=อาทิตย์, 1=จันทร์, ...)
+  claimStartHour  Int      @default(0)      // เริ่มกดรับได้ (ชั่วโมง)
+  claimEndHour    Int      @default(23)     // หมดเวลากดรับ (ชั่วโมง)
+  isActive        Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
 }
 
 // ตั้งค่าฝากสะสม (Streak)
@@ -483,3 +485,5 @@ model SuperAdminLog {
   @@index([superAdminId])
   @@index([createdAt])
 }
+
+

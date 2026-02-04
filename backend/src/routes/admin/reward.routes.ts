@@ -28,7 +28,7 @@ router.get('/settings/cashback', requirePermission('setting', 'view'), async (re
 // POST /api/admin/rewards/settings/cashback
 router.post('/settings/cashback', requirePermission('setting', 'manage'), async (req, res) => {
     try {
-        const { rate, minLoss, maxCashback, dayOfWeek, isActive } = req.body;
+        const { rate, minLoss, maxCashback, dayOfWeek, claimStartHour, claimEndHour, isActive } = req.body;
 
         // Upsert logic (although strictly we expect 1 row)
         const setting = await prisma.cashbackSetting.findFirst();
@@ -42,6 +42,8 @@ router.post('/settings/cashback', requirePermission('setting', 'manage'), async 
                     minLoss: Number(minLoss),
                     maxCashback: Number(maxCashback),
                     dayOfWeek: Number(dayOfWeek),
+                    claimStartHour: claimStartHour !== undefined ? Number(claimStartHour) : undefined,
+                    claimEndHour: claimEndHour !== undefined ? Number(claimEndHour) : undefined,
                     isActive: Boolean(isActive)
                 }
             });
@@ -52,6 +54,8 @@ router.post('/settings/cashback', requirePermission('setting', 'manage'), async 
                     minLoss: Number(minLoss),
                     maxCashback: Number(maxCashback),
                     dayOfWeek: Number(dayOfWeek),
+                    claimStartHour: claimStartHour !== undefined ? Number(claimStartHour) : 0,
+                    claimEndHour: claimEndHour !== undefined ? Number(claimEndHour) : 23,
                     isActive: Boolean(isActive)
                 }
             });
@@ -121,19 +125,64 @@ router.post('/settings/turnover', requirePermission('setting', 'manage'), async 
 });
 
 // =======================
+// SUMMARIES (Weekly Totals)
+// =======================
+
+// GET /api/admin/rewards/summaries
+router.get('/summaries', requirePermission('report', 'view'), async (req, res) => {
+    try {
+        const { type } = req.query;
+
+        // Group by period and sum amounts
+        const where: any = {};
+        if (type) where.type = String(type);
+
+        const claims = await prisma.rewardClaim.groupBy({
+            by: ['periodStart', 'periodEnd'],
+            where,
+            _sum: { amount: true },
+            _count: { id: true },
+            orderBy: { periodStart: 'desc' },
+            take: 10
+        });
+
+        const summaries = claims.map(c => ({
+            periodStart: c.periodStart,
+            periodEnd: c.periodEnd,
+            totalPaid: Number(c._sum.amount || 0),
+            claimCount: c._count.id
+        }));
+
+        res.json({ success: true, data: summaries });
+    } catch (error) {
+        console.error('Get summaries error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
+// =======================
 // REPORTS (Claim History)
 // =======================
 
 // GET /api/admin/rewards/history
 router.get('/history', requirePermission('report', 'view'), async (req, res) => {
     try {
-        const { page = 1, limit = 20, username, type, startDate, endDate } = req.query;
+        const { page = 1, limit = 50, search, type, startDate, endDate } = req.query;
         const skip = (Number(page) - 1) * Number(limit);
 
         const where: any = {};
-        if (username) {
-            where.user = { username: { contains: String(username) } };
+
+        // Search by username or phone
+        if (search) {
+            where.user = {
+                OR: [
+                    { username: { contains: String(search), mode: 'insensitive' } },
+                    { phone: { contains: String(search) } },
+                    { fullName: { contains: String(search), mode: 'insensitive' } }
+                ]
+            };
         }
+
         if (type) {
             where.type = String(type);
         }
@@ -159,6 +208,7 @@ router.get('/history', requirePermission('report', 'view'), async (req, res) => 
         res.json({
             success: true,
             data: items,
+            total,
             pagination: {
                 total,
                 page: Number(page),

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
+import ClientLayout from "@/components/ClientLayout";
 
 import { headers } from "next/headers";
 
@@ -46,7 +47,9 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <ToastProvider>
-          {children}
+          <ClientLayout>
+            {children}
+          </ClientLayout>
         </ToastProvider>
       </body>
     </html>

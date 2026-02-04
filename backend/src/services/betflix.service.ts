@@ -395,9 +395,15 @@ export class BetflixService {
                 'elk': 'qtech', 'bng': 'qtech', 'bpg': 'qtech', 'kgl': 'qtech',
                 'rlx': 'qtech', 'red': 'qtech', 'qs': 'qtech', 'ids': 'qtech',
                 'tk': 'qtech', 'ds': 'qtech',
-                // WAZ, HAK - QTech aggregated
+                // WAZ, HAK, PRS and other QTech aggregated providers
                 'waz': 'qtech',
                 'hak': 'qtech',
+                'prs': 'qtech',
+                'pug': 'qtech',
+                'fng': 'qtech',
+                'nge': 'qtech',
+                '1x2': 'qtech',
+                'max': 'qtech',
             };
 
             const inputProvider = providerCode.toLowerCase().trim();

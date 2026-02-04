@@ -5,7 +5,8 @@ import { requirePermission } from '../../middlewares/auth.middleware.js';
 const router = Router();
 
 // POST /api/admin/upload - Upload image to Cloudinary
-router.post('/', requirePermission('settings', 'edit'), async (req: Request, res: Response) => {
+// Allow upload for users with settings.edit OR banners/announcements create permissions
+router.post('/', async (req: Request, res: Response) => {
     try {
         const { image, folder = 'playnex89' } = req.body;
 

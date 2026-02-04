@@ -68,7 +68,7 @@ export default function AnnouncementsPage() {
         reader.onloadend = async () => {
             try {
                 const base64Image = reader.result;
-                const res = await api.post('/api/admin/upload', { image: base64Image, folder: 'announcements' });
+                const res = await api.post('/admin/upload', { image: base64Image, folder: 'announcements' });
                 if (res.data.success) {
                     setFormData(prev => ({ ...prev, image: res.data.data.url }));
                     toast.success('อัพโหลดรูปสำเร็จ');

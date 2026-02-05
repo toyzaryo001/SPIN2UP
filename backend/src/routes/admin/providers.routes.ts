@@ -203,4 +203,91 @@ router.post('/sync/:code', requirePermission('agents', 'import', 'manage'), asyn
     }
 });
 
+// POST /api/admin/providers/update-display-names - อัพเดทชื่อค่ายเป็นชื่อเต็ม
+router.post('/update-display-names', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
+    try {
+        // Display name mapping
+        const PROVIDER_DISPLAY_NAMES: { [key: string]: string } = {
+            pg: 'PG Soft',
+            pp: 'Pragmatic Play',
+            joker: 'Joker Gaming',
+            jili: 'JILI',
+            jl: 'JILI',
+            fc: 'Fa Chai',
+            km: 'King Maker',
+            sa: 'SA Gaming',
+            dg: 'Dream Gaming',
+            sexy: 'Sexy Baccarat',
+            wm: 'WM Casino',
+            bg: 'Big Gaming',
+            ag: 'Asia Gaming',
+            eg: 'Evolution Gaming',
+            allbet: 'Allbet',
+            cq9: 'CQ9 Gaming',
+            mg: 'Micro Gaming',
+            bs: 'BetSoft',
+            ng: 'Nolimit Gaming',
+            ep: 'Evoplay',
+            gamatron: 'Gamatron',
+            swg: 'Skywind',
+            aws: 'Ameba',
+            funky: 'Funky Games',
+            gdg: 'Golden Dream Gaming',
+            sp: 'Spade Gaming',
+            netent: 'NetEnt',
+            '1x2': '1x2 Gaming',
+            sbo: 'SBOBet',
+            saba: 'Saba Sports',
+            ufa: 'UFA Sports',
+            bfs: 'BetFlix Sports',
+            bpg: 'Blueprint Gaming',
+            bng: 'Big Time Gaming',
+            hab: 'Habanero',
+            kgl: 'Kalamba Games',
+            rlx: 'Relax Gaming',
+            ygg: 'Yggdrasil',
+            red: 'Red Tiger',
+            qs: 'Quickspin',
+            ids: 'iDream Soft',
+            tk: 'Triple Karma',
+            max: 'Max Win Gaming',
+            ds: 'Dragoon Soft',
+            nlc: 'Nolimit City',
+            ga: 'GameArt',
+            png: 'Play n GO',
+            pug: 'Push Gaming',
+            fng: 'Fantasma Games',
+            nge: 'Naga Games',
+            hak: 'Hacksaw Gaming',
+            waz: 'Wazdan',
+            elk: 'ELK Studios',
+            prs: 'PG Soft Real'
+        };
+
+        const providers = await prisma.gameProvider.findMany();
+        let updatedCount = 0;
+
+        for (const provider of providers) {
+            const slug = provider.slug.toLowerCase();
+            const displayName = PROVIDER_DISPLAY_NAMES[slug];
+            if (displayName && provider.name !== displayName) {
+                await prisma.gameProvider.update({
+                    where: { id: provider.id },
+                    data: { name: displayName }
+                });
+                updatedCount++;
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `อัพเดทชื่อค่ายสำเร็จ ${updatedCount} ค่าย`,
+            data: { updatedCount }
+        });
+    } catch (error: any) {
+        console.error('Update display names error:', error);
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาด' });
+    }
+});
+
 export default router;

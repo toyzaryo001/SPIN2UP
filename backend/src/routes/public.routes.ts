@@ -111,7 +111,7 @@ router.get('/categories', async (req: Request, res: Response) => {
             include: {
                 providers: {
                     where: { isActive: true },
-                    select: { id: true, name: true, slug: true, logo: true, categoryId: true },
+                    select: { id: true, name: true, slug: true, logo: true, categoryId: true, isLobbyMode: true },
                     orderBy: { sortOrder: 'asc' }
                 },
                 _count: { select: { providers: true } }

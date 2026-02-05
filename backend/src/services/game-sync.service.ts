@@ -279,9 +279,12 @@ export class GameSyncService {
             let updateCount = 0;
 
             for (const game of gamesToUpsert) {
-                // Detect Fishing Games by code pattern (FH_ prefix or FISH in code)
-                const isFishingGame = game.code.toUpperCase().startsWith('FH_') ||
-                    game.code.toUpperCase().includes('FISH');
+                // Detect Fishing Games - Only for specific providers (JILI, FC) with FH_ prefix
+                // Pattern: FH_JILI-FISH, FH_FC-FISH, etc.
+                const providerUpper = providerCode.toUpperCase();
+                const gameCodeUpper = game.code.toUpperCase();
+                const isFishingGame = (providerUpper === 'JILI' || providerUpper === 'JL' || providerUpper === 'FC') &&
+                    (gameCodeUpper.startsWith('FH_') || gameCodeUpper.includes('-FISH'));
 
                 // Determine which provider to use for this game
                 let targetProvider = provider;

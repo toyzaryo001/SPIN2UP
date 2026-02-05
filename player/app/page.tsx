@@ -285,47 +285,63 @@ const GameCard = ({ title, provider, image, color, hot, isNew, type, onPlay }: a
 
 const Sidebar = ({ title, items, active, setActive }: any) => (
   <div className="glass-card rounded-2xl overflow-hidden sticky top-36">
-    <div className="p-5 border-b border-white/10 bg-white/5">
-      <h3 className="text-lg font-black text-white border-l-4 border-yellow-500 pl-3 uppercase italic tracking-wider">{title}</h3>
+    <div className="p-4 border-b border-white/10 bg-white/5">
+      <h3 className="text-base font-black text-white border-l-4 border-yellow-500 pl-3 uppercase italic tracking-wider">{title}</h3>
     </div>
-    <div className="p-3 flex flex-col gap-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
-      {items.map((item: any, idx: number) => {
-        // Handle both object and string for backward compatibility
-        const name = typeof item === 'object' ? item.name : item;
-        const logo = typeof item === 'object' ? item.logo : null;
-        const isActive = active === name;
+    <div className="p-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+      {/* 2 Column Grid Layout */}
+      <div className="grid grid-cols-2 gap-2">
+        {items.map((item: any, idx: number) => {
+          const name = typeof item === 'object' ? item.name : item;
+          const logo = typeof item === 'object' ? item.logo : null;
+          const isActive = active === name;
+          const isLobby = typeof item === 'object' && item.isLobbyMode;
 
-        return (
-          <button
-            key={idx}
-            onClick={() => setActive && setActive(name)}
-            className={`px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between w-full group relative overflow-hidden
-            ${isActive
-                ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg'
-                : 'text-slate-400 hover:bg-white/5 hover:text-white'
-              }`}
-          >
-            <div className="flex items-center gap-3 relative z-10 overflow-hidden">
-              {isActive && <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0"></div>}
-
-              {/* Logo Implementation */}
-              {logo ? (
-                <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center shrink-0 p-0.5">
-                  <img src={logo} alt={name} className="w-full h-full object-contain" />
-                </div>
-              ) : (
-                <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center shrink-0">
-                  <Gamepad2 size={14} className="opacity-50" />
+          return (
+            <button
+              key={idx}
+              onClick={() => setActive && setActive(name)}
+              className={`aspect-square rounded-xl p-2 flex flex-col items-center justify-center gap-1.5 transition-all relative overflow-hidden group
+              ${isActive
+                  ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-lg ring-2 ring-blue-400 scale-[1.02]'
+                  : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white'
+                }`}
+            >
+              {/* Lobby Badge */}
+              {isLobby && (
+                <div className="absolute top-1 right-1 bg-yellow-500/90 text-[8px] font-bold text-black px-1.5 py-0.5 rounded">
+                  LOBBY
                 </div>
               )}
 
-              <span className="truncate">{name}</span>
-            </div>
-            {isActive === name && <ChevronRight size={16} className="text-yellow-400 shrink-0" />}
-            {isActive !== name && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>}
-          </button>
-        );
-      })}
+              {/* Provider Logo - Large */}
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden transition-transform group-hover:scale-110
+                ${isActive ? 'bg-white/20' : 'bg-white/10'}`}>
+                {logo ? (
+                  <img src={logo} alt={name} className="w-10 h-10 object-contain" />
+                ) : (
+                  <Gamepad2 size={28} className={`${isActive ? 'text-white' : 'text-slate-500'}`} />
+                )}
+              </div>
+
+              {/* Provider Name */}
+              <span className={`text-[10px] font-bold text-center leading-tight line-clamp-2 ${isActive ? 'text-white' : ''}`}>
+                {name}
+              </span>
+
+              {/* Active Indicator */}
+              {isActive && (
+                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+              )}
+
+              {/* Hover Shimmer */}
+              {!isActive && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   </div>
 );

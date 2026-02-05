@@ -624,6 +624,22 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
     (g.provider?.categoryId === category?.id)
   );
 
+  // Check if current provider is lobby mode
+  const currentProvider = providerList.find((p: any) => p.name === activeProvider);
+  const isLobbyProvider = currentProvider?.isLobbyMode === true;
+
+  // Handle lobby entrance
+  const handleEnterLobby = () => {
+    if (onPlay && currentProvider) {
+      onPlay({
+        slug: `${currentProvider.slug}-lobby`,
+        name: `${currentProvider.name} Lobby`,
+        provider: currentProvider,
+        isLobby: true
+      });
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
       <div className="md:col-span-1 hidden md:block">
@@ -636,7 +652,7 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
           onChange={(e) => setActiveProvider(e.target.value)}
         >
           {providerList.length > 0 ? providerList.map((p: any) => (
-            <option key={p.name} value={p.name}>{p.name}</option>
+            <option key={p.name} value={p.name}>{p.name} {p.isLobbyMode ? '🎮' : ''}</option>
           )) : <option>ไม่มีค่ายเกม</option>}
         </select>
       </div>
@@ -647,35 +663,62 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
             <h2 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
               <Gamepad2 className="text-yellow-400" />
               เกม: <span className="text-green-400">{activeProvider}</span>
+              {isLobbyProvider && <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs ml-2">LOBBY</span>}
             </h2>
-            <p className="text-xs text-slate-400 mt-1 font-sans">เกมทั้งหมด {filteredGames.length > 0 ? filteredGames.length : 0} เกม</p>
+            <p className="text-xs text-slate-400 mt-1 font-sans">
+              {isLobbyProvider ? 'กดเพื่อเข้าสู่ห้องเกม' : `เกมทั้งหมด ${filteredGames.length > 0 ? filteredGames.length : 0} เกม`}
+            </p>
           </div>
-          <div className="flex gap-2">
-            <button className="px-4 py-1.5 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 font-sans">ล่าสุด</button>
-            <button className="px-4 py-1.5 text-xs bg-yellow-500 text-slate-900 rounded-lg font-bold shadow-lg shadow-yellow-500/20 hover:bg-yellow-400 transition-colors font-sans">ยอดนิยม</button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-          {filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
-            <GameCard
-              key={i}
-              title={game.name}
-              provider={activeProvider}
-              image={game.thumbnail || game.image}
-              color={`bg-gradient-to-br from-slate-700 to-slate-800`}
-              hot={game.isHot}
-              isNew={game.isNew}
-              type="slot"
-              onPlay={() => onPlay && onPlay(game)}
-            />
-          )) : (
-            <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
-              <Gamepad2 size={48} className="mx-auto mb-4 opacity-20" />
-              <p>ไม่พบเกมในหมวดหมู่นี้</p>
+          {!isLobbyProvider && (
+            <div className="flex gap-2">
+              <button className="px-4 py-1.5 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 font-sans">ล่าสุด</button>
+              <button className="px-4 py-1.5 text-xs bg-yellow-500 text-slate-900 rounded-lg font-bold shadow-lg shadow-yellow-500/20 hover:bg-yellow-400 transition-colors font-sans">ยอดนิยม</button>
             </div>
           )}
         </div>
+
+        {isLobbyProvider ? (
+          // Show single lobby card for lobby providers
+          <div className="flex justify-center py-12">
+            <div
+              onClick={handleEnterLobby}
+              className="cursor-pointer group relative rounded-2xl overflow-hidden shadow-2xl hover:shadow-[0_0_40px_rgba(250,204,21,0.5)] transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:border-yellow-500/50 w-full max-w-md"
+            >
+              <div className="p-10 flex flex-col items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Gamepad2 size={48} className="text-yellow-400" />
+                </div>
+                <h3 className="text-2xl text-white font-bold text-center mb-2">{activeProvider}</h3>
+                <p className="text-slate-400 text-sm mb-4">เลือกเกมจากห้อง Lobby</p>
+                <span className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black rounded-full text-sm font-bold shadow-lg">
+                  🎮 เข้าสู่ LOBBY
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Show individual games
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            {filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
+              <GameCard
+                key={i}
+                title={game.name}
+                provider={activeProvider}
+                image={game.thumbnail || game.image}
+                color={`bg-gradient-to-br from-slate-700 to-slate-800`}
+                hot={game.isHot}
+                isNew={game.isNew}
+                type="slot"
+                onPlay={() => onPlay && onPlay(game)}
+              />
+            )) : (
+              <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
+                <Gamepad2 size={48} className="mx-auto mb-4 opacity-20" />
+                <p>ไม่พบเกมในหมวดหมู่นี้</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

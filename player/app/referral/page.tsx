@@ -1,23 +1,65 @@
 "use client";
 
 import PlayerLayout from "@/components/PlayerLayout";
-import { Users, Copy, Check, Share2, Gift, Coins } from "lucide-react";
-import { useState } from "react";
+import { Users, Copy, Check, Share2, Gift, Coins, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import axios from "axios";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
+interface Referral {
+    id: number;
+    username: string;
+    date: string;
+    commission: number;
+}
 
 export default function ReferralPage() {
-    const { user, loading } = useAuth(true);
+    const { user, loading: authLoading } = useAuth(true);
     const [copied, setCopied] = useState(false);
-    const referralCode = user?.username || "REF12345678";
-    const referralLink = `https://check24m.com/r/${referralCode}`;
-    const totalReferrals = 5;
-    const totalCommission = 500.00;
+    const [loading, setLoading] = useState(true);
+    const [referralCode, setReferralCode] = useState("");
+    const [referralLink, setReferralLink] = useState("");
+    const [totalReferrals, setTotalReferrals] = useState(0);
+    const [totalCommission, setTotalCommission] = useState(0);
+    const [referrals, setReferrals] = useState<Referral[]>([]);
 
-    const referrals = [
-        { id: 1, username: "user***01", date: "01/01/2025", commission: 100 },
-        { id: 2, username: "user***02", date: "02/01/2025", commission: 100 },
-        { id: 3, username: "user***03", date: "03/01/2025", commission: 100 },
-    ];
+    useEffect(() => {
+        const fetchReferralStats = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                setLoading(false);
+                return;
+            }
+            try {
+                const res = await axios.get(`${API_URL}/users/referral-stats`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.data.success) {
+                    const data = res.data.data;
+                    setReferralCode(data.referralCode);
+                    setReferralLink(`https://check24m.com/r/${data.referralCode}`);
+                    setTotalReferrals(data.totalReferrals);
+                    setTotalCommission(data.totalCommission);
+                    setReferrals(data.referrals);
+                }
+            } catch (error) {
+                console.error("Failed to fetch referral stats", error);
+                // Fallback to user data
+                if (user) {
+                    setReferralCode(user.username);
+                    setReferralLink(`https://check24m.com/r/${user.username}`);
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (!authLoading) {
+            fetchReferralStats();
+        }
+    }, [authLoading, user]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(referralLink);
@@ -25,8 +67,8 @@ export default function ReferralPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    if (loading) {
-        return <PlayerLayout><div style={{ padding: "40px", textAlign: "center" }}>กำลังโหลด...</div></PlayerLayout>;
+    if (authLoading || loading) {
+        return <PlayerLayout><div style={{ padding: "40px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}><Loader2 className="animate-spin" size={20} /> กำลังโหลด...</div></PlayerLayout>;
     }
 
     if (!user) return null;

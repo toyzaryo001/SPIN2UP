@@ -122,5 +122,58 @@ router.put('/me/password', authMiddleware, async (req: AuthRequest, res) => {
     }
 });
 
+// GET /api/users/referral-stats - ดึงข้อมูล referral stats
+router.get('/referral-stats', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user!.userId },
+            select: { id: true, username: true }
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+        }
+
+        // ดึง users ที่ถูกแนะนำโดย user นี้
+        const referrals = await prisma.user.findMany({
+            where: { referredBy: user.id },
+            select: {
+                id: true,
+                username: true,
+                createdAt: true
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20
+        });
+
+        // คำนวณ commission (ตัวอย่าง: 10% ของยอดฝากแรกของแต่ละคน)
+        // หรือใช้ค่าคงที่
+        const commissionPerReferral = 100; // ฿100 ต่อคน
+        const totalReferrals = referrals.length;
+        const totalCommission = totalReferrals * commissionPerReferral;
+
+        // Mask username for privacy
+        const maskedReferrals = referrals.map((ref, index) => ({
+            id: ref.id,
+            username: ref.username.substring(0, 4) + '***' + ref.username.slice(-2),
+            date: ref.createdAt.toISOString().split('T')[0].split('-').reverse().join('/'),
+            commission: commissionPerReferral
+        }));
+
+        res.json({
+            success: true,
+            data: {
+                referralCode: user.username,
+                totalReferrals,
+                totalCommission,
+                referrals: maskedReferrals
+            }
+        });
+    } catch (error) {
+        console.error('Get referral stats error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 export default router;
 

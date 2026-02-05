@@ -279,9 +279,53 @@ export class GameSyncService {
             let updateCount = 0;
 
             for (const game of gamesToUpsert) {
+                // Detect Fishing Games by code pattern (FH_ prefix or FISH in code)
+                const isFishingGame = game.code.toUpperCase().startsWith('FH_') ||
+                    game.code.toUpperCase().includes('FISH');
+
+                // Determine which provider to use for this game
+                let targetProvider = provider;
+
+                if (isFishingGame) {
+                    // Get or create Fishing provider
+                    let fishingProvider = await prisma.gameProvider.findUnique({
+                        where: { name: 'FISHING' }
+                    });
+
+                    if (!fishingProvider) {
+                        // Create fishing category first
+                        let fishingCategory = await prisma.gameCategory.findFirst({
+                            where: { slug: 'fishing' }
+                        });
+
+                        if (!fishingCategory) {
+                            fishingCategory = await prisma.gameCategory.create({
+                                data: {
+                                    name: 'FISHING',
+                                    slug: 'fishing',
+                                    isActive: true
+                                }
+                            });
+                        }
+
+                        // Create FISHING provider
+                        fishingProvider = await prisma.gameProvider.create({
+                            data: {
+                                name: 'FISHING',
+                                slug: 'fishing',
+                                categoryId: fishingCategory.id,
+                                isActive: true
+                            }
+                        });
+                        console.log(`[GameSync] Created FISHING provider with category ID: ${fishingCategory.id}`);
+                    }
+
+                    targetProvider = fishingProvider;
+                }
+
                 // Scope slug by provider to ensure uniqueness across providers
                 // [MODIFIED] Use Provider Prefix to prevent duplicates (e.g. pg-mahjong vs joker-mahjong)
-                const safeSlug = `${provider.slug.toLowerCase()}-${game.code}`;
+                const safeSlug = `${targetProvider.slug.toLowerCase()}-${game.code}`;
 
                 const existing = await prisma.game.findUnique({
                     where: {
@@ -295,6 +339,7 @@ export class GameSyncService {
                         data: {
                             name: game.name,
                             thumbnail: game.image || existing.thumbnail,
+                            providerId: targetProvider.id, // Update provider if it changed
                             isActive: true
                         }
                     });
@@ -304,7 +349,7 @@ export class GameSyncService {
                         data: {
                             slug: safeSlug,
                             name: game.name,
-                            providerId: provider.id,
+                            providerId: targetProvider.id,
                             thumbnail: game.image,
                             isActive: true, // Default active
                             minBet: 1,

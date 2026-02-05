@@ -1061,10 +1061,13 @@ function HomePageLogic() {
         {/* Render Dynamic Categories */}
         {categories.map(cat => {
           if (activeTab === (cat.slug || cat.id.toString()) && (cat.slug === 'slots' || cat.slug === 'slot')) {
-            return <SlotsContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />
+            return <SlotsContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />;
           }
           if (activeTab === (cat.slug || cat.id.toString()) && (cat.slug === 'casino' || cat.slug === 'live-casino')) {
-            return <CasinoContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />
+            return <CasinoContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />;
+          }
+          if (activeTab === (cat.slug || cat.id.toString()) && cat.slug === 'fishing') {
+            return <SlotsContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />;
           }
           // Default generic category view can be added here if needed
           return null;

@@ -118,7 +118,29 @@ router.get('/categories', async (req: Request, res: Response) => {
             },
             orderBy: { sortOrder: 'asc' }
         });
-        res.json(categories);
+
+        // Get all lobby mode providers to add to arcade category
+        const lobbyProviders = await prisma.gameProvider.findMany({
+            where: { isActive: true, isLobbyMode: true },
+            select: { id: true, name: true, slug: true, logo: true, categoryId: true, isLobbyMode: true },
+            orderBy: { sortOrder: 'asc' }
+        });
+
+        // Add lobby providers to arcade category (if exists)
+        const result = categories.map((cat: any) => {
+            if (cat.slug === 'arcade') {
+                // Merge existing + lobby providers (avoid duplicates)
+                const existingIds = new Set(cat.providers.map((p: any) => p.id));
+                const additionalProviders = lobbyProviders.filter((lp: any) => !existingIds.has(lp.id));
+                return {
+                    ...cat,
+                    providers: [...cat.providers, ...additionalProviders]
+                };
+            }
+            return cat;
+        });
+
+        res.json(result);
     } catch (error) {
         console.error('Public categories error:', error);
         res.status(500).json({ error: 'Failed to fetch categories' });

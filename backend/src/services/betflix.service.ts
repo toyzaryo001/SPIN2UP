@@ -404,6 +404,16 @@ export class BetflixService {
                 'nge': 'qtech',
                 '1x2': 'qtech',
                 'max': 'qtech',
+                // Split providers (Fishing/Table) - Map back to original provider
+                'jili-fish': 'jl',
+                'jili_fish': 'jl',
+                'fc-fish': 'fc',
+                'fc_fish': 'fc',
+                'jili-table': 'jl',
+                'jili_table': 'jl',
+                'km-table': 'km',
+                'km_table': 'km',
+                'fishing': 'jl', // Default fishing to JILI
             };
 
             const inputProvider = providerCode.toLowerCase().trim();

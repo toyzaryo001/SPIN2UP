@@ -25,7 +25,7 @@ export default function PopupAnnouncement() {
 
                 // Find active popup type announcement
                 const popupAnn = data.find((ann: Announcement) =>
-                    ann.type === 'Popup' && ann.isActive
+                    ann.type === 'POPUP' && ann.isActive
                 );
 
                 if (popupAnn) {

@@ -279,20 +279,28 @@ export class GameSyncService {
             let updateCount = 0;
 
             for (const game of gamesToUpsert) {
-                // Detect Fishing Games - Only for specific providers (JILI, FC) with FH_ prefix
-                // Pattern: FH_JILI-FISH, FH_FC-FISH, etc.
+                // Provider and game code for detection
                 const providerUpper = providerCode.toUpperCase();
                 const gameCodeUpper = game.code.toUpperCase();
-                const isFishingGame = (providerUpper === 'JILI' || providerUpper === 'JL' || providerUpper === 'FC') &&
+
+                // Detect Fishing Games - Only for JILI and FC with FH_ prefix or -FISH pattern
+                const isFishingGame = (providerUpper === 'JILI' || providerUpper === 'FC') &&
                     (gameCodeUpper.startsWith('FH_') || gameCodeUpper.includes('-FISH'));
+
+                // Detect Table Games - For KM and JILI with TABLE in code
+                const isTableGame = (providerUpper === 'KM' || providerUpper === 'JILI') &&
+                    gameCodeUpper.includes('TABLE');
 
                 // Determine which provider to use for this game
                 let targetProvider = provider;
 
                 if (isFishingGame) {
-                    // Get or create Fishing provider
+                    // Create provider-specific fishing provider (e.g., JILI_FISH, FC_FISH)
+                    const fishingProviderName = `${providerUpper}_FISH`;
+                    const fishingProviderSlug = `${providerCode.toLowerCase()}-fish`;
+
                     let fishingProvider = await prisma.gameProvider.findUnique({
-                        where: { name: 'FISHING' }
+                        where: { name: fishingProviderName }
                     });
 
                     if (!fishingProvider) {
@@ -311,19 +319,57 @@ export class GameSyncService {
                             });
                         }
 
-                        // Create FISHING provider
+                        // Create provider-specific FISHING provider
                         fishingProvider = await prisma.gameProvider.create({
                             data: {
-                                name: 'FISHING',
-                                slug: 'fishing',
+                                name: fishingProviderName,
+                                slug: fishingProviderSlug,
                                 categoryId: fishingCategory.id,
                                 isActive: true
                             }
                         });
-                        console.log(`[GameSync] Created FISHING provider with category ID: ${fishingCategory.id}`);
+                        console.log(`[GameSync] Created ${fishingProviderName} provider with category ID: ${fishingCategory.id}`);
                     }
 
                     targetProvider = fishingProvider;
+                } else if (isTableGame) {
+                    // Create provider-specific table provider (e.g., JILI_TABLE, KM_TABLE)
+                    const tableProviderName = `${providerUpper}_TABLE`;
+                    const tableProviderSlug = `${providerCode.toLowerCase()}-table`;
+
+                    let tableProvider = await prisma.gameProvider.findUnique({
+                        where: { name: tableProviderName }
+                    });
+
+                    if (!tableProvider) {
+                        // Create table category first
+                        let tableCategory = await prisma.gameCategory.findFirst({
+                            where: { slug: 'table' }
+                        });
+
+                        if (!tableCategory) {
+                            tableCategory = await prisma.gameCategory.create({
+                                data: {
+                                    name: 'TABLE',
+                                    slug: 'table',
+                                    isActive: true
+                                }
+                            });
+                        }
+
+                        // Create provider-specific TABLE provider
+                        tableProvider = await prisma.gameProvider.create({
+                            data: {
+                                name: tableProviderName,
+                                slug: tableProviderSlug,
+                                categoryId: tableCategory.id,
+                                isActive: true
+                            }
+                        });
+                        console.log(`[GameSync] Created ${tableProviderName} provider with category ID: ${tableCategory.id}`);
+                    }
+
+                    targetProvider = tableProvider;
                 }
 
                 // Scope slug by provider to ensure uniqueness across providers

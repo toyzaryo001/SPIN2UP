@@ -1069,6 +1069,9 @@ function HomePageLogic() {
           if (activeTab === (cat.slug || cat.id.toString()) && cat.slug === 'fishing') {
             return <SlotsContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />;
           }
+          if (activeTab === (cat.slug || cat.id.toString()) && cat.slug === 'table') {
+            return <SlotsContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />;
+          }
           // Default generic category view can be added here if needed
           return null;
         })}

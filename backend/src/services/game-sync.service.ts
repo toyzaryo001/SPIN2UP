@@ -230,8 +230,11 @@ export class GameSyncService {
         }
 
         try {
-            // 2. Ensure Provider Exists
-            let provider = await prisma.gameProvider.findUnique({ where: { name: providerCode.toUpperCase() } });
+            // 2. Ensure Provider Exists (use slug for consistent lookup)
+            let provider = await prisma.gameProvider.findUnique({ where: { slug: providerCodeLower } });
+
+            // Get display name
+            const displayName = PROVIDER_DISPLAY_NAMES[providerCodeLower] || providerCode.toUpperCase();
 
             if (!provider) {
                 // Find or create category
@@ -249,9 +252,6 @@ export class GameSyncService {
                     });
                 }
 
-                // Get display name or fallback to uppercase code
-                const displayName = PROVIDER_DISPLAY_NAMES[providerCodeLower] || providerCode.toUpperCase();
-
                 provider = await prisma.gameProvider.create({
                     data: {
                         name: displayName,
@@ -261,6 +261,15 @@ export class GameSyncService {
                         isLobbyMode: LOBBY_MODE_PROVIDERS.includes(providerCodeLower)
                     }
                 });
+            } else {
+                // Update existing provider's display name if different
+                if (provider.name !== displayName) {
+                    provider = await prisma.gameProvider.update({
+                        where: { id: provider.id },
+                        data: { name: displayName }
+                    });
+                    console.log(`[GameSync] Updated provider name: ${provider.slug} -> ${displayName}`);
+                }
             }
 
             // 3. Parse content

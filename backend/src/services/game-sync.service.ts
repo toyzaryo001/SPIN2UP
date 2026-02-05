@@ -1,6 +1,64 @@
 import axios from 'axios';
 import prisma from '../lib/db';
 
+// Provider display names (Full names instead of abbreviations)
+const PROVIDER_DISPLAY_NAMES: { [key: string]: string } = {
+    pg: 'PG Soft',
+    pp: 'Pragmatic Play',
+    joker: 'Joker Gaming',
+    jili: 'JILI',
+    jl: 'JILI',
+    fc: 'Fa Chai',
+    km: 'King Maker',
+    sa: 'SA Gaming',
+    dg: 'Dream Gaming',
+    sexy: 'Sexy Baccarat',
+    wm: 'WM Casino',
+    bg: 'Big Gaming',
+    ag: 'Asia Gaming',
+    eg: 'Evolution Gaming',
+    allbet: 'Allbet',
+    cq9: 'CQ9 Gaming',
+    mg: 'Micro Gaming',
+    bs: 'BetSoft',
+    ng: 'No Limit Gaming',
+    ep: 'Evoplay',
+    gamatron: 'Gamatron',
+    swg: 'Skywind',
+    aws: 'Ameba',
+    funky: 'Funky Games',
+    gdg: 'Golden Dream Gaming',
+    sp: 'Spade Gaming',
+    netent: 'NetEnt',
+    '1x2': '1x2 Gaming',
+    sbo: 'SBOBet',
+    saba: 'Saba Sports',
+    ufa: 'UFA Sports',
+    bfs: 'BetFlix Sports',
+    // QTech Sub-providers
+    bpg: 'Blueprint Gaming',
+    bng: 'Big Time Gaming',
+    hab: 'Habanero',
+    kgl: 'Kalamba Games',
+    rlx: 'Relax Gaming',
+    ygg: 'Yggdrasil',
+    red: 'Red Tiger',
+    qs: 'Quickspin',
+    ids: 'iDream Soft',
+    tk: 'Triple Karma',
+    max: 'Max Win Gaming',
+    ds: 'Dragoon Soft',
+    nlc: 'Nolimit City',
+    ga: 'GameArt',
+    png: 'Play n GO',
+    pug: 'Push Gaming',
+    fng: 'Fantasma Games',
+    nge: 'Naga Games',
+    hak: 'Hacksaw Gaming',
+    waz: 'Wazdan',
+    elk: 'ELK Studios',
+    prs: 'PG Soft Real'
+};
 
 // Default mapping for provider text files (based on PHP reference)
 const PROVIDER_FILE_MAPPING: { [key: string]: string } = {
@@ -191,9 +249,12 @@ export class GameSyncService {
                     });
                 }
 
+                // Get display name or fallback to uppercase code
+                const displayName = PROVIDER_DISPLAY_NAMES[providerCodeLower] || providerCode.toUpperCase();
+
                 provider = await prisma.gameProvider.create({
                     data: {
-                        name: providerCode.toUpperCase(),
+                        name: displayName,
                         slug: providerCode.toLowerCase(),
                         categoryId: category.id,
                         isActive: true,

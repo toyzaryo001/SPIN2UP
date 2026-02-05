@@ -225,8 +225,8 @@ const GameCard = ({ title, provider, image, color, hot, isNew, type, onPlay }: a
   };
 
   return (
-    <div onClick={handleClick} className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-2">
-      <div className={`h-56 w-full relative overflow-hidden ${!hasImage ? (color || 'bg-slate-800') : ''}`}>
+    <div onClick={handleClick} className="group relative rounded-lg md:rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all duration-300 transform hover:-translate-y-1 md:hover:-translate-y-2">
+      <div className={`aspect-[4/5] md:aspect-[3/4] w-full relative overflow-hidden ${!hasImage ? (color || 'bg-slate-800') : ''}`}>
         {hasImage ? (
           <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url(${image})` }}></div>
         ) : (
@@ -661,32 +661,51 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
       <div className="md:col-span-1 hidden md:block">
         <Sidebar title={`ค่าย${category?.name || 'สล็อต'}`} items={providerList} active={activeProvider} setActive={setActiveProvider} />
       </div>
-      <div className="md:hidden col-span-1">
-        <select
-          className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg p-3 outline-none focus:border-yellow-500 font-sans"
-          value={activeProvider}
-          onChange={(e) => setActiveProvider(e.target.value)}
-        >
+      {/* Mobile Provider Selector - Horizontal Scroll */}
+      <div className="md:hidden col-span-1 -mx-4 px-4 overflow-x-auto pb-3">
+        <div className="flex gap-2 min-w-max">
           {providerList.length > 0 ? providerList.map((p: any) => (
-            <option key={p.name} value={p.name}>{p.name} {p.isLobbyMode ? '🎮' : ''}</option>
-          )) : <option>ไม่มีค่ายเกม</option>}
-        </select>
+            <button
+              key={p.name}
+              onClick={() => setActiveProvider(p.name)}
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all
+                ${activeProvider === p.name
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg ring-2 ring-blue-400'
+                  : 'bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-blue-500/50'
+                }`}
+            >
+              {/* Provider Logo */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden
+                ${activeProvider === p.name ? 'bg-white/20' : 'bg-white/10'}`}>
+                {p.logo ? (
+                  <img src={p.logo} alt={p.name} className="w-6 h-6 object-contain" />
+                ) : (
+                  <Gamepad2 size={16} className="text-slate-400" />
+                )}
+              </div>
+              <span className="text-sm font-bold whitespace-nowrap">{p.name}</span>
+              {p.isLobbyMode && <span className="text-xs bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">🎮</span>}
+            </button>
+          )) : (
+            <div className="text-slate-500 text-sm py-2">ไม่มีค่ายเกม</div>
+          )}
+        </div>
       </div>
 
       <div className="md:col-span-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 bg-[#1e293b] p-4 rounded-xl border border-slate-700 gap-4 shadow-md">
-          <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
-              <Gamepad2 className="text-yellow-400" />
-              เกม: <span className="text-green-400">{activeProvider}</span>
-              {isLobbyProvider && <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs ml-2">LOBBY</span>}
+        <div className="flex flex-row items-center justify-between mb-3 md:mb-6 bg-[#1e293b] p-2 md:p-4 rounded-lg md:rounded-xl border border-slate-700 gap-2 md:gap-4 shadow-md">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm md:text-xl font-bold text-white flex items-center gap-1 md:gap-2 font-sans">
+              <Gamepad2 className="text-yellow-400 w-4 h-4 md:w-6 md:h-6 flex-shrink-0" />
+              <span className="truncate">{activeProvider}</span>
+              {isLobbyProvider && <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-[10px] md:text-xs flex-shrink-0">LOBBY</span>}
             </h2>
-            <p className="text-xs text-slate-400 mt-1 font-sans">
-              {isLobbyProvider ? 'กดเพื่อเข้าสู่ห้องเกม' : `เกมทั้งหมด ${filteredGames.length > 0 ? filteredGames.length : 0} เกม`}
+            <p className="text-[10px] md:text-xs text-slate-400 mt-0.5 md:mt-1 font-sans">
+              {isLobbyProvider ? 'กดเพื่อเข้าห้องเกม' : `${filteredGames.length > 0 ? filteredGames.length : 0} เกม`}
             </p>
           </div>
           {!isLobbyProvider && (
-            <div className="flex gap-2">
+            <div className="hidden md:flex gap-2">
               <button className="px-4 py-1.5 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 font-sans">ล่าสุด</button>
               <button className="px-4 py-1.5 text-xs bg-yellow-500 text-slate-900 rounded-lg font-bold shadow-lg shadow-yellow-500/20 hover:bg-yellow-400 transition-colors font-sans">ยอดนิยม</button>
             </div>
@@ -714,7 +733,7 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
           </div>
         ) : (
           // Show individual games
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
             {filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
               <GameCard
                 key={i}
@@ -805,7 +824,7 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
         </div>
 
         {/* Display Casino Tables/Games from API */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
           {filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
             <GameCard
               key={i}

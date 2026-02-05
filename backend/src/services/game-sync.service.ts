@@ -60,23 +60,23 @@ const CATEGORY_MAPPING: { [key: string]: string } = {
     // Slots
     pg: 'slot', pp: 'slot', joker: 'slot', cq9: 'slot', jili: 'slot', fc: 'slot', km: 'slot',
     mg: 'slot', bs: 'slot', ng: 'slot', ep: 'slot', gamatron: 'slot', swg: 'slot', aws: 'slot',
-    funky: 'slot', gdg: 'slot', sp: 'slot', netent: 'slot', '1x2': 'slot',
+    gdg: 'slot', sp: 'slot', netent: 'slot', '1x2': 'slot',
 
-    // Fishing (ยิงปลา) - Some providers are famous for fishing, though they have slots too. 
-    // We prioritize primary category, or defaults.
-    // Note: Most "Fish" games are inside Slot providers (like JILI, FC, JOKER). 
-    // If we want a separate 'fishing' category, we might need game-level filters later.
-    // For now, we map providers known PRIMARILY for fishing if any, or keep them as slots.
-    // But commonly requested "Fishing" tab usually filters games, not just providers.
-    // However, simple provider mapping:
-    yl: 'fishing', // Youlian (example)
+    // Arcade (Lobby-based providers)
+    funky: 'arcade',
+
+    // Fishing (ยิงปลา)
+    yl: 'fishing',
 
     // Sports (กีฬา)
     sbo: 'sport', saba: 'sport', ufa: 'sport', bfs: 'sport',
 
     // Table / Card (เกมโต๊ะ)
-    kp: 'table', // King Poker (example)
+    kp: 'table',
 };
+
+// Providers that use Lobby Mode (show as single entry instead of individual games)
+const LOBBY_MODE_PROVIDERS = ['funky'];
 
 export class GameSyncService {
 
@@ -196,7 +196,8 @@ export class GameSyncService {
                         name: providerCode.toUpperCase(),
                         slug: providerCode.toLowerCase(),
                         categoryId: category.id,
-                        isActive: true
+                        isActive: true,
+                        isLobbyMode: LOBBY_MODE_PROVIDERS.includes(providerCodeLower)
                     }
                 });
             }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Building2, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical, Loader2 } from "lucide-react";
+import { Building2, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical, Loader2, Gamepad2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 // DnD Kit
@@ -70,6 +70,7 @@ interface Provider {
     categoryId: number;
     category: { name: string };
     isActive: boolean;
+    isLobbyMode?: boolean;
     sortOrder: number;
     _count: { games: number };
 }
@@ -192,6 +193,17 @@ export default function ProvidersPage() {
         } catch (error) { console.error(error); }
     };
 
+    const toggleLobbyMode = async (id: number, isLobbyMode: boolean) => {
+        try {
+            await api.patch(`/admin/providers/${id}`, { isLobbyMode: !isLobbyMode });
+            toast.success(isLobbyMode ? "ปิด Lobby Mode" : "เปิด Lobby Mode");
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            toast.error("เกิดข้อผิดพลาด");
+        }
+    };
+
     const confirmDelete = (item: Provider) => {
         setDeletingItem(item);
         setIsDeleteOpen(true);
@@ -257,6 +269,7 @@ export default function ProvidersPage() {
                                 <th className="px-6 py-4 text-left">ค่ายเกม</th>
                                 <th className="px-6 py-4 text-left">หมวดหมู่</th>
                                 <th className="px-6 py-4 text-center">เกม</th>
+                                <th className="px-6 py-4 text-center">Lobby</th>
                                 <th className="px-6 py-4 text-center">สถานะ</th>
                                 <th className="px-6 py-4 text-center">จัดการ</th>
                             </tr>
@@ -281,6 +294,17 @@ export default function ProvidersPage() {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className="px-2 py-1 bg-slate-100 rounded text-xs">{prov._count.games} เกม</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button onClick={() => toggleLobbyMode(prov.id, prov.isLobbyMode || false)} title={prov.isLobbyMode ? "ปิด Lobby Mode" : "เปิด Lobby Mode"}>
+                                                    {prov.isLobbyMode ? (
+                                                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs flex items-center gap-1">
+                                                            <Gamepad2 size={12} /> LOBBY
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-1 bg-slate-100 text-slate-400 rounded text-xs">ปกติ</span>
+                                                    )}
+                                                </button>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <button onClick={() => toggle(prov.id, prov.isActive)}>

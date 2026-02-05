@@ -772,6 +772,74 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
   );
 };
 
+// --- ARCADE CONTENT (For Lobby-based providers like FUNKY) ---
+const ArcadeContent = ({ category, providers: globalProviders, onPlay }: any) => {
+  // Get providers in this category (arcade)
+  const arcadeProviders = (category?.providers && category.providers.length > 0)
+    ? category.providers
+    : (globalProviders || []).filter((p: any) => p.categoryId === category?.id);
+
+  const handleEnterLobby = (provider: any) => {
+    // Send a "lobby" game request - backend will handle opening lobby URL
+    if (onPlay) {
+      onPlay({
+        slug: `${provider.slug}-lobby`,
+        name: `${provider.name} Lobby`,
+        provider: provider,
+        isLobby: true
+      });
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 bg-[#1e293b] p-4 rounded-xl border border-slate-700 gap-4 shadow-md">
+        <div>
+          <h2 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
+            <Gamepad2 className="text-yellow-400" />
+            {category?.name || 'Arcade'} - เกมห้อง Lobby
+          </h2>
+          <p className="text-xs text-slate-400 mt-1 font-sans">กดเลือกค่ายเพื่อเข้าสู่ห้องเกม</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {arcadeProviders.length > 0 ? arcadeProviders.map((provider: any) => (
+          <div
+            key={provider.id}
+            onClick={() => handleEnterLobby(provider)}
+            className="group relative rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-[0_0_25px_rgba(250,204,21,0.4)] transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:border-yellow-500/50"
+          >
+            <div className="p-6 flex flex-col items-center justify-center min-h-[180px]">
+              {provider.logo ? (
+                <img src={provider.logo} alt={provider.name} className="w-16 h-16 object-contain mb-3" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3">
+                  <Gamepad2 size={32} className="text-yellow-400" />
+                </div>
+              )}
+              <h3 className="text-white font-bold text-center mb-2">{provider.name}</h3>
+              <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-bold">
+                🎮 เข้า LOBBY
+              </span>
+            </div>
+
+            {/* Hover Overlay */}
+            <div className="absolute inset-0 bg-yellow-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <Play fill="white" className="text-white" size={48} />
+            </div>
+          </div>
+        )) : (
+          <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
+            <Gamepad2 size={48} className="mx-auto mb-4 opacity-20" />
+            <p>ยังไม่มีค่ายเกมในหมวด Arcade</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- 3. MAIN LOGIC & MODALS ---
 
 const Footer = ({ settings }: any) => (
@@ -1071,6 +1139,9 @@ function HomePageLogic() {
           }
           if (activeTab === (cat.slug || cat.id.toString()) && cat.slug === 'table') {
             return <SlotsContent key={cat.id} games={games} category={cat} providers={providers} onPlay={handlePlayGame} />;
+          }
+          if (activeTab === (cat.slug || cat.id.toString()) && cat.slug === 'arcade') {
+            return <ArcadeContent key={cat.id} category={cat} providers={providers} onPlay={handlePlayGame} />;
           }
           // Default generic category view can be added here if needed
           return null;

@@ -158,6 +158,7 @@ model GameProvider {
   categoryId  Int
   category    GameCategory  @relation(fields: [categoryId], references: [id])
   isActive    Boolean       @default(true)
+  isLobbyMode Boolean       @default(false)  // ค่ายที่เปิดเกมผ่าน Lobby (เช่น FUNKY)
   sortOrder   Int           @default(0)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

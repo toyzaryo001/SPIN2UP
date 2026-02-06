@@ -19,7 +19,7 @@ export default function PopupAnnouncement() {
     useEffect(() => {
         const fetchPopups = async () => {
             try {
-                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+                const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
                 const res = await fetch(`${API_URL}/public/announcements`);
                 const data = await res.json();
 

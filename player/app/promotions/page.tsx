@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
 
 // Emoji and gradient mapping based on promotion type or index
 const promoStyles = [

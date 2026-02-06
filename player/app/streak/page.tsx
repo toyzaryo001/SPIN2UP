@@ -6,7 +6,7 @@ import { Calendar, Flame } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
 
 interface StreakDay {
     day: number;

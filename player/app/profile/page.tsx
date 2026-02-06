@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import BankLogo from "@/components/BankLogo";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
 
 const BANK_NAMES: Record<string, string> = {
     KBANK: "กสิกรไทย (KBANK)",

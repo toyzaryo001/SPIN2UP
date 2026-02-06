@@ -11,7 +11,7 @@ export default function Header() {
     const [showMenu, setShowMenu] = useState(false);
     const [brandName, setBrandName] = useState(""); // Default empty to show skeleton
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+    const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
 
     useEffect(() => {
         const checkUser = () => {

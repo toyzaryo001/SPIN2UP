@@ -12,7 +12,7 @@ import ContactDrawer from "@/components/ContactDrawer";
 import { useToast } from "@/components/Toast";
 import BankSelectDropdown from "@/components/BankSelectDropdown";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
 
 // --- 1. VISUAL COMPONENTS (Premium UI) ---
 

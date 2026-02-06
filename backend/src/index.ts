@@ -71,6 +71,7 @@ app.use(cors({
         'https://admin.check24m.com',
         'https://www.check24m.com',
         'https://check24m.com',
+        'https://play.check24m.com',
         // Allow any HTTPS origin (customize for production)
     ],
     credentials: true,

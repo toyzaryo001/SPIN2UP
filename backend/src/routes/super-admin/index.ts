@@ -3,9 +3,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../../lib/db.js';
 import * as prefixService from '../../services/prefix.service.js';
+import { signToken, verifyToken } from '../../utils/jwt.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
 // Middleware to verify Super Admin JWT
 const verifySuperAdmin = async (req: Request, res: Response, next: any) => {
@@ -16,7 +16,7 @@ const verifySuperAdmin = async (req: Request, res: Response, next: any) => {
         }
 
         const token = authHeader.substring(7);
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const decoded = verifyToken(token) as any;
 
         if (decoded.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์ Super Admin' });
@@ -67,11 +67,10 @@ router.post('/login', async (req: Request, res: Response) => {
         });
 
         // Generate JWT
-        const token = jwt.sign({
+        const token = signToken({
             userId: admin.id,
-            username: admin.username,
             role: 'SUPER_ADMIN'
-        }, JWT_SECRET, { expiresIn: '24h' });
+        });
 
         res.json({
             success: true,

@@ -13,6 +13,7 @@ import staffRoutes from './routes/staff.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import superAdminRoutes from './routes/super-admin/index.js';
 import adminRewardRoutes from './routes/admin/reward.routes.js';
+import { initJwtSecret } from './utils/jwt.js';
 
 dotenv.config();
 
@@ -41,8 +42,10 @@ async function fixDatabase() {
     }
 }
 
-// Run fix before starting server
-fixDatabase().catch(console.error);
+// Run fix and init JWT on startup
+fixDatabase()
+    .then(() => initJwtSecret())
+    .catch(console.error);
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);

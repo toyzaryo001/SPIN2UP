@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission } from '../../middlewares/auth.middleware.js';
+import { clearJwtSecretCache } from '../../utils/jwt.js';
 
 const router = Router();
 
@@ -31,6 +32,12 @@ router.put('/', requirePermission('settings', 'general', 'manage'), async (req: 
                 update: { value: String(value) },
                 create: { key, value: String(value) },
             });
+        }
+
+        // Clear JWT cache if jwtSecret was updated
+        if (settings.jwtSecret) {
+            clearJwtSecretCache();
+            console.log('[Settings] JWT secret updated, cache cleared');
         }
 
         res.json({ success: true, message: 'บันทึกการตั้งค่าสำเร็จ' });

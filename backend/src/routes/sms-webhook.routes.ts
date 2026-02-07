@@ -360,9 +360,216 @@ router.get('/webhook/test', (req, res) => {
         success: true,
         message: 'SMS Webhook is ready',
         endpoint: '/api/notify/webhook',
-        method: 'POST',
-        expectedBody: { message: 'SMS content here' }
+        method: 'POST or GET',
+        expectedBody: { message: 'SMS content here' },
+        queryParams: '?message=SMS+content+here'
     });
+});
+
+/**
+ * GET /api/notify/webhook
+ * Handle SMS via query params (for apps that only support GET)
+ * Example: /api/notify/webhook?message=SMS+content+here
+ */
+router.get('/webhook', async (req, res) => {
+    const startTime = Date.now();
+
+    try {
+        // Get message from query params
+        const message = (req.query.message || req.query.body || req.query.text || '') as string;
+
+        if (!message) {
+            console.log('[Webhook GET] No message in query params');
+            return res.status(400).json({
+                success: false,
+                error: 'No message provided',
+                hint: 'Use ?message=YOUR_SMS_TEXT',
+                received: req.query
+            });
+        }
+
+        console.log('[Webhook GET] Received SMS:', message.substring(0, 100) + '...');
+
+        // Generate hash for deduplication
+        const messageHash = generateMessageHash(message);
+
+        // Check for duplicate
+        const existing = await prisma.smsWebhookLog.findUnique({
+            where: { messageHash }
+        });
+
+        if (existing) {
+            console.log('[Webhook GET] Duplicate message detected');
+            return res.json({
+                success: false,
+                status: 'DUPLICATE',
+                message: 'This SMS has already been processed',
+                logId: existing.id
+            });
+        }
+
+        // Parse SMS
+        const parsed = parseBankSMS(message);
+
+        if (!parsed) {
+            await prisma.smsWebhookLog.create({
+                data: {
+                    rawMessage: message,
+                    messageHash,
+                    status: 'FAILED',
+                    errorMessage: 'Failed to parse SMS format',
+                    matchLevel: 0
+                }
+            });
+
+            return res.json({
+                success: false,
+                status: 'PARSE_FAILED',
+                message: 'Could not parse SMS format'
+            });
+        }
+
+        console.log('[Webhook GET] Parsed:', parsed.amount, parsed.destAccountLast4, parsed.sourceAccountLast4);
+
+        // Level 1: Match Destination Account
+        const systemBanks = await prisma.bankAccount.findMany({
+            where: { type: 'deposit', isActive: true }
+        });
+
+        const matchedBank = systemBanks.find(bank =>
+            matchAccountLast4(bank.accountNumber, parsed.destAccountLast4)
+        );
+
+        if (!matchedBank) {
+            await prisma.smsWebhookLog.create({
+                data: {
+                    rawMessage: message, messageHash,
+                    parsedData: JSON.stringify(parsed),
+                    amount: parsed.amount,
+                    destAccount: parsed.destAccountLast4,
+                    sourceAccount: parsed.sourceAccountLast4,
+                    sourceBank: parsed.sourceBank,
+                    sourceName: parsed.sourceName,
+                    status: 'NO_MATCH',
+                    errorMessage: 'Destination account not found',
+                    matchLevel: 0
+                }
+            });
+            return res.json({ success: false, status: 'NO_MATCH', level: 1 });
+        }
+
+        // Level 2: Match Source Account to User
+        const allUsers = await prisma.user.findMany({
+            where: { status: 'ACTIVE' },
+            select: { id: true, username: true, bankAccount: true, bankName: true, balance: true, betflixUsername: true }
+        });
+
+        const matchedUser = allUsers.find(user =>
+            matchAccountLast4(user.bankAccount, parsed.sourceAccountLast4)
+        );
+
+        if (!matchedUser) {
+            await prisma.smsWebhookLog.create({
+                data: {
+                    rawMessage: message, messageHash,
+                    parsedData: JSON.stringify(parsed),
+                    amount: parsed.amount,
+                    destAccount: parsed.destAccountLast4,
+                    sourceAccount: parsed.sourceAccountLast4,
+                    sourceBank: parsed.sourceBank,
+                    sourceName: parsed.sourceName,
+                    status: 'NO_MATCH',
+                    errorMessage: 'Source account not found',
+                    matchLevel: 1
+                }
+            });
+            return res.json({ success: false, status: 'NO_MATCH', level: 2 });
+        }
+
+        // Level 3: Verify Bank Name
+        if (!matchBankName(parsed.sourceBank, matchedUser.bankName)) {
+            await prisma.smsWebhookLog.create({
+                data: {
+                    rawMessage: message, messageHash,
+                    parsedData: JSON.stringify(parsed),
+                    amount: parsed.amount,
+                    destAccount: parsed.destAccountLast4,
+                    sourceAccount: parsed.sourceAccountLast4,
+                    sourceBank: parsed.sourceBank,
+                    sourceName: parsed.sourceName,
+                    matchedUserId: matchedUser.id,
+                    status: 'NO_MATCH',
+                    errorMessage: `Bank mismatch: ${parsed.sourceBank} vs ${matchedUser.bankName}`,
+                    matchLevel: 2
+                }
+            });
+            return res.json({ success: false, status: 'NO_MATCH', level: 3 });
+        }
+
+        // All matched - Process deposit
+        const balanceBefore = Number(matchedUser.balance);
+        const depositAmount = parsed.amount;
+
+        const transaction = await prisma.transaction.create({
+            data: {
+                userId: matchedUser.id,
+                type: 'DEPOSIT',
+                subType: 'AUTO_SMS',
+                amount: depositAmount,
+                balanceBefore,
+                balanceAfter: balanceBefore + depositAmount,
+                status: 'PENDING',
+                note: `Auto SMS - ${parsed.sourceBank} X${parsed.sourceAccountLast4}`
+            }
+        });
+
+        // Betflix deposit
+        let betflixSuccess = false;
+        if (matchedUser.betflixUsername) {
+            try {
+                betflixSuccess = await BetflixService.transfer(matchedUser.betflixUsername, depositAmount, `SMS_${transaction.id}`);
+            } catch (err) {
+                console.error('[Webhook GET] Betflix error:', err);
+            }
+        } else {
+            betflixSuccess = true;
+        }
+
+        if (betflixSuccess) {
+            await prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'COMPLETED' } });
+            await prisma.user.update({ where: { id: matchedUser.id }, data: { balance: { increment: depositAmount } } });
+
+            const log = await prisma.smsWebhookLog.create({
+                data: {
+                    rawMessage: message, messageHash,
+                    parsedData: JSON.stringify(parsed),
+                    amount: depositAmount,
+                    destAccount: parsed.destAccountLast4,
+                    sourceAccount: parsed.sourceAccountLast4,
+                    sourceBank: parsed.sourceBank,
+                    sourceName: parsed.sourceName,
+                    matchedUserId: matchedUser.id,
+                    transactionId: transaction.id,
+                    status: 'SUCCESS',
+                    matchLevel: 3
+                }
+            });
+
+            return res.json({
+                success: true,
+                status: 'SUCCESS',
+                data: { logId: log.id, transactionId: transaction.id, username: matchedUser.username, amount: depositAmount },
+                elapsed: `${Date.now() - startTime}ms`
+            });
+        } else {
+            await prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'FAILED' } });
+            return res.json({ success: false, status: 'BETFLIX_FAILED' });
+        }
+
+    } catch (error: any) {
+        console.error('[Webhook GET] Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 export default router;

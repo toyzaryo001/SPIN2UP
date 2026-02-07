@@ -371,14 +371,23 @@ router.get('/webhook/test', (req, res) => {
  * Debug endpoint to see exactly what the app sends
  */
 router.get('/webhook/debug', (req, res) => {
-    console.log('[Webhook Debug] Query:', req.query);
-    console.log('[Webhook Debug] URL:', req.url);
+    console.log('[Webhook Debug] Full Request:', {
+        query: req.query,
+        body: req.body,
+        params: req.params,
+        headers: req.headers,
+        url: req.url,
+        originalUrl: req.originalUrl
+    });
+
     res.json({
         success: true,
         message: 'Debug info logged',
         query: req.query,
+        body: req.body,
         url: req.url,
-        headers: req.headers
+        // Echo back keys found in query/body
+        keys: [...Object.keys(req.query), ...Object.keys(req.body)]
     });
 });
 

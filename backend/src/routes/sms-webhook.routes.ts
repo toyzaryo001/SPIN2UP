@@ -367,6 +367,22 @@ router.get('/webhook/test', (req, res) => {
 });
 
 /**
+ * GET /api/notify/webhook/debug
+ * Debug endpoint to see exactly what the app sends
+ */
+router.get('/webhook/debug', (req, res) => {
+    console.log('[Webhook Debug] Query:', req.query);
+    console.log('[Webhook Debug] URL:', req.url);
+    res.json({
+        success: true,
+        message: 'Debug info logged',
+        query: req.query,
+        url: req.url,
+        headers: req.headers
+    });
+});
+
+/**
  * GET /api/notify/webhook
  * Handle SMS via query params (for apps that only support GET)
  * Example: /api/notify/webhook?message=SMS+content+here

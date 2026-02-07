@@ -400,15 +400,15 @@ router.get('/webhook', async (req, res) => {
     const startTime = Date.now();
 
     try {
-        // Get message from query params
-        const message = (req.query.message || req.query.body || req.query.text || '') as string;
+        // Get message from query params - support multiple field names
+        const message = (req.query.message || req.query.body || req.query.text || req.query.msg || req.query.key || '') as string;
 
         if (!message) {
             console.log('[Webhook GET] No message in query params');
             return res.status(400).json({
                 success: false,
                 error: 'No message provided',
-                hint: 'Use ?message=YOUR_SMS_TEXT',
+                hint: 'Use ?message=YOUR_SMS_TEXT or ?msg=YOUR_SMS_TEXT',
                 received: req.query
             });
         }

@@ -2,8 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { formatBaht, formatDate } from "@/lib/utils";
-import { Calendar, Search, Download } from "lucide-react";
-import { use, useState } from "react";
+import { Calendar, Search, Download, FileText as FileIcon } from "lucide-react";
+import { use, useState, useEffect } from "react";
+import api from "@/lib/api";
 
 // Map slugs to Page Titles and specific configs
 const reportConfig: Record<string, { title: string; columns: string[] }> = {
@@ -21,6 +22,80 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     const { slug } = use(params);
     const config = reportConfig[slug] || { title: "รายงาน", columns: [] };
     const [dateRange, setDateRange] = useState("today");
+    const [customStart, setCustomStart] = useState("");
+    const [customEnd, setCustomEnd] = useState("");
+    const [search, setSearch] = useState("");
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [summary, setSummary] = useState<any>(null);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+
+    // Fetch Data
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                let url = "";
+                let query = `?preset=${dateRange}&page=${page}&limit=20`;
+                if (search) query += `&search=${search}`;
+                if (dateRange === 'custom' && customStart && customEnd) {
+                    query += `&startDate=${customStart}&endDate=${customEnd}`;
+                }
+
+                // Decide API based on slug
+                if (["deposit", "withdraw", "bonus"].includes(slug)) {
+                    const typeMap: Record<string, string> = {
+                        "deposit": "DEPOSIT",
+                        "withdraw": "WITHDRAW",
+                        "bonus": "BONUS"
+                    };
+                    url = `/api/admin/transactions${query}&type=${typeMap[slug]}`;
+
+                    // Specific status filter for reports (usually COMPLETED)
+                    if (slug === 'deposit' || slug === 'withdraw') {
+                        // url += `&status=COMPLETED`; // Optional: if report should show only completed
+                    }
+                } else {
+                    // Fallback to existing logic for other reports (summary based)
+                    // or maybe we don't have list APIs for them yet?
+                    // For now, let's just handle deposit/withdraw list
+                    if (slug === 'new-users') url = `/api/admin/reports/new-users${query}`;
+                    else if (slug === 'new-users-deposit') url = `/api/admin/reports/new-users-deposit${query}`;
+                    else if (slug === 'profit-loss') url = `/api/admin/reports/profit-loss${query}`;
+                    else if (slug === 'inactive-users') url = `/api/admin/reports/inactive-users${query}`;
+                    else url = `/api/admin/reports/${slug}${query}`; // Try generic
+                }
+
+                const res = await api.get(url);
+                const data = res.data;
+
+                if (data.success) {
+                    if (data.data.transactions) {
+                        setData(data.data.transactions);
+                        setSummary(data.data.summary);
+                        setTotalPages(data.data.pagination?.totalPages || 1);
+                    } else if (data.data.dailyData) {
+                        // Handle summary reports (chart data) - maybe need different UI?
+                        // For now, simple table not suitable for dailyData unless flattened
+                        // Just showing empty or error if type mismatch
+                        setData([]);
+                    } else if (Array.isArray(data.data)) {
+                        setData(data.data);
+                    } else if (data.data.users) {
+                        setData(data.data.users);
+                    }
+                }
+            } catch (error) {
+                console.error("Fetch report error:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const timer = setTimeout(fetchData, 300);
+        return () => clearTimeout(timer);
+    }, [slug, dateRange, customStart, customEnd, page, search]);
 
     return (
         <div className="space-y-6">
@@ -40,7 +115,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     {['today', 'yesterday', 'week', 'month'].map((range) => (
                         <button
                             key={range}
-                            onClick={() => setDateRange(range)}
+                            onClick={() => { setDateRange(range); setPage(1); }}
                             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${dateRange === range
                                 ? 'bg-white text-slate-900 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-700'
@@ -59,15 +134,26 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     <input
                         type="text"
                         placeholder="ค้นหา..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
                     />
                 </div>
-
-                <div className="flex items-center gap-2 text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-50">
-                    <Calendar size={18} />
-                    <span className="text-sm">เลือกช่วงเวลาเอง</span>
-                </div>
             </div>
+
+            {/* Summary Cards for Deposit/Withdraw */}
+            {summary && (slug === 'deposit' || slug === 'withdraw') && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                        <p className="text-slate-500 text-sm">จำนวนรายการ</p>
+                        <p className="text-2xl font-bold text-slate-800">{summary.count}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                        <p className="text-slate-500 text-sm">ยอดรวม</p>
+                        <p className={`text-2xl font-bold ${slug === 'deposit' ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.totalAmount)}</p>
+                    </div>
+                </div>
+            )}
 
             {/* Table */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -82,25 +168,105 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {/* Mock Data - In real app, fetch based on slug */}
-                            <tr>
-                                <td colSpan={config.columns.length + 1} className="px-6 py-12 text-center text-slate-400">
-                                    <div className="flex flex-col items-center justify-center gap-2">
-                                        <FileText className="opacity-20" size={48} />
-                                        <p>ไม่พบข้อมูลในช่วงเวลานี้</p>
-                                    </div>
-                                </td>
-                            </tr>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={config.columns.length + 1} className="px-6 py-12 text-center text-slate-400">
+                                        กำลังโหลดข้อมูล...
+                                    </td>
+                                </tr>
+                            ) : data.length === 0 ? (
+                                <tr>
+                                    <td colSpan={config.columns.length + 1} className="px-6 py-12 text-center text-slate-400">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <FileText className="opacity-20" size={48} />
+                                            <p>ไม่พบข้อมูลในช่วงเวลานี้</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                data.map((item: any, index: number) => (
+                                    <tr key={item.id} className="hover:bg-slate-50">
+                                        <td className="px-6 py-4 text-center text-slate-500">{index + 1 + (page - 1) * 20}</td>
+                                        {/* Dynamic Row Rendering based on Slug */}
+                                        {slug === 'deposit' && (
+                                            <>
+                                                <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                                                <td className="px-6 py-4">
+                                                    <div>
+                                                        <p className="font-bold text-slate-700">{item.user?.username || '-'}</p>
+                                                        <p className="text-xs text-slate-400">{item.user?.fullName}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600">
+                                                        {item.subType === 'AUTO_SMS' ? 'Auto SMS' : 'Manual'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-500">-</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                                                        item.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                                        }`}>
+                                                        {item.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-400 text-xs">System</td>
+                                            </>
+                                        )}
+                                        {slug === 'withdraw' && (
+                                            <>
+                                                <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                                                <td className="px-6 py-4">
+                                                    <div>
+                                                        <p className="font-bold text-slate-700">{item.user?.username || '-'}</p>
+                                                        <p className="text-xs text-slate-400">{item.user?.fullName}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-red-600">{formatBaht(item.amount)}</td>
+                                                <td className="px-6 py-4 text-slate-500">{item.user?.bankName}</td>
+                                                <td className="px-6 py-4 text-slate-500">{item.user?.bankAccount}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                                                        item.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                                        }`}>
+                                                        {item.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-400 text-xs">{item.admin?.username || 'Auto'}</td>
+                                            </>
+                                        )}
+                                        {/* Default fallback for generic list */}
+                                        {!['deposit', 'withdraw'].includes(slug) && (
+                                            <td colSpan={config.columns.length} className="px-6 py-4 text-slate-500">
+                                                {JSON.stringify(item).slice(0, 100)}...
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Pagination (Generic) */}
+                {/* Pagination */}
                 <div className="p-4 border-t border-slate-100 flex justify-between items-center text-sm text-slate-500">
-                    <div>แสดง 0 รายการ</div>
+                    <div>หน้า {page} จาก {totalPages}</div>
                     <div className="flex gap-2">
-                        <button disabled className="px-3 py-1 border border-slate-200 rounded disabled:opacity-50">ก่อนหน้า</button>
-                        <button disabled className="px-3 py-1 border border-slate-200 rounded disabled:opacity-50">ถัดไป</button>
+                        <button
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="px-3 py-1 border border-slate-200 rounded disabled:opacity-50 hover:bg-slate-50"
+                        >
+                            ก่อนหน้า
+                        </button>
+                        <button
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="px-3 py-1 border border-slate-200 rounded disabled:opacity-50 hover:bg-slate-50"
+                        >
+                            ถัดไป
+                        </button>
                     </div>
                 </div>
             </div>

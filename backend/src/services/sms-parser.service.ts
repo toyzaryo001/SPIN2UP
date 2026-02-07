@@ -28,6 +28,7 @@ export interface ParsedSMS {
     balanceAfter: number;
     dateTime: string;
     rawMessage: string;
+    isOutgoing?: boolean;
 }
 
 /**
@@ -41,6 +42,24 @@ export function parseBankSMS(message: string): ParsedSMS | null {
 
         // Pattern 1: มีเงิน{amount}บ.โอนเข้าบ/ชxx{destLast4} จาก{bank} X{sourceLast4} {name} เหลือ{balance}บ.{datetime}
         // Example: มีเงิน10.00บ.โอนเข้าบ/ชxx7109 จากBBL X7902 MR WORAPON CHIN เหลือ94.00บ.31/12/25@00:33
+
+        // Check if message is Outgoing / Withdrawal
+        // Keywords: ถอน, โอนออก, ชำระ, หักบัญชี, จ่าย
+        const isOutgoing = /ถอน|โอนออก|ชำระ|หักบัญชี|จ่าย|Direct Debit|Payment/i.test(normalized);
+
+        if (isOutgoing) {
+            return {
+                amount: 0,
+                destAccountLast4: '',
+                sourceBank: '',
+                sourceAccountLast4: '',
+                sourceName: '',
+                balanceAfter: 0,
+                dateTime: '',
+                rawMessage: message,
+                isOutgoing: true
+            };
+        }
 
         // Extract amount
         const amountMatch = normalized.match(/มีเงิน([\d,]+\.?\d*)บ/);

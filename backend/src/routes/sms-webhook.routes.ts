@@ -70,6 +70,21 @@ router.post('/webhook', async (req, res) => {
             });
         }
 
+        if (parsed.isOutgoing) {
+            await (prisma as any).smsWebhookLog.create({
+                data: {
+                    rawMessage: message,
+                    messageHash,
+                    parsedData: JSON.stringify(parsed),
+                    status: 'IGNORED',
+                    errorMessage: 'Outgoing transaction - Ignored',
+                    matchLevel: 0
+                }
+            });
+            console.log('[Webhook] Outgoing transaction detected and ignored.');
+            return res.json({ success: true, status: 'IGNORED', message: 'Outgoing transaction detected' });
+        }
+
         console.log('[Webhook] Parsed SMS:', {
             amount: parsed.amount,
             dest: parsed.destAccountLast4,
@@ -114,6 +129,15 @@ router.post('/webhook', async (req, res) => {
                 level: 1,
                 message: 'Destination account not registered in system'
             });
+        }
+
+        // Update Bank Balance from SMS
+        if (parsed.balanceAfter && parsed.balanceAfter > 0) {
+            await prisma.bankAccount.update({
+                where: { id: matchedBank.id },
+                data: { balance: parsed.balanceAfter }
+            });
+            console.log(`[Webhook] Updated Bank ${matchedBank.bankName} balance to ${parsed.balanceAfter}`);
         }
 
         console.log('[Webhook] Level 1 PASSED: Matched system bank:', matchedBank.bankName, matchedBank.accountNumber);
@@ -454,6 +478,19 @@ router.get('/webhook', async (req, res) => {
             });
         }
 
+        if (parsed.isOutgoing) {
+            await (prisma as any).smsWebhookLog.create({
+                data: {
+                    rawMessage: message, messageHash,
+                    parsedData: JSON.stringify(parsed),
+                    status: 'IGNORED',
+                    errorMessage: 'Outgoing transaction - Ignored',
+                    matchLevel: 0
+                }
+            });
+            return res.json({ success: true, status: 'IGNORED', message: 'Outgoing transaction detected' });
+        }
+
         console.log('[Webhook GET] Parsed:', parsed.amount, parsed.destAccountLast4, parsed.sourceAccountLast4);
 
         // Level 1: Match Destination Account
@@ -481,6 +518,14 @@ router.get('/webhook', async (req, res) => {
                 }
             });
             return res.json({ success: false, status: 'NO_MATCH', level: 1 });
+        }
+
+        // Update Bank Balance from SMS
+        if (parsed.balanceAfter && parsed.balanceAfter > 0) {
+            await prisma.bankAccount.update({
+                where: { id: matchedBank.id },
+                data: { balance: parsed.balanceAfter }
+            });
         }
 
         // Level 2: Match Source Account to User

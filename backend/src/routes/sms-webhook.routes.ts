@@ -16,8 +16,8 @@ router.post('/webhook', async (req, res) => {
     const startTime = Date.now();
 
     try {
-        // Get message from request body
-        const message = req.body.message || req.body.body || req.body.text || '';
+        // Get message from request body - support multiple field names
+        const message = req.body.message || req.body.body || req.body.text || req.body.key || req.body.msg || '';
 
         if (!message) {
             console.log('[Webhook] No message in request body');

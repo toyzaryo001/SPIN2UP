@@ -41,11 +41,13 @@ export default function DepositPage() {
     const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
     const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
 
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
         // Check if user is logged in
         const token = localStorage.getItem("token");
         const userData = localStorage.getItem("user");
-        if (!token || !userData || userData === "undefined") {
+        if (!token) {
             // Redirect to login
             router.push("/?action=login");
             return;
@@ -70,7 +72,11 @@ export default function DepositPage() {
                     setUser(data.user);
                     // Update localStorage with fresh data
                     localStorage.setItem("user", JSON.stringify(data.user));
+                    setError(null);
                 }
+            } else {
+                // If API fails (e.g. 401), try fallback but mark error if fallback fails
+                throw new Error("API Error");
             }
         } catch (error) {
             console.error("Fetch user profile error:", error);
@@ -81,7 +87,10 @@ export default function DepositPage() {
                     setUser(JSON.parse(userData));
                 } catch (e) {
                     console.error("Parse user data error:", e);
+                    setError("ข้อมูลผู้ใช้ไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่");
                 }
+            } else {
+                setError("ไม่สามารถโหลดข้อมูลผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง");
             }
         } finally {
             setLoading(false);
@@ -112,15 +121,50 @@ export default function DepositPage() {
     if (loading) {
         return (
             <PlayerLayout>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px", color: "white" }}>
                     <p>กำลังโหลด...</p>
                 </div>
             </PlayerLayout>
         );
     }
 
-    if (!user) {
-        return null;
+    if (error || !user) {
+        return (
+            <PlayerLayout>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "300px", gap: "16px", color: "white" }}>
+                    <AlertCircle size={48} color="#EF4444" />
+                    <p>{error || "ไม่พบข้อมูลผู้ใช้"}</p>
+                    <button
+                        onClick={() => window.location.href = '/?action=login'}
+                        style={{
+                            padding: "10px 20px",
+                            background: "#EF4444",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            fontWeight: 600
+                        }}
+                    >
+                        เข้าสู่ระบบใหม่
+                    </button>
+                    <button
+                        onClick={() => window.location.reload()}
+                        style={{
+                            padding: "10px 20px",
+                            background: "transparent",
+                            color: "white",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            fontWeight: 600
+                        }}
+                    >
+                        ลองอีกครั้ง
+                    </button>
+                </div>
+            </PlayerLayout>
+        );
     }
 
     return (

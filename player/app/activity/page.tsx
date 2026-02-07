@@ -55,60 +55,19 @@ export default function ActivityPage() {
             path: "/commission",
             gradient: "linear-gradient(135deg, #F59E0B, #D97706)"
         },
+        {
+            icon: "🎁",
+            label: "โปรโมชั่น",
+            path: "/promotions",
+            gradient: "linear-gradient(135deg, #EC4899, #DB2777)"
+        },
     ];
 
     return (
         <PlayerLayout>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {/* Balance Card */}
-                <div style={{
-                    background: "#21262D",
-                    borderRadius: "16px",
-                    padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between"
-                }}>
-                    <div>
-                        <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "4px" }}>ยอดเงินในเกม</p>
-                        <p style={{
-                            fontSize: "28px",
-                            fontWeight: 900,
-                            color: "#FFD700",
-                            margin: 0
-                        }}>
-                            ฿ {user ? Number(user.balance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) : "0.00"}
-                        </p>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                        <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "4px" }}>เครดิตฟรี</p>
-                        <p style={{
-                            fontSize: "20px",
-                            fontWeight: 700,
-                            color: "#FFFFFF",
-                            margin: 0
-                        }}>
-                            {user ? Number(user.bonusBalance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) : "0.00"}
-                        </p>
-                    </div>
-                    <button
-                        onClick={() => handleNavigate("/deposit")}
-                        style={{
-                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
-                            color: "#0D1117",
-                            border: "none",
-                            padding: "12px 20px",
-                            borderRadius: "10px",
-                            fontWeight: 700,
-                            fontSize: "14px",
-                            cursor: "pointer"
-                        }}
-                    >
-                        โอนเครดิต
-                    </button>
-                </div>
+                {/* Balance Card Removed as requested */}
 
                 {/* Quick Actions Grid */}
                 <div style={{

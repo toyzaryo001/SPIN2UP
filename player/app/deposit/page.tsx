@@ -22,6 +22,8 @@ const bankColors: Record<string, string> = {
     "GSB": "#D91B5B",
 };
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
+
 interface BankAccount {
     id: number;
     bankName: string;
@@ -61,7 +63,7 @@ export default function DepositPage() {
 
     const fetchUserProfile = async (token: string) => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/wallet/me`, {
+            const res = await fetch(`${API_URL}/wallet/me`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -99,7 +101,7 @@ export default function DepositPage() {
 
     const fetchBankAccounts = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/bank-accounts?type=deposit`);
+            const res = await fetch(`${API_URL}/public/bank-accounts?type=deposit`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setBankAccounts(data);
@@ -238,6 +240,48 @@ export default function DepositPage() {
 
                 {activeTab === "deposit" ? (
                     <>
+                        {/* User's Bank Account for Deposit Warning */}
+                        {user && (
+                            <div style={{
+                                background: "rgba(255,255,255,0.05)",
+                                borderRadius: "14px",
+                                padding: "16px",
+                                marginTop: "16px",
+                                marginBottom: "16px",
+                                border: "1px solid rgba(255,255,255,0.1)"
+                            }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                                    <p style={{ fontSize: "12px", color: "#8B949E" }}>บัญชีของคุณ (ต้องโอนจากบัญชีนี้เท่านั้น)</p>
+                                    <span style={{ fontSize: "10px", color: "#FFD700", border: "1px solid #FFD700", padding: "2px 6px", borderRadius: "4px" }}>บัญชีที่ผูกไว้</span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <div style={{
+                                        width: "42px",
+                                        height: "42px",
+                                        background: "rgba(255,255,255,0.05)",
+                                        borderRadius: "10px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        color: "white",
+                                        fontSize: "11px",
+                                        fontWeight: 700,
+                                        boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+                                    }}>
+                                        <BankLogo bankCode={user?.bankName} width={32} height={32} />
+                                    </div>
+                                    <div>
+                                        <p style={{ fontWeight: 700, color: "#FFFFFF", fontSize: "14px" }}>{user?.bankAccount || "-"}</p>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <p style={{ fontSize: "12px", color: "#8B949E" }}>{user?.fullName || "-"}</p>
+                                            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)" }}>|</span>
+                                            <p style={{ fontSize: "12px", color: "#8B949E" }}>{user?.bankName || "-"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Channel Selection */}
                         <div style={{
                             background: "#21262D",

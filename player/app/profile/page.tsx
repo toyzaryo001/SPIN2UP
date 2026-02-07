@@ -34,10 +34,26 @@ export default function ProfilePage() {
     const [passwordLoading, setPasswordLoading] = useState(false);
     const [passwordError, setPasswordError] = useState("");
     const [passwordSuccess, setPasswordSuccess] = useState(false);
+    const [brandName, setBrandName] = useState("");
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
     useEffect(() => {
         fetchUserData();
+        fetchBranding();
     }, []);
+
+    const fetchBranding = async () => {
+        try {
+            const hostname = window.location.hostname;
+            const res = await axios.get(`${API_URL}/auth/config?domain=${hostname}`);
+            if (res.data.success) {
+                setBrandName(res.data.data.name);
+                setLogoUrl(res.data.data.logo);
+            }
+        } catch (error) {
+            console.error("Branding error", error);
+        }
+    };
 
     const fetchUserData = async () => {
         try {
@@ -157,7 +173,11 @@ export default function ProfilePage() {
                     boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
                     display: "flex", alignItems: "center", gap: "12px"
                 }}>
-                    <span style={{ fontSize: "40px" }}>👤</span>
+                    {logoUrl ? (
+                        <img src={logoUrl} alt="Logo" style={{ height: "64px", objectFit: "contain", filter: "drop-shadow(0 0 10px rgba(255,215,0,0.3))" }} />
+                    ) : (
+                        <span style={{ fontSize: "40px" }}>👤</span>
+                    )}
                     <div>
                         <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>โปรไฟล์ของฉัน</h1>
                         <p style={{ fontSize: "14px", opacity: 0.9, marginTop: "4px" }}>ข้อมูลบัญชีของคุณ</p>

@@ -13,6 +13,7 @@ import staffRoutes from './routes/staff.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import superAdminRoutes from './routes/super-admin/index.js';
 import adminRewardRoutes from './routes/admin/reward.routes.js';
+import smsWebhookRoutes from './routes/sms-webhook.routes.js';
 import { initJwtSecret } from './utils/jwt.js';
 
 dotenv.config();
@@ -91,6 +92,7 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/admin/rewards', adminRewardRoutes); // Register
+app.use('/api/notify', smsWebhookRoutes); // SMS Webhook for auto deposit
 
 // Health check
 app.get('/api/health', (req, res) => {

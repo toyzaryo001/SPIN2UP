@@ -487,4 +487,25 @@ model SuperAdminLog {
   @@index([createdAt])
 }
 
-
+// SMS Webhook Log (Auto Deposit)
+model SmsWebhookLog {
+  id            Int      @id @default(autoincrement())
+  rawMessage    String
+  messageHash   String   @unique  // MD5 of message for dedup
+  parsedData    String?  // JSON of parsed data
+  amount        Decimal?
+  destAccount   String?  // Last 4 digits of destination
+  sourceAccount String?  // Last 4 digits of source  
+  sourceBank    String?
+  sourceName    String?
+  matchLevel    Int      @default(0)  // 0=none, 1=dest, 2=user, 3=bank
+  matchedUserId Int?
+  transactionId Int?     // Created transaction ID
+  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED, DUPLICATE, NO_MATCH
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  
+  @@index([messageHash])
+  @@index([status])
+  @@index([createdAt])
+}

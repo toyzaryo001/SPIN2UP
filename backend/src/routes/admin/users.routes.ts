@@ -43,6 +43,7 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
                     bonusBalance: true,
                     lastLoginAt: true,
                     createdAt: true,
+                    betflixUsername: true,
                 },
                 orderBy: { createdAt: 'desc' },
                 take: Number(limit),
@@ -51,10 +52,33 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
             prisma.user.count({ where }),
         ]);
 
+        // Sync Balance with Betflix (Real-time)
+
+        const usersWithBalance = await Promise.all(users.map(async (user) => {
+            if (user.betflixUsername) {
+                try {
+                    const betflixBalance = await BetflixService.getBalance(user.betflixUsername);
+
+                    // Update local DB if balance is different (to keep sync for future)
+                    if (Number(user.balance) !== betflixBalance) {
+                        await prisma.user.update({
+                            where: { id: user.id },
+                            data: { balance: betflixBalance }
+                        });
+                        return { ...user, balance: betflixBalance };
+                    }
+                    return user;
+                } catch (e) {
+                    return user;
+                }
+            }
+            return user;
+        }));
+
         res.json({
             success: true,
             data: {
-                users,
+                users: usersWithBalance,
                 pagination: { page: Number(page), limit: Number(limit), total, totalPages: Math.ceil(total / Number(limit)) },
             },
         });

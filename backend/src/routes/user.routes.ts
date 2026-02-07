@@ -46,6 +46,15 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
         // Fetch Betflix Balance
         if (user.betflixUsername) {
             const betflixBalance = await BetflixService.getBalance(user.betflixUsername);
+
+            // Sync to local DB if changed
+            if (Number(user.balance) !== betflixBalance) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { balance: betflixBalance }
+                });
+            }
+
             (user as any).balance = betflixBalance;
         }
 

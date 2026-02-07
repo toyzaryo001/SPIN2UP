@@ -34,7 +34,7 @@ router.post('/webhook', async (req, res) => {
         const messageHash = generateMessageHash(message);
 
         // Check for duplicate
-        const existing = await prisma.smsWebhookLog.findUnique({
+        const existing = await (prisma as any).smsWebhookLog.findUnique({
             where: { messageHash }
         });
 
@@ -53,7 +53,7 @@ router.post('/webhook', async (req, res) => {
 
         if (!parsed) {
             // Log failed parse
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message,
                     messageHash,
@@ -92,7 +92,7 @@ router.post('/webhook', async (req, res) => {
         if (!matchedBank) {
             console.log('[Webhook] Level 1 FAILED: No matching system bank for', parsed.destAccountLast4);
 
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message,
                     messageHash,
@@ -138,7 +138,7 @@ router.post('/webhook', async (req, res) => {
         if (!matchedUser) {
             console.log('[Webhook] Level 2 FAILED: No user with account ending', parsed.sourceAccountLast4);
 
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message,
                     messageHash,
@@ -170,7 +170,7 @@ router.post('/webhook', async (req, res) => {
         if (!bankMatch) {
             console.log('[Webhook] Level 3 FAILED: Bank mismatch', parsed.sourceBank, 'vs', matchedUser.bankName);
 
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message,
                     messageHash,
@@ -256,7 +256,7 @@ router.post('/webhook', async (req, res) => {
             });
 
             // Log success
-            const log = await prisma.smsWebhookLog.create({
+            const log = await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message,
                     messageHash,
@@ -298,7 +298,7 @@ router.post('/webhook', async (req, res) => {
                 }
             });
 
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message,
                     messageHash,
@@ -340,7 +340,7 @@ router.post('/webhook', async (req, res) => {
  */
 router.get('/webhook/logs', async (req, res) => {
     try {
-        const logs = await prisma.smsWebhookLog.findMany({
+        const logs = await (prisma as any).smsWebhookLog.findMany({
             orderBy: { createdAt: 'desc' },
             take: 50
         });
@@ -419,7 +419,7 @@ router.get('/webhook', async (req, res) => {
         const messageHash = generateMessageHash(message);
 
         // Check for duplicate
-        const existing = await prisma.smsWebhookLog.findUnique({
+        const existing = await (prisma as any).smsWebhookLog.findUnique({
             where: { messageHash }
         });
 
@@ -437,7 +437,7 @@ router.get('/webhook', async (req, res) => {
         const parsed = parseBankSMS(message);
 
         if (!parsed) {
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message,
                     messageHash,
@@ -466,7 +466,7 @@ router.get('/webhook', async (req, res) => {
         );
 
         if (!matchedBank) {
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message, messageHash,
                     parsedData: JSON.stringify(parsed),
@@ -494,7 +494,7 @@ router.get('/webhook', async (req, res) => {
         );
 
         if (!matchedUser) {
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message, messageHash,
                     parsedData: JSON.stringify(parsed),
@@ -513,7 +513,7 @@ router.get('/webhook', async (req, res) => {
 
         // Level 3: Verify Bank Name
         if (!matchBankName(parsed.sourceBank, matchedUser.bankName)) {
-            await prisma.smsWebhookLog.create({
+            await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message, messageHash,
                     parsedData: JSON.stringify(parsed),
@@ -564,7 +564,7 @@ router.get('/webhook', async (req, res) => {
             await prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'COMPLETED' } });
             await prisma.user.update({ where: { id: matchedUser.id }, data: { balance: { increment: depositAmount } } });
 
-            const log = await prisma.smsWebhookLog.create({
+            const log = await (prisma as any).smsWebhookLog.create({
                 data: {
                     rawMessage: message, messageHash,
                     parsedData: JSON.stringify(parsed),

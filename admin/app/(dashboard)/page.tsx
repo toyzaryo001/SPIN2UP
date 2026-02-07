@@ -3,17 +3,36 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { formatBaht } from "@/lib/utils";
-import { Users, UserPlus, ArrowDownToLine, ArrowUpFromLine, TrendingUp, Wallet } from "lucide-react";
+import {
+  Users, UserPlus, ArrowDownToLine, ArrowUpFromLine, TrendingUp,
+  Wallet, Gift, Activity, UserCheck, Calendar, RefreshCw
+} from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface DashboardData {
+  filterRange: { start: string; end: string };
   summary: {
     totalUsers: number;
-    newUsersToday: number;
+    newUsersInRange: number;
     totalDeposit: number;
     depositCount: number;
     totalWithdraw: number;
     withdrawCount: number;
+    totalBonus: number;
+    bonusCount: number;
+    profit: number;
+    firstDepositAmount: number;
+    firstDepositCount: number;
+    activeUserCount: number;
+    returningCustomerCount: number;
+  };
+  monthlySummary: {
+    deposit: number;
+    depositCount: number;
+    withdraw: number;
+    withdrawCount: number;
+    bonus: number;
+    bonusCount: number;
     profit: number;
   };
   chartData: { date: string; deposit: number; withdraw: number; newUsers: number }[];
@@ -21,17 +40,76 @@ interface DashboardData {
   recentTransactions: { id: number; type: string; amount: number; status: string; createdAt: string; user: { username: string; fullName: string } }[];
 }
 
+type DatePreset = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'custom';
+
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [datePreset, customStartDate, customEndDate]);
+
+  const getDateRange = () => {
+    const now = new Date();
+    let start: Date;
+    let end: Date = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    switch (datePreset) {
+      case 'today':
+        start = new Date();
+        start.setHours(0, 0, 0, 0);
+        break;
+      case 'yesterday':
+        start = new Date();
+        start.setDate(start.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        end = new Date();
+        end.setDate(end.getDate() - 1);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'thisWeek':
+        start = new Date();
+        start.setDate(start.getDate() - start.getDay());
+        start.setHours(0, 0, 0, 0);
+        break;
+      case 'thisMonth':
+        start = new Date();
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        break;
+      case 'custom':
+        if (customStartDate && customEndDate) {
+          start = new Date(customStartDate);
+          end = new Date(customEndDate);
+          end.setHours(23, 59, 59, 999);
+        } else {
+          start = new Date();
+          start.setHours(0, 0, 0, 0);
+        }
+        break;
+      default:
+        start = new Date();
+        start.setHours(0, 0, 0, 0);
+    }
+
+    return { start, end };
+  };
 
   const fetchData = async () => {
     try {
-      const res = await api.get('/admin/dashboard');
+      setLoading(true);
+      const { start, end } = getDateRange();
+      const res = await api.get('/admin/dashboard', {
+        params: {
+          startDate: start.toISOString(),
+          endDate: end.toISOString()
+        }
+      });
       if (res.data.success) {
         setData(res.data.data);
       }
@@ -50,15 +128,15 @@ export default function Dashboard() {
     color: string;
     bgColor: string;
   }) => (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start">
         <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <h3 className="text-2xl font-bold mt-2 text-slate-800">{value}</h3>
-          {subValue && <p className="text-sm mt-1 text-emerald-600">{subValue}</p>}
+          <p className="text-xs font-medium text-slate-500">{title}</p>
+          <h3 className="text-xl font-bold mt-1 text-slate-800">{value}</h3>
+          {subValue && <p className="text-xs mt-1 text-slate-500">{subValue}</p>}
         </div>
-        <div className={`p-3 rounded-xl ${bgColor}`}>
-          <Icon size={24} className={color} />
+        <div className={`p-2 rounded-lg ${bgColor}`}>
+          <Icon size={20} className={color} />
         </div>
       </div>
     </div>
@@ -75,16 +153,19 @@ export default function Dashboard() {
     return labels[type] || { label: type, color: "text-slate-600 bg-slate-50" };
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, { label: string; color: string }> = {
-      PENDING: { label: "รอดำเนินการ", color: "text-yellow-600 bg-yellow-50" },
-      COMPLETED: { label: "สำเร็จ", color: "text-emerald-600 bg-emerald-50" },
-      FAILED: { label: "ล้มเหลว", color: "text-red-600 bg-red-50" },
-    };
-    return labels[status] || { label: status, color: "text-slate-600 bg-slate-50" };
-  };
+  const PresetButton = ({ preset, label }: { preset: DatePreset; label: string }) => (
+    <button
+      onClick={() => setDatePreset(preset)}
+      className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${datePreset === preset
+          ? 'bg-blue-600 text-white'
+          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        }`}
+    >
+      {label}
+    </button>
+  );
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-slate-500">กำลังโหลดข้อมูล...</div>
@@ -94,46 +175,159 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-800">แดชบอร์ดภาพรวม</h2>
-        <p className="text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           อัปเดตล่าสุด: {new Date().toLocaleString('th-TH')}
-        </p>
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="สมาชิกทั้งหมด"
-          value={(data?.summary.totalUsers || 0).toLocaleString()}
-          subValue={`+${data?.summary.newUsersToday || 0} วันนี้`}
-          icon={Users}
-          color="text-blue-600"
-          bgColor="bg-blue-50"
-        />
-        <StatCard
-          title="ยอดฝากวันนี้"
-          value={formatBaht(data?.summary.totalDeposit || 0)}
-          subValue={`${data?.summary.depositCount || 0} รายการ`}
-          icon={ArrowDownToLine}
-          color="text-emerald-600"
-          bgColor="bg-emerald-50"
-        />
-        <StatCard
-          title="ยอดถอนวันนี้"
-          value={formatBaht(data?.summary.totalWithdraw || 0)}
-          subValue={`${data?.summary.withdrawCount || 0} รายการ`}
-          icon={ArrowUpFromLine}
-          color="text-red-600"
-          bgColor="bg-red-50"
-        />
-        <StatCard
-          title="กำไรสุทธิวันนี้"
-          value={formatBaht(data?.summary.profit || 0)}
-          icon={TrendingUp}
-          color={(data?.summary.profit || 0) >= 0 ? "text-emerald-600" : "text-red-600"}
-          bgColor={(data?.summary.profit || 0) >= 0 ? "bg-emerald-50" : "bg-red-50"}
-        />
+      {/* ============ MONTHLY SUMMARY ============ */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <Calendar size={20} />
+          สรุปรายเดือน ({new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })})
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white/10 rounded-xl p-4">
+            <p className="text-blue-100 text-sm">ยอดฝาก</p>
+            <p className="text-2xl font-bold">{formatBaht(data?.monthlySummary.deposit || 0)}</p>
+            <p className="text-blue-200 text-xs">{data?.monthlySummary.depositCount || 0} รายการ</p>
+          </div>
+          <div className="bg-white/10 rounded-xl p-4">
+            <p className="text-blue-100 text-sm">ยอดถอน</p>
+            <p className="text-2xl font-bold">{formatBaht(data?.monthlySummary.withdraw || 0)}</p>
+            <p className="text-blue-200 text-xs">{data?.monthlySummary.withdrawCount || 0} รายการ</p>
+          </div>
+          <div className="bg-white/10 rounded-xl p-4">
+            <p className="text-blue-100 text-sm">โบนัส</p>
+            <p className="text-2xl font-bold">{formatBaht(data?.monthlySummary.bonus || 0)}</p>
+            <p className="text-blue-200 text-xs">{data?.monthlySummary.bonusCount || 0} รายการ</p>
+          </div>
+          <div className="bg-white/10 rounded-xl p-4">
+            <p className="text-blue-100 text-sm">กำไร/ขาดทุน</p>
+            <p className={`text-2xl font-bold ${(data?.monthlySummary.profit || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+              {formatBaht(data?.monthlySummary.profit || 0)}
+            </p>
+            <p className="text-blue-200 text-xs">ฝาก - ถอน - โบนัส</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ============ DATE FILTER ============ */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+          <span className="text-sm font-medium text-slate-700">ช่วงเวลา:</span>
+          <div className="flex flex-wrap gap-2">
+            <PresetButton preset="today" label="วันนี้" />
+            <PresetButton preset="yesterday" label="เมื่อวาน" />
+            <PresetButton preset="thisWeek" label="สัปดาห์นี้" />
+            <PresetButton preset="thisMonth" label="เดือนนี้" />
+            <PresetButton preset="custom" label="กำหนดเอง" />
+          </div>
+          {datePreset === 'custom' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm"
+              />
+              <span className="text-slate-400">-</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ============ DAILY/RANGE SUMMARY ============ */}
+      <div>
+        <h3 className="text-lg font-bold text-slate-800 mb-4">
+          สรุปตามช่วงเวลา
+          {datePreset === 'today' && ' (วันนี้)'}
+          {datePreset === 'yesterday' && ' (เมื่อวาน)'}
+          {datePreset === 'thisWeek' && ' (สัปดาห์นี้)'}
+          {datePreset === 'thisMonth' && ' (เดือนนี้)'}
+        </h3>
+
+        {/* Row 1: Financial Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <StatCard
+            title="ยอดฝาก"
+            value={formatBaht(data?.summary.totalDeposit || 0)}
+            subValue={`${data?.summary.depositCount || 0} รายการ`}
+            icon={ArrowDownToLine}
+            color="text-emerald-600"
+            bgColor="bg-emerald-50"
+          />
+          <StatCard
+            title="ยอดถอน"
+            value={formatBaht(data?.summary.totalWithdraw || 0)}
+            subValue={`${data?.summary.withdrawCount || 0} รายการ`}
+            icon={ArrowUpFromLine}
+            color="text-red-600"
+            bgColor="bg-red-50"
+          />
+          <StatCard
+            title="โบนัส"
+            value={formatBaht(data?.summary.totalBonus || 0)}
+            subValue={`${data?.summary.bonusCount || 0} รายการ`}
+            icon={Gift}
+            color="text-blue-600"
+            bgColor="bg-blue-50"
+          />
+          <StatCard
+            title="กำไร/ขาดทุน"
+            value={formatBaht(data?.summary.profit || 0)}
+            subValue="ฝาก - ถอน - โบนัส"
+            icon={TrendingUp}
+            color={(data?.summary.profit || 0) >= 0 ? "text-emerald-600" : "text-red-600"}
+            bgColor={(data?.summary.profit || 0) >= 0 ? "bg-emerald-50" : "bg-red-50"}
+          />
+        </div>
+
+        {/* Row 2: User Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            title="สมาชิกใหม่"
+            value={`${data?.summary.newUsersInRange || 0} คน`}
+            subValue={`ทั้งหมด ${data?.summary.totalUsers || 0} คน`}
+            icon={UserPlus}
+            color="text-blue-600"
+            bgColor="bg-blue-50"
+          />
+          <StatCard
+            title="สมัครฝาก"
+            value={formatBaht(data?.summary.firstDepositAmount || 0)}
+            subValue={`${data?.summary.firstDepositCount || 0} คน`}
+            icon={Wallet}
+            color="text-purple-600"
+            bgColor="bg-purple-50"
+          />
+          <StatCard
+            title="แอคทีฟ"
+            value={`${data?.summary.activeUserCount || 0} คน`}
+            subValue="ฝาก + เดิมพัน"
+            icon={Activity}
+            color="text-orange-600"
+            bgColor="bg-orange-50"
+          />
+          <StatCard
+            title="ลูกค้าเก่าเติม"
+            value={`${data?.summary.returningCustomerCount || 0} คน`}
+            subValue="สมาชิกเก่าที่ฝาก"
+            icon={UserCheck}
+            color="text-teal-600"
+            bgColor="bg-teal-50"
+          />
+        </div>
       </div>
 
       {/* Charts */}
@@ -243,8 +437,8 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        <span className={tx.type === 'DEPOSIT' || tx.type === 'WIN' ? 'text-emerald-600' : 'text-red-600'}>
-                          {tx.type === 'DEPOSIT' || tx.type === 'WIN' ? '+' : '-'}{formatBaht(Number(tx.amount))}
+                        <span className={tx.type === 'DEPOSIT' || tx.type === 'WIN' || tx.type === 'BONUS' ? 'text-emerald-600' : 'text-red-600'}>
+                          {tx.type === 'DEPOSIT' || tx.type === 'WIN' || tx.type === 'BONUS' ? '+' : '-'}{formatBaht(Number(tx.amount))}
                         </span>
                       </td>
                     </tr>

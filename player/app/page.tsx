@@ -301,42 +301,47 @@ const Sidebar = ({ title, items, active, setActive }: any) => (
             <button
               key={idx}
               onClick={() => setActive && setActive(name)}
-              className={`aspect-square rounded-xl p-2 flex flex-col items-center justify-center gap-1.5 transition-all relative overflow-hidden group
+              className={`aspect-square rounded-xl flex flex-col items-center justify-end transition-all relative overflow-hidden group
               ${isActive
-                  ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-lg ring-2 ring-blue-400 scale-[1.02]'
-                  : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white'
+                  ? 'ring-2 ring-blue-400 scale-[1.02] shadow-lg'
+                  : 'hover:ring-2 hover:ring-white/30'
                 }`}
             >
+              {/* Full Background Logo */}
+              {logo ? (
+                <div className="absolute inset-0">
+                  <img src={logo} alt={name} className="w-full h-full object-cover" />
+                  {/* Gradient Overlay for text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                </div>
+              ) : (
+                <div className={`absolute inset-0 flex items-center justify-center ${isActive ? 'bg-gradient-to-br from-blue-600 to-blue-800' : 'bg-white/5'}`}>
+                  <Gamepad2 size={40} className={`${isActive ? 'text-white' : 'text-slate-500'}`} />
+                </div>
+              )}
+
               {/* Lobby Badge */}
               {isLobby && (
-                <div className="absolute top-1 right-1 bg-yellow-500/90 text-[8px] font-bold text-black px-1.5 py-0.5 rounded">
+                <div className="absolute top-1 right-1 bg-yellow-500/90 text-[8px] font-bold text-black px-1.5 py-0.5 rounded z-10">
                   LOBBY
                 </div>
               )}
 
-              {/* Provider Logo - Large */}
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden transition-transform group-hover:scale-110
-                ${isActive ? 'bg-white/20' : 'bg-white/10'}`}>
-                {logo ? (
-                  <img src={logo} alt={name} className="w-10 h-10 object-contain" />
-                ) : (
-                  <Gamepad2 size={28} className={`${isActive ? 'text-white' : 'text-slate-500'}`} />
-                )}
+              {/* Provider Name - Bottom */}
+              <div className="relative z-10 w-full p-2 text-center">
+                <span className={`text-[10px] font-bold text-white drop-shadow-lg line-clamp-1`}>
+                  {name}
+                </span>
               </div>
-
-              {/* Provider Name */}
-              <span className={`text-[10px] font-bold text-center leading-tight line-clamp-2 ${isActive ? 'text-white' : ''}`}>
-                {name}
-              </span>
 
               {/* Active Indicator */}
               {isActive && (
-                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-green-400 animate-pulse z-10"></div>
               )}
 
-              {/* Hover Shimmer */}
+              {/* Hover Effect */}
               {!isActive && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300"></div>
               )}
             </button>
           );

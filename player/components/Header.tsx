@@ -34,8 +34,19 @@ export default function Header() {
 
         // Fetch Branding
         const fetchBranding = async () => {
-            const hostname = window.location.hostname;
-            const setFallback = () => {
+            try {
+                const { default: axios } = await import("axios");
+                // User requested to use /public/settings (same as Home page)
+                const res = await axios.get(`${API_URL}/public/settings`);
+                if (res.data && res.data.settings) {
+                    const settings = res.data.settings;
+                    setBrandName(settings.siteName || "GOLDENBET");
+                    setLogoUrl(settings.logoUrl || null);
+                }
+            } catch (error) {
+                console.error("Branding error", error);
+                // Fallback to domain name if API fails
+                const hostname = window.location.hostname;
                 const parts = hostname.split('.');
                 if (parts.length >= 2) {
                     const mainDomain = parts[parts.length - 2].toUpperCase();
@@ -43,20 +54,6 @@ export default function Header() {
                         setBrandName(mainDomain);
                     }
                 }
-            };
-
-            try {
-                const { default: axios } = await import("axios");
-                const res = await axios.get(`${API_URL}/auth/config?domain=${hostname}`);
-                if (res.data.success) {
-                    setBrandName(res.data.data.name);
-                    setLogoUrl(res.data.data.logo);
-                } else {
-                    setFallback();
-                }
-            } catch (error) {
-                console.error("Branding error", error);
-                setFallback();
             }
         };
         fetchBranding();

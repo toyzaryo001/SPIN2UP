@@ -6,13 +6,19 @@ const router = Router();
 // GET /api/admin/transactions - รายการธุรกรรมทั้งหมด
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 20, type, status, userId, startDate, endDate } = req.query;
+        const { page = 1, limit = 20, type, status, userId, startDate, endDate, adminId } = req.query;
         const skip = (Number(page) - 1) * Number(limit);
 
         const where: any = {};
-        if (type) where.type = type;
-        if (status) where.status = status;
+        if (type && type !== 'all') where.type = type;
+        if (status && status !== 'all') where.status = status;
         if (userId) where.userId = Number(userId);
+
+        // Filter for manual transactions (adminId is not null)
+        if (adminId === 'true') {
+            where.adminId = { not: null };
+        }
+
         if (startDate || endDate) {
             where.createdAt = {};
             if (startDate) where.createdAt.gte = new Date(startDate as string);

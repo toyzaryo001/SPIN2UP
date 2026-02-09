@@ -61,6 +61,26 @@ export default function DepositPage() {
         fetchBankAccounts();
     }, [router]);
 
+    // Reset selected bank when channel changes
+    useEffect(() => {
+        if (bankAccounts.length > 0) {
+            // Filter based on new channel
+            const filtered = bankAccounts.filter(bank => {
+                const name = (bank.bankName || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (selectedChannel === "truemoney") return name.includes("true");
+                if (selectedChannel === "promptpay") return name.includes("promptpay");
+                return !name.includes("true") && !name.includes("promptpay");
+            });
+
+            // Should potentially select the first one if available
+            if (filtered.length > 0) {
+                setSelectedBank(filtered[0]);
+            } else {
+                setSelectedBank(null);
+            }
+        }
+    }, [selectedChannel, bankAccounts]);
+
     const fetchUserProfile = async (token: string) => {
         try {
             const res = await fetch(`${API_URL}/wallet/me`, {
@@ -320,137 +340,160 @@ export default function DepositPage() {
                             </div>
                         </div>
 
-                        {/* Bank Accounts from API */}
-                        {bankAccounts.length === 0 ? (
-                            <div style={{
-                                background: "#21262D",
-                                borderRadius: "16px",
-                                padding: "32px",
-                                textAlign: "center",
-                                boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-                                border: "1px solid rgba(255,255,255,0.1)"
-                            }}>
-                                <AlertCircle size={48} color="#FFD700" style={{ marginBottom: "16px" }} />
-                                <p style={{ color: "#8B949E", fontWeight: 600 }}>ยังไม่มีบัญชีรับฝาก กรุณาติดต่อแอดมิน</p>
-                            </div>
-                        ) : (
-                            <>
-                                {/* Bank Selection */}
-                                {bankAccounts.length > 1 && (
-                                    <div style={{
-                                        background: "#21262D",
-                                        borderRadius: "16px",
-                                        padding: "16px",
-                                        boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-                                        border: "1px solid rgba(255,255,255,0.1)"
-                                    }}>
-                                        <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "12px" }}>เลือกบัญชี</p>
-                                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                                            {bankAccounts.map((bank) => (
-                                                <button
-                                                    key={bank.id}
-                                                    onClick={() => setSelectedBank(bank)}
-                                                    style={{
-                                                        padding: "10px 16px",
-                                                        borderRadius: "10px",
-                                                        border: selectedBank?.id === bank.id ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
-                                                        background: selectedBank?.id === bank.id ? "rgba(255,215,0,0.1)" : "rgba(255,255,255,0.05)",
-                                                        cursor: "pointer",
-                                                        fontWeight: 700,
-                                                        fontSize: "13px",
-                                                        color: "#FFFFFF",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "8px"
-                                                    }}
-                                                >
-                                                    <BankLogo bankCode={bank.bankName} width={24} height={24} />
-                                                    {bank.bankName}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                        {/* Filtered Bank Accounts */}
+                        {(() => {
+                            // Filter accounts based on channel
+                            const filteredBanks = bankAccounts.filter(bank => {
+                                const name = (bank.bankName || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+                                if (selectedChannel === "truemoney") {
+                                    return name.includes("true");
+                                }
+                                if (selectedChannel === "promptpay") {
+                                    return name.includes("promptpay");
+                                }
+                                // Bank channel: Exclude true/promptpay
+                                return !name.includes("true") && !name.includes("promptpay");
+                            });
 
-                                {/* Selected Bank Info */}
-                                {selectedBank && (
+                            if (filteredBanks.length === 0) {
+                                return (
                                     <div style={{
                                         background: "#21262D",
                                         borderRadius: "16px",
-                                        padding: "24px",
+                                        padding: "32px",
                                         textAlign: "center",
                                         boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
                                         border: "1px solid rgba(255,255,255,0.1)"
                                     }}>
-                                        <div style={{
-                                            width: "64px",
-                                            height: "64px",
-                                            margin: "0 auto 12px",
-                                            background: "rgba(255,255,255,0.05)",
-                                            borderRadius: "16px",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontSize: "12px",
-                                            fontWeight: 800,
-                                            color: "white",
-                                            boxShadow: "0 6px 20px rgba(0,0,0,0.2)"
-                                        }}>
-                                            <BankLogo bankCode={selectedBank.bankName} width={48} height={48} />
-                                        </div>
-                                        <h3 style={{ fontWeight: 700, fontSize: "18px", color: "#FFD700", marginBottom: "16px" }}>
-                                            {selectedBank.bankName === "KBANK" ? "ธนาคารกสิกรไทย" :
-                                                selectedBank.bankName === "SCB" ? "ธนาคารไทยพาณิชย์" :
-                                                    selectedBank.bankName === "BBL" ? "ธนาคารกรุงเทพ" :
-                                                        selectedBank.bankName === "KTB" ? "ธนาคารกรุงไทย" :
-                                                            selectedBank.bankName}
-                                        </h3>
+                                        <AlertCircle size={48} color="#FFD700" style={{ marginBottom: "16px" }} />
+                                        <p style={{ color: "#8B949E", fontWeight: 600 }}>
+                                            {selectedChannel === "truemoney" ? "ยังไม่มีบัญชี TrueMoney" :
+                                                selectedChannel === "promptpay" ? "ยังไม่มีบัญชี PromptPay" :
+                                                    "ยังไม่มีบัญชีธนาคาร"}
+                                        </p>
+                                    </div>
+                                );
+                            }
 
+                            return (
+                                <>
+                                    {/* Bank Selection */}
+                                    {filteredBanks.length > 0 && (
                                         <div style={{
-                                            background: "rgba(255,255,255,0.05)",
-                                            borderRadius: "14px",
+                                            background: "#21262D",
+                                            borderRadius: "16px",
                                             padding: "16px",
-                                            marginBottom: "12px",
+                                            boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
                                             border: "1px solid rgba(255,255,255,0.1)"
                                         }}>
-                                            <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "6px" }}>เลขบัญชี</p>
-                                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
-                                                <span style={{ fontSize: "24px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "2px" }}>
-                                                    {selectedBank.accountNumber}
-                                                </span>
-                                                <button
-                                                    onClick={() => handleCopy(selectedBank.accountNumber.replace(/-/g, ""), "acc")}
-                                                    style={{ padding: "8px", background: "none", border: "none", cursor: "pointer", borderRadius: "8px" }}
-                                                >
-                                                    {copied === "acc" ? <Check size={20} color="#22C55E" /> : <Copy size={20} color="#999" />}
-                                                </button>
+                                            <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "12px" }}>เลือกบัญชี</p>
+                                            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                                                {filteredBanks.map((bank) => (
+                                                    <button
+                                                        key={bank.id}
+                                                        onClick={() => setSelectedBank(bank)}
+                                                        style={{
+                                                            padding: "10px 16px",
+                                                            borderRadius: "10px",
+                                                            border: selectedBank?.id === bank.id ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
+                                                            background: selectedBank?.id === bank.id ? "rgba(255,215,0,0.1)" : "rgba(255,255,255,0.05)",
+                                                            cursor: "pointer",
+                                                            fontWeight: 700,
+                                                            fontSize: "13px",
+                                                            color: "#FFFFFF",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: "8px"
+                                                        }}
+                                                    >
+                                                        <BankLogo bankCode={bank.bankName} width={24} height={24} />
+                                                        {bank.bankName}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
+                                    )}
+                                </>
+                            );
+                        })()}
 
-                                        <div style={{
-                                            background: "rgba(255,255,255,0.05)",
-                                            borderRadius: "14px",
-                                            padding: "14px",
-                                            border: "1px solid rgba(255,255,255,0.1)"
-                                        }}>
-                                            <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "4px" }}>ชื่อบัญชี</p>
-                                            <p style={{ fontWeight: 700, color: "#FFFFFF", fontSize: "16px" }}>{selectedBank.accountName}</p>
-                                        </div>
+                        {/* Selected Bank Info */}
+                        {selectedBank && (
+                            <div style={{
+                                background: "#21262D",
+                                borderRadius: "16px",
+                                padding: "24px",
+                                textAlign: "center",
+                                boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                                border: "1px solid rgba(255,255,255,0.1)"
+                            }}>
+                                <div style={{
+                                    width: "64px",
+                                    height: "64px",
+                                    margin: "0 auto 12px",
+                                    background: "rgba(255,255,255,0.05)",
+                                    borderRadius: "16px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "12px",
+                                    fontWeight: 800,
+                                    color: "white",
+                                    boxShadow: "0 6px 20px rgba(0,0,0,0.2)"
+                                }}>
+                                    <BankLogo bankCode={selectedBank.bankName} width={48} height={48} />
+                                </div>
+                                <h3 style={{ fontWeight: 700, fontSize: "18px", color: "#FFD700", marginBottom: "16px" }}>
+                                    {selectedBank.bankName === "KBANK" ? "ธนาคารกสิกรไทย" :
+                                        selectedBank.bankName === "SCB" ? "ธนาคารไทยพาณิชย์" :
+                                            selectedBank.bankName === "BBL" ? "ธนาคารกรุงเทพ" :
+                                                selectedBank.bankName === "KTB" ? "ธนาคารกรุงไทย" :
+                                                    selectedBank.bankName}
+                                </h3>
 
-                                        <div style={{
-                                            marginTop: "16px",
-                                            background: "rgba(255, 215, 0, 0.1)",
-                                            border: "1px solid rgba(255, 215, 0, 0.3)",
-                                            borderRadius: "14px",
-                                            padding: "14px"
-                                        }}>
-                                            <p style={{ fontSize: "13px", color: "#FFD700", fontWeight: 600 }}>
-                                                💡 โอนเงินแล้วรอ 1-3 นาที เครดิตเข้าอัตโนมัติ
-                                            </p>
-                                        </div>
+                                <div style={{
+                                    background: "rgba(255,255,255,0.05)",
+                                    borderRadius: "14px",
+                                    padding: "16px",
+                                    marginBottom: "12px",
+                                    border: "1px solid rgba(255,255,255,0.1)"
+                                }}>
+                                    <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "6px" }}>เลขบัญชี</p>
+                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
+                                        <span style={{ fontSize: "24px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "2px" }}>
+                                            {selectedBank.accountNumber}
+                                        </span>
+                                        <button
+                                            onClick={() => handleCopy(selectedBank.accountNumber.replace(/-/g, ""), "acc")}
+                                            style={{ padding: "8px", background: "none", border: "none", cursor: "pointer", borderRadius: "8px" }}
+                                        >
+                                            {copied === "acc" ? <Check size={20} color="#22C55E" /> : <Copy size={20} color="#999" />}
+                                        </button>
                                     </div>
-                                )}
-                            </>
+                                </div>
+
+                                <div style={{
+                                    background: "rgba(255,255,255,0.05)",
+                                    borderRadius: "14px",
+                                    padding: "14px",
+                                    border: "1px solid rgba(255,255,255,0.1)"
+                                }}>
+                                    <p style={{ fontSize: "12px", color: "#8B949E", marginBottom: "4px" }}>ชื่อบัญชี</p>
+                                    <p style={{ fontWeight: 700, color: "#FFFFFF", fontSize: "16px" }}>{selectedBank.accountName}</p>
+                                </div>
+
+                                <div style={{
+                                    marginTop: "16px",
+                                    background: "rgba(255, 215, 0, 0.1)",
+                                    border: "1px solid rgba(255, 215, 0, 0.3)",
+                                    borderRadius: "14px",
+                                    padding: "14px"
+                                }}>
+                                    <p style={{ fontSize: "13px", color: "#FFD700", fontWeight: 600 }}>
+                                        💡 โอนเงินแล้วรอ 1-3 นาที เครดิตเข้าอัตโนมัติ
+                                    </p>
+                                </div>
+                            </div>
                         )}
                     </>
                 ) : (
@@ -561,6 +604,6 @@ export default function DepositPage() {
                     </>
                 )}
             </div>
-        </PlayerLayout>
+        </PlayerLayout >
     );
 }

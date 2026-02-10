@@ -44,11 +44,14 @@ function getDateRange(preset: string, startDate?: string, endDate?: string) {
             end.setHours(23, 59, 59, 999);
             break;
         case '7days':
+        case 'week':
             start.setDate(start.getDate() - 6);
             start.setHours(0, 0, 0, 0);
             end.setHours(23, 59, 59, 999);
             break;
         case '1month':
+        case 'month':
+        case '30days':
             start.setDate(start.getDate() - 29);
             start.setHours(0, 0, 0, 0);
             end.setHours(23, 59, 59, 999);

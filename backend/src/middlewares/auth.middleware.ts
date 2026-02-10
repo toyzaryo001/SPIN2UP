@@ -84,7 +84,7 @@ export function requirePermission(category: string, featureOrAction: string, act
             }
 
             // Parse permissions
-            let permissions: Record<string, Record<string, { view: boolean; manage: boolean }>> = {};
+            let permissions: Record<string, Record<string, boolean | { view: boolean; manage: boolean }>> = {};
             try {
                 permissions = JSON.parse(admin.role.permissions || '{}');
             } catch (e) {
@@ -112,9 +112,9 @@ export function requirePermission(category: string, featureOrAction: string, act
             const catPerms = permissions[category];
             const featPerms = catPerms ? catPerms[requiredFeature as any] : undefined;
 
-            // Handle legacy structure if present (e.g. true/false instead of object)
-            // But new frontend saves {view: bool, manage: bool}.
-            const hasPerm = featPerms && (featPerms as any)[requiredAction] === true;
+            // Handle both flat boolean (e.g. { view_deposits: true }) 
+            // and nested object (e.g. { deposits: { view: true, manage: true } })
+            const hasPerm = featPerms === true || (featPerms && (featPerms as any)[requiredAction] === true);
 
             if (hasPerm) {
                 return next();

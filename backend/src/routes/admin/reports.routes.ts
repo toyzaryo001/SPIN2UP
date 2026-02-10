@@ -402,7 +402,7 @@ router.get('/user-win-lose/:userId', requirePermission('reports', 'win_lose', 'v
 });
 
 // GET /api/admin/reports/all-deposits - รายการฝากเงินทั้งหมด (รวม Auto, Manual, Bonus, Cashback และ SMS ที่ไม่ Match)
-router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), async (req, res) => {
+router.get('/all-deposits', requirePermission('reports', 'view_deposits'), async (req, res) => {
     try {
         const { preset = 'today', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);

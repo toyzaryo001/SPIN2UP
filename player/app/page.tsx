@@ -561,7 +561,7 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
       })()}
 
       {/* Mobile: Category Game Sections */}
-      <div className="md:hidden space-y-6">
+      <div className="md:hidden space-y-6 animate-fade-in-up">
         {/* สล็อต ยอดนิยม */}
         {(() => {
           const slotGames = games.filter((g: any) => {
@@ -576,7 +576,7 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
                 <Gamepad2 className="text-yellow-400" size={18} />
                 <h2 className="text-sm font-bold text-white">สล็อต ยอดนิยม</h2>
               </div>
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="grid grid-cols-5 gap-1.5 stagger-children">
                 {displaySlots.map((game: any, i: number) => (
                   <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
                     <div className="aspect-[4/5] w-full relative bg-slate-800">

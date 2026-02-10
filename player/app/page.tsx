@@ -560,9 +560,85 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
         );
       })()}
 
-      <JackpotBar />
+      {/* Mobile: Category Game Sections */}
+      <div className="md:hidden space-y-6">
+        {/* สล็อต ยอดนิยม */}
+        {(() => {
+          const slotGames = games.filter((g: any) => {
+            const catSlug = g.provider?.category?.slug || g.category?.slug || '';
+            return catSlug === 'slots' || catSlug === 'slot' || g.type === 'SLOT';
+          });
+          // If no category-filtered games, show first 10
+          const displaySlots = slotGames.length > 0 ? slotGames.slice(0, 10) : displayGames.slice(0, 10);
+          return displaySlots.length > 0 ? (
+            <div>
+              <div className="flex items-center gap-2 mb-3 bg-[#1e293b] p-2.5 rounded-lg border border-slate-700">
+                <Gamepad2 className="text-yellow-400" size={18} />
+                <h2 className="text-sm font-bold text-white">สล็อต ยอดนิยม</h2>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {displaySlots.map((game: any, i: number) => (
+                  <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
+                    <div className="aspect-[4/5] w-full relative bg-slate-800">
+                      {(game.thumbnail || game.image) ? (
+                        <img src={game.thumbnail || game.image} alt={game.name || game.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
+                          <Gamepad2 size={20} className="text-slate-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-[#1e293b] p-1 text-center">
+                      <span className="text-[8px] text-slate-300 line-clamp-1">{game.name || game.title}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })()}
 
-      <div className="relative">
+        {/* คาสิโน ยอดนิยม */}
+        {(() => {
+          const casinoGames = games.filter((g: any) => {
+            const catSlug = g.provider?.category?.slug || g.category?.slug || '';
+            return catSlug === 'casino' || catSlug === 'live-casino' || g.type === 'CASINO';
+          });
+          return casinoGames.length > 0 ? (
+            <div>
+              <div className="flex items-center gap-2 mb-3 bg-gradient-to-r from-green-900/40 to-green-800/20 p-2.5 rounded-lg border border-green-700/40">
+                <Dices className="text-green-400" size={18} />
+                <h2 className="text-sm font-bold text-white">คาสิโน ยอดนิยม</h2>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {casinoGames.slice(0, 5).map((game: any, i: number) => (
+                  <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
+                    <div className="aspect-[4/5] w-full relative bg-slate-800">
+                      {(game.thumbnail || game.image) ? (
+                        <img src={game.thumbnail || game.image} alt={game.name || game.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 to-slate-800">
+                          <Dices size={20} className="text-green-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-[#1e293b] p-1 text-center">
+                      <span className="text-[8px] text-slate-300 line-clamp-1">{game.name || game.title}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })()}
+      </div>
+
+      {/* Desktop: Original Hot Games Section */}
+      <div className="hidden md:block">
+        <JackpotBar />
+      </div>
+
+      <div className="relative hidden md:block">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-orange-500/20 border border-orange-500/40 flex items-center justify-center">
@@ -926,6 +1002,138 @@ const ArcadeContent = ({ category, providers: globalProviders, onPlay }: any) =>
   );
 };
 
+// --- MOBILE GAME BROWSER (Full-screen mobile game page) ---
+const MobileGameBrowser = ({ games, categories, providers, onPlay, onClose }: any) => {
+  const [activeCat, setActiveCat] = useState<string>(categories?.[0]?.slug || 'slots');
+  const [activeProvider, setActiveProvider] = useState<string>('');
+
+  // Get providers for active category
+  const activeCatObj = categories?.find((c: any) => c.slug === activeCat || c.id?.toString() === activeCat);
+  const catProviders = activeCatObj?.providers && activeCatObj.providers.length > 0
+    ? activeCatObj.providers
+    : providers.filter((p: any) => p.categoryId === activeCatObj?.id);
+
+  // Auto-select first provider when category changes
+  useEffect(() => {
+    if (catProviders.length > 0 && !catProviders.find((p: any) => p.name === activeProvider)) {
+      setActiveProvider(catProviders[0].name);
+    }
+  }, [activeCat, catProviders.length]);
+
+  // Filter games
+  const filteredGames = games.filter((g: any) => {
+    const matchProvider = !activeProvider || g.provider?.name === activeProvider;
+    const matchCategory = !activeCatObj || g.provider?.categoryId === activeCatObj?.id;
+    return matchProvider && matchCategory;
+  });
+
+  // Check if provider is lobby mode
+  const currentProvider = catProviders.find((p: any) => p.name === activeProvider);
+  const isLobbyProvider = currentProvider?.isLobbyMode === true;
+
+  return (
+    <div className="fixed inset-0 z-[99] bg-[#0b1120] flex flex-col animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2.5 bg-[#0f172a] border-b border-slate-800">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
+          <Gamepad2 className="text-yellow-400" size={18} />
+          เลือกเกม
+        </h2>
+        <button onClick={onClose} className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="flex gap-1.5 px-3 py-2 bg-[#0f172a]/80 overflow-x-auto border-b border-slate-800/50">
+        {(categories || []).map((cat: any) => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCat(cat.slug || cat.id.toString())}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${activeCat === (cat.slug || cat.id.toString())
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black shadow-lg'
+                : 'bg-slate-800 text-slate-400 border border-slate-700'
+              }`}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Provider Tabs */}
+      <div className="flex gap-1.5 px-3 py-2 overflow-x-auto bg-[#0f172a]/50">
+        {catProviders.map((p: any) => (
+          <button
+            key={p.id || p.name}
+            onClick={() => setActiveProvider(p.name)}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeProvider === p.name
+                ? 'bg-blue-600/30 text-blue-300 ring-1 ring-blue-500'
+                : 'bg-slate-800/60 text-slate-500 border border-slate-700/50'
+              }`}
+          >
+            {p.logo && <img src={p.logo} alt={p.name} className="w-4 h-4 rounded object-contain" />}
+            <span className="whitespace-nowrap">{p.name}</span>
+            {p.isLobbyMode && <span className="text-[8px] text-yellow-400">🎮</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Game Grid */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 pb-20">
+        {isLobbyProvider ? (
+          <div className="flex justify-center py-12">
+            <div
+              onClick={() => {
+                if (onPlay && currentProvider) {
+                  onPlay({
+                    slug: `${currentProvider.slug}-lobby`,
+                    name: `${currentProvider.name} Lobby`,
+                    provider: currentProvider,
+                    isLobby: true
+                  });
+                }
+              }}
+              className="cursor-pointer rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-yellow-500/30 p-8 flex flex-col items-center w-full max-w-xs"
+            >
+              <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3">
+                <Gamepad2 size={32} className="text-yellow-400" />
+              </div>
+              <h3 className="text-white font-bold text-lg mb-1">{activeProvider}</h3>
+              <span className="px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black rounded-full text-xs font-bold">
+                🎮 เข้าสู่ LOBBY
+              </span>
+            </div>
+          </div>
+        ) : filteredGames.length > 0 ? (
+          <div className="grid grid-cols-4 gap-1.5">
+            {filteredGames.map((game: any, i: number) => (
+              <div key={i} onClick={() => onPlay && onPlay(game)} className="rounded-lg overflow-hidden cursor-pointer shadow-md active:scale-95 transition-transform">
+                <div className="aspect-[4/5] w-full relative bg-slate-800">
+                  {(game.thumbnail || game.image) ? (
+                    <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
+                      <Gamepad2 size={20} className="text-slate-600" />
+                    </div>
+                  )}
+                </div>
+                <div className="bg-[#1e293b] p-1 text-center">
+                  <span className="text-[8px] text-slate-300 line-clamp-1">{game.name}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+            <Gamepad2 size={48} className="opacity-20 mb-3" />
+            <p className="text-sm">ไม่พบเกมในหมวดนี้</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- 3. MAIN LOGIC & MODALS ---
 
 const Footer = ({ settings }: any) => (
@@ -1040,6 +1248,7 @@ function HomePageLogic() {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showMobileGames, setShowMobileGames] = useState(false);
 
   // Auth & Data State
   // Auth & Data State
@@ -1270,7 +1479,7 @@ function HomePageLogic() {
 
           {/* 3. Play Game (Center Prominent) */}
           <div className="relative flex justify-center h-full items-center">
-            <button onClick={() => setActiveTab('slots')} className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1">
+            <button onClick={() => setShowMobileGames(true)} className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1">
               <Gamepad2 size={24} className="animate-pulse" />
               <span className="text-[8px] font-black mt-0.5">เล่นเกม</span>
             </button>
@@ -1428,6 +1637,17 @@ function HomePageLogic() {
 
       {/* Contact Drawer */}
       <ContactDrawer isOpen={showContact} onClose={() => setShowContact(false)} />
+
+      {/* Mobile Game Browser */}
+      {showMobileGames && (
+        <MobileGameBrowser
+          games={games}
+          categories={categories}
+          providers={providers}
+          onPlay={(game: any) => { setShowMobileGames(false); handlePlayGame(game); }}
+          onClose={() => setShowMobileGames(false)}
+        />
+      )}
 
     </div >
   );

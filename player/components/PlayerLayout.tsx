@@ -17,7 +17,7 @@ export default function PlayerLayout({ children }: PlayerLayoutProps) {
             height: "100vh",
             display: "flex",
             flexDirection: "column",
-            background: "linear-gradient(180deg, #0D1117 0%, #161B22 50%, #1A1F26 100%)",
+            background: "linear-gradient(180deg, #0f172a 0%, #0b1120 50%, #0f172a 100%)",
             fontFamily: "'Kanit', sans-serif",
             overflow: "hidden",
             color: "#FFFFFF"

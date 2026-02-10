@@ -44,16 +44,17 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                 }
 
                 // Decide API based on slug
-                if (["deposit", "withdraw", "bonus"].includes(slug)) {
+                if (slug === 'deposit') {
+                    url = `/api/admin/reports/all-deposits${query}`;
+                } else if (["withdraw", "bonus"].includes(slug)) {
                     const typeMap: Record<string, string> = {
-                        "deposit": "DEPOSIT",
                         "withdraw": "WITHDRAW",
                         "bonus": "BONUS"
                     };
                     url = `/api/admin/transactions${query}&type=${typeMap[slug]}`;
 
                     // Specific status filter for reports (usually COMPLETED)
-                    if (slug === 'deposit' || slug === 'withdraw') {
+                    if (slug === 'withdraw') {
                         // url += `&status=COMPLETED`; // Optional: if report should show only completed
                     }
                 } else {
@@ -190,28 +191,36 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                         {/* Dynamic Row Rendering based on Slug */}
                                         {slug === 'deposit' && (
                                             <>
-                                                <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                                                <td className="px-6 py-4">{formatDate(item.date || item.createdAt)}</td>
                                                 <td className="px-6 py-4">
                                                     <div>
-                                                        <p className="font-bold text-slate-700">{item.user?.username || '-'}</p>
-                                                        <p className="text-xs text-slate-400">{item.user?.fullName}</p>
+                                                        <p className="font-bold text-slate-700">{item.username || '-'}</p>
+                                                        {item.fullName && <p className="text-xs text-slate-400">{item.fullName}</p>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600">
-                                                        {item.subType === 'AUTO_SMS' ? 'Auto SMS' : 'Manual'}
+                                                    <span className={`text-xs px-2 py-1 rounded 
+                                                        ${item.channel?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
+                                                            item.channel === 'Manual' ? 'bg-blue-100 text-blue-700' :
+                                                                item.channel === 'Bonus' ? 'bg-pink-100 text-pink-700' :
+                                                                    item.channel === 'Cashback' ? 'bg-orange-100 text-orange-700' :
+                                                                        'bg-slate-100 text-slate-600'}`}>
+                                                        {item.channel || item.subType || item.type}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-slate-500">-</td>
+                                                <td className="px-6 py-4 text-slate-500">{item.promotion || '-'}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
-                                                        item.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                                    <span className={`text-xs px-2 py-1 rounded-full 
+                                                        ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                                                            item.status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                                                                item.status === 'PENDING_REVIEW' ? 'bg-orange-100 text-orange-800' :
+                                                                    'bg-amber-100 text-amber-700'
                                                         }`}>
-                                                        {item.status}
+                                                        {item.status === 'PENDING_REVIEW' ? 'รอตรวจสอบ' : item.status}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-slate-400 text-xs">System</td>
+                                                <td className="px-6 py-4 text-slate-400 text-xs">{item.admin || 'System'}</td>
                                             </>
                                         )}
                                         {slug === 'withdraw' && (

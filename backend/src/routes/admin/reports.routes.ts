@@ -5,6 +5,22 @@ import { requirePermission } from '../../middlewares/auth.middleware.js';
 
 const router = Router();
 
+interface DepositReportItem {
+    id: string;
+    originalId: number;
+    date: Date;
+    amount: number;
+    type: string;
+    subType: string | null;
+    status: string;
+    username: string;
+    fullName: string | null | undefined;
+    channel: string | null;
+    admin: string | null;
+    source: string;
+    rawMessage: string | null;
+}
+
 // Helper: สร้าง date range
 function getDateRange(preset: string, startDate?: string, endDate?: string) {
     const now = new Date();
@@ -378,6 +394,103 @@ router.get('/user-win-lose/:userId', requirePermission('reports', 'win_lose', 'v
         });
     } catch (error) {
         console.error('Report user win-lose error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/all-deposits - รายการฝากเงินทั้งหมด (รวม Auto, Manual, Bonus, Cashback และ SMS ที่ไม่ Match)
+router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        // 1. Fetch Valid Transactions
+        const transactions = await prisma.transaction.findMany({
+            where: {
+                type: { in: ['DEPOSIT', 'MANUAL_ADD', 'BONUS', 'CASHBACK'] },
+                createdAt: { gte: start, lte: end }
+            },
+            include: {
+                user: { select: { username: true, fullName: true, phone: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        // 2. Fetch Unmatched SMS Logs
+        // Note: Casting to any because SmsWebhookLog might not be in generated client yet
+        const smsLogs = await (prisma as any).smsWebhookLog.findMany({
+            where: {
+                status: { in: ['NO_MATCH', 'PARSE_FAILED', 'BETFLIX_FAILED'] },
+                createdAt: { gte: start, lte: end }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        // 3. Merge & Normalize Data
+        const mergedData: DepositReportItem[] = [
+            ...transactions.map(t => ({
+                id: `tx_${t.id}`,
+                originalId: t.id,
+                date: t.createdAt,
+                amount: Number(t.amount),
+                type: t.type, // DEPOSIT, MANUAL_ADD, BONUS, CASHBACK
+                subType: t.subType,
+                status: t.status,
+                username: t.user?.username || 'Unknown',
+                fullName: t.user?.fullName,
+                channel: t.type === 'DEPOSIT' && t.subType === 'AUTO_SMS' ? 'Auto SMS' :
+                    t.type === 'MANUAL_ADD' ? 'Manual' :
+                        t.type === 'BONUS' ? 'Bonus' :
+                            t.type === 'CASHBACK' ? 'Cashback' : t.type,
+                admin: t.adminId ? `Admin #${t.adminId}` : 'System',
+                source: 'TRANSACTION',
+                rawMessage: null
+            })),
+            ...smsLogs.map(log => {
+                // Try to extract name from message if simple parse didn't work
+                return {
+                    id: `sms_${log.id}`,
+                    originalId: log.id,
+                    date: log.createdAt,
+                    amount: Number(log.amount || 0),
+                    type: 'SMS_UNMATCHED',
+                    subType: null,
+                    status: 'PENDING_REVIEW', // Display as "รอตรวจสอบ"
+                    username: log.sourceName || 'Unknown', // From SMS
+                    fullName: log.rawMessage.substring(0, 50) + '...', // Show part of message as detail?
+                    channel: 'Auto SMS (Unmatched)',
+                    admin: 'System',
+                    source: 'SMS_LOG',
+                    rawMessage: log.rawMessage
+                };
+            })
+        ];
+
+        // 4. Sort Merged Data by Date Descending
+        mergedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        // 5. Calculate Summary
+        const totalAmount = transactions
+            .filter(t => t.status === 'COMPLETED')
+            .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const totalUnmatchedAmount = smsLogs.reduce((sum, log) => sum + Number(log.amount || 0), 0);
+
+        res.json({
+            success: true,
+            data: {
+                transactions: mergedData, // We call it 'transactions' to fit frontend expect
+                summary: {
+                    totalAmount,
+                    totalCount: transactions.length,
+                    unmatchedCount: smsLogs.length,
+                    unmatchedAmount: totalUnmatchedAmount
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Report all-deposits error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });

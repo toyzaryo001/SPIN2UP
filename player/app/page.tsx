@@ -499,63 +499,66 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
       <TopBanner banners={banners} />
 
       {/* Secondary Banner & Activity Board Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 mb-8 md:mb-12 animate-fade-in">
+      {(() => {
+        const sideBanners = banners ? banners.filter((b: any) => b.position === 'SIDE') : [];
+        const hasSideBanners = sideBanners.length > 0;
 
-        {/* Left: Secondary Banners (Takes 3/4 width on desktop) */}
-        <div className="md:col-span-3 h-full min-h-[160px]">
-          {(() => {
-            const sideBanners = banners.filter((b: any) => b.position === 'SIDE');
-            const count = sideBanners.length;
-            const gridCols = count === 1 ? 'grid-cols-1' : count === 2 ? 'grid-cols-2' : 'grid-cols-3';
+        return (
+          <div className={`grid grid-cols-1 ${hasSideBanners ? 'md:grid-cols-4' : 'md:grid-cols-1'} gap-3 md:gap-4 mb-8 md:mb-12 animate-fade-in`}>
 
-            return count > 0 ? (
-              <div className={`grid ${gridCols} gap-2 h-full`}>
-                {/* Show up to 3 banners, filling height */}
-                {sideBanners.slice(0, 3).map((banner: any, idx: number) => (
-                  <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer md:h-full md:min-h-[120px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
-                    <img src={banner.image} alt={banner.title} className="w-full h-auto md:absolute md:inset-0 md:h-full md:object-cover transform group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-blue-900/10 group-hover:bg-transparent transition-colors"></div>
-                  </div>
-                ))}
+            {/* Left: Secondary Banners (Only show if exists) */}
+            {hasSideBanners && (
+              <div className="md:col-span-3 h-full min-h-[160px]">
+                {(() => {
+                  const count = sideBanners.length;
+                  const gridCols = count === 1 ? 'grid-cols-1' : count === 2 ? 'grid-cols-2' : 'grid-cols-3';
+
+                  return (
+                    <div className={`grid ${gridCols} gap-2 h-full`}>
+                      {/* Show up to 3 banners, filling height */}
+                      {sideBanners.slice(0, 3).map((banner: any, idx: number) => (
+                        <div key={idx} className="relative rounded-xl overflow-hidden group border border-white/10 shadow-lg hover:shadow-yellow-500/20 transition-all cursor-pointer md:h-full md:min-h-[120px]" onClick={() => banner.link && window.open(banner.link, '_blank')}>
+                          <img src={banner.image} alt={banner.title} className="w-full h-auto md:absolute md:inset-0 md:h-full md:object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                          <div className="absolute inset-0 bg-blue-900/10 group-hover:bg-transparent transition-colors"></div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
-            ) : (
-              /* Fallback if no side banners - Show Placeholder or Nothing */
-              <div className="w-full h-full min-h-[160px] rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center">
-                <span className="text-slate-600 font-bold">SECONDARY BANNER</span>
-              </div>
-            );
-          })()}
-        </div>
+            )}
 
-        {/* Right: Activity Buttons Grid 2x2 (Takes 1/4 width on desktop) */}
-        <div className="md:col-span-1 grid grid-cols-2 gap-2 md:gap-3 h-full">
+            {/* Right: Activity Buttons Grid (Adapts based on banner existence) */}
+            <div className={`${hasSideBanners ? 'md:col-span-1 grid-cols-2' : 'w-full grid-cols-2 md:grid-cols-4'} grid gap-2 md:gap-3 h-full`}>
 
-          {/* 1. แนะนำเพื่อน (Top Left) */}
-          <button onClick={() => window.location.href = '/commission'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-900/40 border border-blue-500/30 hover:border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all group">
-            <Users className="text-blue-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
-            <span className="text-[10px] md:text-xs font-bold text-blue-100 group-hover:text-white">แนะนำเพื่อน</span>
-          </button>
+              {/* 1. แนะนำเพื่อน */}
+              <button onClick={() => window.location.href = '/commission'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-900/40 border border-blue-500/30 hover:border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all group">
+                <Users className="text-blue-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
+                <span className="text-[10px] md:text-xs font-bold text-blue-100 group-hover:text-white">แนะนำเพื่อน</span>
+              </button>
 
-          {/* 2. ฝากต่อเนื่อง (Top Right) */}
-          <button onClick={() => window.location.href = '/streak'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-green-600/20 to-green-900/40 border border-green-500/30 hover:border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] transition-all group">
-            <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📅</span>
-            <span className="text-[10px] md:text-xs font-bold text-green-100 group-hover:text-white">ฝากต่อเนื่อง</span>
-          </button>
+              {/* 2. ฝากต่อเนื่อง */}
+              <button onClick={() => window.location.href = '/streak'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-green-600/20 to-green-900/40 border border-green-500/30 hover:border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] transition-all group">
+                <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📅</span>
+                <span className="text-[10px] md:text-xs font-bold text-green-100 group-hover:text-white">ฝากต่อเนื่อง</span>
+              </button>
 
-          {/* 3. คืนยอดเสีย (Bottom Left) */}
-          <button onClick={() => window.location.href = '/cashback'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-red-600/20 to-red-900/40 border border-red-500/30 hover:border-red-400 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all group">
-            <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">💸</span>
-            <span className="text-[10px] md:text-xs font-bold text-red-100 group-hover:text-white">คืนยอดเสีย</span>
-          </button>
+              {/* 3. คืนยอดเสีย */}
+              <button onClick={() => window.location.href = '/cashback'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-red-600/20 to-red-900/40 border border-red-500/30 hover:border-red-400 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all group">
+                <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">💸</span>
+                <span className="text-[10px] md:text-xs font-bold text-red-100 group-hover:text-white">คืนยอดเสีย</span>
+              </button>
 
-          {/* 4. RANK (Bottom Right) */}
-          <button onClick={() => window.location.href = '/rank'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-yellow-600/20 to-yellow-900/40 border border-yellow-500/30 hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all group">
-            <Trophy className="text-yellow-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
-            <span className="text-[10px] md:text-xs font-bold text-yellow-100 group-hover:text-white">RANK</span>
-          </button>
-        </div>
+              {/* 4. RANK */}
+              <button onClick={() => window.location.href = '/rank'} className="h-20 md:h-auto md:aspect-square flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-yellow-600/20 to-yellow-900/40 border border-yellow-500/30 hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all group">
+                <Trophy className="text-yellow-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
+                <span className="text-[10px] md:text-xs font-bold text-yellow-100 group-hover:text-white">RANK</span>
+              </button>
+            </div>
 
-      </div>
+          </div>
+        );
+      })()}
 
       <JackpotBar />
 

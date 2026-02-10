@@ -1051,8 +1051,8 @@ const MobileGameBrowser = ({ games, categories, providers, onPlay, onClose }: an
             key={cat.id}
             onClick={() => setActiveCat(cat.slug || cat.id.toString())}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${activeCat === (cat.slug || cat.id.toString())
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black shadow-lg'
-                : 'bg-slate-800 text-slate-400 border border-slate-700'
+              ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black shadow-lg'
+              : 'bg-slate-800 text-slate-400 border border-slate-700'
               }`}
           >
             {cat.name}
@@ -1067,8 +1067,8 @@ const MobileGameBrowser = ({ games, categories, providers, onPlay, onClose }: an
             key={p.id || p.name}
             onClick={() => setActiveProvider(p.name)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeProvider === p.name
-                ? 'bg-blue-600/30 text-blue-300 ring-1 ring-blue-500'
-                : 'bg-slate-800/60 text-slate-500 border border-slate-700/50'
+              ? 'bg-blue-600/30 text-blue-300 ring-1 ring-blue-500'
+              : 'bg-slate-800/60 text-slate-500 border border-slate-700/50'
               }`}
           >
             {p.logo && <img src={p.logo} alt={p.name} className="w-4 h-4 rounded object-contain" />}
@@ -1515,16 +1515,16 @@ function HomePageLogic() {
               <button onClick={() => setShowLogin(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={24} /></button>
 
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-black text-white italic tracking-tighter">ยินดีต้อนรับกลับมา</h2>
-                <p className="text-slate-400 text-sm mt-2">ลงชื่อเข้าใช้เพื่อดำเนินการต่อ</p>
+                <h2 className="text-3xl font-black text-white italic tracking-tighter">เข้าสู่ระบบ</h2>
+                <p className="text-slate-400 text-sm mt-2">กรอกเบอร์โทรศัพท์และรหัสผ่าน</p>
               </div>
 
               {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg mb-6 text-sm text-center font-bold">{error}</div>}
 
               <form onSubmit={handleLogin} className="space-y-5">
                 <div>
-                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เบอร์โทรศัพท์ (หรือ Username)</label>
-                  <input type="text" placeholder="08x-xxx-xxxx / users..." className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.phone} onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })} required />
+                  <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">เบอร์โทรศัพท์</label>
+                  <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder="0xxxxxxxxx" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors" value={loginForm.phone} onChange={e => setLoginForm({ ...loginForm, phone: e.target.value.replace(/[^0-9]/g, '') })} required />
                 </div>
                 <div>
                   <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน</label>

@@ -446,7 +446,7 @@ router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), as
                 source: 'TRANSACTION',
                 rawMessage: null
             })),
-            ...smsLogs.map(log => {
+            ...smsLogs.map((log: any) => {
                 // Try to extract name from message if simple parse didn't work
                 return {
                     id: `sms_${log.id}`,
@@ -474,7 +474,7 @@ router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), as
             .filter(t => t.status === 'COMPLETED')
             .reduce((sum, t) => sum + Number(t.amount), 0);
 
-        const totalUnmatchedAmount = smsLogs.reduce((sum, log) => sum + Number(log.amount || 0), 0);
+        const totalUnmatchedAmount = smsLogs.reduce((sum: number, log: any) => sum + Number(log.amount || 0), 0);
 
         res.json({
             success: true,

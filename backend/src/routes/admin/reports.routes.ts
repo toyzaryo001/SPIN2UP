@@ -419,86 +419,37 @@ router.get('/all-deposits', requirePermission('reports', 'view_deposits'), async
             orderBy: { createdAt: 'desc' }
         });
 
-        // 2. Fetch Unmatched SMS Logs (Safely)
-        // Note: Casting to any because SmsWebhookLog might not be in generated client yet
-        let smsLogs = [];
-        try {
-            smsLogs = await (prisma as any).smsWebhookLog.findMany({
-                where: {
-                    status: { in: ['NO_MATCH', 'PARSE_FAILED', 'BETFLIX_FAILED'] },
-                    createdAt: { gte: start, lte: end }
-                },
-                orderBy: { createdAt: 'desc' }
-            });
-        } catch (smsError) {
-            console.warn('Failed to fetch SMS logs, possibly schema mismatch or missing table:', smsError);
-            // Ignore error and proceed with empty smsLogs to show at least transactions
-            smsLogs = [];
-        }
+        // 2. Normalize Data (Transaction Only)
+        const mergedData: DepositReportItem[] = transactions.map(t => ({
+            id: `tx_${t.id}`,
+            originalId: t.id,
+            date: t.createdAt,
+            amount: Number(t.amount),
+            type: t.type, // DEPOSIT, MANUAL_ADD, BONUS, CASHBACK
+            subType: t.subType,
+            status: t.status,
+            username: t.user?.username || 'Unknown',
+            fullName: t.user?.fullName,
+            channel: t.type === 'DEPOSIT' && t.subType === 'AUTO_SMS' ? 'Auto SMS' :
+                t.type === 'MANUAL_ADD' ? 'Manual' :
+                    t.type === 'BONUS' ? 'Bonus' :
+                        t.type === 'CASHBACK' ? 'Cashback' : t.type,
+            admin: t.adminId ? `Admin #${t.adminId}` : 'System',
+            source: 'TRANSACTION',
+            rawMessage: null
+        }));
 
-        // 3. Merge & Normalize Data
-        const mergedData: DepositReportItem[] = [
-            ...transactions.map(t => ({
-                id: `tx_${t.id}`,
-                originalId: t.id,
-                date: t.createdAt,
-                amount: Number(t.amount),
-                type: t.type, // DEPOSIT, MANUAL_ADD, BONUS, CASHBACK
-                subType: t.subType,
-                status: t.status,
-                username: t.user?.username || 'Unknown',
-                fullName: t.user?.fullName,
-                channel: t.type === 'DEPOSIT' && t.subType === 'AUTO_SMS' ? 'Auto SMS' :
-                    t.type === 'MANUAL_ADD' ? 'Manual' :
-                        t.type === 'BONUS' ? 'Bonus' :
-                            t.type === 'CASHBACK' ? 'Cashback' : t.type,
-                admin: t.adminId ? `Admin #${t.adminId}` : 'System',
-                source: 'TRANSACTION',
-                rawMessage: null
-            })),
-            ...smsLogs.map((log: any) => {
-                // Try to extract name from message if simple parse didn't work
-                return {
-                    id: `sms_${log.id}`,
-                    originalId: log.id,
-                    date: log.createdAt,
-                    amount: Number(log.amount || 0),
-                    type: 'SMS_UNMATCHED',
-                    subType: null,
-                    status: 'PENDING_REVIEW', // Display as "รอตรวจสอบ"
-                    username: log.sourceName || 'Unknown', // From SMS
-                    fullName: log.rawMessage.substring(0, 50) + '...', // Show part of message as detail?
-                    channel: 'Auto SMS (Unmatched)',
-                    admin: 'System',
-                    source: 'SMS_LOG',
-                    rawMessage: log.rawMessage
-                };
-            })
-        ];
-
-        // 4. Sort Merged Data by Date Descending
-        mergedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        // 5. Calculate Summary
-        const totalAmount = transactions
-            .filter(t => t.status === 'COMPLETED')
-            .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const totalUnmatchedAmount = smsLogs.reduce((sum: number, log: any) => sum + Number(log.amount || 0), 0);
+        const totalCount = transactions.length;
+        const totalAmount = transactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
         res.json({
             success: true,
             data: {
-                transactions: mergedData, // We call it 'transactions' to fit frontend expect
-                summary: {
-                    totalAmount,
-                    totalCount: transactions.length,
-                    unmatchedCount: smsLogs.length,
-                    unmatchedAmount: totalUnmatchedAmount
-                }
+                transactions: mergedData,
+                summary: { totalCount, totalAmount },
+                pagination: { page: 1, limit: transactions.length, totalPages: 1, total: transactions.length }
             }
         });
-
     } catch (error) {
         console.error('Report all-deposits error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });

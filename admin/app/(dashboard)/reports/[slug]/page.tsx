@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { formatBaht, formatDate } from "@/lib/utils";
-import { Calendar, Search, Download, FileText as FileIcon, AlertCircle } from "lucide-react";
+import { Calendar, Search, Download, FileText as FileIcon } from "lucide-react";
 import { use, useState, useEffect } from "react";
 import api from "@/lib/api";
 
@@ -31,52 +31,89 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    // DEBUG STATE
-    const [debugUrl, setDebugUrl] = useState("");
-    const [error, setError] = useState<string | null>(null);
-
     // Fetch Data
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-            setError(null);
             try {
-                // Use Server Time for standard presets to match Dashboard logic
-                // We pass 'preset' directly to the API, so the Backend calculates the range based on Server Time
+                // Calculate Date Range on Client Side (Required for Transactions API)
+                const now = new Date();
+                let start = new Date();
+                let end = new Date();
+                end.setHours(23, 59, 59, 999);
 
-                let query = `?preset=${dateRange}&page=${page}&limit=20`;
-
-                if (dateRange === 'custom' && customStart && customEnd) {
-                    query += `&startDate=${new Date(customStart).toISOString()}&endDate=${new Date(customEnd).toISOString()}`;
+                switch (dateRange) {
+                    case 'today':
+                        start = new Date();
+                        start.setHours(0, 0, 0, 0);
+                        break;
+                    case 'yesterday':
+                        start = new Date();
+                        start.setDate(start.getDate() - 1);
+                        start.setHours(0, 0, 0, 0);
+                        end = new Date();
+                        end.setDate(end.getDate() - 1);
+                        end.setHours(23, 59, 59, 999);
+                        break;
+                    case 'week':
+                        start = new Date();
+                        start.setDate(start.getDate() - start.getDay());
+                        start.setHours(0, 0, 0, 0);
+                        break;
+                    case 'month':
+                        start = new Date();
+                        start.setDate(1);
+                        start.setHours(0, 0, 0, 0);
+                        break;
+                    case 'custom':
+                        if (customStart && customEnd) {
+                            start = new Date(customStart);
+                            end = new Date(customEnd);
+                            end.setHours(23, 59, 59, 999);
+                        } else {
+                            start = new Date();
+                            start.setHours(0, 0, 0, 0);
+                        }
+                        break;
+                    default:
+                        start = new Date();
+                        start.setHours(0, 0, 0, 0);
                 }
 
+                // Generic Query Params
+                let query = `?page=${page}&limit=20`;
                 if (search) query += `&search=${search}`;
 
                 let url = "";
+
                 // Decide API based on slug
                 if (slug === 'deposit') {
-                    url = `/api/admin/reports/all-deposits${query}`;
+                    // SWITCHED TO TRANSACTIONS API (Bypassing broken Report API)
+                    // Requires explicit type=DEPOSIT and startDate/endDate
+                    url = `/api/admin/transactions${query}&type=DEPOSIT&startDate=${start.toISOString()}&endDate=${end.toISOString()}`;
+
                 } else if (["withdraw", "bonus"].includes(slug)) {
+                    // Use Transactions API for these as well
                     const typeMap: Record<string, string> = {
                         "withdraw": "WITHDRAW",
                         "bonus": "BONUS"
                     };
-                    url = `/api/admin/transactions${query}&type=${typeMap[slug]}`;
+                    url = `/api/admin/transactions${query}&type=${typeMap[slug]}&startDate=${start.toISOString()}&endDate=${end.toISOString()}`;
 
-                    // Specific status filter for reports (usually COMPLETED)
-                    if (slug === 'withdraw') {
-                        // url += `&status=COMPLETED`; // Optional: if report should show only completed
-                    }
                 } else {
-                    // Fallback to existing logic for other reports
-                    if (slug === 'new-users') url = `/api/admin/reports/new-users${query}`;
-                    else if (slug === 'new-users-deposit') url = `/api/admin/reports/new-users-deposit${query}`;
-                    else if (slug === 'profit-loss') url = `/api/admin/reports/profit-loss${query}`;
-                    else if (slug === 'inactive-users') url = `/api/admin/reports/inactive-users${query}`;
-                    else url = `/api/admin/reports/${slug}${query}`;
-                }
+                    // Fallback to original Report APIs for others (which might pass preset)
+                    // Note: sending preset here for backward compatibility with other endpoints if they exist
+                    let reportQuery = `${query}&preset=${dateRange}`;
+                    if (dateRange === 'custom') {
+                        reportQuery += `&startDate=${start.toISOString()}&endDate=${end.toISOString()}`;
+                    }
 
-                setDebugUrl(url);
+                    if (slug === 'new-users') url = `/api/admin/reports/new-users${reportQuery}`;
+                    else if (slug === 'new-users-deposit') url = `/api/admin/reports/new-users-deposit${reportQuery}`;
+                    else if (slug === 'profit-loss') url = `/api/admin/reports/profit-loss${reportQuery}`;
+                    else if (slug === 'inactive-users') url = `/api/admin/reports/inactive-users${reportQuery}`;
+                    else url = `/api/admin/reports/${slug}${reportQuery}`;
+                }
 
                 const res = await api.get(url);
                 const data = res.data;
@@ -93,14 +130,10 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     } else if (data.data.users) {
                         setData(data.data.users);
                     }
-                } else {
-                    setError(data.message || "API returned success: false");
-                    setData([]);
                 }
-            } catch (error: any) {
+            } catch (error) {
                 console.error("Fetch report error:", error);
-                setError(error.response?.data?.message || error.message || "Unknown Error");
-                setData([]);
+                // Silent fail or show toast? For now console error only as requested "don't make it difficult"
             } finally {
                 setLoading(false);
             }
@@ -119,19 +152,6 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                         <Download size={18} />
                         Export Excel
                     </button>
-                </div>
-            </div>
-
-            {/* DEBUG PANEL - TEMPORARY */}
-            <div className="bg-red-50 p-4 rounded-xl border border-red-200 text-sm mb-4">
-                <h3 className="font-bold text-red-700 flex items-center gap-2">
-                    <AlertCircle size={16} /> Debug Info (สำหรับตรวจสอบปัญหา)
-                </h3>
-                <div className="mt-2 space-y-1 text-slate-600">
-                    <p><span className="font-medium text-slate-800">API URL:</span> <code className="bg-white px-1 py-0.5 rounded border">{debugUrl}</code></p>
-                    <p><span className="font-medium text-slate-800">Status:</span> {loading ? 'Loading...' : error ? <span className="text-red-600 font-bold">Error</span> : 'Success'}</p>
-                    {error && <p><span className="font-medium text-slate-800">Error Message:</span> <span className="text-red-600">{error}</span></p>}
-                    <p><span className="font-medium text-slate-800">Data Count:</span> {data.length} records</p>
                 </div>
             </div>
 
@@ -216,25 +236,25 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                         {/* Dynamic Row Rendering based on Slug */}
                                         {slug === 'deposit' && (
                                             <>
-                                                <td className="px-6 py-4">{formatDate(item.date || item.createdAt)}</td>
+                                                <td className="px-6 py-4">{formatDate(item.createdAt || item.date)}</td>
                                                 <td className="px-6 py-4">
                                                     <div>
-                                                        <p className="font-bold text-slate-700">{item.username || '-'}</p>
-                                                        {item.fullName && <p className="text-xs text-slate-400">{item.fullName}</p>}
+                                                        <p className="font-bold text-slate-700">{item.user?.username || item.username || '-'}</p>
+                                                        {(item.user?.fullName || item.fullName) && <p className="text-xs text-slate-400">{item.user?.fullName || item.fullName}</p>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`text-xs px-2 py-1 rounded 
-                                                        ${item.channel?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
-                                                            item.channel === 'Manual' ? 'bg-blue-100 text-blue-700' :
-                                                                item.channel === 'Bonus' ? 'bg-pink-100 text-pink-700' :
-                                                                    item.channel === 'Cashback' ? 'bg-orange-100 text-orange-700' :
+                                                        ${(item.subType || item.channel || item.type)?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
+                                                            item.type === 'MANUAL_ADD' ? 'bg-blue-100 text-blue-700' :
+                                                                item.type === 'BONUS' ? 'bg-pink-100 text-pink-700' :
+                                                                    item.type === 'CASHBACK' ? 'bg-orange-100 text-orange-700' :
                                                                         'bg-slate-100 text-slate-600'}`}>
-                                                        {item.channel || item.subType || item.type}
+                                                        {item.subType || item.channel || item.type}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-slate-500">{item.promotion || '-'}</td>
+                                                <td className="px-6 py-4 text-slate-500">{item.promotion?.name || '-'}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`text-xs px-2 py-1 rounded-full 
                                                         ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
@@ -245,7 +265,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                                         {item.status === 'PENDING_REVIEW' ? 'รอตรวจสอบ' : item.status}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-slate-400 text-xs">{item.admin || 'System'}</td>
+                                                <td className="px-6 py-4 text-slate-400 text-xs">{item.adminId ? `Admin #${item.adminId}` : (item.admin || 'System')}</td>
                                             </>
                                         )}
                                         {slug === 'withdraw' && (

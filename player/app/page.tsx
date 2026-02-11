@@ -708,11 +708,18 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
 
   const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "PG Soft";
   const [activeProvider, setActiveProvider] = useState(firstProviderName);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Update active provider if the list changes and current one isn't in it?
   // For simplicity, just rely on initial state or user selection. 
   // But if 'activeProvider' is invalid, we should ideally switch. 
   // React state doesn't auto-update on re-render of defaults.
+
+  const handleProviderChange = (providerName: string) => {
+    setIsLoading(true);
+    setActiveProvider(providerName);
+    setTimeout(() => setIsLoading(false), 500);
+  };
 
   // Provider Names/Objects List
   // Optimization: use displayProviders which already contains full objects
@@ -743,7 +750,7 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
       <div className="md:col-span-1 hidden md:block">
-        <Sidebar title={`ค่าย${category?.name || 'สล็อต'}`} items={providerList} active={activeProvider} setActive={setActiveProvider} />
+        <Sidebar title={`ค่าย${category?.name || 'สล็อต'}`} items={providerList} active={activeProvider} setActive={handleProviderChange} />
       </div>
       {/* Mobile Provider Selector - Horizontal Scroll */}
       <div className="md:hidden col-span-1 -mx-4 px-4 overflow-x-auto pb-3">
@@ -751,7 +758,7 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
           {providerList.length > 0 ? providerList.map((p: any) => (
             <button
               key={p.name}
-              onClick={() => setActiveProvider(p.name)}
+              onClick={() => handleProviderChange(p.name)}
               className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all
                 ${activeProvider === p.name
                   ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg ring-2 ring-blue-400'
@@ -817,8 +824,13 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
           </div>
         ) : (
           // Show individual games
-          <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-            {filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
+          <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 min-h-[300px]">
+            {isLoading ? (
+              <div className="col-span-full flex flex-col items-center justify-center h-64 text-slate-400">
+                <Loader2 size={40} className="animate-spin text-yellow-500 mb-2" />
+                <span className="animate-pulse text-xs">กำลังโหลดเกม...</span>
+              </div>
+            ) : filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
               <GameCard
                 key={i}
                 title={game.name}
@@ -852,6 +864,13 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
 
   // Ensure activeProvider is initialized to a valid one
   const [activeProvider, setActiveProvider] = useState(firstProviderName);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleProviderChange = (providerName: string) => {
+    setIsLoading(true);
+    setActiveProvider(providerName);
+    setTimeout(() => setIsLoading(false), 500);
+  };
 
   // If local list updates, we might want to reset activeProvider, but for now relies on initial render.
 
@@ -866,13 +885,13 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
       <div className="md:col-span-1 hidden md:block">
-        <Sidebar title={`ค่าย${category?.name || 'คาสิโน'}`} items={providerList} active={activeProvider} setActive={setActiveProvider} />
+        <Sidebar title={`ค่าย${category?.name || 'คาสิโน'}`} items={providerList} active={activeProvider} setActive={handleProviderChange} />
       </div>
       <div className="md:hidden col-span-1">
         <select
           className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg p-3 outline-none focus:border-yellow-500 font-sans"
           value={activeProvider}
-          onChange={(e) => setActiveProvider(e.target.value)}
+          onChange={(e) => handleProviderChange(e.target.value)}
         >
           {providerList.length > 0 ? providerList.map((p: any) => (
             <option key={p.name} value={p.name}>{p.name}</option>
@@ -908,8 +927,13 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
         </div>
 
         {/* Display Casino Tables/Games from API */}
-        <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-          {filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
+        <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 min-h-[300px]">
+          {isLoading ? (
+            <div className="col-span-full flex flex-col items-center justify-center h-64 text-slate-400">
+              <Loader2 size={40} className="animate-spin text-green-500 mb-2" />
+              <span className="animate-pulse text-xs">กำลังเชื่อมต่อสัญญาณสด...</span>
+            </div>
+          ) : filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
             <GameCard
               key={i}
               title={game.name}
@@ -1006,6 +1030,7 @@ const ArcadeContent = ({ category, providers: globalProviders, onPlay }: any) =>
 const MobileGameBrowser = ({ games, categories, providers, onPlay, onClose }: any) => {
   const [activeCat, setActiveCat] = useState<string>(categories?.[0]?.slug || 'slots');
   const [activeProvider, setActiveProvider] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Get providers for active category
   const activeCatObj = categories?.find((c: any) => c.slug === activeCat || c.id?.toString() === activeCat);
@@ -1019,6 +1044,12 @@ const MobileGameBrowser = ({ games, categories, providers, onPlay, onClose }: an
       setActiveProvider(catProviders[0].name);
     }
   }, [activeCat, catProviders.length]);
+
+  const handleProviderChange = (providerName: string) => {
+    setIsLoading(true);
+    setActiveProvider(providerName);
+    setTimeout(() => setIsLoading(false), 500);
+  };
 
   // Filter games
   const filteredGames = games.filter((g: any) => {
@@ -1065,7 +1096,7 @@ const MobileGameBrowser = ({ games, categories, providers, onPlay, onClose }: an
         {catProviders.map((p: any) => (
           <button
             key={p.id || p.name}
-            onClick={() => setActiveProvider(p.name)}
+            onClick={() => handleProviderChange(p.name)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeProvider === p.name
               ? 'bg-blue-600/30 text-blue-300 ring-1 ring-blue-500'
               : 'bg-slate-800/60 text-slate-500 border border-slate-700/50'
@@ -1080,7 +1111,12 @@ const MobileGameBrowser = ({ games, categories, providers, onPlay, onClose }: an
 
       {/* Game Grid */}
       <div className="flex-1 overflow-y-auto px-3 py-3 pb-20">
-        {isLobbyProvider ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            <Loader2 size={40} className="animate-spin text-yellow-500 mb-2" />
+            <span className="animate-pulse text-xs">กำลังโหลดเกม...</span>
+          </div>
+        ) : isLobbyProvider ? (
           <div className="flex justify-center py-12">
             <div
               onClick={() => {

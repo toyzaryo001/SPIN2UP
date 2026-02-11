@@ -60,7 +60,7 @@ function getDateRange(preset: string, startDate?: string, endDate?: string) {
             if (startDate) start = new Date(startDate);
             if (endDate) {
                 end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
+                // end.setHours(23, 59, 59, 999); // REMOVED: Trust the client provided end date time
             }
             break;
         default:
@@ -419,15 +419,22 @@ router.get('/all-deposits', requirePermission('reports', 'view_deposits'), async
             orderBy: { createdAt: 'desc' }
         });
 
-        // 2. Fetch Unmatched SMS Logs
+        // 2. Fetch Unmatched SMS Logs (Safely)
         // Note: Casting to any because SmsWebhookLog might not be in generated client yet
-        const smsLogs = await (prisma as any).smsWebhookLog.findMany({
-            where: {
-                status: { in: ['NO_MATCH', 'PARSE_FAILED', 'BETFLIX_FAILED'] },
-                createdAt: { gte: start, lte: end }
-            },
-            orderBy: { createdAt: 'desc' }
-        });
+        let smsLogs = [];
+        try {
+            smsLogs = await (prisma as any).smsWebhookLog.findMany({
+                where: {
+                    status: { in: ['NO_MATCH', 'PARSE_FAILED', 'BETFLIX_FAILED'] },
+                    createdAt: { gte: start, lte: end }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+        } catch (smsError) {
+            console.warn('Failed to fetch SMS logs, possibly schema mismatch or missing table:', smsError);
+            // Ignore error and proceed with empty smsLogs to show at least transactions
+            smsLogs = [];
+        }
 
         // 3. Merge & Normalize Data
         const mergedData: DepositReportItem[] = [

@@ -12,13 +12,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
   try {
     const res = await fetch(`${API_URL}/auth/config?domain=${domain}`, { next: { revalidate: 60 } });
-    const json = await res.json();
-    if (json.success && json.data) {
-      return {
-        title: `${json.data.name} Admin`,
-        description: "Casino Management System",
-        icons: json.data.logo ? { icon: json.data.logo } : undefined
-      };
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && json.data) {
+        return {
+          title: `${json.data.name} Admin`,
+          description: "Casino Management System",
+          icons: json.data.logo ? { icon: json.data.logo } : undefined
+        };
+      }
     }
   } catch (error) {
     console.error("Metadata fetch error:", error);

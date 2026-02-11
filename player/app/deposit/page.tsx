@@ -35,7 +35,16 @@ interface BankAccount {
 
 export default function DepositPage() {
     const router = useRouter();
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<any>(() => {
+        // Load user from localStorage immediately on mount
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = localStorage.getItem("user");
+                if (saved && saved !== "undefined") return JSON.parse(saved);
+            } catch { }
+        }
+        return null;
+    });
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">("deposit");
     const [selectedChannel, setSelectedChannel] = useState("bank");
@@ -48,18 +57,16 @@ export default function DepositPage() {
     useEffect(() => {
         // Check if user is logged in
         const token = localStorage.getItem("token");
-        const userData = localStorage.getItem("user");
         if (!token) {
-            // Redirect to login
             router.push("/?action=login");
             return;
         }
 
-        // Fetch fresh user data from API
+        // Fetch fresh user data from API (updates in background)
         fetchUserProfile(token);
-        // Fetch bank accounts from API
+        // Fetch bank accounts from API (independent from user profile)
         fetchBankAccounts();
-    }, [router]);
+    }, []);
 
     // Reset selected bank when channel changes
     useEffect(() => {
@@ -92,27 +99,27 @@ export default function DepositPage() {
                 const data = await res.json();
                 if (data.user) {
                     setUser(data.user);
-                    // Update localStorage with fresh data
                     localStorage.setItem("user", JSON.stringify(data.user));
                     setError(null);
                 }
             } else {
-                // If API fails (e.g. 401), try fallback but mark error if fallback fails
-                throw new Error("API Error");
+                // API failed but user was already loaded from localStorage
+                // Only show error if we have no user data at all
+                if (!user) {
+                    const userData = localStorage.getItem("user");
+                    if (userData && userData !== "undefined") {
+                        try { setUser(JSON.parse(userData)); } catch { }
+                    }
+                }
             }
         } catch (error) {
             console.error("Fetch user profile error:", error);
-            // Fallback to localStorage data
-            const userData = localStorage.getItem("user");
-            if (userData && userData !== "undefined") {
-                try {
-                    setUser(JSON.parse(userData));
-                } catch (e) {
-                    console.error("Parse user data error:", e);
-                    setError("ข้อมูลผู้ใช้ไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่");
+            // User was already loaded from localStorage on init, so just log
+            if (!user) {
+                const userData = localStorage.getItem("user");
+                if (userData && userData !== "undefined") {
+                    try { setUser(JSON.parse(userData)); } catch { }
                 }
-            } else {
-                setError("ไม่สามารถโหลดข้อมูลผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง");
             }
         } finally {
             setLoading(false);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Wallet, RefreshCw } from "lucide-react";
+import ThaiDateTimeClock from "./ThaiDateTimeClock";
 
 export default function Topbar() {
     const [balance, setBalance] = useState<number | null>(null);
@@ -34,7 +35,13 @@ export default function Topbar() {
     if (!mounted) return null;
 
     return (
-        <div className="bg-white border-b border-slate-200 px-8 py-3 flex justify-end items-center shadow-sm">
+        <div className="bg-white border-b border-slate-200 px-8 py-3 flex justify-between items-center shadow-sm">
+            {/* Left Side: Clock */}
+            <div className="flex items-center">
+                <ThaiDateTimeClock />
+            </div>
+
+            {/* Right Side: Wallet & Profile */}
             <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
                 <div className="flex items-center gap-2 text-slate-600">
                     <Wallet size={18} className="text-yellow-500" />

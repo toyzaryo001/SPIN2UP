@@ -36,12 +36,62 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
         const fetchData = async () => {
             setLoading(true);
             try {
-                let url = "";
-                let query = `?preset=${dateRange}&page=${page}&limit=20`;
-                if (search) query += `&search=${search}`;
-                if (dateRange === 'custom' && customStart && customEnd) {
-                    query += `&startDate=${customStart}&endDate=${customEnd}`;
+                // Calculate Date Range on Client Side to match Dashboard's logic (Local Time)
+                const now = new Date();
+                let start = new Date();
+                let end = new Date();
+                end.setHours(23, 59, 59, 999);
+
+                switch (dateRange) {
+                    case 'today':
+                        start = new Date();
+                        start.setHours(0, 0, 0, 0);
+                        break;
+                    case 'yesterday':
+                        start = new Date();
+                        start.setDate(start.getDate() - 1);
+                        start.setHours(0, 0, 0, 0);
+                        end = new Date();
+                        end.setDate(end.getDate() - 1);
+                        end.setHours(23, 59, 59, 999);
+                        break;
+                    case 'week':
+                        start = new Date();
+                        // Adjust to start of week (Sunday or Monday? user didn't specify, standard JS .getDay() 0=Sun)
+                        // Dashboard uses: start.setDate(start.getDate() - start.getDay());
+                        start.setDate(start.getDate() - start.getDay());
+                        start.setHours(0, 0, 0, 0);
+                        break;
+                    case 'month':
+                        start = new Date();
+                        start.setDate(1);
+                        start.setHours(0, 0, 0, 0);
+                        break;
+                    case 'custom':
+                        if (customStart && customEnd) {
+                            start = new Date(customStart);
+                            end = new Date(customEnd);
+                            end.setHours(23, 59, 59, 999);
+                        } else {
+                            // Fallback if custom dates invalid
+                            start = new Date();
+                            start.setHours(0, 0, 0, 0);
+                        }
+                        break;
+                    default: // today fallback
+                        start = new Date();
+                        start.setHours(0, 0, 0, 0);
                 }
+
+                // Construct Query with Explicit Dates (force preset=custom-like behavior)
+                // Sending preset=custom to backend usually triggers it to use startDate/endDate
+                // OR we can send preset=custom explicitly.
+
+                let url = "";
+                // Note: sending preset=custom forces backend to use startDate/endDate logic in reports.routes.ts
+                let query = `?preset=custom&startDate=${start.toISOString()}&endDate=${end.toISOString()}&page=${page}&limit=20`;
+
+                if (search) query += `&search=${search}`;
 
                 // Decide API based on slug
                 if (slug === 'deposit') {

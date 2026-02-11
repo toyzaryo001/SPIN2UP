@@ -1508,9 +1508,9 @@ function HomePageLogic() {
             <span className="text-[10px] mt-1 font-medium font-sans">หน้าหลัก</span>
           </button>
 
-          {/* 2. Deposit/Withdraw — Navigate to actual /deposit page */}
-          <button onClick={() => !user ? setShowLogin(true) : router.push('/deposit')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors text-slate-500 hover:text-white`}>
-            <Wallet size={20} />
+          {/* 2. Deposit/Withdraw */}
+          <button onClick={() => !user ? setShowLogin(true) : setActiveTab('deposit')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'deposit' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
+            <Wallet size={20} className={activeTab === 'deposit' ? 'fill-current' : ''} />
             <span className="text-[10px] mt-1 font-medium font-sans">ฝากถอน</span>
           </button>
 
@@ -1536,9 +1536,9 @@ function HomePageLogic() {
             </button>
           </div>
 
-          {/* 4. Activities — Navigate to actual /activity page */}
-          <button onClick={() => router.push('/activity')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors text-slate-500 hover:text-white`}>
-            <Gift size={20} />
+          {/* 4. Activities */}
+          <button onClick={() => setActiveTab('promotions')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'promotions' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
+            <Gift size={20} className={activeTab === 'promotions' ? 'fill-current' : ''} />
             <span className="text-[10px] mt-1 font-medium font-sans">กิจกรรม</span>
           </button>
 

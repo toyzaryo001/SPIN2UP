@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Home, Wallet, Gamepad2, Gift, User } from "lucide-react";
+import { Home, Wallet, Gamepad2, Gift, User, Loader2 } from "lucide-react";
 
 export default function BottomNav() {
     const router = useRouter();
     const pathname = usePathname();
+    const [loadingGame, setLoadingGame] = useState(false);
 
     const isHome = pathname === "/";
     const isDeposit = pathname === "/deposit" || pathname === "/withdraw";
@@ -37,11 +39,22 @@ export default function BottomNav() {
                 {/* 3. Play Game (Center Prominent) */}
                 <div className="relative flex justify-center h-full items-center">
                     <button
-                        onClick={() => router.push("/")}
-                        className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1"
+                        onClick={() => {
+                            setLoadingGame(true);
+                            setTimeout(() => {
+                                router.push("/");
+                                setLoadingGame(false);
+                            }, 800);
+                        }}
+                        disabled={loadingGame}
+                        className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1 disabled:opacity-80 disabled:cursor-not-allowed"
                     >
-                        <Gamepad2 size={24} className="animate-pulse" />
-                        <span className="text-[8px] font-black mt-0.5">เล่นเกม</span>
+                        {loadingGame ? (
+                            <Loader2 size={24} className="animate-spin text-black" />
+                        ) : (
+                            <Gamepad2 size={24} className="animate-pulse" />
+                        )}
+                        <span className="text-[8px] font-black mt-0.5">{loadingGame ? 'รอสักครู่' : 'เล่นเกม'}</span>
                     </button>
                 </div>
 

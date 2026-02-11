@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search, Menu, User, Gamepad2, Dices, Trophy, Gift, Wallet, Home,
   ChevronRight, Play, CreditCard, Smartphone, Flame, Star, Users, X,
-  MonitorPlay, Sparkles, LogOut
+  MonitorPlay, Sparkles, LogOut, Loader2
 } from 'lucide-react';
 import axios from "axios";
 import ContactDrawer from "@/components/ContactDrawer";
@@ -1249,6 +1249,7 @@ function HomePageLogic() {
   const [showRegister, setShowRegister] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showMobileGames, setShowMobileGames] = useState(false);
+  const [loadingGame, setLoadingGame] = useState(false);
 
   // Auth & Data State
   // Auth & Data State
@@ -1479,9 +1480,23 @@ function HomePageLogic() {
 
           {/* 3. Play Game (Center Prominent) */}
           <div className="relative flex justify-center h-full items-center">
-            <button onClick={() => setShowMobileGames(true)} className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1">
-              <Gamepad2 size={24} className="animate-pulse" />
-              <span className="text-[8px] font-black mt-0.5">เล่นเกม</span>
+            <button
+              onClick={() => {
+                setLoadingGame(true);
+                setTimeout(() => {
+                  setShowMobileGames(true);
+                  setLoadingGame(false);
+                }, 800);
+              }}
+              disabled={loadingGame}
+              className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1 disabled:opacity-80 disabled:cursor-not-allowed"
+            >
+              {loadingGame ? (
+                <Loader2 size={24} className="animate-spin text-black" />
+              ) : (
+                <Gamepad2 size={24} className="animate-pulse" />
+              )}
+              <span className="text-[8px] font-black mt-0.5">{loadingGame ? 'รอสักครู่' : 'เล่นเกม'}</span>
             </button>
           </div>
 

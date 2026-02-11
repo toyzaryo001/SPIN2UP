@@ -10,7 +10,7 @@ const router = Router();
 // GET /api/admin/users - รายการผู้ใช้ (ต้องมีสิทธิ์ดู)
 router.get('/', requirePermission('members', 'list', 'view'), async (req, res) => {
     try {
-        const { page = 1, limit = 20, search, status, role } = req.query;
+        const { page = 1, limit = 20, search, status, role, startDate, endDate, sort, order } = req.query;
         const skip = (Number(page) - 1) * Number(limit);
 
         const where: any = {};
@@ -26,7 +26,17 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
         } else {
             where.status = { not: 'DELETED' };
         }
-        // User table now only contains players (admins are in Admin table)
+
+        // Date range filter (for new-users reports)
+        if (startDate || endDate) {
+            where.createdAt = {};
+            if (startDate) where.createdAt.gte = new Date(startDate as string);
+            if (endDate) where.createdAt.lte = new Date(endDate as string);
+        }
+
+        // Dynamic sort
+        const sortField = (sort as string) || 'createdAt';
+        const sortOrder = (order as string) === 'asc' ? 'asc' : 'desc';
 
         const [users, total] = await Promise.all([
             prisma.user.findMany({
@@ -45,7 +55,7 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
                     createdAt: true,
                     betflixUsername: true,
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { [sortField]: sortOrder },
                 take: Number(limit),
                 skip,
             }),

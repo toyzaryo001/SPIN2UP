@@ -342,8 +342,8 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
 
             {/* Filter Section */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center">
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                    {['today', 'yesterday', 'week', 'month'].map((range) => (
+                <div className="flex bg-slate-100 p-1 rounded-lg flex-wrap">
+                    {['today', 'yesterday', 'week', 'month', 'custom'].map((range) => (
                         <button
                             key={range}
                             onClick={() => { setDateRange(range); setPage(1); }}
@@ -356,9 +356,29 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                             {range === 'yesterday' && 'เมื่อวาน'}
                             {range === 'week' && 'สัปดาห์นี้'}
                             {range === 'month' && 'เดือนนี้'}
+                            {range === 'custom' && 'กำหนดเอง'}
                         </button>
                     ))}
                 </div>
+
+                {/* Custom Date Range Picker */}
+                {dateRange === 'custom' && (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="date"
+                            value={customStart}
+                            onChange={(e) => { setCustomStart(e.target.value); setPage(1); }}
+                            className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        />
+                        <span className="text-slate-400">ถึง</span>
+                        <input
+                            type="date"
+                            value={customEnd}
+                            onChange={(e) => { setCustomEnd(e.target.value); setPage(1); }}
+                            className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        />
+                    </div>
+                )}
 
                 <div className="flex-1 min-w-[200px] relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />

@@ -23,9 +23,9 @@ router.get('/', async (req, res) => {
             where.createdAt = {};
             if (startDate) where.createdAt.gte = new Date(startDate as string);
             if (endDate) {
-                const end = new Date(endDate as string);
-                end.setHours(23, 59, 59, 999);
-                where.createdAt.lte = end;
+                // Frontend already sends endDate with correct time (23:59:59 in local TZ, converted to ISO)
+                // Do NOT call setHours again — that would shift UTC time and include next-day records
+                where.createdAt.lte = new Date(endDate as string);
             }
         }
 

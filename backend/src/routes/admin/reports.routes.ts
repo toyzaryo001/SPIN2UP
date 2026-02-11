@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { Prisma } from '@prisma/client';
 import { requirePermission } from '../../middlewares/auth.middleware.js';
+import { BetflixService } from '../../services/betflix.service.js';
 
 const router = Router();
 
@@ -452,6 +453,118 @@ router.get('/all-deposits', requirePermission('reports', 'view_deposits'), async
         });
     } catch (error) {
         console.error('Report all-deposits error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/win-lose - รายงานแพ้-ชนะทั้งหมด (Betflix API)
+router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate, page = 1, limit = 20, search } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        // Format dates for Betflix API (YYYY-MM-DD)
+        const startStr = start.toISOString().split('T')[0];
+        const endStr = end.toISOString().split('T')[0];
+
+        // Get all users with betflixUsername
+        const where: any = {
+            betflixUsername: { not: null },
+            status: { not: 'DELETED' },
+        };
+        if (search) {
+            where.OR = [
+                { username: { contains: search } },
+                { fullName: { contains: search } },
+            ];
+        }
+
+        const users = await prisma.user.findMany({
+            where,
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                betflixUsername: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        // Fetch Betflix report for each user (concurrency limited)
+        const results: any[] = [];
+        const batchSize = 5;
+
+        for (let i = 0; i < users.length; i += batchSize) {
+            const batch = users.slice(i, i + batchSize);
+            const batchResults = await Promise.all(
+                batch.map(async (user) => {
+                    try {
+                        const report = await BetflixService.getReportSummary(
+                            user.betflixUsername!,
+                            startStr,
+                            endStr
+                        );
+
+                        if (report) {
+                            const turnover = Number(report.turnover || 0);
+                            const winloss = Number(report.winloss || 0);
+                            const validAmount = Number(report.valid_amount || 0);
+
+                            return {
+                                id: user.id,
+                                username: user.username,
+                                fullName: user.fullName,
+                                turnover,
+                                validAmount,
+                                winloss,
+                                rtp: turnover > 0 ? ((turnover + winloss) / turnover * 100).toFixed(2) : '0.00',
+                            };
+                        }
+                        return null;
+                    } catch {
+                        return null;
+                    }
+                })
+            );
+            results.push(...batchResults.filter(r => r !== null));
+        }
+
+        // Sort by turnover descending (most active first), filter out zero-activity
+        const filtered = results.filter(r => r.turnover > 0 || r.winloss !== 0);
+        filtered.sort((a, b) => b.turnover - a.turnover);
+
+        // Pagination
+        const total = filtered.length;
+        const pageNum = Number(page);
+        const limitNum = Number(limit);
+        const totalPages = Math.ceil(total / limitNum);
+        const paged = filtered.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+
+        // Summary
+        const totalTurnover = filtered.reduce((sum, r) => sum + r.turnover, 0);
+        const totalWinloss = filtered.reduce((sum, r) => sum + r.winloss, 0);
+        const avgRtp = totalTurnover > 0 ? ((totalTurnover + totalWinloss) / totalTurnover * 100).toFixed(2) : '0.00';
+
+        res.json({
+            success: true,
+            data: {
+                users: paged,
+                summary: {
+                    totalUsers: total,
+                    totalTurnover,
+                    totalWinloss,
+                    avgRtp,
+                },
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total,
+                    totalPages,
+                },
+            },
+        });
+    } catch (error) {
+        console.error('Report win-lose error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });

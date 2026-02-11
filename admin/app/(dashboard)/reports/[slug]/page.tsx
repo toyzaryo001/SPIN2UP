@@ -317,6 +317,31 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
             );
         }
 
+        if (slug === 'win-lose') {
+            const winloss = Number(item.winloss || 0);
+            return (
+                <tr key={item.id || index} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4">
+                        <div>
+                            <p className="font-bold text-slate-700">{item.username || '-'}</p>
+                            {item.fullName && <p className="text-xs text-slate-400">{item.fullName}</p>}
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-slate-700">{formatBaht(item.turnover)}</td>
+                    <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(winloss > 0 ? 0 : Math.abs(winloss))}</td>
+                    <td className={`px-6 py-4 font-bold ${winloss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {formatBaht(winloss)}
+                    </td>
+                    <td className="px-6 py-4">
+                        <span className={`text-xs px-2 py-1 rounded ${Number(item.rtp) > 100 ? 'bg-red-100 text-red-700' : Number(item.rtp) > 90 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {item.rtp}%
+                        </span>
+                    </td>
+                </tr>
+            );
+        }
+
         // Fallback: show raw JSON
         return (
             <tr key={item.id || index} className="hover:bg-slate-50">
@@ -424,6 +449,28 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     <div className={`bg-white p-4 rounded-xl shadow-sm border ${summary.profit >= 0 ? 'border-emerald-200' : 'border-red-200'}`}>
                         <p className="text-slate-500 text-sm">📊 กำไรสุทธิ</p>
                         <p className={`text-2xl font-bold ${summary.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.profit)}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Win-Lose Summary Cards */}
+            {summary && slug === 'win-lose' && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                        <p className="text-slate-500 text-sm">👤 สมาชิกที่เล่น</p>
+                        <p className="text-2xl font-bold text-slate-800">{summary.totalUsers} คน</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-200">
+                        <p className="text-slate-500 text-sm">🎰 ยอดเล่นรวม</p>
+                        <p className="text-2xl font-bold text-blue-600">{formatBaht(summary.totalTurnover)}</p>
+                    </div>
+                    <div className={`bg-white p-4 rounded-xl shadow-sm border ${summary.totalWinloss >= 0 ? 'border-emerald-200' : 'border-red-200'}`}>
+                        <p className="text-slate-500 text-sm">📊 แพ้-ชนะสุทธิ</p>
+                        <p className={`text-2xl font-bold ${summary.totalWinloss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.totalWinloss)}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-amber-200">
+                        <p className="text-slate-500 text-sm">📈 RTP เฉลี่ย</p>
+                        <p className="text-2xl font-bold text-amber-600">{summary.avgRtp}%</p>
                     </div>
                 </div>
             )}

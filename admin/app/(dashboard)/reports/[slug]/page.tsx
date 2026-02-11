@@ -86,8 +86,8 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                 if (search) query += `&search=${search}`;
 
                 // =============================================
-                // All transaction-based reports → /api/admin/transactions
-                // All user-based reports → /api/admin/users
+                // All transaction-based reports → /admin/transactions
+                // All user-based reports → /admin/users
                 // =============================================
 
                 if (['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
@@ -98,7 +98,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                         "bonus": "BONUS",
                         "new-users-deposit": "DEPOSIT",
                     };
-                    const url = `/api/admin/transactions${query}&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}`;
+                    const url = `/admin/transactions${query}&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}`;
                     const res = await api.get(url);
                     const result = res.data;
                     if (result.success) {
@@ -108,8 +108,8 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     }
 
                 } else if (['new-users', 'inactive-users'].includes(slug)) {
-                    // User-based reports → /api/admin/users
-                    let url = `/api/admin/users${query}`;
+                    // User-based reports → /admin/users
+                    let url = `/admin/users${query}`;
                     if (slug === 'new-users') {
                         url += `&startDate=${startISO}&endDate=${endISO}&sort=createdAt&order=desc`;
                     } else {
@@ -128,9 +128,9 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                 } else if (slug === 'profit-loss') {
                     // Profit/Loss: aggregate from transactions
                     const [depRes, wdRes, bonRes] = await Promise.all([
-                        api.get(`/api/admin/transactions?type=DEPOSIT&startDate=${startISO}&endDate=${endISO}&limit=1`),
-                        api.get(`/api/admin/transactions?type=WITHDRAW&startDate=${startISO}&endDate=${endISO}&limit=1`),
-                        api.get(`/api/admin/transactions?type=BONUS&startDate=${startISO}&endDate=${endISO}&limit=1`),
+                        api.get(`/admin/transactions?type=DEPOSIT&startDate=${startISO}&endDate=${endISO}&limit=1`),
+                        api.get(`/admin/transactions?type=WITHDRAW&startDate=${startISO}&endDate=${endISO}&limit=1`),
+                        api.get(`/admin/transactions?type=BONUS&startDate=${startISO}&endDate=${endISO}&limit=1`),
                     ]);
 
                     const depTotal = depRes.data?.data?.summary?.totalAmount || 0;
@@ -150,7 +150,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
 
                 } else {
                     // Fallback - try report endpoint
-                    const url = `/api/admin/reports/${slug}${query}&preset=${dateRange}`;
+                    const url = `/admin/reports/${slug}${query}&preset=${dateRange}`;
                     try {
                         const res = await api.get(url);
                         if (res.data.success) {

@@ -1,22 +1,61 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { formatBaht, formatDate } from "@/lib/utils";
-import { Calendar, Search, Download, FileText as FileIcon } from "lucide-react";
+import { Search, Download, FileText } from "lucide-react";
 import { use, useState, useEffect } from "react";
 import api from "@/lib/api";
 
-// Map slugs to Page Titles and specific configs
+// Map slugs to Page Titles and columns
 const reportConfig: Record<string, { title: string; columns: string[] }> = {
-    "new-users": { title: "รายงานสมัครใหม่", columns: ["วันที่", "Username", "ชื่อ-นามสกุล", "เบอร์โทร", "ธนาคาร", "ผู้แนะนำ"] },
-    "new-users-deposit": { title: "รายงานสมัครใหม่ฝากเงิน", columns: ["วันที่", "Username", "ยอดฝากแรก", "ช่องทาง", "เวลาฝาก"] },
-    "deposit": { title: "รายงานฝากเงิน", columns: ["วันที่", "Username", "จำนวนเงิน", "ช่องทาง", "โปรโมชั่น", "สถานะ", "ผู้ทำรายการ"] },
+    "new-users": { title: "รายงานสมัครใหม่", columns: ["วันที่สมัคร", "Username", "ชื่อ-นามสกุล", "เบอร์โทร", "ธนาคาร", "ยอดเงิน"] },
+    "new-users-deposit": { title: "รายงานสมัครใหม่ฝากเงิน", columns: ["วันที่", "Username", "ชื่อ-นามสกุล", "ยอดฝากแรก", "สถานะ"] },
+    "deposit": { title: "รายงานฝากเงิน", columns: ["วันที่", "Username", "จำนวนเงิน", "ช่องทาง", "สถานะ", "ผู้ทำรายการ"] },
     "withdraw": { title: "รายงานถอนเงิน", columns: ["วันที่", "Username", "จำนวนเงิน", "ธนาคาร", "เลขบัญชี", "สถานะ", "ผู้ทำรายการ"] },
-    "bonus": { title: "รายงานโบนัส", columns: ["วันที่", "Username", "ประเภทโบนัส", "จำนวนเงิน", "เงื่อนไข (Turnover)"] },
-    "profit-loss": { title: "รายงานกำไรขาดทุน", columns: ["วันที่", "ยอดฝาก", "ยอดถอน", "โบนัส", "กำไรสุทธิ"] },
-    "inactive-users": { title: "รายงานยูสไม่ออนไลน์", columns: ["Username", "ออนไลน์ล่าสุด", "ยอดเงินคงเหลือ", "สถานะ"] },
+    "bonus": { title: "รายงานโบนัส", columns: ["วันที่", "Username", "ประเภท", "จำนวนเงิน", "สถานะ"] },
+    "profit-loss": { title: "รายงานกำไรขาดทุน", columns: ["ยอดฝากรวม", "ยอดถอนรวม", "โบนัสรวม", "กำไรสุทธิ"] },
+    "inactive-users": { title: "รายงานยูสไม่ออนไลน์", columns: ["Username", "ชื่อ-นามสกุล", "เข้าใช้ล่าสุด", "ยอดคงเหลือ", "สถานะ"] },
     "win-lose": { title: "รายงานแพ้-ชนะ", columns: ["Username", "ยอดเล่นรวม", "ยอดชนะ", "ยอดแพ้", "RTP เฉลี่ย"] },
 };
+
+// Calculate date range from preset
+function getDateRange(preset: string, customStart: string, customEnd: string): { start: Date; end: Date } {
+    let start = new Date();
+    let end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    switch (preset) {
+        case 'today':
+            start.setHours(0, 0, 0, 0);
+            break;
+        case 'yesterday':
+            start.setDate(start.getDate() - 1);
+            start.setHours(0, 0, 0, 0);
+            end = new Date();
+            end.setDate(end.getDate() - 1);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case 'week':
+            start.setDate(start.getDate() - start.getDay());
+            start.setHours(0, 0, 0, 0);
+            break;
+        case 'month':
+            start.setDate(1);
+            start.setHours(0, 0, 0, 0);
+            break;
+        case 'custom':
+            if (customStart && customEnd) {
+                start = new Date(customStart);
+                end = new Date(customEnd);
+                end.setHours(23, 59, 59, 999);
+            } else {
+                start.setHours(0, 0, 0, 0);
+            }
+            break;
+        default:
+            start.setHours(0, 0, 0, 0);
+    }
+    return { start, end };
+}
 
 export default function ReportPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = use(params);
@@ -30,110 +69,102 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     const [summary, setSummary] = useState<any>(null);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [errorMsg, setErrorMsg] = useState("");
 
     // Fetch Data
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
+            setErrorMsg("");
             try {
-                // Calculate Date Range on Client Side (Required for Transactions API)
-                const now = new Date();
-                let start = new Date();
-                let end = new Date();
-                end.setHours(23, 59, 59, 999);
-
-                switch (dateRange) {
-                    case 'today':
-                        start = new Date();
-                        start.setHours(0, 0, 0, 0);
-                        break;
-                    case 'yesterday':
-                        start = new Date();
-                        start.setDate(start.getDate() - 1);
-                        start.setHours(0, 0, 0, 0);
-                        end = new Date();
-                        end.setDate(end.getDate() - 1);
-                        end.setHours(23, 59, 59, 999);
-                        break;
-                    case 'week':
-                        start = new Date();
-                        start.setDate(start.getDate() - start.getDay());
-                        start.setHours(0, 0, 0, 0);
-                        break;
-                    case 'month':
-                        start = new Date();
-                        start.setDate(1);
-                        start.setHours(0, 0, 0, 0);
-                        break;
-                    case 'custom':
-                        if (customStart && customEnd) {
-                            start = new Date(customStart);
-                            end = new Date(customEnd);
-                            end.setHours(23, 59, 59, 999);
-                        } else {
-                            start = new Date();
-                            start.setHours(0, 0, 0, 0);
-                        }
-                        break;
-                    default:
-                        start = new Date();
-                        start.setHours(0, 0, 0, 0);
-                }
-
-                // Generic Query Params
+                const { start, end } = getDateRange(dateRange, customStart, customEnd);
+                const startISO = start.toISOString();
+                const endISO = end.toISOString();
                 let query = `?page=${page}&limit=20`;
                 if (search) query += `&search=${search}`;
 
-                let url = "";
+                // ======================================================
+                // IMPORTANT: api.get() baseURL already has /api
+                // So URLs here should NOT start with /api
+                // e.g. use "/admin/transactions" NOT "/api/admin/transactions"
+                // ======================================================
 
-                // Decide API based on slug
-                if (slug === 'deposit') {
-                    // SWITCHED TO TRANSACTIONS API (Bypassing broken Report API)
-                    // Requires explicit type=DEPOSIT and startDate/endDate
-                    url = `/api/admin/transactions${query}&type=DEPOSIT&startDate=${start.toISOString()}&endDate=${end.toISOString()}`;
-
-                } else if (["withdraw", "bonus"].includes(slug)) {
-                    // Use Transactions API for these as well
+                if (['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
+                    // Transaction-based reports → /admin/transactions
                     const typeMap: Record<string, string> = {
+                        "deposit": "DEPOSIT",
                         "withdraw": "WITHDRAW",
-                        "bonus": "BONUS"
+                        "bonus": "BONUS",
+                        "new-users-deposit": "DEPOSIT",
                     };
-                    url = `/api/admin/transactions${query}&type=${typeMap[slug]}&startDate=${start.toISOString()}&endDate=${end.toISOString()}`;
-
-                } else {
-                    // Fallback to original Report APIs for others (which might pass preset)
-                    // Note: sending preset here for backward compatibility with other endpoints if they exist
-                    let reportQuery = `${query}&preset=${dateRange}`;
-                    if (dateRange === 'custom') {
-                        reportQuery += `&startDate=${start.toISOString()}&endDate=${end.toISOString()}`;
+                    const url = `/admin/transactions${query}&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}`;
+                    const res = await api.get(url);
+                    const result = res.data;
+                    if (result.success) {
+                        setData(result.data.transactions || []);
+                        setSummary(result.data.summary || null);
+                        setTotalPages(result.data.pagination?.totalPages || 1);
                     }
 
-                    if (slug === 'new-users') url = `/api/admin/reports/new-users${reportQuery}`;
-                    else if (slug === 'new-users-deposit') url = `/api/admin/reports/new-users-deposit${reportQuery}`;
-                    else if (slug === 'profit-loss') url = `/api/admin/reports/profit-loss${reportQuery}`;
-                    else if (slug === 'inactive-users') url = `/api/admin/reports/inactive-users${reportQuery}`;
-                    else url = `/api/admin/reports/${slug}${reportQuery}`;
-                }
+                } else if (['new-users', 'inactive-users'].includes(slug)) {
+                    // User-based reports → /admin/users
+                    let url = `/admin/users${query}`;
+                    if (slug === 'new-users') {
+                        url += `&startDate=${startISO}&endDate=${endISO}&sort=createdAt&order=desc`;
+                    } else {
+                        url += `&sort=lastLoginAt&order=asc`;
+                    }
+                    const res = await api.get(url);
+                    const result = res.data;
+                    if (result.success) {
+                        const users = result.data?.users || result.data || [];
+                        setData(Array.isArray(users) ? users : []);
+                        setTotalPages(result.data?.pagination?.totalPages || 1);
+                        setSummary(null);
+                    }
 
-                const res = await api.get(url);
-                const data = res.data;
+                } else if (slug === 'profit-loss') {
+                    // Aggregate deposit/withdraw/bonus totals
+                    const [depRes, wdRes, bonRes] = await Promise.all([
+                        api.get(`/admin/transactions?type=DEPOSIT&startDate=${startISO}&endDate=${endISO}&limit=1`),
+                        api.get(`/admin/transactions?type=WITHDRAW&startDate=${startISO}&endDate=${endISO}&limit=1`),
+                        api.get(`/admin/transactions?type=BONUS&startDate=${startISO}&endDate=${endISO}&limit=1`),
+                    ]);
 
-                if (data.success) {
-                    if (data.data.transactions) {
-                        setData(data.data.transactions);
-                        setSummary(data.data.summary);
-                        setTotalPages(data.data.pagination?.totalPages || 1);
-                    } else if (data.data.dailyData) {
+                    const depTotal = depRes.data?.data?.summary?.totalAmount || 0;
+                    const wdTotal = wdRes.data?.data?.summary?.totalAmount || 0;
+                    const bonTotal = bonRes.data?.data?.summary?.totalAmount || 0;
+                    const profit = depTotal - wdTotal - bonTotal;
+
+                    setSummary({ deposit: depTotal, withdraw: wdTotal, bonus: bonTotal, profit });
+                    setData([{
+                        id: 'summary',
+                        deposit: depTotal,
+                        withdraw: wdTotal,
+                        bonus: bonTotal,
+                        profit: profit,
+                    }]);
+                    setTotalPages(1);
+
+                } else {
+                    // Fallback: try report endpoints
+                    const url = `/admin/reports/${slug}${query}&preset=${dateRange}`;
+                    try {
+                        const res = await api.get(url);
+                        if (res.data.success) {
+                            const d = res.data.data;
+                            setData(d.transactions || d.users || (Array.isArray(d) ? d : []));
+                            setSummary(d.summary || null);
+                            setTotalPages(d.pagination?.totalPages || 1);
+                        }
+                    } catch {
                         setData([]);
-                    } else if (Array.isArray(data.data)) {
-                        setData(data.data);
-                    } else if (data.data.users) {
-                        setData(data.data.users);
+                        setErrorMsg("ไม่สามารถโหลดข้อมูลรายงานนี้ได้");
                     }
                 }
             } catch (error) {
                 console.error("Fetch report error:", error);
-                // Silent fail or show toast? For now console error only as requested "don't make it difficult"
+                setErrorMsg("เกิดข้อผิดพลาดในการโหลดข้อมูล");
             } finally {
                 setLoading(false);
             }
@@ -142,6 +173,160 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
         const timer = setTimeout(fetchData, 300);
         return () => clearTimeout(timer);
     }, [slug, dateRange, customStart, customEnd, page, search]);
+
+    // Render table row based on slug
+    const renderRow = (item: any, index: number) => {
+        const rowNum = index + 1 + (page - 1) * 20;
+
+        if (slug === 'deposit' || slug === 'new-users-deposit') {
+            return (
+                <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                    <td className="px-6 py-4">
+                        <div>
+                            <p className="font-bold text-slate-700">{item.user?.username || '-'}</p>
+                            {item.user?.fullName && <p className="text-xs text-slate-400">{item.user.fullName}</p>}
+                        </div>
+                    </td>
+                    {slug === 'new-users-deposit' ? (
+                        <>
+                            <td className="px-6 py-4 text-slate-600">{item.user?.fullName || '-'}</td>
+                            <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
+                        </>
+                    ) : (
+                        <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
+                    )}
+                    {slug === 'deposit' && (
+                        <td className="px-6 py-4">
+                            <span className={`text-xs px-2 py-1 rounded ${item.subType?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
+                                item.type === 'MANUAL_ADD' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-slate-100 text-slate-600'}`}>
+                                {item.subType || item.type}
+                            </span>
+                        </td>
+                    )}
+                    <td className="px-6 py-4">
+                        <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                            item.status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                                'bg-amber-100 text-amber-700'}`}>
+                            {item.status}
+                        </span>
+                    </td>
+                    {slug === 'deposit' && (
+                        <td className="px-6 py-4 text-slate-400 text-xs">{item.adminId ? `Admin #${item.adminId}` : 'System'}</td>
+                    )}
+                </tr>
+            );
+        }
+
+        if (slug === 'withdraw') {
+            return (
+                <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                    <td className="px-6 py-4">
+                        <div>
+                            <p className="font-bold text-slate-700">{item.user?.username || '-'}</p>
+                            <p className="text-xs text-slate-400">{item.user?.fullName}</p>
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-red-600">{formatBaht(item.amount)}</td>
+                    <td className="px-6 py-4 text-slate-500">{item.user?.bankName || '-'}</td>
+                    <td className="px-6 py-4 text-slate-500">{item.user?.bankAccount || '-'}</td>
+                    <td className="px-6 py-4">
+                        <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                            item.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {item.status}
+                        </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 text-xs">{item.adminId ? `Admin #${item.adminId}` : 'Auto'}</td>
+                </tr>
+            );
+        }
+
+        if (slug === 'bonus') {
+            return (
+                <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                    <td className="px-6 py-4">
+                        <div>
+                            <p className="font-bold text-slate-700">{item.user?.username || '-'}</p>
+                            <p className="text-xs text-slate-400">{item.user?.fullName}</p>
+                        </div>
+                    </td>
+                    <td className="px-6 py-4">
+                        <span className="text-xs px-2 py-1 rounded bg-pink-100 text-pink-700">
+                            {item.subType || item.type}
+                        </span>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-purple-600">{formatBaht(item.amount)}</td>
+                    <td className="px-6 py-4">
+                        <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                            item.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {item.status}
+                        </span>
+                    </td>
+                </tr>
+            );
+        }
+
+        if (slug === 'new-users') {
+            return (
+                <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                    <td className="px-6 py-4 font-bold text-slate-700">{item.username || item.phone || '-'}</td>
+                    <td className="px-6 py-4 text-slate-600">{item.fullName || '-'}</td>
+                    <td className="px-6 py-4 text-slate-500">{item.phone || '-'}</td>
+                    <td className="px-6 py-4 text-slate-500">{item.bankName || '-'}</td>
+                    <td className="px-6 py-4 text-slate-500">{formatBaht(item.balance || 0)}</td>
+                </tr>
+            );
+        }
+
+        if (slug === 'inactive-users') {
+            return (
+                <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4 font-bold text-slate-700">{item.username || item.phone || '-'}</td>
+                    <td className="px-6 py-4 text-slate-600">{item.fullName || '-'}</td>
+                    <td className="px-6 py-4 text-slate-500">{item.lastLoginAt ? formatDate(item.lastLoginAt) : 'ไม่เคยเข้าใช้'}</td>
+                    <td className="px-6 py-4 text-slate-500">{formatBaht(item.balance || 0)}</td>
+                    <td className="px-6 py-4">
+                        <span className={`text-xs px-2 py-1 rounded-full ${item.isActive !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            {item.isActive !== false ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                </tr>
+            );
+        }
+
+        if (slug === 'profit-loss') {
+            return (
+                <tr key={item.id || 'summary'} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.deposit)}</td>
+                    <td className="px-6 py-4 font-bold text-red-600">{formatBaht(item.withdraw)}</td>
+                    <td className="px-6 py-4 font-bold text-purple-600">{formatBaht(item.bonus)}</td>
+                    <td className={`px-6 py-4 font-bold text-lg ${item.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {formatBaht(item.profit)}
+                    </td>
+                </tr>
+            );
+        }
+
+        // Fallback: show raw JSON
+        return (
+            <tr key={item.id || index} className="hover:bg-slate-50">
+                <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                <td colSpan={config.columns.length} className="px-6 py-4 text-slate-500 text-xs">
+                    {JSON.stringify(item).slice(0, 200)}...
+                </td>
+            </tr>
+        );
+    };
 
     return (
         <div className="space-y-6">
@@ -187,8 +372,8 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                 </div>
             </div>
 
-            {/* Summary Cards for Deposit/Withdraw */}
-            {summary && (slug === 'deposit' || slug === 'withdraw') && (
+            {/* Summary Cards */}
+            {summary && ['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug) && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                         <p className="text-slate-500 text-sm">จำนวนรายการ</p>
@@ -196,8 +381,37 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     </div>
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                         <p className="text-slate-500 text-sm">ยอดรวม</p>
-                        <p className={`text-2xl font-bold ${slug === 'deposit' ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.totalAmount)}</p>
+                        <p className={`text-2xl font-bold ${slug === 'withdraw' ? 'text-red-600' : slug === 'bonus' ? 'text-purple-600' : 'text-emerald-600'}`}>{formatBaht(summary.totalAmount)}</p>
                     </div>
+                </div>
+            )}
+
+            {/* Profit-Loss Summary Cards */}
+            {summary && slug === 'profit-loss' && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-200">
+                        <p className="text-slate-500 text-sm">💰 ยอดฝากรวม</p>
+                        <p className="text-2xl font-bold text-emerald-600">{formatBaht(summary.deposit)}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-red-200">
+                        <p className="text-slate-500 text-sm">💸 ยอดถอนรวม</p>
+                        <p className="text-2xl font-bold text-red-600">{formatBaht(summary.withdraw)}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-purple-200">
+                        <p className="text-slate-500 text-sm">🎁 โบนัสรวม</p>
+                        <p className="text-2xl font-bold text-purple-600">{formatBaht(summary.bonus)}</p>
+                    </div>
+                    <div className={`bg-white p-4 rounded-xl shadow-sm border ${summary.profit >= 0 ? 'border-emerald-200' : 'border-red-200'}`}>
+                        <p className="text-slate-500 text-sm">📊 กำไรสุทธิ</p>
+                        <p className={`text-2xl font-bold ${summary.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.profit)}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Error Message */}
+            {errorMsg && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-center">
+                    {errorMsg}
                 </div>
             )}
 
@@ -230,74 +444,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                     </td>
                                 </tr>
                             ) : (
-                                data.map((item: any, index: number) => (
-                                    <tr key={item.id} className="hover:bg-slate-50">
-                                        <td className="px-6 py-4 text-center text-slate-500">{index + 1 + (page - 1) * 20}</td>
-                                        {/* Dynamic Row Rendering based on Slug */}
-                                        {slug === 'deposit' && (
-                                            <>
-                                                <td className="px-6 py-4">{formatDate(item.createdAt || item.date)}</td>
-                                                <td className="px-6 py-4">
-                                                    <div>
-                                                        <p className="font-bold text-slate-700">{item.user?.username || item.username || '-'}</p>
-                                                        {(item.user?.fullName || item.fullName) && <p className="text-xs text-slate-400">{item.user?.fullName || item.fullName}</p>}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`text-xs px-2 py-1 rounded 
-                                                        ${(item.subType || item.channel || item.type)?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
-                                                            item.type === 'MANUAL_ADD' ? 'bg-blue-100 text-blue-700' :
-                                                                item.type === 'BONUS' ? 'bg-pink-100 text-pink-700' :
-                                                                    item.type === 'CASHBACK' ? 'bg-orange-100 text-orange-700' :
-                                                                        'bg-slate-100 text-slate-600'}`}>
-                                                        {item.subType || item.channel || item.type}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-slate-500">{item.promotion?.name || '-'}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`text-xs px-2 py-1 rounded-full 
-                                                        ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
-                                                            item.status === 'FAILED' ? 'bg-red-100 text-red-700' :
-                                                                item.status === 'PENDING_REVIEW' ? 'bg-orange-100 text-orange-800' :
-                                                                    'bg-amber-100 text-amber-700'
-                                                        }`}>
-                                                        {item.status === 'PENDING_REVIEW' ? 'รอตรวจสอบ' : item.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-slate-400 text-xs">{item.adminId ? `Admin #${item.adminId}` : (item.admin || 'System')}</td>
-                                            </>
-                                        )}
-                                        {slug === 'withdraw' && (
-                                            <>
-                                                <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
-                                                <td className="px-6 py-4">
-                                                    <div>
-                                                        <p className="font-bold text-slate-700">{item.user?.username || '-'}</p>
-                                                        <p className="text-xs text-slate-400">{item.user?.fullName}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 font-bold text-red-600">{formatBaht(item.amount)}</td>
-                                                <td className="px-6 py-4 text-slate-500">{item.user?.bankName}</td>
-                                                <td className="px-6 py-4 text-slate-500">{item.user?.bankAccount}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
-                                                        item.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                                                        }`}>
-                                                        {item.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-slate-400 text-xs">{item.admin?.username || 'Auto'}</td>
-                                            </>
-                                        )}
-                                        {/* Default fallback for generic list */}
-                                        {!['deposit', 'withdraw'].includes(slug) && (
-                                            <td colSpan={config.columns.length} className="px-6 py-4 text-slate-500">
-                                                {JSON.stringify(item).slice(0, 100)}...
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))
+                                data.map((item: any, index: number) => renderRow(item, index))
                             )}
                         </tbody>
                     </table>
@@ -308,16 +455,16 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     <div>หน้า {page} จาก {totalPages}</div>
                     <div className="flex gap-2">
                         <button
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            onClick={() => setPage(Math.max(1, page - 1))}
                             disabled={page === 1}
-                            className="px-3 py-1 border border-slate-200 rounded disabled:opacity-50 hover:bg-slate-50"
+                            className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
                         >
                             ก่อนหน้า
                         </button>
                         <button
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            onClick={() => setPage(Math.min(totalPages, page + 1))}
                             disabled={page === totalPages}
-                            className="px-3 py-1 border border-slate-200 rounded disabled:opacity-50 hover:bg-slate-50"
+                            className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
                         >
                             ถัดไป
                         </button>
@@ -325,28 +472,5 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                 </div>
             </div>
         </div>
-    );
-}
-
-function FileText(props: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-            <path d="M10 9H8" />
-            <path d="M16 13H8" />
-            <path d="M16 17H8" />
-        </svg>
     );
 }

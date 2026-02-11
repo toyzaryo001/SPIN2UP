@@ -99,6 +99,32 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// DB diagnostic check — tests actual PostgreSQL connectivity
+app.get('/api/db-check', async (req, res) => {
+    try {
+        const result = await prisma.$queryRaw`SELECT 1 as ok`;
+        const userCount = await prisma.user.count();
+        res.json({
+            status: 'connected',
+            database: 'OK',
+            userCount,
+            dbUrl: process.env.DATABASE_URL ? `${process.env.DATABASE_URL.substring(0, 30)}...` : 'NOT SET',
+            superDbUrl: process.env.SUPER_DATABASE_URL ? `${process.env.SUPER_DATABASE_URL.substring(0, 30)}...` : 'NOT SET',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            status: 'disconnected',
+            database: 'ERROR',
+            error: error.message,
+            code: error.code,
+            dbUrl: process.env.DATABASE_URL ? `${process.env.DATABASE_URL.substring(0, 30)}...` : 'NOT SET',
+            superDbUrl: process.env.SUPER_DATABASE_URL ? `${process.env.SUPER_DATABASE_URL.substring(0, 30)}...` : 'NOT SET',
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // Root Health Check (for Railway/Load Balancers default check)
 app.get('/', (req, res) => {
     res.send('OK');

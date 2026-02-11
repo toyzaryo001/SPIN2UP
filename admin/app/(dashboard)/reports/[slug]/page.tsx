@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { formatBaht, formatDate } from "@/lib/utils";
-import { Calendar, Search, Download, FileText as FileIcon } from "lucide-react";
+import { Calendar, Search, Download, FileText as FileIcon, AlertCircle } from "lucide-react";
 import { use, useState, useEffect } from "react";
 import api from "@/lib/api";
 
@@ -31,10 +31,15 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
+    // DEBUG STATE
+    const [debugUrl, setDebugUrl] = useState("");
+    const [error, setError] = useState<string | null>(null);
+
     // Fetch Data
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
+            setError(null);
             try {
                 // Use Server Time for standard presets to match Dashboard logic
                 // We pass 'preset' directly to the API, so the Backend calculates the range based on Server Time
@@ -63,15 +68,15 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                         // url += `&status=COMPLETED`; // Optional: if report should show only completed
                     }
                 } else {
-                    // Fallback to existing logic for other reports (summary based)
-                    // or maybe we don't have list APIs for them yet?
-                    // For now, let's just handle deposit/withdraw list
+                    // Fallback to existing logic for other reports
                     if (slug === 'new-users') url = `/api/admin/reports/new-users${query}`;
                     else if (slug === 'new-users-deposit') url = `/api/admin/reports/new-users-deposit${query}`;
                     else if (slug === 'profit-loss') url = `/api/admin/reports/profit-loss${query}`;
                     else if (slug === 'inactive-users') url = `/api/admin/reports/inactive-users${query}`;
-                    else url = `/api/admin/reports/${slug}${query}`; // Try generic
+                    else url = `/api/admin/reports/${slug}${query}`;
                 }
+
+                setDebugUrl(url);
 
                 const res = await api.get(url);
                 const data = res.data;
@@ -82,18 +87,20 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                         setSummary(data.data.summary);
                         setTotalPages(data.data.pagination?.totalPages || 1);
                     } else if (data.data.dailyData) {
-                        // Handle summary reports (chart data) - maybe need different UI?
-                        // For now, simple table not suitable for dailyData unless flattened
-                        // Just showing empty or error if type mismatch
                         setData([]);
                     } else if (Array.isArray(data.data)) {
                         setData(data.data);
                     } else if (data.data.users) {
                         setData(data.data.users);
                     }
+                } else {
+                    setError(data.message || "API returned success: false");
+                    setData([]);
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Fetch report error:", error);
+                setError(error.response?.data?.message || error.message || "Unknown Error");
+                setData([]);
             } finally {
                 setLoading(false);
             }
@@ -112,6 +119,19 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                         <Download size={18} />
                         Export Excel
                     </button>
+                </div>
+            </div>
+
+            {/* DEBUG PANEL - TEMPORARY */}
+            <div className="bg-red-50 p-4 rounded-xl border border-red-200 text-sm mb-4">
+                <h3 className="font-bold text-red-700 flex items-center gap-2">
+                    <AlertCircle size={16} /> Debug Info (สำหรับตรวจสอบปัญหา)
+                </h3>
+                <div className="mt-2 space-y-1 text-slate-600">
+                    <p><span className="font-medium text-slate-800">API URL:</span> <code className="bg-white px-1 py-0.5 rounded border">{debugUrl}</code></p>
+                    <p><span className="font-medium text-slate-800">Status:</span> {loading ? 'Loading...' : error ? <span className="text-red-600 font-bold">Error</span> : 'Success'}</p>
+                    {error && <p><span className="font-medium text-slate-800">Error Message:</span> <span className="text-red-600">{error}</span></p>}
+                    <p><span className="font-medium text-slate-800">Data Count:</span> {data.length} records</p>
                 </div>
             </div>
 

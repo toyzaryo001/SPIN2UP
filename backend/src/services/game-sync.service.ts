@@ -179,58 +179,70 @@ export class GameSyncService {
         console.log(`[GameSync] Fetching game list from: ${url}`);
 
         let response;
+        const axiosConfig = {
+            timeout: 15000,
+            responseType: 'text' as const,
+            validateStatus: () => true, // Accept all status codes, check response body instead
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'x-api-cat': config.xApiCat || '',
+                'x-api-key': config.xApiKey || ''
+            }
+        };
+
         try {
-            response = await axios.get(url, {
-                timeout: 10000,
-                responseType: 'text',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'x-api-cat': config.xApiCat || '',
-                    'x-api-key': config.xApiKey || ''
-                }
-            });
+            response = await axios.get(url, axiosConfig);
+
+            // Log non-2xx status for debugging
+            if (response.status >= 400) {
+                console.warn(`[GameSync] ${filename} returned status ${response.status}, checking response body...`);
+            }
 
             // Check if response is HTML (Error/Suspended) -> Retry without .txt if applicable
-            if (typeof response.data === 'string' && response.data.trim().startsWith('<') && filename.endsWith('.txt')) {
-                console.warn(`[GameSync] HTML received for ${filename}, retrying without extension...`);
+            const isHtmlResponse = typeof response.data === 'string' && response.data.trim().startsWith('<');
+            const isErrorStatus = response.status >= 400;
+
+            if ((isHtmlResponse || isErrorStatus) && filename.endsWith('.txt')) {
+                console.warn(`[GameSync] Bad response for ${filename} (status: ${response.status}), retrying without extension...`);
 
                 const filenameNoExt = filename.replace('.txt', '');
-
-                // The baseUrl variable is already correctly processed to remove /games_share if present.
-                // Use it directly to avoid re-calculating and potential double /games_share.
                 const urlNoExt = `${baseUrl}/games_share/${filenameNoExt}`;
 
                 try {
-                    const retryRes = await axios.get(urlNoExt, { timeout: 10000, responseType: 'text' });
-                    // If retry is JSON or Pipe-delimited (not HTML), use it
-                    if (typeof retryRes.data !== 'string' || !retryRes.data.trim().startsWith('<')) {
+                    const retryRes = await axios.get(urlNoExt, axiosConfig);
+                    // If retry has valid data (not HTML and not error), use it
+                    const retryIsHtml = typeof retryRes.data === 'string' && retryRes.data.trim().startsWith('<');
+                    if (!retryIsHtml && retryRes.status < 400) {
                         console.log(`[GameSync] Retry success with: ${filenameNoExt}`);
                         response = retryRes;
-                        url = urlNoExt; // Update URL for error reporting
+                        url = urlNoExt;
+                    } else if (!retryIsHtml && retryRes.data) {
+                        // Even with error status, if body is not HTML, try to use it
+                        console.log(`[GameSync] Retry got status ${retryRes.status} but data looks valid, using it`);
+                        response = retryRes;
+                        url = urlNoExt;
                     }
                 } catch (retryErr) {
                     console.warn(`[GameSync] Retry failed for ${filenameNoExt}`);
-                    // Continue with original response (to be handled by HTML check below)
+                }
+
+                // If response is still bad, check if original response body has usable data despite error status
+                if (isErrorStatus && !isHtmlResponse && response.data) {
+                    console.log(`[GameSync] Original response status ${response.status} but body looks like data, attempting parse`);
                 }
             }
 
         } catch (error) {
-            // If 404, valid try without extension?
+            // Network error (timeout, connection refused, etc.)
             if (filename.endsWith('.txt')) {
                 console.warn(`[GameSync] Request failed for ${filename}, retrying without extension...`);
                 const filenameNoExt = filename.replace('.txt', '');
-
-                let baseUrl = config.gameEntrance.replace(/\/$/, '');
-                if (baseUrl.endsWith('/games_share')) {
-                    baseUrl = baseUrl.replace('/games_share', '');
-                }
                 const urlNoExt = `${baseUrl}/games_share/${filenameNoExt}`;
 
                 try {
-                    response = await axios.get(urlNoExt, { timeout: 10000, responseType: 'text' });
+                    response = await axios.get(urlNoExt, axiosConfig);
                     url = urlNoExt;
                 } catch (e) {
-                    // Throw original error if both fail
                     console.error(`[GameSync] Error syncing ${providerCode}:`, (error as Error).message);
                     throw error;
                 }

@@ -10,7 +10,6 @@ import {
 import axios from "axios";
 import ContactDrawer from "@/components/ContactDrawer";
 import { useToast } from "@/components/Toast";
-import { useToast } from "@/components/Toast";
 import BankSelectDropdown from "@/components/BankSelectDropdown";
 import BottomNav from "@/components/BottomNav";
 
@@ -1325,8 +1324,6 @@ function HomePageLogic() {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showContact, setShowContact] = useState(false);
-  const [showMobileGames, setShowMobileGames] = useState(false);
-  const [loadingGame, setLoadingGame] = useState(false);
 
   // Auth & Data State
   // Auth & Data State
@@ -1673,16 +1670,7 @@ function HomePageLogic() {
       {/* Contact Drawer */}
       <ContactDrawer isOpen={showContact} onClose={() => setShowContact(false)} />
 
-      {/* Mobile Game Browser */}
-      {showMobileGames && (
-        <MobileGameBrowser
-          games={games}
-          categories={categories}
-          providers={providers}
-          onPlay={(game: any) => { setShowMobileGames(false); handlePlayGame(game); }}
-          onClose={() => setShowMobileGames(false)}
-        />
-      )}
+
 
     </div >
   );

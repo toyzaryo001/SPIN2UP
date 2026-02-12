@@ -145,20 +145,22 @@ export class BetflixService {
             const api = await this.getApi();
 
             // Logic ported from PHP: Try multiple variants if first fails
-            // Variant 1: Prefix + Last 6 digits (Standard)
+            // Correct format: upline + sitePrefix + last6 digits (e.g., be31kkCHKK938073)
             const phoneDigits = phone.replace(/\D/g, '');
             const variants: string[] = [];
 
-            // 1. Prefix + Last 6 (Standard)
+            // 1. Upline + SitePrefix + Last 6 (CORRECT Standard format)
+            if (phoneDigits.length >= 6) {
+                variants.push(config.prefix + config.sitePrefix + phoneDigits.slice(-6));
+            }
+
+            // 2. Upline + SitePrefix + Full Phone (fallback)
+            variants.push(config.prefix + config.sitePrefix + phoneDigits);
+
+            // 3. Upline + Last 6 (legacy, without sitePrefix)
             if (phoneDigits.length >= 6) {
                 variants.push(config.prefix + phoneDigits.slice(-6));
             }
-
-            // 2. Prefix + Full Phone
-            variants.push(config.prefix + phoneDigits);
-
-            // 3. Raw Phone (Some agents use phone as user)
-            variants.push(phoneDigits);
 
             const password = phoneDigits; // Use phone as password
 

@@ -245,6 +245,26 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
                 console.error('❌ Betflix register failed');
                 return res.status(400).json({ success: false, message: 'ไม่สามารถเชื่อมต่อระบบเกมได้ (Betflix Register Failed)' });
             }
+        } else {
+            // Auto-fix: if betflixUsername is in wrong format (raw phone without prefix), re-register
+            const currentUsername = user.betflixUsername;
+            const isRawPhone = /^\d{10}$/.test(currentUsername); // e.g., "0642938073"
+            const hasNoPrefix = !currentUsername.toLowerCase().includes('chkk') && !currentUsername.toLowerCase().startsWith('be31kk');
+
+            if (isRawPhone || hasNoPrefix) {
+                console.log(`⚠️ betflixUsername "${currentUsername}" is in wrong format, re-registering...`);
+                const betflixUser = await BetflixService.register(user.phone);
+                if (betflixUser) {
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: { betflixUsername: betflixUser.username, betflixPassword: betflixUser.password }
+                    });
+                    user.betflixUsername = betflixUser.username;
+                    console.log('✅ Betflix username fixed:', betflixUser.username);
+                } else {
+                    console.warn('⚠️ Re-register failed, continuing with existing username');
+                }
+            }
         }
 
         const betflixUser = user.betflixUsername!;

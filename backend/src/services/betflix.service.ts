@@ -508,9 +508,12 @@ export class BetflixService {
                         const token = res.data.data.login_token;
                         if (token) {
                             // Use gameEntrance from config, or fallback to default Betflix game entrance
-                            const gameEntranceUrl = config.gameEntrance
+                            let gameEntranceUrl = config.gameEntrance
                                 || res.data.data.game_entrance
                                 || 'game.bfl88.com'; // Default Betflix game entrance
+
+                            // Strip /games_share suffix if present (it's for game sync, not for play/login)
+                            gameEntranceUrl = gameEntranceUrl.replace(/\/games_share\/?$/i, '');
 
                             const entrance = gameEntranceUrl.startsWith('http')
                                 ? gameEntranceUrl
@@ -539,7 +542,9 @@ export class BetflixService {
 
                                 // Try to build URL from fallback response token
                                 const fbToken = fallbackRes.data.data.login_token;
-                                const fbEntrance = fallbackRes.data.data.game_entrance || config.gameEntrance || 'game.bfl88.com';
+                                let fbEntrance = fallbackRes.data.data.game_entrance || config.gameEntrance || 'game.bfl88.com';
+                                // Strip /games_share suffix
+                                fbEntrance = fbEntrance.replace(/\/games_share\/?$/i, '');
                                 if (fbToken) {
                                     const fbEntranceUrl = fbEntrance.startsWith('http') ? fbEntrance : `https://${fbEntrance}`;
                                     const tokenUrl = `${fbEntranceUrl.replace(/\/$/, '')}/play/login?token=${fbToken}`;

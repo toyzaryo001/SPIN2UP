@@ -1324,6 +1324,7 @@ function HomePageLogic() {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showMobileGames, setShowMobileGames] = useState(false);
 
   // Auth & Data State
   // Auth & Data State
@@ -1380,6 +1381,7 @@ function HomePageLogic() {
     const action = searchParams.get("action");
     if (action === "login") { setShowLogin(true); setShowRegister(false); }
     else if (action === "register") { setShowRegister(true); setShowLogin(false); }
+    else if (action === "play") { setShowMobileGames(true); }
   }, [searchParams]);
 
   // Actions
@@ -1669,6 +1671,17 @@ function HomePageLogic() {
 
       {/* Contact Drawer */}
       <ContactDrawer isOpen={showContact} onClose={() => setShowContact(false)} />
+
+      {/* Mobile Game Browser */}
+      {showMobileGames && (
+        <MobileGameBrowser
+          games={games}
+          categories={categories}
+          providers={providers}
+          onPlay={(game: any) => { setShowMobileGames(false); handlePlayGame(game); }}
+          onClose={() => setShowMobileGames(false)}
+        />
+      )}
 
 
 

@@ -41,10 +41,11 @@ export default function BottomNav() {
                     <button
                         onClick={() => {
                             setLoadingGame(true);
+                            // Simulate loading then redirect to action=play
                             setTimeout(() => {
-                                router.push("/");
+                                router.push("/?action=play");
                                 setLoadingGame(false);
-                            }, 800);
+                            }, 500);
                         }}
                         disabled={loadingGame}
                         className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1 disabled:opacity-80 disabled:cursor-not-allowed"

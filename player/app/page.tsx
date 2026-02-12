@@ -1442,10 +1442,22 @@ function HomePageLogic() {
     const loadingId = toast.loading('กำลังเปิดเกม...', game.name || 'โปรดรอสักครู่');
 
     try {
-      const payload = {
-        providerCode: game.providerCode || game.provider?.slug,
-        gameCode: game.slug || game.code
-      };
+      let payload;
+
+      if (game.isLobby) {
+        // Lobby mode: send providerCode = provider slug, gameCode = empty
+        // game.slug is like "sa-lobby", strip "-lobby" to get provider code
+        const provCode = game.providerCode || game.slug?.replace(/-lobby$/, '') || '';
+        payload = {
+          providerCode: provCode,
+          gameCode: ''  // Empty = open lobby
+        };
+      } else {
+        payload = {
+          providerCode: game.providerCode || game.provider?.slug,
+          gameCode: game.slug || game.code
+        };
+      }
 
       console.log("Launching game with payload:", payload);
 

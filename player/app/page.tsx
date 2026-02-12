@@ -10,7 +10,9 @@ import {
 import axios from "axios";
 import ContactDrawer from "@/components/ContactDrawer";
 import { useToast } from "@/components/Toast";
+import { useToast } from "@/components/Toast";
 import BankSelectDropdown from "@/components/BankSelectDropdown";
+import BottomNav from "@/components/BottomNav";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
 
@@ -1537,65 +1539,8 @@ function HomePageLogic() {
 
       <Footer settings={settings} />
 
-      {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0f172a]/95 backdrop-blur-md border-t border-slate-800 px-2 py-1 z-50 pb-safe">
-        <div className="grid grid-cols-5 gap-1 items-end h-[60px]">
-
-          {/* 1. Home */}
-          <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'home' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
-            <Home size={20} className={activeTab === 'home' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">หน้าหลัก</span>
-          </button>
-
-          {/* 2. Deposit/Withdraw */}
-          <button onClick={() => !user ? setShowLogin(true) : setActiveTab('deposit')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'deposit' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
-            <Wallet size={20} className={activeTab === 'deposit' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">ฝากถอน</span>
-          </button>
-
-          {/* 3. Play Game (Center Prominent) */}
-          <div className="relative flex justify-center h-full items-center">
-            <button
-              onClick={() => {
-                setLoadingGame(true);
-                setTimeout(() => {
-                  setShowMobileGames(true);
-                  setLoadingGame(false);
-                }, 800);
-              }}
-              disabled={loadingGame}
-              className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1 disabled:opacity-80 disabled:cursor-not-allowed"
-            >
-              {loadingGame ? (
-                <Loader2 size={24} className="animate-spin text-black" />
-              ) : (
-                <Gamepad2 size={24} className="animate-pulse" />
-              )}
-              <span className="text-[8px] font-black mt-0.5">{loadingGame ? 'รอสักครู่' : 'เล่นเกม'}</span>
-            </button>
-          </div>
-
-          {/* 4. Activities */}
-          <button onClick={() => setActiveTab('promotions')} className={`flex flex-col items-center justify-center h-full rounded-lg transition-colors ${activeTab === 'promotions' ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
-            <Gift size={20} className={activeTab === 'promotions' ? 'fill-current' : ''} />
-            <span className="text-[10px] mt-1 font-medium font-sans">กิจกรรม</span>
-          </button>
-
-          {/* 5. Profile / Logout */}
-          {user ? (
-            <button onClick={handleLogout} className="flex flex-col items-center justify-center h-full rounded-lg transition-colors text-red-400 hover:text-red-300">
-              <LogOut size={20} />
-              <span className="text-[10px] mt-1 font-medium font-sans">ออก</span>
-            </button>
-          ) : (
-            <button onClick={() => setShowLogin(true)} className="flex flex-col items-center justify-center h-full rounded-lg transition-colors text-slate-500 hover:text-white">
-              <User size={20} />
-              <span className="text-[10px] mt-1 font-medium font-sans">โปรไฟล์</span>
-            </button>
-          )}
-
-        </div>
-      </div>
+      {/* Mobile Bottom Nav - Shared Component */}
+      <BottomNav />
 
       {/* LOGIN MODAL */}
       {

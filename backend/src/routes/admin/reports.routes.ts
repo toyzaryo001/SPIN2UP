@@ -1,6 +1,12 @@
+import { Router } from 'express';
+import prisma from '../../lib/db';
+import { requirePermission } from '../../middlewares/auth.middleware';
+import { BetflixService } from '../../services/betflix.service';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+
+const router = Router();
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -50,7 +56,44 @@ function getDateRange(preset: string, startDate?: string, endDate?: string) {
     return { start: start.toDate(), end: end.toDate() };
 }
 
-// ... (Keep existing getDailyData) ...
+interface DepositReportItem {
+    id: string;
+    originalId: number;
+    date: Date;
+    amount: number;
+    type: string;
+    subType: string | null;
+    status: string;
+    username: string;
+    fullName: string | null | undefined;
+    channel: string | null;
+    admin: string | null;
+    source: string;
+    rawMessage: string | null;
+}
+
+// Helper: สร้างรายงานรายวัน
+async function getDailyData(start: Date, end: Date, getData: (date: Date) => Promise<any>) {
+    const days: any[] = [];
+    const current = new Date(start);
+    // clone end date to avoid modification if passed by reference (though here it's Date object)
+    const endDate = new Date(end);
+
+    while (current <= endDate) {
+        const dayStart = new Date(current);
+        dayStart.setHours(0, 0, 0, 0);
+
+        const data = await getData(dayStart);
+        days.push({
+            date: dayStart.toISOString().split('T')[0],
+            ...data,
+        });
+
+        current.setDate(current.getDate() + 1);
+    }
+
+    return days;
+}
 
 // GET /api/admin/reports/new-users - 4.1 รายงานสมัครใหม่ (ต้องมีสิทธิ์ดู)
 router.get('/new-users', requirePermission('reports', 'new_users', 'view'), async (req, res) => {

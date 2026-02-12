@@ -1,99 +1,56 @@
-import { Router } from 'express';
-import prisma from '../../lib/db.js';
-import { Prisma } from '@prisma/client';
-import { requirePermission } from '../../middlewares/auth.middleware.js';
-import { BetflixService } from '../../services/betflix.service.js';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
 
-const router = Router();
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
-interface DepositReportItem {
-    id: string;
-    originalId: number;
-    date: Date;
-    amount: number;
-    type: string;
-    subType: string | null;
-    status: string;
-    username: string;
-    fullName: string | null | undefined;
-    channel: string | null;
-    admin: string | null;
-    source: string;
-    rawMessage: string | null;
-}
-
-// Helper: สร้าง date range
+// Helper: สร้าง date range (UTC+7 Support)
 function getDateRange(preset: string, startDate?: string, endDate?: string) {
-    const now = new Date();
-    let start = new Date();
-    let end = new Date();
+    // Current time in BKK (UTC+7)
+    const now = dayjs().utcOffset(7);
+    let start = now.clone();
+    let end = now.clone();
 
     switch (preset) {
         case 'today':
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
+            start = now.startOf('day');
+            end = now.endOf('day');
             break;
         case 'yesterday':
-            start.setDate(start.getDate() - 1);
-            start.setHours(0, 0, 0, 0);
-            end.setDate(end.getDate() - 1);
-            end.setHours(23, 59, 59, 999);
+            start = now.subtract(1, 'day').startOf('day');
+            end = now.subtract(1, 'day').endOf('day');
             break;
         case '3days':
-            start.setDate(start.getDate() - 2);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
+            start = now.subtract(2, 'day').startOf('day');
+            end = now.endOf('day');
             break;
         case '7days':
         case 'week':
-            start.setDate(start.getDate() - 6);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
+            start = now.subtract(6, 'day').startOf('day');
+            end = now.endOf('day');
             break;
         case '1month':
         case 'month':
         case '30days':
-            start.setDate(start.getDate() - 29);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
+            start = now.subtract(29, 'day').startOf('day');
+            end = now.endOf('day');
             break;
         case 'custom':
-            if (startDate) start = new Date(startDate);
+            if (startDate) start = dayjs(startDate).utcOffset(7).startOf('day');
             if (endDate) {
-                end = new Date(endDate);
-                // end.setHours(23, 59, 59, 999); // REMOVED: Trust the client provided end date time
+                end = dayjs(endDate).utcOffset(7).endOf('day');
             }
             break;
         default:
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
+            start = now.startOf('day');
+            end = now.endOf('day');
     }
 
-    return { start, end };
+    return { start: start.toDate(), end: end.toDate() };
 }
 
-// Helper: สร้างรายงานรายวัน
-async function getDailyData(start: Date, end: Date, getData: (date: Date) => Promise<any>) {
-    const days: any[] = [];
-    const current = new Date(start);
-
-    while (current <= end) {
-        const dayStart = new Date(current);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(current);
-        dayEnd.setHours(23, 59, 59, 999);
-
-        const data = await getData(dayStart);
-        days.push({
-            date: dayStart.toISOString().split('T')[0],
-            ...data,
-        });
-
-        current.setDate(current.getDate() + 1);
-    }
-
-    return days;
-}
+// ... (Keep existing getDailyData) ...
 
 // GET /api/admin/reports/new-users - 4.1 รายงานสมัครใหม่ (ต้องมีสิทธิ์ดู)
 router.get('/new-users', requirePermission('reports', 'new_users', 'view'), async (req, res) => {
@@ -464,8 +421,9 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
 
         // Format dates for Betflix API (YYYY-MM-DD)
-        const startStr = start.toISOString().split('T')[0];
-        const endStr = end.toISOString().split('T')[0];
+        // Fix: Use UTC+7 for date string formatting to ensure we query the correct "local" day
+        const startStr = dayjs(start).utcOffset(7).format('YYYY-MM-DD');
+        const endStr = dayjs(end).utcOffset(7).format('YYYY-MM-DD');
 
         // Get all users with betflixUsername
         const where: any = {

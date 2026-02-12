@@ -589,8 +589,12 @@ export class BetflixService {
             const api = await this.getApi();
             // Params: username, start, end
             // Note: Betflix usually expects YYYY-MM-DD or YYYY-MM-DD HH:mm:ss
+
+            // Ensure username has prefix
+            const apiUser = await this.applyPrefix(username);
+
             const res = await api.get('/v4/report/summaryNEW', {
-                params: { username, start, end }
+                params: { username: apiUser, start, end }
             });
 
             if (res.data.status === 'success' && res.data.data) {

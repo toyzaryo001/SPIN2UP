@@ -872,9 +872,23 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
     setTimeout(() => setIsLoading(false), 500);
   };
 
-  // If local list updates, we might want to reset activeProvider, but for now relies on initial render.
-
   const providerList = displayProviders;
+
+  // Find current provider object to check lobby mode
+  const currentProvider = providerList.find((p: any) => p.name === activeProvider);
+  const isLobbyProvider = currentProvider?.isLobbyMode === true;
+
+  // Handle lobby entrance
+  const handleEnterLobby = () => {
+    if (currentProvider && onPlay) {
+      onPlay({
+        slug: `${currentProvider.slug}-lobby`,
+        name: `${currentProvider.name} Lobby`,
+        providerId: currentProvider.id,
+        isLobby: true
+      });
+    }
+  };
 
   // Filter Casino Games
   const filteredGames = games.filter((g: any) =>
@@ -906,13 +920,18 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
             <h2 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
               <Dices className="text-yellow-400" />
               เกม: <span className="text-green-400">{activeProvider}</span>
+              {isLobbyProvider && <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-[10px] md:text-xs flex-shrink-0">LOBBY</span>}
             </h2>
-            <p className="text-xs text-slate-400 mt-1 font-sans">เกมทั้งหมด {filteredGames.length > 0 ? filteredGames.length : 0} เกม</p>
+            <p className="text-xs text-slate-400 mt-1 font-sans">
+              {isLobbyProvider ? 'กดเพื่อเข้าห้องเกม' : `เกมทั้งหมด ${filteredGames.length > 0 ? filteredGames.length : 0} เกม`}
+            </p>
           </div>
-          <div className="flex gap-2">
-            <button className="px-4 py-1.5 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 font-sans">ล่าสุด</button>
-            <button className="px-4 py-1.5 text-xs bg-yellow-500 text-slate-900 rounded-lg font-bold shadow-lg shadow-yellow-500/20 hover:bg-yellow-400 transition-colors font-sans">ยอดนิยม</button>
-          </div>
+          {!isLobbyProvider && (
+            <div className="flex gap-2">
+              <button className="px-4 py-1.5 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 font-sans">ล่าสุด</button>
+              <button className="px-4 py-1.5 text-xs bg-yellow-500 text-slate-900 rounded-lg font-bold shadow-lg shadow-yellow-500/20 hover:bg-yellow-400 transition-colors font-sans">ยอดนิยม</button>
+            </div>
+          )}
         </div>
 
         {/* Hero Banner for Casino */}
@@ -926,33 +945,53 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
           </div>
         </div>
 
-        {/* Display Casino Tables/Games from API */}
-        <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 min-h-[300px]">
-          {isLoading ? (
-            <div className="col-span-full flex flex-col items-center justify-center h-64 text-slate-400">
-              <Loader2 size={40} className="animate-spin text-green-500 mb-2" />
-              <span className="animate-pulse text-xs">กำลังเชื่อมต่อสัญญาณสด...</span>
+        {/* Display Casino Content */}
+        {isLobbyProvider ? (
+          // Show lobby enter button for lobby-mode casino providers
+          <div className="flex justify-center items-center min-h-[300px]">
+            <div
+              className="bg-gradient-to-br from-blue-900/80 to-slate-900 rounded-2xl p-8 text-center cursor-pointer hover:scale-[1.02] transition-all duration-300 border border-blue-500/30 max-w-md w-full shadow-2xl shadow-blue-500/10"
+              onClick={handleEnterLobby}
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
+                <Dices size={40} className="text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2 font-sans">{activeProvider}</h3>
+              <p className="text-slate-400 text-sm mb-6 font-sans">เข้าสู่ห้องคาสิโนสดเพื่อเลือกโต๊ะเกม</p>
+              <button className="w-full py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-slate-900 rounded-xl font-bold text-lg hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-lg shadow-yellow-500/30 font-sans">
+                🎮 เข้าสู่ LOBBY
+              </button>
             </div>
-          ) : filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
-            <GameCard
-              key={i}
-              title={game.name}
-              provider={activeProvider}
-              image={game.thumbnail || game.image}
-              color={`bg-gradient-to-br from-slate-700 to-slate-800`}
-              hot={game.isHot}
-              isNew={game.isNew}
-              type="casino"
-              onPlay={() => onPlay && onPlay(game)}
-            />
-          )) : (
-            <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
-              <Dices size={48} className="mx-auto mb-4 opacity-20" />
-              <p>ไม่พบเกมในหมวดหมู่นี้</p>
-              <p className="text-xs mt-2 text-slate-600">โปรดลองเลือกค่ายอื่น</p>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          // Show individual games grid
+          <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 min-h-[300px]">
+            {isLoading ? (
+              <div className="col-span-full flex flex-col items-center justify-center h-64 text-slate-400">
+                <Loader2 size={40} className="animate-spin text-green-500 mb-2" />
+                <span className="animate-pulse text-xs">กำลังเชื่อมต่อสัญญาณสด...</span>
+              </div>
+            ) : filteredGames.length > 0 ? filteredGames.map((game: any, i: number) => (
+              <GameCard
+                key={i}
+                title={game.name}
+                provider={activeProvider}
+                image={game.thumbnail || game.image}
+                color={`bg-gradient-to-br from-slate-700 to-slate-800`}
+                hot={game.isHot}
+                isNew={game.isNew}
+                type="casino"
+                onPlay={() => onPlay && onPlay(game)}
+              />
+            )) : (
+              <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
+                <Dices size={48} className="mx-auto mb-4 opacity-20" />
+                <p>ไม่พบเกมในหมวดหมู่นี้</p>
+                <p className="text-xs mt-2 text-slate-600">โปรดลองเลือกค่ายอื่น</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

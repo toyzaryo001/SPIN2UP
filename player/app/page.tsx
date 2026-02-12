@@ -884,7 +884,7 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
       onPlay({
         slug: `${currentProvider.slug}-lobby`,
         name: `${currentProvider.name} Lobby`,
-        providerId: currentProvider.id,
+        provider: currentProvider,
         isLobby: true
       });
     }
@@ -1442,22 +1442,10 @@ function HomePageLogic() {
     const loadingId = toast.loading('กำลังเปิดเกม...', game.name || 'โปรดรอสักครู่');
 
     try {
-      let payload;
-
-      if (game.isLobby) {
-        // Lobby mode: send providerCode = provider slug, gameCode = empty
-        // game.slug is like "sa-lobby", strip "-lobby" to get provider code
-        const provCode = game.providerCode || game.slug?.replace(/-lobby$/, '') || '';
-        payload = {
-          providerCode: provCode,
-          gameCode: ''  // Empty = open lobby
-        };
-      } else {
-        payload = {
-          providerCode: game.providerCode || game.provider?.slug,
-          gameCode: game.slug || game.code
-        };
-      }
+      const payload = {
+        providerCode: game.providerCode || game.provider?.slug,
+        gameCode: game.slug || game.code
+      };
 
       console.log("Launching game with payload:", payload);
 

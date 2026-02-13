@@ -43,4 +43,13 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+// Extend axios instance with specific methods
+const extendedApi = Object.assign(api, {
+  payment: {
+    getGateways: () => api.get('/admin/payment-gateways'),
+    updateGateway: (id: number, data: any) => api.put(`/admin/payment-gateways/${id}`, data),
+    toggleGateway: (id: number) => api.patch(`/admin/payment-gateways/${id}/toggle`)
+  }
+});
+
+export default extendedApi;

@@ -3,6 +3,7 @@ import { IPaymentProvider, PayinResult, WebhookResult } from '../IPaymentProvide
 
 interface BibPayConfig {
     apiKey: string;
+    secretKey?: string; // Added secretKey
     apiEndpoint?: string;
     callbackUrl?: string; // Optional override
 }

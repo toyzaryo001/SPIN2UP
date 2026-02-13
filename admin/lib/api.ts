@@ -47,8 +47,10 @@ api.interceptors.response.use(
 const extendedApi = Object.assign(api, {
   payment: {
     getGateways: () => api.get('/admin/payment-gateways'),
+    createGateway: (data: any) => api.post('/admin/payment-gateways', data),
     updateGateway: (id: number, data: any) => api.put(`/admin/payment-gateways/${id}`, data),
-    toggleGateway: (id: number) => api.patch(`/admin/payment-gateways/${id}/toggle`)
+    toggleGateway: (id: number) => api.patch(`/admin/payment-gateways/${id}/toggle`),
+    deleteGateway: (id: number) => api.delete(`/admin/payment-gateways/${id}`)
   }
 });
 

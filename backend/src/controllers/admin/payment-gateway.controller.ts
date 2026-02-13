@@ -81,4 +81,58 @@ export class PaymentGatewayController {
             return res.status(500).json({ success: false, message: error.message });
         }
     }
+
+    /**
+     * Create new payment gateway
+     * POST /api/admin/payment-gateways
+     */
+    static async createGateway(req: AuthRequest, res: Response) {
+        try {
+            const { code, name, config } = req.body;
+
+            if (!code || !name) {
+                return res.status(400).json({ success: false, message: 'Code and Name are required' });
+            }
+
+            // Check if code exists
+            const existing = await prisma.paymentGateway.findFirst({ where: { code } });
+            if (existing) {
+                return res.status(400).json({ success: false, message: 'Gateway with this code already exists' });
+            }
+
+            let configString = config;
+            if (typeof config === 'object') {
+                configString = JSON.stringify(config);
+            }
+
+            const gateway = await prisma.paymentGateway.create({
+                data: {
+                    code,
+                    name,
+                    config: configString || '{}',
+                    isActive: true
+                }
+            });
+
+            return res.json({ success: true, data: gateway });
+        } catch (error: any) {
+            console.error('Create Gateway Error:', error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    /**
+     * Delete payment gateway
+     * DELETE /api/admin/payment-gateways/:id
+     */
+    static async deleteGateway(req: AuthRequest, res: Response) {
+        try {
+            const id = parseInt(req.params.id);
+            await prisma.paymentGateway.delete({ where: { id } });
+            return res.json({ success: true, message: 'Deleted successfully' });
+        } catch (error: any) {
+            console.error('Delete Gateway Error:', error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
 }

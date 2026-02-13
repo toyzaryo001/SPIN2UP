@@ -38,6 +38,7 @@ async function main() {
     ];
 
     for (const gw of gateways) {
+        // @ts-ignore
         await prisma.paymentGateway.upsert({
             where: { code: gw.code },
             update: {}, // Don't overwrite config if it exists

@@ -796,6 +796,13 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
               {isLobbyProvider ? 'กดเพื่อเข้าห้องเกม' : `${filteredGames.length > 0 ? filteredGames.length : 0} เกม`}
             </p>
           </div>
+          {/* Loading Indicator for Desktop Header */}
+          {isLoading && (
+            <div className="flex items-center gap-2 text-yellow-400">
+              <Loader2 size={16} className="animate-spin" />
+              <span className="text-xs">กำลังโหลด...</span>
+            </div>
+          )}
           {!isLobbyProvider && (
             <div className="hidden md:flex gap-2">
               <button className="px-4 py-1.5 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 font-sans">ล่าสุด</button>
@@ -844,9 +851,9 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
                 onPlay={() => onPlay && onPlay(game)}
               />
             )) : (
-              <div className="col-span-full py-20 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
-                <Gamepad2 size={48} className="mx-auto mb-4 opacity-20" />
-                <p>ไม่พบเกมในหมวดหมู่นี้</p>
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-slate-500">
+                <Gamepad2 size={48} className="mb-2 opacity-20" />
+                <p>ไม่พบเกมในหมวดนี้</p>
               </div>
             )}
           </div>

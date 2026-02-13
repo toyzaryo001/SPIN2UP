@@ -20,6 +20,15 @@ import { initJwtSecret } from './utils/jwt.js';
 
 dotenv.config();
 
+// Initialize Express
+const app = express();
+const PORT = parseInt(process.env.PORT || '3001');
+
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
 // ... existing code ...
 
 // API Routes

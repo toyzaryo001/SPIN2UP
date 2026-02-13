@@ -41,11 +41,11 @@ export class PaymentService {
                 balanceBefore: user.balance,
                 balanceAfter: user.balance, // No change yet
                 status: 'pending',
-                channel: 'auto',
+                // channel: 'auto', // Removed as it's not in schema
                 subType: 'qrcode', // or 'promptpay'
                 paymentGatewayId: gateway?.id,
                 referenceId: referenceId,
-                description: `Auto Deposit via ${provider.code.toUpperCase()}`
+                note: `Auto Deposit via ${provider.code.toUpperCase()}`
             }
         });
 

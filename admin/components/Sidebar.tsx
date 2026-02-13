@@ -155,7 +155,7 @@ const allMenuItems: MenuItem[] = [
 // Global variable to store scroll position during client-side navigation
 let sidebarScrollPosition = 0;
 
-type Permissions = Record<string, Record<string, boolean>>;
+type Permissions = Record<string, Record<string, boolean | { view: boolean; manage: boolean }>>
 
 export default function Sidebar() {
   const pathname = usePathname();

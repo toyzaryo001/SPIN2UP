@@ -82,6 +82,7 @@ const allMenuItems: MenuItem[] = [
       { label: 'บัญชีธนาคาร', href: '/bank-accounts' },
       { label: 'TrueMoney', href: '/bank-accounts/truemoney' },
       { label: 'LogoBank', href: '/bank-accounts/logobank' },
+      { label: 'ระบบชำระเงิน', href: '/payment', permissionCheck: { category: 'settings', action: 'payment' } },
     ]
   },
   {
@@ -230,7 +231,11 @@ export default function Sidebar() {
   // Helper to check if user has any permission in a category
   const hasAnyPermissionIn = (key: string) => {
     if (!permissions || !permissions[key]) return false;
-    return Object.values(permissions[key]).some(v => v === true);
+    return Object.values(permissions[key]).some(v => {
+      if (typeof v === 'boolean') return v === true;
+      if (typeof v === 'object' && v !== null) return v.view || v.manage;
+      return false;
+    });
   };
 
   // Filter menu items based on permissions
@@ -321,7 +326,6 @@ export default function Sidebar() {
                       {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </button>
 
-                    {/* Submenu Items */}
                     {isExpanded && (
                       <div className="mt-1 ml-4 space-y-1 border-l border-slate-800 pl-2">
                         {item.submenu
@@ -332,7 +336,10 @@ export default function Sidebar() {
                             if (isSuperAdmin) return true;
                             // Check specific permission
                             const { category, action } = sub.permissionCheck;
-                            return permissions?.[category]?.[action] === true;
+                            const perm = permissions?.[category]?.[action];
+                            if (typeof perm === 'boolean') return perm === true;
+                            if (typeof perm === 'object' && perm !== null) return perm.view || perm.manage;
+                            return false;
                           })
                           .map((sub) => {
                             const isSubActive = pathname === sub.href;

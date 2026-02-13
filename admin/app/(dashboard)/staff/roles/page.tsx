@@ -56,6 +56,7 @@ const PERMISSION_MATRIX = [
             { key: 'notify', label: 'แจ้งเตือน (Line/TG)' },
             { key: 'banks', label: 'บัญชีธนาคาร' },
             { key: 'truemoney', label: 'TrueMoney' },
+            { key: 'payment', label: 'ระบบชำระเงิน' },
         ]
     },
     {

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search, Menu, User, Gamepad2, Dices, Trophy, Gift, Wallet, Home,
   ChevronRight, Play, CreditCard, Smartphone, Flame, Star, Users, X,
-  MonitorPlay, Sparkles, LogOut, Loader2
+  MonitorPlay, Sparkles, LogOut, Loader2, RotateCw
 } from 'lucide-react';
 import axios from "axios";
 import ContactDrawer from "@/components/ContactDrawer";
@@ -17,7 +17,7 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "
 
 // --- 1. VISUAL COMPONENTS (Premium UI) ---
 
-const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
+const Header = ({ onLogin, onRegister, user, onLogout, settings, onRefresh, isRefreshing }: any) => {
   const siteName = settings?.siteName;
   const logoUrl = settings?.logoUrl;
 
@@ -90,10 +90,20 @@ const Header = ({ onLogin, onRegister, user, onLogout, settings }: any) => {
                   <span className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors">{user.username}</span>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right mr-2">
                 <span className="text-xs text-green-400 block">Balance</span>
                 <span className="font-mono font-bold text-gradient-gold text-lg">฿{Number(user.balance).toLocaleString()}</span>
               </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefresh && onRefresh();
+                }}
+                className={`p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-yellow-400 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+                title="อัพเดทตยอดเงิน"
+              >
+                <RotateCw size={18} />
+              </button>
               {/* Logout Button */}
               <button onClick={(e) => { e.stopPropagation(); onLogout(); }} className="ml-2 p-2 rounded-full bg-red-500/10 hover:bg-red-500/30 border border-red-500/30 text-red-400 hover:text-red-300 transition-all" title="ออกจากระบบ">
                 <LogOut size={18} />
@@ -1373,14 +1383,43 @@ function HomePageLogic() {
     fetchData();
   }, []);
 
-  // Check Auth
-  useEffect(() => {
+  const [refreshingBalance, setRefreshingBalance] = useState(false);
+
+  // Check Auth & Poll User Data
+  const fetchUser = async () => {
     const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setRefreshingBalance(true);
+    try {
+      const res = await axios.get(`${API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setUser(res.data.data);
+        localStorage.setItem("user", JSON.stringify(res.data.data));
+      }
+    } catch (err) {
+      console.error("Failed to fetch user:", err);
+    } finally {
+      setRefreshingBalance(false);
+    }
+  };
+
+  useEffect(() => {
+    // Initial fetch from local storage
     const userData = localStorage.getItem("user");
-    if (token && userData && userData !== "undefined") {
+    if (userData && userData !== "undefined") {
       try { setUser(JSON.parse(userData)); }
       catch (e) { localStorage.removeItem("user"); }
     }
+
+    // Then fetch fresh data
+    fetchUser();
+
+    // Poll every 10 seconds
+    const interval = setInterval(fetchUser, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Handle URL Actions
@@ -1498,7 +1537,15 @@ function HomePageLogic() {
 
   return (
     <div className="min-h-screen bg-[#0b1120] text-slate-200 font-sans selection:bg-yellow-500 selection:text-black pb-20">
-      <Header onLogin={() => setShowLogin(true)} onRegister={() => setShowRegister(true)} user={user} onLogout={handleLogout} settings={settings} />
+      <Header
+        onLogin={() => setShowLogin(true)}
+        onRegister={() => setShowRegister(true)}
+        user={user}
+        onLogout={handleLogout}
+        settings={settings}
+        onRefresh={fetchUser}
+        isRefreshing={refreshingBalance}
+      />
 
       <NavBar activeTab={activeTab} setActiveTab={setActiveTab} categories={categories} />
 

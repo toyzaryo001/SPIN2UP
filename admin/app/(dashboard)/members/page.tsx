@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { formatBaht, formatDate } from "@/lib/utils";
-import { Search, UserPlus, Edit, Ban, X, Save, AlertTriangle, CheckCircle, Trash2 } from "lucide-react";
+import { Search, UserPlus, Edit, Ban, X, Save, AlertTriangle, CheckCircle, Trash2, RotateCw } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface User {
@@ -161,7 +161,24 @@ export default function MembersPage() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-slate-800">จัดการสมาชิก</h2>
+                <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-slate-800">จัดการสมาชิก</h2>
+                    <button
+                        onClick={fetchUsers}
+                        disabled={loading}
+                        className={`p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-all ${loading ? 'animate-spin' : ''}`}
+                        title="รีเฟรชข้อมูล"
+                    >
+                        <RotateCw size={20} />
+                    </button>
+                </div>
+                <button
+                    onClick={openCreateModal}
+                    className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-yellow-500/20 transition-all"
+                >
+                    <UserPlus size={20} />
+                    <span>เพิ่มสมาชิก</span>
+                </button>
             </div>
 
             {/* Filters */}

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import prisma from '../lib/db.js';
 import { signToken } from '../utils/jwt.js';
 import { BetflixService } from '../services/betflix.service.js';
+import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
@@ -201,6 +202,49 @@ router.post('/login', async (req, res) => {
         });
     } catch (error) {
         console.error('Login error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/auth/me - Get current user data (Real-time balance)
+router.get('/me', authMiddleware, async (req: any, res) => {
+    try {
+        // req.user is populated by authMiddleware
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'ไม่พบข้อมูลผู้ใช้' });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                phone: true,
+                balance: true,
+                bonusBalance: true,
+                bankName: true,
+                bankAccount: true,
+                lineId: true,
+                status: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้งาน' });
+        }
+
+        if (user.status === 'SUSPENDED') {
+            return res.status(403).json({ success: false, message: 'บัญชีถูกระงับ' });
+        }
+
+        res.json({
+            success: true,
+            data: user
+        });
+    } catch (error) {
+        console.error('Get me error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });

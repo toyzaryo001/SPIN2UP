@@ -17,6 +17,7 @@ import bannerRoutes from './banners.routes.js';
 import activitiesRoutes from './activities.routes.js';
 import uploadRoutes from './upload.routes.js';
 import agentRoutes from './agent.routes.js';
+import paymentGatewayRoutes from './payment-gateway.routes.js';
 
 const router = Router();
 // Import sub-routes require auth + admin role
@@ -92,5 +93,6 @@ router.use('/banners', bannerRoutes);
 router.use('/activities', activitiesRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/agents', agentRoutes);
+router.use('/payment-gateways', paymentGatewayRoutes);
 
 export default router;

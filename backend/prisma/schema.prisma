@@ -106,6 +106,15 @@ model Transaction {
   slipImage     String?
   note          String?
   adminId       Int?
+  
+  // Payment Gateway fields
+  paymentGatewayId Int?
+  paymentGateway   PaymentGateway? @relation(fields: [paymentGatewayId], references: [id])
+  referenceId      String?         @unique // Unique reference for payment system
+  externalId       String?         // External transaction ID from provider
+  qrCode           String?         // QR Code payload or image URL
+  rawResponse      String?         // Debug data from provider
+  
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -113,6 +122,22 @@ model Transaction {
   @@index([type])
   @@index([status])
   @@index([createdAt])
+  @@index([referenceId])
+}
+
+// ช่องทางชำระเงิน (Generic Payment Gateway)
+model PaymentGateway {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique // bibpay, gbprime, scb, truemoney
+  name        String
+  config      String   // JSON string: apiKey, secret, merchantId, etc.
+  logo        String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  transactions Transaction[]
 }
 
 // Log การแก้ไข

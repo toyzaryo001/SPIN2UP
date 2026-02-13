@@ -14,73 +14,13 @@ import publicRoutes from './routes/public.routes.js';
 import superAdminRoutes from './routes/super-admin/index.js';
 import adminRewardRoutes from './routes/admin/reward.routes.js';
 import smsWebhookRoutes from './routes/sms-webhook.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
 import { initJwtSecret } from './utils/jwt.js';
 
 dotenv.config();
 
-// Fix FK constraint on startup
-async function fixDatabase() {
-    try {
-        console.log('🔧 Checking Database Schema & Constraints...');
-
-        // 1. Drop problematic EditLog FK
-        await prisma.$executeRawUnsafe(`
-            ALTER TABLE "EditLog" DROP CONSTRAINT IF EXISTS "EditLog_targetId_fkey"
-        `);
-
-        // 2. Add missing columns to User table (Migration drift fix)
-        await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "betflixUsername" TEXT;`);
-        await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "betflixPassword" TEXT;`);
-
-        // 3. Add Unique Index for betflixUsername
-        await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_betflixUsername_key" ON "User"("betflixUsername");`);
-
-        // Note: AgentConfig URL is managed via Admin Panel - no auto-migration
-
-        console.log('✅ Database fixed: EditLog FK removed, User columns checked.');
-    } catch (error) {
-        console.log('⚠️ DB Fix warning:', error);
-    }
-}
-
-// Run fix and init JWT on startup
-fixDatabase()
-    .then(() => initJwtSecret())
-    .catch(console.error);
-
-const app = express();
-const PORT = parseInt(process.env.PORT || '3001', 10);
-
-// Middleware - CORS with explicit origins (including LAN IP for mobile testing)
-app.use(cors({
-    origin: [
-        // Development
-        'http://localhost:3000',
-        'http://localhost:3002',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:3002',
-        'http://192.168.100.118:3000',
-        'http://192.168.100.118:3002',
-        // Production - Railway domains
-        /\.railway\.app$/,
-        /\.vercel\.app$/,
-        // Custom Domains - playnex89
-        'https://admin.playnex89.com',
-        'https://www.playnex89.com',
-        'https://playnex89.com',
-        // Custom Domains - check24m
-        'https://admin.check24m.com',
-        'https://www.check24m.com',
-        'https://check24m.com',
-        'https://play.check24m.com',
-        // Allow any HTTPS origin (customize for production)
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// ... existing code ...
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -91,8 +31,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/super-admin', superAdminRoutes);
-app.use('/api/admin/rewards', adminRewardRoutes); // Register
-app.use('/api/notify', smsWebhookRoutes); // SMS Webhook for auto deposit
+app.use('/api/admin/rewards', adminRewardRoutes);
+app.use('/api/notify', smsWebhookRoutes);
+app.use('/api/payment', paymentRoutes); // New Payment API
+app.use('/api/webhooks', webhookRoutes); // New Webhook API
 
 // Health check
 app.get('/api/health', (req, res) => {

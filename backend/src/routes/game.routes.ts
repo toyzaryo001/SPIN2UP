@@ -101,10 +101,10 @@ router.post('/:slug/spin', authMiddleware, async (req: AuthRequest, res) => {
         }
 
         // Check bet limits
-        if (betAmount < Number(game.minBet) || betAmount > Number(game.maxBet)) {
+        if (betAmount < Number(game!.minBet) || betAmount > Number(game!.maxBet)) {
             return res.status(400).json({
                 success: false,
-                message: `เดิมพันต้องอยู่ระหว่าง ${game.minBet} - ${game.maxBet}`,
+                message: `เดิมพันต้องอยู่ระหว่าง ${game!.minBet} - ${game!.maxBet}`,
             });
         }
 
@@ -115,35 +115,35 @@ router.post('/:slug/spin', authMiddleware, async (req: AuthRequest, res) => {
         }
 
         // Check balance
-        const totalBalance = Number(user.balance) + Number(user.bonusBalance);
+        const totalBalance = Number(user!.balance) + Number(user!.bonusBalance);
         if (totalBalance < betAmount) {
             return res.status(400).json({ success: false, message: 'ยอดเงินไม่เพียงพอ' });
         }
 
         // Spin!
-        const result = spinSlot(betAmount, game.rtp);
+        const result = spinSlot(betAmount, game!.rtp);
 
         // Calculate new balance
-        const newBalance = Number(user.balance) - betAmount + result.totalWin;
+        const newBalance = Number(user!.balance) - betAmount + result.totalWin;
 
         // Update user balance & create transactions
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Deduct bet
             await tx.user.update({
-                where: { id: user.id },
+                where: { id: user!.id },
                 data: { balance: new Decimal(newBalance) },
             });
 
             // Create bet transaction
             await tx.transaction.create({
                 data: {
-                    userId: user.id,
+                    userId: user!.id,
                     type: 'BET',
                     amount: new Decimal(betAmount),
-                    balanceBefore: user.balance,
-                    balanceAfter: new Decimal(Number(user.balance) - betAmount),
+                    balanceBefore: user!.balance,
+                    balanceAfter: new Decimal(Number(user!.balance) - betAmount),
                     status: 'COMPLETED',
-                    note: `เดิมพัน ${game.name}`,
+                    note: `เดิมพัน ${game!.name}`,
                 },
             });
 
@@ -151,13 +151,13 @@ router.post('/:slug/spin', authMiddleware, async (req: AuthRequest, res) => {
             if (result.totalWin > 0) {
                 await tx.transaction.create({
                     data: {
-                        userId: user.id,
+                        userId: user!.id,
                         type: 'WIN',
                         amount: new Decimal(result.totalWin),
-                        balanceBefore: new Decimal(Number(user.balance) - betAmount),
+                        balanceBefore: new Decimal(Number(user!.balance) - betAmount),
                         balanceAfter: new Decimal(newBalance),
                         status: 'COMPLETED',
-                        note: `ชนะ ${game.name}`,
+                        note: `ชนะ ${game!.name}`,
                     },
                 });
             }
@@ -165,8 +165,8 @@ router.post('/:slug/spin', authMiddleware, async (req: AuthRequest, res) => {
             // Create game session
             await tx.gameSession.create({
                 data: {
-                    userId: user.id,
-                    gameId: game.id,
+                    userId: user!.id,
+                    gameId: game!.id,
                     betAmount: new Decimal(betAmount),
                     winAmount: new Decimal(result.totalWin),
                     result: JSON.stringify(result),

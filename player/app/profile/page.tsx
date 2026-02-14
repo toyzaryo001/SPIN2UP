@@ -6,8 +6,7 @@ import { LogOut, ChevronRight, Eye, EyeOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BankLogo from "@/components/BankLogo";
-
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
+import { API_URL } from "@/lib/api";
 
 const BANK_NAMES: Record<string, string> = {
     KBANK: "กสิกรไทย (KBANK)",

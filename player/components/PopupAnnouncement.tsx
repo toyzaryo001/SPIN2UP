@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 interface Announcement {
     id: number;
@@ -16,10 +17,10 @@ export default function PopupAnnouncement() {
     const [popup, setPopup] = useState<Announcement | null>(null);
     const [isOpen, setIsOpen] = useState(false);
 
+
     useEffect(() => {
         const fetchPopups = async () => {
             try {
-                const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
                 const res = await fetch(`${API_URL}/public/announcements`);
                 const data = await res.json();
 

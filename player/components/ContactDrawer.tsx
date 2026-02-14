@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, ExternalLink } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
 const CHANNEL_ICONS: Record<string, { icon: string; color: string; label: string }> = {
     LINE: { icon: "💬", color: "#06C755", label: "LINE" },
@@ -39,7 +40,6 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
 
     const fetchContacts = async () => {
         try {
-            const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
             const res = await fetch(`${API_URL}/public/contacts`);
             const data = await res.json();
             if (Array.isArray(data)) {

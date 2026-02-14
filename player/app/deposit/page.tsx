@@ -141,7 +141,7 @@ export default function DepositPage() {
                 setQrData(data.data);
             } else {
                 // Localize Error Messages
-                let msg = data.message || "สร้าง QR Code ไม่สำเร็จ";
+                let msg = String(data.message || "สร้าง QR Code ไม่สำเร็จ");
                 if (msg.includes("Payment gateway not available")) {
                     msg = "ระบบฝากเงินยังไม่เปิดให้บริการในขณะนี้";
                 } else if (msg.includes("Invalid amount")) {
@@ -192,7 +192,7 @@ export default function DepositPage() {
             const data = await res.json();
 
             if (data.success) {
-                showAlert(data.message || "ทำรายการถอนเงินสำเร็จ", "success");
+                showAlert(String(data.message || "ทำรายการถอนเงินสำเร็จ"), "success");
                 setWithdrawAmount("");
                 // Refresh User Balance
                 const userRes = await fetch(`${API_URL}/auth/me`, {
@@ -201,7 +201,7 @@ export default function DepositPage() {
                 const userData = await userRes.json();
                 if (userData.success) setUser(userData.user);
             } else {
-                showAlert(data.message || "ทำรายการไม่สำเร็จ", "error");
+                showAlert(String(data.message || "ทำรายการไม่สำเร็จ"), "error");
             }
         } catch (error) {
             console.error("Withdraw error:", error);

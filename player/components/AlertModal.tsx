@@ -81,7 +81,7 @@ export default function AlertModal({ isOpen, onClose, title, message, type = "er
                 </h3>
 
                 <p className="text-base text-gray-400 mb-6 leading-relaxed">
-                    {message}
+                    {typeof message === 'object' ? JSON.stringify(message) : String(message || "")}
                 </p>
 
                 <button

@@ -47,7 +47,7 @@ interface BankLogoProps {
 
 const BankLogo: React.FC<BankLogoProps> = ({ bankCode, className, style, width = 48, height = 48 }) => {
     // Normalize code
-    const normalizedName = (bankCode || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normalizedName = (String(bankCode) || "").toLowerCase().replace(/[^a-z0-9]/g, '');
 
     // Find mapped code or use direct normalized name
     const code = BANK_CODE_MAP[normalizedName] || normalizedName;

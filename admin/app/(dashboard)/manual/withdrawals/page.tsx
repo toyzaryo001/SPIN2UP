@@ -40,9 +40,9 @@ export default function PendingWithdrawalsPage() {
     const fetchWithdrawals = async () => {
         try {
             setLoading(true);
-            const res = await api.get("/admin/transactions?type=WITHDRAW&status=PENDING");
+            const res = await api.get("/admin/transactions/pending-withdrawals");
             if (res.data.success) {
-                setWithdrawals(res.data.data.transactions);
+                setWithdrawals(res.data.data);
             }
         } catch (error) {
             console.error("Fetch withdrawals error:", error);
@@ -234,7 +234,7 @@ export default function PendingWithdrawalsPage() {
                             <div className="bg-slate-50 p-4 rounded-xl space-y-2 text-sm border border-slate-100">
                                 <div className="flex justify-between">
                                     <span className="text-slate-500">สมาชิก:</span>
-                                    <span className="font-medium">{selectedTx.user.username}</span>
+                                    <span className="font-medium text-right">{selectedTx.user.username}<br /><span className="text-xs text-slate-400">{selectedTx.user.fullName}</span></span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-500">ธนาคาร:</span>
@@ -253,7 +253,6 @@ export default function PendingWithdrawalsPage() {
                                     <input type="radio" name="approveMode" value="manual" checked={approveMode === 'manual'} onChange={() => setApproveMode('manual')} className="mt-1" />
                                     <div>
                                         <div className="font-medium text-slate-900">โอนเอง (Manual)</div>
-                                        <div className="text-xs text-slate-500">แอดมินโอนเงินผ่านแอพธนาคารเอง แล้วมากดยืนยันเพื่อเปลี่ยนสถานะ</div>
                                     </div>
                                 </label>
 
@@ -261,7 +260,6 @@ export default function PendingWithdrawalsPage() {
                                     <input type="radio" name="approveMode" value="auto" checked={approveMode === 'auto'} onChange={() => setApproveMode('auto')} className="mt-1" />
                                     <div>
                                         <div className="font-medium text-slate-900">โอนอัตโนมัติ (Gateway)</div>
-                                        <div className="text-xs text-slate-500">ระบบจะส่งคำสั่งไปยัง BIBPAY เพื่อโอนเงินให้ลูกค้าทันที (มีค่าธรรมเนียม)</div>
                                     </div>
                                 </label>
                             </div>

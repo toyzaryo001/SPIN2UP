@@ -1,5 +1,6 @@
 import prisma from '../lib/db';
 import { PaymentFactory } from './payment/PaymentFactory';
+import { BetflixService } from './betflix.service';
 
 export class PaymentService {
 
@@ -53,13 +54,13 @@ export class PaymentService {
         const transaction = await prisma.transaction.create({
             data: {
                 userId,
-                type: 'deposit',
+                type: 'DEPOSIT',
                 amount,
                 balanceBefore: user.balance,
                 balanceAfter: user.balance, // No change yet
-                status: 'pending',
+                status: 'PENDING',
                 // channel: 'auto', // Removed as it's not in schema
-                subType: 'qrcode', // or 'promptpay'
+                subType: 'QRCODE', // or 'promptpay'
                 paymentGatewayId: gateway?.id,
                 referenceId: referenceId,
                 note: `Auto Deposit via ${provider.code.toUpperCase()}`
@@ -129,11 +130,11 @@ export class PaymentService {
         const transaction = await prisma.transaction.create({
             data: {
                 userId,
-                type: 'withdraw',
+                type: 'WITHDRAW',
                 amount,
                 balanceBefore: user.balance,
                 balanceAfter: Number(user.balance) - amount,
-                status: 'pending', // Always start as pending
+                status: 'PENDING', // Always start as pending
                 note: isAutoWithdraw ? 'Auto Withdraw Request' : 'Manual Withdraw Request',
                 paymentGatewayId: null // Pending until assigned
             }
@@ -277,46 +278,86 @@ export class PaymentService {
 
         // 5. Handle Status Change
         if (result.txStatus === 'SUCCESS') {
-            // ... existing logic ...
-            await prisma.transaction.update({
-                where: { id: transaction.id },
-                data: {
-                    status: 'success',
-                    externalId: result.externalId || transaction.externalId,
-                    rawResponse: JSON.stringify(result.rawResponse)
-                }
-            });
+            const typeUpper = transaction.type.toUpperCase();
 
-            // If DEPOSIT -> Increment Balance
-            if (transaction.type === 'deposit') {
+            // If DEPOSIT -> Betflix Transfer & Increment Balance
+            if (typeUpper === 'DEPOSIT') {
                 const amount = result.amount || Number(transaction.amount);
-                await prisma.user.update({
-                    where: { id: transaction.userId },
-                    data: { balance: { increment: amount } }
-                });
-                // Update transaction snapshot
-                const updatedUser = await prisma.user.findUnique({ where: { id: transaction.userId } });
+
+                // 2. Transfer to Betflix (Game Wallet) FIRST (Like AUTO_SMS)
+                let betflixSuccess = false;
+                let betflixError = '';
+
+                if (transaction.user?.betflixUsername) {
+                    try {
+                        console.log(`[Payment] Auto-transferring ${amount} to Betflix for ${transaction.user.username}`);
+                        betflixSuccess = await BetflixService.transfer(
+                            transaction.user.betflixUsername,
+                            amount,
+                            `PAYMENT_${transaction.id}`
+                        );
+                    } catch (err: any) {
+                        console.error('[Payment] Betflix transfer error:', err);
+                        betflixError = err.message;
+                    }
+                } else {
+                    betflixSuccess = true; // No game ID, treat as system only success
+                }
+
+                if (betflixSuccess) {
+                    // Success: Update User Balance & Transaction Status
+                    await prisma.user.update({
+                        where: { id: transaction.userId },
+                        data: { balance: { increment: amount } }
+                    });
+
+                    const updatedUser = await prisma.user.findUnique({ where: { id: transaction.userId } });
+
+                    await prisma.transaction.update({
+                        where: { id: transaction.id },
+                        data: {
+                            status: 'COMPLETED',
+                            balanceAfter: updatedUser?.balance,
+                            externalId: result.externalId || transaction.externalId,
+                            rawResponse: JSON.stringify(result.rawResponse)
+                        }
+                    });
+                } else {
+                    // Betflix Failed: Mark Transaction as FAILED (UserBalance NOT incremented)
+                    await prisma.transaction.update({
+                        where: { id: transaction.id },
+                        data: {
+                            status: 'FAILED',
+                            note: (transaction.note || '') + ` | Betflix Error: ${betflixError}`,
+                            rawResponse: JSON.stringify(result.rawResponse)
+                        }
+                    });
+                }
+            }
+            // If WITHDRAW -> Balance was already deducted. Just update status.
+            else if (typeUpper === 'WITHDRAW') {
                 await prisma.transaction.update({
                     where: { id: transaction.id },
                     data: {
-                        balanceAfter: updatedUser?.balance
+                        status: 'COMPLETED',
+                        externalId: result.externalId || transaction.externalId,
+                        rawResponse: JSON.stringify(result.rawResponse)
                     }
                 });
             }
-            // If WITHDRAW -> Balance was already deducted. Just update status.
 
         } else if (result.txStatus === 'FAILED') {
             await prisma.transaction.update({
                 where: { id: transaction.id },
                 data: {
-                    status: 'failed',
+                    status: 'FAILED',
                     note: result.message,
                     rawResponse: JSON.stringify(result.rawResponse)
                 }
             });
 
             // If WITHDRAW -> Refund Balance
-            if (transaction.type === 'withdraw') {
+            if (transaction.type.toUpperCase() === 'WITHDRAW') {
                 const amount = Number(transaction.amount);
                 await prisma.user.update({
                     where: { id: transaction.userId },

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { CreditCard, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, Plus, Trash2, ArrowRight } from 'lucide-react';
 import api from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { cn, formatBaht } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface PaymentGateway {
@@ -13,6 +13,9 @@ interface PaymentGateway {
     config: string;
     isActive: boolean;
     logo?: string;
+    // Parsed from config
+    canDeposit?: boolean;
+    canWithdraw?: boolean;
 }
 
 const SUPPORTED_PROVIDERS = [
@@ -45,7 +48,6 @@ export default function PaymentPage() {
             }
         } catch (error) {
             console.error(`Failed to fetch balance for gateway ${id}`, error);
-            // toast.error('ไม่สามารถดึงยอดเงินได้'); // Optional: don't spam toasts
         } finally {
             setLoadingBalances(prev => ({ ...prev, [id]: false }));
         }
@@ -56,7 +58,15 @@ export default function PaymentPage() {
         try {
             const res = await api.payment.getGateways();
             if (res.data.success) {
-                const data = res.data.data;
+                const data = res.data.data.map((g: any) => {
+                    let parsedConfig = {};
+                    try { parsedConfig = JSON.parse(g.config); } catch { }
+                    return {
+                        ...g,
+                        canDeposit: (parsedConfig as any).canDeposit !== false, // Default true if undefined
+                        canWithdraw: (parsedConfig as any).canWithdraw !== false // Default true if undefined
+                    };
+                });
                 setGateways(data);
                 // Fetch balances for active gateways
                 data.forEach((g: PaymentGateway) => {
@@ -77,7 +87,52 @@ export default function PaymentPage() {
         fetchGateways();
     }, []);
 
-    const handleToggle = async (id: number) => {
+    const updateGatewayConfig = async (id: number, newConfig: any) => {
+        const gateway = gateways.find(g => g.id === id);
+        if (!gateway) return;
+
+        try {
+            // Merge new config with existing parsed config
+            let currentConfig = {};
+            try { currentConfig = JSON.parse(gateway.config); } catch { }
+
+            const updatedConfig = { ...currentConfig, ...newConfig };
+
+            const res = await api.payment.updateGateway(id, {
+                name: gateway.name,
+                config: JSON.stringify(updatedConfig),
+                isActive: gateway.isActive
+            });
+
+            if (res.data.success) {
+                toast.success('บันทึกการตั้งค่าเรียบร้อย');
+                // Update local state
+                setGateways(prev => prev.map(g => {
+                    if (g.id === id) {
+                        return {
+                            ...g,
+                            config: JSON.stringify(updatedConfig),
+                            canDeposit: updatedConfig.canDeposit !== false,
+                            canWithdraw: updatedConfig.canWithdraw !== false
+                        };
+                    }
+                    return g;
+                }));
+            }
+        } catch (error) {
+            toast.error('บันทึกการตั้งค่าไม่สำเร็จ');
+        }
+    };
+
+    const handleToggleDeposit = (id: number, currentValue: boolean) => {
+        updateGatewayConfig(id, { canDeposit: !currentValue });
+    };
+
+    const handleToggleWithdraw = (id: number, currentValue: boolean) => {
+        updateGatewayConfig(id, { canWithdraw: !currentValue });
+    };
+
+    const handleToggleStatus = async (id: number) => {
         try {
             const res = await api.payment.toggleGateway(id);
             if (res.data.success) {
@@ -143,7 +198,9 @@ export default function PaymentPage() {
             const config = {
                 apiKey: addForm.apiKey,
                 secretKey: addForm.secretKey,
-                apiEndpoint: addForm.apiEndpoint
+                apiEndpoint: addForm.apiEndpoint,
+                canDeposit: true,
+                canWithdraw: true
             };
 
             const res = await api.payment.createGateway({
@@ -190,115 +247,147 @@ export default function PaymentPage() {
                 </div>
             </div>
 
-            {/* Gateways List */}
-            {isLoading ? (
-                <div className="flex justify-center py-12">
-                    <RefreshCw className="animate-spin text-slate-400" size={32} />
+            {/* Gateways Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                                <th className="px-6 py-4">ผู้ให้บริการ</th>
+                                <th className="px-6 py-4 text-center">API Config</th>
+                                <th className="px-6 py-4 text-right">ยอดเงินคงเหลือ</th>
+                                <th className="px-6 py-4 text-center">ฝากเงิน</th>
+                                <th className="px-6 py-4 text-center">ถอนเงิน</th>
+                                <th className="px-6 py-4 text-center">สถานะ</th>
+                                <th className="px-6 py-4 text-right">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center">
+                                        <div className="flex justify-center">
+                                            <RefreshCw className="animate-spin text-slate-400" size={24} />
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : gateways.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                                        ยังไม่มี Payment Gateway
+                                    </td>
+                                </tr>
+                            ) : (
+                                gateways.map(gateway => (
+                                    <tr key={gateway.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", gateway.isActive ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-400")}>
+                                                    <CreditCard size={20} />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-slate-800">{gateway.name}</h3>
+                                                    <p className="text-xs text-slate-500 font-mono uppercase">{gateway.code}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            {gateway.config && gateway.config !== '{}' ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                                                    <CheckCircle size={12} /> Connected
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+                                                    <AlertCircle size={12} /> Not Configured
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <span className="font-mono font-bold text-slate-800">
+                                                    {balances[gateway.id] !== undefined
+                                                        ? formatBaht(balances[gateway.id])
+                                                        : '-.--'}
+                                                </span>
+                                                <button
+                                                    onClick={() => fetchBalance(gateway.id)}
+                                                    disabled={loadingBalances[gateway.id]}
+                                                    className="p-1 text-slate-400 hover:text-blue-600 rounded-full transition-all"
+                                                >
+                                                    <RefreshCw size={14} className={loadingBalances[gateway.id] ? "animate-spin text-blue-600" : ""} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button
+                                                onClick={() => handleToggleDeposit(gateway.id, gateway.canDeposit || false)}
+                                                className={cn(
+                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2",
+                                                    gateway.canDeposit ? 'bg-emerald-500' : 'bg-slate-200'
+                                                )}
+                                                title="เปิด/ปิด การฝาก"
+                                            >
+                                                <span className={cn(
+                                                    "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                                                    gateway.canDeposit ? 'translate-x-6' : 'translate-x-1'
+                                                )} />
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button
+                                                onClick={() => handleToggleWithdraw(gateway.id, gateway.canWithdraw || false)}
+                                                className={cn(
+                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2",
+                                                    gateway.canWithdraw ? 'bg-amber-500' : 'bg-slate-200'
+                                                )}
+                                                title="เปิด/ปิด การถอน"
+                                            >
+                                                <span className={cn(
+                                                    "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                                                    gateway.canWithdraw ? 'translate-x-6' : 'translate-x-1'
+                                                )} />
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button
+                                                onClick={() => handleToggleStatus(gateway.id)}
+                                                className={cn(
+                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2",
+                                                    gateway.isActive ? 'bg-blue-600' : 'bg-slate-200'
+                                                )}
+                                                title="เปิด/ปิด ระบบหลัก"
+                                            >
+                                                <span className={cn(
+                                                    "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                                                    gateway.isActive ? 'translate-x-6' : 'translate-x-1'
+                                                )} />
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(gateway)}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="ตั้งค่า"
+                                                >
+                                                    <Settings size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(gateway.id)}
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="ลบ"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-            ) : gateways.length === 0 ? (
-                <div className="bg-white p-12 rounded-xl border border-dashed border-slate-300 text-center space-y-4">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
-                        <CreditCard size={32} />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-slate-800">ยังไม่มี Payment Gateway</h3>
-                        <p className="text-slate-500">กดปุ่ม "เพิ่ม Payment" เพื่อเริ่มต้นเชื่อมต่อระบบชำระเงิน</p>
-                    </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="text-blue-600 font-medium hover:underline"
-                    >
-                        เพิ่ม Payment Gateway
-                    </button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {gateways.map(gateway => (
-                        <div key={gateway.id} className={cn(
-                            "bg-white rounded-xl border shadow-sm transition-all overflow-hidden",
-                            gateway.isActive ? "border-blue-200 shadow-blue-50" : "border-slate-200 opacity-80"
-                        )}>
-                            <div className="p-5 border-b border-slate-100 flex justify-between items-start">
-                                <div className="flex items-center gap-3">
-                                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", gateway.isActive ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-400")}>
-                                        <CreditCard size={20} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-800">{gateway.name}</h3>
-                                        <p className="text-xs text-slate-500 font-mono uppercase">{gateway.code}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className={cn(
-                                        "px-2 py-0.5 rounded-full text-xs font-bold",
-                                        gateway.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
-                                    )}>
-                                        {gateway.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="p-5 bg-slate-50/50 space-y-4">
-                                {/* Balance Section */}
-                                <div className="bg-white border border-slate-200 rounded-lg p-3 flex justify-between items-center">
-                                    <div>
-                                        <p className="text-xs text-slate-500 mb-1">ยอดเงินคงเหลือ</p>
-                                        <p className="text-lg font-bold text-slate-800 font-mono">
-                                            {balances[gateway.id] !== undefined
-                                                ? balances[gateway.id].toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                                : '-.--'}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => fetchBalance(gateway.id)}
-                                        disabled={loadingBalances[gateway.id]}
-                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-                                        title="อัพเดทยอดเงิน"
-                                    >
-                                        <RefreshCw size={16} className={loadingBalances[gateway.id] ? "animate-spin text-blue-600" : ""} />
-                                    </button>
-                                </div>
-
-                                <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-100">
-                                    <span className="text-slate-500">API Configured</span>
-                                    {gateway.config && gateway.config !== '{}' ? (
-                                        <span className="text-green-600 flex items-center gap-1"><CheckCircle size={14} /> Yes</span>
-                                    ) : (
-                                        <span className="text-red-500 flex items-center gap-1"><AlertCircle size={14} /> No</span>
-                                    )}
-                                </div>
-
-                                <div className="flex gap-2 pt-2">
-                                    <button
-                                        onClick={() => handleToggle(gateway.id)}
-                                        className={cn(
-                                            "flex-1 py-2 rounded-lg text-sm font-medium border transition-colors",
-                                            gateway.isActive
-                                                ? "border-amber-200 text-amber-600 hover:bg-amber-50"
-                                                : "border-green-200 text-green-600 hover:bg-green-50"
-                                        )}
-                                    >
-                                        {gateway.isActive ? 'ปิดการใช้งาน' : 'เปิดใช้งาน'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleEdit(gateway)}
-                                        className="flex-1 bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <Settings size={16} /> ตั้งค่า
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(gateway.id)}
-                                        className="p-2 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-                                        title="ลบ Gateway"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+            </div>
 
             {/* Add Gateway Modal */}
             {showAddModal && (
@@ -464,6 +553,26 @@ export default function PaymentPage() {
                                                 placeholder="https://..."
                                             />
                                             <p className="text-xs text-slate-400">ปล่อยว่างเพื่อใช้ค่า Default ของระบบ</p>
+                                        </div>
+                                        <div className="flex gap-4 pt-4 border-t border-slate-100">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={configForm.canDeposit !== false}
+                                                    onChange={e => setConfigForm({ ...configForm, canDeposit: e.target.checked })}
+                                                    className="w-4 h-4 text-blue-600 rounded"
+                                                />
+                                                <span className="text-sm text-slate-700">เปิดรับฝากเงิน</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={configForm.canWithdraw !== false}
+                                                    onChange={e => setConfigForm({ ...configForm, canWithdraw: e.target.checked })}
+                                                    className="w-4 h-4 text-blue-600 rounded"
+                                                />
+                                                <span className="text-sm text-slate-700">เปิดโอนออก (ถอน)</span>
+                                            </label>
                                         </div>
                                     </>
                                 ) : (

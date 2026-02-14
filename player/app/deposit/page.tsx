@@ -53,8 +53,42 @@ export default function DepositPage() {
     const [depositAmount, setDepositAmount] = useState<string>("");
     const [qrData, setQrData] = useState<any>(null);
     const [generatingQr, setGeneratingQr] = useState(false);
+    const [features, setFeatures] = useState<any>({});
+    const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
 
-    // ... existing effects ...
+    const handleCopy = (text: string, type: string) => {
+        navigator.clipboard.writeText(text);
+        setCopied(type);
+        setTimeout(() => setCopied(null), 2000);
+    };
+
+    useEffect(() => {
+        // Check if user is logged in
+        if (!user) {
+            const saved = localStorage.getItem("user");
+            if (saved) setUser(JSON.parse(saved));
+            else router.push("/");
+            return;
+        }
+        setLoading(false);
+        fetchConfig();
+    }, [user]); // user dependency to ensure load
+
+    const fetchConfig = async () => {
+        try {
+            const res = await fetch(`${API_URL}/auth/config?domain=${window.location.hostname}`);
+            const data = await res.json();
+            if (data.success && data.data && data.data.features) {
+                setFeatures(data.data.features);
+                // Adjust default channel/tab if disabled
+                if (data.data.features.deposit === false && activeTab === 'deposit') {
+                    setActiveTab('withdraw');
+                }
+            }
+        } catch (error) {
+            console.error("Config fetch error:", error);
+        }
+    };
 
     const handleDeposit = async () => {
         if (!depositAmount || Number(depositAmount) <= 0) {
@@ -65,9 +99,7 @@ export default function DepositPage() {
         setGeneratingQr(true);
         setQrData(null);
         try {
-            // Using 'bibpay' as default gateway for now, or fetch from active gateway
-            // Ideally we should get the gateway code dynamically, but for now hardcoding or using a prop
-            // The PaymentService picks default if not specified.
+            // Using 'bibpay' as default gateway for now
             const res = await fetch(`${API_URL}/payment/deposit`, {
                 method: 'POST',
                 headers: {
@@ -76,7 +108,7 @@ export default function DepositPage() {
                 },
                 body: JSON.stringify({
                     amount: Number(depositAmount),
-                    gateway: 'bibpay' // Optional: let backend pick default
+                    gateway: 'bibpay'
                 })
             });
             const data = await res.json();
@@ -92,10 +124,6 @@ export default function DepositPage() {
             setGeneratingQr(false);
         }
     };
-
-    // ... existing components ...
-
-    // Filter logic for banks (Manual)
     const renderManualDeposit = () => {
         // ... reuse existing logic for bank/truemoney ...
         const filteredBanks = bankAccounts.filter(bank => {
@@ -248,29 +276,32 @@ export default function DepositPage() {
 
                 {/* Tabs ... existing ... */}
                 <div style={{ display: "flex", background: "#21262D", borderRadius: "30px", padding: "4px", boxShadow: "0 4px 15px rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    {/* ... same buttons ... */}
-                    <button
-                        onClick={() => setActiveTab("deposit")}
-                        style={{
-                            flex: 1, padding: "14px", borderRadius: "26px", fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer", transition: "all 0.3s", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                            background: activeTab === "deposit" ? "linear-gradient(135deg, #FFD700, #FFC000)" : "transparent",
-                            color: activeTab === "deposit" ? "#0D1117" : "#8B949E",
-                            boxShadow: activeTab === "deposit" ? "0 4px 15px rgba(255,215,0,0.3)" : "none"
-                        }}
-                    >
-                        <Wallet size={18} /> ฝากเงิน
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("withdraw")}
-                        style={{
-                            flex: 1, padding: "14px", borderRadius: "26px", fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer", transition: "all 0.3s", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                            background: activeTab === "withdraw" ? "linear-gradient(135deg, #FFD700, #FFC000)" : "transparent",
-                            color: activeTab === "withdraw" ? "#0D1117" : "#8B949E",
-                            boxShadow: activeTab === "withdraw" ? "0 4px 15px rgba(255,215,0,0.3)" : "none"
-                        }}
-                    >
-                        <ArrowDownToLine size={18} /> ถอนเงิน
-                    </button>
+                    {(features.deposit !== false) && (
+                        <button
+                            onClick={() => setActiveTab("deposit")}
+                            style={{
+                                flex: 1, padding: "14px", borderRadius: "26px", fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer", transition: "all 0.3s", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                                background: activeTab === "deposit" ? "linear-gradient(135deg, #FFD700, #FFC000)" : "transparent",
+                                color: activeTab === "deposit" ? "#0D1117" : "#8B949E",
+                                boxShadow: activeTab === "deposit" ? "0 4px 15px rgba(255,215,0,0.3)" : "none"
+                            }}
+                        >
+                            <Wallet size={18} /> ฝากเงิน
+                        </button>
+                    )}
+                    {(features.withdraw !== false) && (
+                        <button
+                            onClick={() => setActiveTab("withdraw")}
+                            style={{
+                                flex: 1, padding: "14px", borderRadius: "26px", fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer", transition: "all 0.3s", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                                background: activeTab === "withdraw" ? "linear-gradient(135deg, #FFD700, #FFC000)" : "transparent",
+                                color: activeTab === "withdraw" ? "#0D1117" : "#8B949E",
+                                boxShadow: activeTab === "withdraw" ? "0 4px 15px rgba(255,215,0,0.3)" : "none"
+                            }}
+                        >
+                            <ArrowDownToLine size={18} /> ถอนเงิน
+                        </button>
+                    )}
                 </div>
 
                 {activeTab === "deposit" ? (
@@ -285,7 +316,10 @@ export default function DepositPage() {
                         }}>
                             <p style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>เลือกช่องทางฝาก</p>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-                                {channels.map((ch) => (
+                                {channels.filter(ch => {
+                                    if (ch.id === 'promptpay' && features.auto === false) return false;
+                                    return true;
+                                }).map((ch) => (
                                     <button
                                         key={ch.id}
                                         onClick={() => { setSelectedChannel(ch.id); setQrData(null); }}

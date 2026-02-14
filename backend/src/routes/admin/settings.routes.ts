@@ -229,6 +229,7 @@ router.post('/features/init', requirePermission('settings', 'features', 'manage'
             { key: 'registration', name: 'สมัครสมาชิก', description: 'อนุญาตให้ผู้ใช้สมัครสมาชิกใหม่' },
             { key: 'deposit', name: 'ฝากเงิน', description: 'อนุญาตให้ผู้ใช้ฝากเงิน' },
             { key: 'withdraw', name: 'ถอนเงิน', description: 'อนุญาตให้ผู้ใช้ถอนเงิน' },
+            { key: 'auto', name: 'ระบบออโต้', description: 'เปิด/ปิด ระบบฝาก-ถอนออโต้ (ถ้าปิด ถอนจะเข้า Manual / ฝากจะซ่อน QR)' },
             { key: 'promotions', name: 'โปรโมชั่น', description: 'แสดงโปรโมชั่นในหน้าผู้เล่น' },
             { key: 'referral', name: 'แนะนำเพื่อน', description: 'อนุญาตให้ใช้ระบบแนะนำเพื่อน' },
             { key: 'cashback', name: 'ยอดเสีย', description: 'อนุญาตให้รับยอดเสียคืน' },

@@ -305,6 +305,13 @@ router.get('/config', async (req, res) => {
                     settings.forEach((s: { key: string; value: string }) => {
                         tenantSettings[s.key] = s.value;
                     });
+
+                    // Fetch Features here while connection is open
+                    const feats = await tenantPrisma.siteFeature.findMany();
+                    const featMap: Record<string, boolean> = {};
+                    feats.forEach(f => featMap[f.key] = f.isEnabled);
+                    tenantSettings.features = featMap;
+
                 } finally {
                     await tenantPrisma.$disconnect();
                 }
@@ -322,7 +329,8 @@ router.get('/config', async (req, res) => {
                     // Prefer Tenant Setting > Super Admin Logo
                     logo: tenantSettings.logoUrl || prefixData.logo,
                     primaryColor: prefixData.primaryColor,
-                    lineUrl: tenantSettings.lineUrl || ""
+                    lineUrl: tenantSettings.lineUrl || "",
+                    features: tenantSettings.features || {}
                 }
             });
         } else {

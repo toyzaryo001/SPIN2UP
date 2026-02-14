@@ -39,6 +39,14 @@ export interface IPaymentProvider {
     createPayin(amount: number, user: any, referenceId: string): Promise<PayinResult>;
 
     /**
+     * Create a payout transaction (Withdraw)
+     * @param amount Amount to withdraw
+     * @param user User object (id, name, bank info)
+     * @param referenceId Internal unique reference ID
+     */
+    createPayout(amount: number, user: any, referenceId: string): Promise<PayinResult>;
+
+    /**
      * Verify the webhook signature
      * @param payload Request body
      * @param headers Request headers

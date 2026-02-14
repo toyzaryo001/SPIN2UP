@@ -31,7 +31,7 @@ export class BibPayProvider implements IPaymentProvider {
         try {
             // Determine Bank Code logic (Simplified from PHP version)
             // Ideally should have a mapper util, but using '014' (SCB) as safe fallback or user's bank if mapped
-            const bankCode = this.mapBankCode(user.bank) || '014';
+            const bankCode = this.mapBankCode(user.bankName) || '014';
 
             // Construct callback URL if not provided in config, usually passed from controller or env
             // For now assuming we rely on what's configured or let the controller handle it?
@@ -83,6 +83,67 @@ export class BibPayProvider implements IPaymentProvider {
             return {
                 success: false,
                 message: error.response?.data?.message || error.message,
+                rawResponse: error.response?.data
+            };
+        }
+    }
+
+    async createPayout(amount: number, user: any, referenceId: string): Promise<PayinResult> {
+        try {
+            // 1. Map Bank Code
+            const bankCode = this.mapBankCode(user.bankName);
+            if (!bankCode) throw new Error('Bank not supported for auto-withdraw');
+
+            // 2. Prepare Payload
+            const payload = {
+                bankName: user.bankName,
+                bankNumber: user.bankAccount,
+                bankCode: bankCode,
+                amount: amount.toFixed(2),
+                refferend: referenceId,
+                signatrure: this.config.apiKey,
+                // Some payout APIs require name
+                accountName: user.fullName,
+                callbackUrl: this.config.callbackUrl || `${process.env.API_BASE_URL}/webhooks/payment/bibpay`
+            };
+
+            // 3. Call API
+            // Assuming /payout endpoint exists for BibPay. If not, this will fail 404.
+            // If user only has Payin implementation, we should catch/mock this.
+            // Given user request "auto withdraw", it implies there IS a way.
+            const response = await axios.post(`${this.baseUrl}/payout`, payload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.config.apiKey
+                }
+            });
+
+            const result = response.data;
+
+            if (!result.status) {
+                return {
+                    success: false,
+                    message: result.msg || result.message || 'Failed to create payout',
+                    rawResponse: result
+                };
+            }
+
+            const data = result.data || {};
+            const txId = data.transactionId || data.transaction_id;
+
+            return {
+                success: true,
+                transactionId: txId,
+                amount: amount,
+                referenceId: referenceId,
+                rawResponse: result
+            };
+
+        } catch (error: any) {
+            console.error('BibPay CreatePayout Error:', error.response?.data || error.message);
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || 'Payout Error',
                 rawResponse: error.response?.data
             };
         }

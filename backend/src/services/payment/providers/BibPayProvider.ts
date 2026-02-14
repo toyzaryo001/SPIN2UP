@@ -224,4 +224,66 @@ export class BibPayProvider implements IPaymentProvider {
             return 0;
         }
     }
+
+    async checkTransactionStatus(referenceId: string): Promise<any> {
+        try {
+            // Need to verify correct endpoint. Assuming /transaction/:id based on standard REST
+            // Or maybe POST /transaction-status with body { referenceId } ?
+            // Let's try POST /transaction/status based on common patterns if docs not available
+            // User list said "GET Get transactions by ID" -> likely GET /transaction/:id
+
+            // However, referenceId is OUR ref. External might need their ID.
+            // If we use our ref, it might be GET /transaction?ref=...
+
+            // Let's assume standard REST GET /transaction/:referenceId or GET /check-transfer/:referenceId
+            // Safe bet: POST /check-transfer or similar.
+
+            // Given I don't have docs, I will implement a generic POST check-status that sends refId.
+            // URL: /check-transfer (common in Thai gateways) OR /transaction/:id
+
+            // Let's use the pattern from `createPayout`: POST /payout
+            // Maybe POST /transaction/check ?
+
+            // NOTE: I will key off the User's "GET Get transactions by ID" request.
+            // Implementing: GET /transaction/:referenceId
+            // Note: baseUrl ends with /api/v1/mc
+
+            const response = await axios.post(`${this.baseUrl}/transaction/check`, { referenceId }, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.config.apiKey
+                }
+            });
+
+            return response.data;
+        } catch (error: any) {
+            console.error('BibPay CheckStatus Error:', error.response?.data || error.message);
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message,
+                data: null
+            };
+        }
+    }
+
+    async getBankList(): Promise<any> {
+        try {
+            // User said "POST Get bank"
+            const response = await axios.post(`${this.baseUrl}/bank`, {}, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.config.apiKey
+                }
+            });
+
+            return response.data;
+        } catch (error: any) {
+            console.error('BibPay GetBankList Error:', error.response?.data || error.message);
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message,
+                data: []
+            };
+        }
+    }
 }

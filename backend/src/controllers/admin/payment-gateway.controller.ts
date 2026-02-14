@@ -163,4 +163,59 @@ export class PaymentGatewayController {
             return res.status(500).json({ success: false, message: error.message });
         }
     }
+
+    /**
+     * Check Transaction Status (Manual Check)
+     * POST /api/admin/payment-gateways/:id/check-status
+     */
+    static async checkStatus(req: AuthRequest, res: Response) {
+        try {
+            const id = parseInt(req.params.id);
+            const { referenceId } = req.body;
+
+            if (!referenceId) return res.status(400).json({ success: false, message: 'Reference ID required' });
+
+            const gateway = await prisma.paymentGateway.findUnique({ where: { id } });
+            if (!gateway) return res.status(404).json({ success: false, message: 'Gateway not found' });
+
+            const provider = await PaymentFactory.getProvider(gateway.code);
+            if (!provider) return res.status(400).json({ success: false, message: 'Provider not found' });
+
+            if (!provider.checkTransactionStatus) {
+                return res.status(400).json({ success: false, message: 'Provider does not support status check' });
+            }
+
+            const result = await provider.checkTransactionStatus(referenceId);
+            return res.json({ success: true, data: result });
+
+        } catch (error: any) {
+            console.error('Check Status Error:', error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    /**
+     * Get Bank List from Provider
+     * GET /api/admin/payment-gateways/:id/banks
+     */
+    static async getBanks(req: AuthRequest, res: Response) {
+        try {
+            const id = parseInt(req.params.id);
+            const gateway = await prisma.paymentGateway.findUnique({ where: { id } });
+            if (!gateway) return res.status(404).json({ success: false, message: 'Gateway not found' });
+
+            const provider = await PaymentFactory.getProvider(gateway.code);
+            if (!provider) return res.status(400).json({ success: false, message: 'Provider not found' });
+
+            if (!provider.getBankList) {
+                return res.status(400).json({ success: false, message: 'Provider does not support bank list' });
+            }
+
+            const result = await provider.getBankList();
+            return res.json({ success: true, data: result });
+        } catch (error: any) {
+            console.error('Get Banks Error:', error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
 }

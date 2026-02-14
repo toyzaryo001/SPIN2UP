@@ -62,4 +62,15 @@ export interface IPaymentProvider {
      * Get current balance of the payment gateway account
      */
     getBalance(): Promise<number>;
+
+    /**
+     * Check transaction status (Optional)
+     * @param referenceId Transaction Reference ID
+     */
+    checkTransactionStatus?(referenceId: string): Promise<any>;
+
+    /**
+     * Get supported bank list (Optional)
+     */
+    getBankList?(): Promise<any>;
 }

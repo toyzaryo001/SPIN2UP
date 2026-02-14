@@ -12,4 +12,8 @@ router.put('/:id', requirePermission('settings', 'payment', 'manage'), PaymentGa
 router.patch('/:id/toggle', requirePermission('settings', 'payment', 'manage'), PaymentGatewayController.toggleActive);
 router.delete('/:id', requirePermission('settings', 'payment', 'manage'), PaymentGatewayController.deleteGateway);
 
+// New Provider Features
+router.post('/:id/check-status', requirePermission('settings', 'payment', 'view'), PaymentGatewayController.checkStatus);
+router.get('/:id/banks', requirePermission('settings', 'payment', 'view'), PaymentGatewayController.getBanks);
+
 export default router;

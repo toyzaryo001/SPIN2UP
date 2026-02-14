@@ -81,6 +81,10 @@ router.get('/:slug', async (req, res) => {
 // POST /api/games/:slug/spin - หมุนสล็อต
 router.post('/:slug/spin', authMiddleware, async (req: AuthRequest, res) => {
     try {
+        // Fix: Disable local spin engine in production to prevent "Infinite Money" exploit
+        // (Local wallet updates but doesn't sync with Betflix)
+        return res.status(404).json({ success: false, message: 'Local spin engine is disabled' });
+
         const { betAmount } = req.body;
 
         if (!betAmount || betAmount <= 0) {
@@ -249,9 +253,11 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
             // Auto-fix: if betflixUsername is in wrong format (raw phone without prefix), re-register
             const currentUsername = user.betflixUsername;
             const isRawPhone = /^\d{10}$/.test(currentUsername); // e.g., "0642938073"
-            const hasNoPrefix = !currentUsername.toLowerCase().includes('chkk') && !currentUsername.toLowerCase().startsWith('be31kk');
 
-            if (isRawPhone || hasNoPrefix) {
+            // Fix: Don't hardcode 'chkk' check. Just check if it looks like a raw phone number.
+            // If we really want to check prefix, we should get it from config, but checking raw phone is usually enough
+            // to catch users who haven't been properly registered with a prefix.
+            if (isRawPhone) {
                 console.log(`⚠️ betflixUsername "${currentUsername}" is in wrong format, re-registering...`);
                 const betflixUser = await BetflixService.register(user.phone);
                 if (betflixUser) {

@@ -2,7 +2,6 @@ import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission } from '../../middlewares/auth.middleware.js';
 import { Prisma } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
 import { BetflixService } from '../../services/betflix.service.js';
 
 const router = Router();
@@ -75,9 +74,9 @@ router.post('/deposit', async (req: AuthRequest, res) => {
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Update balance
             if (isBonus) {
-                await tx.user.update({ where: { id: user.id }, data: { bonusBalance: new Decimal(balanceAfter) } });
+                await tx.user.update({ where: { id: user.id }, data: { bonusBalance: new Prisma.Decimal(balanceAfter) } });
             } else {
-                await tx.user.update({ where: { id: user.id }, data: { balance: new Decimal(balanceAfter) } });
+                await tx.user.update({ where: { id: user.id }, data: { balance: new Prisma.Decimal(balanceAfter) } });
             }
 
             // Create transaction
@@ -86,9 +85,9 @@ router.post('/deposit', async (req: AuthRequest, res) => {
                     userId: user.id,
                     type: isBonus ? 'BONUS' : 'MANUAL_ADD',
                     subType: subType || 'credit',
-                    amount: new Decimal(amount),
+                    amount: new Prisma.Decimal(amount),
                     balanceBefore: balanceBefore,
-                    balanceAfter: new Decimal(balanceAfter),
+                    balanceAfter: new Prisma.Decimal(balanceAfter),
                     status: 'COMPLETED',
                     note: note || `เติม${isBonus ? 'โบนัส' : 'เครดิต'}โดยแอดมิน`,
                     adminId: req.user!.userId,
@@ -146,9 +145,9 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
 
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             if (isBonus) {
-                await tx.user.update({ where: { id: user.id }, data: { bonusBalance: new Decimal(balanceAfter) } });
+                await tx.user.update({ where: { id: user.id }, data: { bonusBalance: new Prisma.Decimal(balanceAfter) } });
             } else {
-                await tx.user.update({ where: { id: user.id }, data: { balance: new Decimal(balanceAfter) } });
+                await tx.user.update({ where: { id: user.id }, data: { balance: new Prisma.Decimal(balanceAfter) } });
             }
 
             await tx.transaction.create({
@@ -156,9 +155,9 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
                     userId: user.id,
                     type: 'MANUAL_DEDUCT',
                     subType: subType || 'credit',
-                    amount: new Decimal(amount),
+                    amount: new Prisma.Decimal(amount),
                     balanceBefore: balanceBefore,
-                    balanceAfter: new Decimal(balanceAfter),
+                    balanceAfter: new Prisma.Decimal(balanceAfter),
                     status: 'COMPLETED',
                     note: note || 'ลดเครดิตโดยแอดมิน',
                     adminId: req.user!.userId,
@@ -360,12 +359,12 @@ router.post('/approve-deposit', requirePermission('manual', 'deposit', 'manage')
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.user.update({
                 where: { id: transaction.userId },
-                data: { balance: new Decimal(newBalance) },
+                data: { balance: new Prisma.Decimal(newBalance) },
             });
 
             await tx.transaction.update({
                 where: { id: transaction.id },
-                data: { status: 'COMPLETED', balanceAfter: new Decimal(newBalance), adminId: req.user!.userId },
+                data: { status: 'COMPLETED', balanceAfter: new Prisma.Decimal(newBalance), adminId: req.user!.userId },
             });
         });
 

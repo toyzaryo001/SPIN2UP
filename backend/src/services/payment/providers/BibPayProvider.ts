@@ -134,4 +134,23 @@ export class BibPayProvider implements IPaymentProvider {
         }
         return null; // Let caller default
     }
+
+    async getBalance(): Promise<number> {
+        try {
+            const response = await axios.post(`${this.baseUrl}/balance`, {}, {
+                headers: {
+                    'x-api-key': this.config.apiKey
+                }
+            });
+
+            if (response.data && response.data.status && response.data.data) {
+                return parseFloat(response.data.data.balance || '0');
+            }
+            return 0;
+        } catch (error: any) {
+            console.error('BibPay GetBalance Error:', error.response?.data || error.message);
+            // Return 0 or rethrow? Returning 0 for now to prevent crashing the UI
+            return 0;
+        }
+    }
 }

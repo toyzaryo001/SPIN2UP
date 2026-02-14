@@ -50,4 +50,8 @@ export interface IPaymentProvider {
      * @param payload Request body
      */
     processWebhook(payload: any): Promise<WebhookResult>;
+    /**
+     * Get current balance of the payment gateway account
+     */
+    getBalance(): Promise<number>;
 }

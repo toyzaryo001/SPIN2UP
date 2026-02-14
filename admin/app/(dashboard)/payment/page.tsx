@@ -28,16 +28,42 @@ export default function PaymentPage() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
+    // Balance States
+    const [balances, setBalances] = useState<Record<number, number>>({});
+    const [loadingBalances, setLoadingBalances] = useState<Record<number, boolean>>({});
+
     // Forms
     const [configForm, setConfigForm] = useState<any>({});
     const [addForm, setAddForm] = useState({ name: '', apiKey: '', secretKey: '', apiEndpoint: '' });
+
+    const fetchBalance = async (id: number) => {
+        setLoadingBalances(prev => ({ ...prev, [id]: true }));
+        try {
+            const res = await api.payment.getGatewayBalance(id);
+            if (res.data.success) {
+                setBalances(prev => ({ ...prev, [id]: res.data.data.balance }));
+            }
+        } catch (error) {
+            console.error(`Failed to fetch balance for gateway ${id}`, error);
+            // toast.error('ไม่สามารถดึงยอดเงินได้'); // Optional: don't spam toasts
+        } finally {
+            setLoadingBalances(prev => ({ ...prev, [id]: false }));
+        }
+    };
 
     const fetchGateways = async () => {
         setIsLoading(true);
         try {
             const res = await api.payment.getGateways();
             if (res.data.success) {
-                setGateways(res.data.data);
+                const data = res.data.data;
+                setGateways(data);
+                // Fetch balances for active gateways
+                data.forEach((g: PaymentGateway) => {
+                    if (g.isActive && g.config && g.config !== '{}') {
+                        fetchBalance(g.id);
+                    }
+                });
             }
         } catch (error) {
             console.error('Failed to fetch gateways', error);
@@ -213,7 +239,27 @@ export default function PaymentPage() {
                             </div>
 
                             <div className="p-5 bg-slate-50/50 space-y-4">
-                                <div className="flex items-center justify-between text-sm">
+                                {/* Balance Section */}
+                                <div className="bg-white border border-slate-200 rounded-lg p-3 flex justify-between items-center">
+                                    <div>
+                                        <p className="text-xs text-slate-500 mb-1">ยอดเงินคงเหลือ</p>
+                                        <p className="text-lg font-bold text-slate-800 font-mono">
+                                            {balances[gateway.id] !== undefined
+                                                ? balances[gateway.id].toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                : '-.--'}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => fetchBalance(gateway.id)}
+                                        disabled={loadingBalances[gateway.id]}
+                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                                        title="อัพเดทยอดเงิน"
+                                    >
+                                        <RefreshCw size={16} className={loadingBalances[gateway.id] ? "animate-spin text-blue-600" : ""} />
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-100">
                                     <span className="text-slate-500">API Configured</span>
                                     {gateway.config && gateway.config !== '{}' ? (
                                         <span className="text-green-600 flex items-center gap-1"><CheckCircle size={14} /> Yes</span>

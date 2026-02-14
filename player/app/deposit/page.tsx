@@ -416,7 +416,7 @@ export default function DepositPage() {
                             <p style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>เลือกช่องทางฝาก</p>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
                                 {channels.filter(ch => {
-                                    if (ch.id === 'promptpay' && features.auto === false) return false;
+                                    if (ch.id === 'promptpay' && features.auto_deposit === false) return false;
                                     return true;
                                 }).map((ch) => (
                                     <button

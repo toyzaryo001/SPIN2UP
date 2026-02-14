@@ -12,6 +12,12 @@ export class PaymentService {
         // 1. Validate Amount
         if (amount <= 0) throw new Error('Invalid amount');
 
+        // Check Feature Toggle: auto_deposit
+        const autoDepositFeature = await prisma.siteFeature.findUnique({ where: { key: 'auto_deposit' } });
+        if (autoDepositFeature && !autoDepositFeature.isEnabled) {
+            throw new Error('Auto deposit is disabled'); // Or localized message
+        }
+
         // 2. Get Provider
         let provider;
         if (gatewayCode) {
@@ -160,27 +166,33 @@ export class PaymentService {
         });
 
         // 5. Check Auto Withdraw Condition
-        // Logic: Auto ON + Withdraw ON = Auto API
+        // Logic: Auto Feature ON + Gateway Auto ON + Gateway Withdraw ON
         let shouldAutoWithdraw = false;
         let activeGateway = null;
 
-        try {
-            const gateways = await prisma.paymentGateway.findMany({ where: { isActive: true } });
-            for (const gateway of gateways) {
-                try {
-                    const config = JSON.parse(gateway.config);
-                    const canWithdraw = config.canWithdraw !== false;
-                    const isAuto = config.isAutoWithdraw === true;
+        // Check Global Feature Toggle: auto_withdraw
+        const autoWithdrawFeature = await prisma.siteFeature.findUnique({ where: { key: 'auto_withdraw' } });
+        const isAutoWithdrawEnabled = autoWithdrawFeature ? autoWithdrawFeature.isEnabled : true; // Default to true if missing? Or false? Better safe than sorry, maybe false if strictly controlled. But for back-compat? User asked for splitting.
 
-                    if (canWithdraw && isAuto) {
-                        shouldAutoWithdraw = true;
-                        activeGateway = gateway;
-                        break;
-                    }
-                } catch (e) { continue; }
+        if (isAutoWithdrawEnabled) {
+            try {
+                const gateways = await prisma.paymentGateway.findMany({ where: { isActive: true } });
+                for (const gateway of gateways) {
+                    try {
+                        const config = JSON.parse(gateway.config);
+                        const canWithdraw = config.canWithdraw !== false;
+                        const isAuto = config.isAutoWithdraw === true;
+
+                        if (canWithdraw && isAuto) {
+                            shouldAutoWithdraw = true;
+                            activeGateway = gateway;
+                            break;
+                        }
+                    } catch (e) { continue; }
+                }
+            } catch (error) {
+                console.error('Error checking auto withdraw config', error);
             }
-        } catch (error) {
-            console.error('Error checking auto withdraw config', error);
         }
 
         // 6. If Auto Withdraw is OFF, stop here.

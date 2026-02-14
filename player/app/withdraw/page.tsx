@@ -8,7 +8,7 @@ import BankLogo from "@/components/BankLogo";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
+import { API_URL } from "@/lib/api";
 
 export default function WithdrawPage() {
     const router = useRouter();

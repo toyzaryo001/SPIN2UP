@@ -1,6 +1,13 @@
 import axios from 'axios';
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
+let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+// Force HTTPS in production (client-side only or if we can detect env)
+if (process.env.NODE_ENV === 'production' && !apiUrl.startsWith('https://')) {
+    apiUrl = apiUrl.replace('http://', 'https://');
+}
+
+export const API_URL = apiUrl + '/api';
 
 const api = axios.create({
     baseURL: API_URL,

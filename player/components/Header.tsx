@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X, Globe, LogOut, Gift, MessageCircle, Home, Wallet, User } from "lucide-react";
 
+import { API_URL } from "@/lib/api";
+
 export default function Header() {
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [showMenu, setShowMenu] = useState(false);
     const [brandName, setBrandName] = useState(""); // Default empty to show skeleton
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
 
     useEffect(() => {
         const checkUser = () => {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import PlayerLayout from "@/components/PlayerLayout";
 import { Wallet, ArrowDownToLine, Copy, Check, Building2, Smartphone, QrCode, AlertCircle } from "lucide-react";
 import BankLogo from "@/components/BankLogo";
-
+import { API_URL } from "@/lib/api";
 const channels = [
     { id: "bank", label: "ธนาคาร", icon: Building2, emoji: "🏦" },
     { id: "truemoney", label: "TrueMoney", icon: Smartphone, emoji: "📱" },
@@ -22,7 +22,7 @@ const bankColors: Record<string, string> = {
     "GSB": "#D91B5B",
 };
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
+
 
 interface BankAccount {
     id: number;

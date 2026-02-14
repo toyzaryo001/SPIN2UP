@@ -7,7 +7,9 @@ const router = Router();
 // User APIs
 router.post('/deposit', authMiddleware, PaymentController.createDeposit);
 
-// Private/Admin APIs (Future)
-// router.get('/gateways', ...);
+// Webhook Callback (Public)
+router.post('/webhook/:gateway', PaymentController.webhook);
+// Support GET for some providers if needed, or stick to POST
+router.get('/webhook/:gateway', PaymentController.webhook);
 
 export default router;

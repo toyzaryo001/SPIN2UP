@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import prisma from '../../lib/db';
+import { PaymentFactory } from '../../services/payment/PaymentFactory';
 
 export class PaymentGatewayController {
 
@@ -149,32 +150,16 @@ export class PaymentGatewayController {
                 return res.status(404).json({ success: false, message: 'Gateway not found' });
             }
 
-            const provider = PaymentFactory.getProvider(gateway.code);
+            const provider = await PaymentFactory.getProvider(gateway.code);
             if (!provider) {
-                return res.status(400).json({ success: false, message: 'Provider implementation not found' });
+                return res.status(400).json({ success: false, message: 'Provider implementation not found or inactive' });
             }
 
-            // Factory instantiates with config from DB, but let's double check if we need to re-instantiate or if Factory handles it correctly.
-            // PaymentFactory.getProvider(code) gets config from DB inside it?
-            // Wait, PaymentFactory.getProvider takes (code). Let's check PaymentFactory again.
-            // Ah, PaymentFactory logic usually fetches config inside. let me check. 
-            // NO, I need to check PaymentFactory.ts to be sure. 
-            // The previous view showed: `getProvider(code: string): PaymentProvider | null`? No, it seemed to fetch from DB.
-            // Re-reading PaymentFactory.ts in my thought process... no I should just check it to be 100% safe.
-            // But I will assume standard pattern for now: 
-            // actually, if PaymentFactory needs to be async to fetch config, then `getProvider` must be async.
-            // If it's static and synchronous, it might need config passed to it.
+            const balance = await provider.getBalance();
 
-            // Checking my previous memory of PaymentFactory...
-            // "This factory class is responsible for creating instances... It fetches gateway configurations from the database"
-            // If it fetches from DB, it must be async.
-
-            // Let me quick-check PaymentFactory again to be safe. 
-            // I'll pause this edit and check PaymentFactory first.
-
-            // logic moved to next step
-            return res.status(501).json({ message: "Not implemented yet" });
+            return res.json({ success: true, data: { balance } });
         } catch (error: any) {
+            console.error('Get Gateway Balance Error:', error);
             return res.status(500).json({ success: false, message: error.message });
         }
     }

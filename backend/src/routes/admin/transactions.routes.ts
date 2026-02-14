@@ -41,11 +41,42 @@ router.get('/', async (req, res) => {
         ]);
 
         // Summary
-        const summary = await prisma.transaction.aggregate({
-            where,
-            _sum: { amount: true },
-            _count: true,
-        });
+        // Summary
+        // If status is not specifically filtered, only sum COMPLETED transactions for the amount
+        // But keep count of all matching transactions
+        const startValues = {
+            _sum: { amount: 0 },
+            _count: 0
+        };
+
+        let summary;
+
+        if (!where.status) {
+            // Case: No status filter (All statuses shown in list)
+            // We want Total Amount = Only COMPLETED
+            // We want Count = All (to match list pagination)
+
+            // 1. Get Sum of COMPLETED
+            const completedSum = await prisma.transaction.aggregate({
+                where: { ...where, status: 'COMPLETED' },
+                _sum: { amount: true }
+            });
+
+            // 2. Count is already in 'total' variable from above
+            summary = {
+                _sum: { amount: completedSum._sum.amount || 0 },
+                _count: total
+            };
+
+        } else {
+            // Case: Status filter applied (e.g. user filtered for PENDING)
+            // Respect the filter for both Sum and Count
+            summary = await prisma.transaction.aggregate({
+                where,
+                _sum: { amount: true },
+                _count: true,
+            });
+        }
 
         res.json({
             success: true,

@@ -5,8 +5,7 @@ import { Users, Copy, Check, Share2, Gift, Coins, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import axios from "axios";
-
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") + "/api";
+import { API_URL } from "@/lib/api";
 
 interface Referral {
     id: number;

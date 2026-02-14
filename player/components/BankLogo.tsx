@@ -53,7 +53,7 @@ const BankLogo: React.FC<BankLogoProps> = ({ bankCode, className, style, width =
     const code = BANK_CODE_MAP[normalizedName] || normalizedName;
 
     // Get file name from map
-    const fileName = BANK_FILE_MAP[code] || bankCode.toUpperCase();
+    const fileName = BANK_FILE_MAP[code] || (bankCode ? bankCode.toUpperCase() : "");
     const logoUrl = `/bank-logos/${fileName}.png`;
 
     return (

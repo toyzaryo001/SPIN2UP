@@ -27,15 +27,21 @@ interface BankAccount {
 
 export default function DepositPage() {
     const router = useRouter();
-    const [user, setUser] = useState<any>(() => {
+    const [user, setUser] = useState<any>(null);
+
+    useEffect(() => {
         if (typeof window !== 'undefined') {
             try {
                 const saved = localStorage.getItem("user");
-                if (saved && saved !== "undefined") return JSON.parse(saved);
+                if (saved && saved !== "undefined") {
+                    setUser(JSON.parse(saved));
+                } else {
+                    router.push("/");
+                }
             } catch { }
         }
-        return null;
-    });
+        setLoading(false);
+    }, []);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">("deposit");
     const [selectedChannel, setSelectedChannel] = useState("bank");

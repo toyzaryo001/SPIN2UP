@@ -11,7 +11,7 @@ interface BibPayConfig {
 export class BibPayProvider implements IPaymentProvider {
     readonly code = 'bibpay';
     private config: BibPayConfig;
-    private baseUrl = 'https://apiv2.javisx.com/api/v1/mc';
+    private baseUrl = 'https://api.bibbyx.com/api/v1/mc';
 
     constructor(config: any) {
         this.config = config as BibPayConfig;
@@ -96,12 +96,17 @@ export class BibPayProvider implements IPaymentProvider {
     }
 
     async processWebhook(payload: any): Promise<WebhookResult> {
-        // Payload structure based on PHP: { status, message, data: { transactionId, refferend, amount, ... } }
+        // Payload structure: { status: "completed", data: { transactionId, refferend, amount, depositAmount, ... } }
+        console.log('BibPay Webhook Payload:', JSON.stringify(payload));
+
         const status = payload.status;
         const txData = payload.data || {};
-        const refId = txData.refferend || txData.reference_id;
+        const refId = txData.refferend; // This matches our 'referenceId'
         const externalId = txData.transactionId;
-        const amount = parseFloat(txData.amount || '0');
+
+        // Prioritize depositAmount (actual received) over amount (requested)
+        const amountStr = txData.depositAmount || txData.amount || '0';
+        const amount = parseFloat(amountStr);
 
         let txStatus: 'SUCCESS' | 'FAILED' | 'PENDING' = 'PENDING';
 
@@ -112,9 +117,9 @@ export class BibPayProvider implements IPaymentProvider {
         }
 
         return {
-            success: true, // Processed successfully
+            success: true,
             txStatus,
-            transactionId: refId, // Use our Ref ID to find the transaction
+            transactionId: refId || '', // Handle missing refId safely
             externalId,
             amount,
             message: payload.message,

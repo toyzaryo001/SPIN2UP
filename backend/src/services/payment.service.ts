@@ -30,8 +30,25 @@ export class PaymentService {
         // We need a reference ID BEFORE calling the provider, so we use a placeholder or generate one first.
         const referenceId = `PAYIN_${Date.now()}_${userId}`;
 
-        // Find gateway ID for relation
+        // Find gateway ID and validate config
         const gateway = await prisma.paymentGateway.findUnique({ where: { code: provider.code } });
+        if (!gateway) {
+            throw new Error('Payment gateway configuration not found');
+        }
+        if (!gateway.isActive) {
+            throw new Error('Payment gateway is not active');
+        }
+
+        let gatewayConfig: any = {};
+        try {
+            gatewayConfig = JSON.parse(gateway.config);
+        } catch (e) {
+            console.error("Failed to parse gateway config", e);
+        }
+
+        if (gatewayConfig.canDeposit === false) {
+            throw new Error('Deposit is temporarily disabled for this channel');
+        }
 
         const transaction = await prisma.transaction.create({
             data: {

@@ -66,7 +66,13 @@ export class BibPayProvider implements IPaymentProvider {
 
             const data = result.data;
             // Try multiple keys for QR and TxID
-            const qrCode = data.qrcode || data.qr_code || data.qrCode || data.qr || data.image || data.qr_image;
+            let qrCode = data.qrcode || data.qr_code || data.qrCode || data.qr || data.image || data.qr_image;
+
+            // Ensure QR Code format for base64
+            if (qrCode && !qrCode.startsWith('http') && !qrCode.startsWith('data:image')) {
+                // Assume PNG base64 if not URL and no header
+                qrCode = `data:image/png;base64,${qrCode}`;
+            }
             const txId = data.transactionId || data.transaction_id;
 
             return {

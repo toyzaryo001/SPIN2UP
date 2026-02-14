@@ -90,6 +90,25 @@ export default function DepositPage() {
         }
     };
 
+    const fetchBankAccounts = async () => {
+        try {
+            // Fetch only 'deposit' accounts for the player to transfer money to
+            const res = await fetch(`${API_URL}/public/bank-accounts?type=deposit`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setBankAccounts(data);
+            }
+        } catch (error) {
+            console.error("Fetch banks error:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (loading) return;
+        fetchConfig();
+        fetchBankAccounts();
+    }, [loading]);
+
     const handleDeposit = async () => {
         if (!depositAmount || Number(depositAmount) <= 0) {
             alert("กรุณาระบุจำนวนเงิน");

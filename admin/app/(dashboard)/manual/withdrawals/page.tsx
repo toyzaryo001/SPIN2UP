@@ -98,10 +98,10 @@ export default function PendingWithdrawalsPage() {
 
     const handleConfirmReject = async () => {
         if (!selectedTx) return;
-        if (!rejectReason.trim()) {
-            toast.error('กรุณาระบุเหตุผล');
-            return;
-        }
+        // if (!rejectReason.trim()) {
+        //     toast.error('กรุณาระบุเหตุผล');
+        //     return;
+        // }
 
         setIsSubmitting(true);
         try {

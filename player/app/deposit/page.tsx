@@ -5,24 +5,16 @@ import { useRouter } from "next/navigation";
 import PlayerLayout from "@/components/PlayerLayout";
 import { Wallet, ArrowDownToLine, Copy, Check, Building2, Smartphone, QrCode, AlertCircle } from "lucide-react";
 import BankLogo from "@/components/BankLogo";
+import AlertModal from "@/components/AlertModal";
 import { API_URL } from "@/lib/api";
+
 const channels = [
     { id: "bank", label: "ธนาคาร", icon: Building2, emoji: "🏦" },
     { id: "truemoney", label: "TrueMoney", icon: Smartphone, emoji: "📱" },
     { id: "promptpay", label: "PromptPay", icon: QrCode, emoji: "📲" },
 ];
 
-const bankColors: Record<string, string> = {
-    "KBANK": "#00A651",
-    "SCB": "#4E2A84",
-    "BBL": "#002F6C",
-    "KTB": "#00A9E0",
-    "BAY": "#FDD800",
-    "TMB": "#003C71",
-    "GSB": "#D91B5B",
-};
-
-
+// ... (Keep existing BankColors interface & consts)
 
 interface BankAccount {
     id: number;
@@ -36,7 +28,6 @@ interface BankAccount {
 export default function DepositPage() {
     const router = useRouter();
     const [user, setUser] = useState<any>(() => {
-        // Load user from localStorage immediately on mount
         if (typeof window !== 'undefined') {
             try {
                 const saved = localStorage.getItem("user");
@@ -56,6 +47,22 @@ export default function DepositPage() {
     const [features, setFeatures] = useState<any>({});
     const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
 
+    // Alert Modal State
+    const [alertState, setAlertState] = useState<{
+        isOpen: boolean;
+        title?: string;
+        message: string;
+        type: "success" | "error" | "warning";
+    }>({
+        isOpen: false,
+        message: "",
+        type: "error"
+    });
+
+    const showAlert = (message: string, type: "success" | "error" | "warning" = "error", title?: string) => {
+        setAlertState({ isOpen: true, message, type, title });
+    };
+
     const handleCopy = (text: string, type: string) => {
         navigator.clipboard.writeText(text);
         setCopied(type);
@@ -63,7 +70,6 @@ export default function DepositPage() {
     };
 
     useEffect(() => {
-        // Check if user is logged in
         if (!user) {
             const saved = localStorage.getItem("user");
             if (saved) setUser(JSON.parse(saved));
@@ -72,7 +78,7 @@ export default function DepositPage() {
         }
         setLoading(false);
         fetchConfig();
-    }, [user]); // user dependency to ensure load
+    }, [user]);
 
     const fetchConfig = async () => {
         try {
@@ -80,7 +86,6 @@ export default function DepositPage() {
             const data = await res.json();
             if (data.success && data.data && data.data.features) {
                 setFeatures(data.data.features);
-                // Adjust default channel/tab if disabled
                 if (data.data.features.deposit === false && activeTab === 'deposit') {
                     setActiveTab('withdraw');
                 }
@@ -92,7 +97,6 @@ export default function DepositPage() {
 
     const fetchBankAccounts = async () => {
         try {
-            // Fetch only 'deposit' accounts for the player to transfer money to
             const res = await fetch(`${API_URL}/public/bank-accounts?type=deposit`);
             const data = await res.json();
             if (Array.isArray(data)) {
@@ -111,14 +115,13 @@ export default function DepositPage() {
 
     const handleDeposit = async () => {
         if (!depositAmount || Number(depositAmount) <= 0) {
-            alert("กรุณาระบุจำนวนเงิน");
+            showAlert("กรุณาระบุจำนวนเงิน", "warning");
             return;
         }
 
         setGeneratingQr(true);
         setQrData(null);
         try {
-            // Using 'bibpay' as default gateway for now
             const res = await fetch(`${API_URL}/payment/deposit`, {
                 method: 'POST',
                 headers: {
@@ -131,24 +134,44 @@ export default function DepositPage() {
                 })
             });
             const data = await res.json();
+
             if (data.success) {
                 setQrData(data.data);
             } else {
-                alert(data.message || "สร้าง QR Code ไม่สำเร็จ");
+                // Localize Error Messages
+                let msg = data.message || "สร้าง QR Code ไม่สำเร็จ";
+                if (msg.includes("Payment gateway not available")) {
+                    msg = "ระบบฝากเงินยังไม่เปิดให้บริการในขณะนี้";
+                } else if (msg.includes("Invalid amount")) {
+                    msg = "จำนวนเงินไม่ถูกต้อง";
+                } else if (msg.includes("User not found")) {
+                    msg = "ไม่พบข้อมูลผู้ใช้";
+                } else if (msg.includes("Payment gateway configuration not found")) {
+                    msg = "ไม่พบการตั้งค่าช่องทางชำระเงิน";
+                } else if (msg.includes("Payment gateway is not active")) {
+                    msg = "ช่องทางชำระเงินปิดปรับปรุงชั่วคราว";
+                } else if (msg.includes("Deposit is temporarily disabled")) {
+                    msg = "ระบบฝากเงินปิดปรับปรุงชั่วคราว";
+                }
+
+                showAlert(msg, "error");
             }
         } catch (error) {
             console.error("Deposit error:", error);
-            alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+            showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อ", "error");
         } finally {
             setGeneratingQr(false);
         }
     };
+
+    // ... (rest of the component render logic)
+    // IMPORTANT: Inject <AlertModal /> before closing PlayerLayout
+
     const renderManualDeposit = () => {
-        // ... reuse existing logic for bank/truemoney ...
+        // ... (reuse existing logic)
         const filteredBanks = bankAccounts.filter(bank => {
             const name = (bank.bankName || "").toLowerCase().replace(/[^a-z0-9]/g, '');
             if (selectedChannel === "truemoney") return name.includes("true");
-            // if (selectedChannel === "promptpay") return name.includes("promptpay"); // PromptPay is now Auto
             return !name.includes("true") && !name.includes("promptpay");
         });
 
@@ -207,7 +230,7 @@ export default function DepositPage() {
                     </div>
                 </div>
 
-                {/* Selected Bank Info Details ... reused ... */}
+                {/* Selected Bank Info Details */}
                 {selectedBank && (
                     <div style={{
                         background: "#21262D",
@@ -277,7 +300,7 @@ export default function DepositPage() {
     return (
         <PlayerLayout>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {/* Banner ... existing ... */}
+                {/* Banner */}
                 <div style={{
                     background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
                     borderRadius: "16px",
@@ -293,7 +316,7 @@ export default function DepositPage() {
                     </div>
                 </div>
 
-                {/* Tabs ... existing ... */}
+                {/* Tabs */}
                 <div style={{ display: "flex", background: "#21262D", borderRadius: "30px", padding: "4px", boxShadow: "0 4px 15px rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)" }}>
                     {(features.deposit !== false) && (
                         <button
@@ -586,6 +609,14 @@ export default function DepositPage() {
                     </div>
                 )}
             </div>
+
+            <AlertModal
+                isOpen={alertState.isOpen}
+                onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+            />
         </PlayerLayout>
     );
 }

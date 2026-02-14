@@ -3,6 +3,7 @@ import { z } from 'zod';
 import prisma from '../lib/db.js';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 import { Decimal } from '@prisma/client/runtime/library';
+import { PaymentService } from '../services/payment.service.js';
 
 const router = Router();
 
@@ -98,42 +99,30 @@ router.post('/deposit', authMiddleware, async (req: AuthRequest, res) => {
 });
 
 // POST /api/wallet/withdraw - ถอนเงิน (สร้างรายการรอ)
+// POST /api/wallet/withdraw - ถอนเงิน (สร้างรายการรอ)
 router.post('/withdraw', authMiddleware, async (req: AuthRequest, res) => {
     try {
-        const { amount } = req.body;
+        const { amount, bankAccountId } = req.body;
+        const userId = req.user!.userId;
 
         if (!amount || amount <= 0) {
             return res.status(400).json({ success: false, message: 'จำนวนเงินไม่ถูกต้อง' });
         }
 
-        const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+        if (!bankAccountId) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุบัญชีธนาคาร' });
         }
 
-        if (Number(user.balance) < amount) {
-            return res.status(400).json({ success: false, message: 'ยอดเงินไม่เพียงพอ' });
+        const result = await PaymentService.createWithdraw(userId, amount, bankAccountId);
+
+        if (!result.success) {
+            return res.status(400).json(result);
         }
 
-        const transaction = await prisma.transaction.create({
-            data: {
-                userId: req.user!.userId,
-                type: 'WITHDRAW',
-                amount: new Decimal(amount),
-                balanceBefore: user.balance,
-                balanceAfter: user.balance, // ยังไม่หัก รอ Admin อนุมัติ
-                status: 'PENDING',
-            },
-        });
-
-        res.status(201).json({
-            success: true,
-            message: 'สร้างรายการถอนเงินสำเร็จ รอตรวจสอบ',
-            data: { transactionId: transaction.id },
-        });
-    } catch (error) {
+        res.status(201).json(result);
+    } catch (error: any) {
         console.error('Withdraw error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการทำรายการ' });
     }
 });
 

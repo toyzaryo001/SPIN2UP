@@ -16,6 +16,7 @@ interface PaymentGateway {
     // Parsed from config
     canDeposit?: boolean;
     canWithdraw?: boolean;
+    isAutoWithdraw?: boolean; // New Flag
 }
 
 const SUPPORTED_PROVIDERS = [
@@ -63,12 +64,12 @@ export default function PaymentPage() {
                     try { parsedConfig = JSON.parse(g.config); } catch { }
                     return {
                         ...g,
-                        canDeposit: (parsedConfig as any).canDeposit !== false, // Default true if undefined
-                        canWithdraw: (parsedConfig as any).canWithdraw !== false // Default true if undefined
+                        canDeposit: (parsedConfig as any).canDeposit !== false, // Default true
+                        canWithdraw: (parsedConfig as any).canWithdraw !== false, // Default true
+                        isAutoWithdraw: (parsedConfig as any).isAutoWithdraw === true // Default false
                     };
                 });
                 setGateways(data);
-                // Fetch balances for active gateways
                 data.forEach((g: PaymentGateway) => {
                     if (g.isActive && g.config && g.config !== '{}') {
                         fetchBalance(g.id);
@@ -92,7 +93,6 @@ export default function PaymentPage() {
         if (!gateway) return;
 
         try {
-            // Merge new config with existing parsed config
             let currentConfig = {};
             try { currentConfig = JSON.parse(gateway.config); } catch { }
 
@@ -101,19 +101,19 @@ export default function PaymentPage() {
             const res = await api.payment.updateGateway(id, {
                 name: gateway.name,
                 config: JSON.stringify(updatedConfig),
-                isActive: gateway.isActive
+                isActive: gateway.isActive // Preserve existing isActive
             });
 
             if (res.data.success) {
                 toast.success('บันทึกการตั้งค่าเรียบร้อย');
-                // Update local state
                 setGateways(prev => prev.map(g => {
                     if (g.id === id) {
                         return {
                             ...g,
                             config: JSON.stringify(updatedConfig),
                             canDeposit: updatedConfig.canDeposit !== false,
-                            canWithdraw: updatedConfig.canWithdraw !== false
+                            canWithdraw: updatedConfig.canWithdraw !== false,
+                            isAutoWithdraw: updatedConfig.isAutoWithdraw === true
                         };
                     }
                     return g;
@@ -132,18 +132,8 @@ export default function PaymentPage() {
         updateGatewayConfig(id, { canWithdraw: !currentValue });
     };
 
-    const handleToggleStatus = async (id: number) => {
-        try {
-            const res = await api.payment.toggleGateway(id);
-            if (res.data.success) {
-                toast.success('อัพเดทสถานะเรียบร้อย');
-                setGateways(prev => prev.map(g =>
-                    g.id === id ? { ...g, isActive: !g.isActive } : g
-                ));
-            }
-        } catch (error) {
-            toast.error('เกิดข้อผิดพลาดในการอัพเดทสถานะ');
-        }
+    const handleToggleAuto = (id: number, currentValue: boolean) => {
+        updateGatewayConfig(id, { isAutoWithdraw: !currentValue });
     };
 
     const handleDelete = async (id: number) => {
@@ -200,7 +190,8 @@ export default function PaymentPage() {
                 secretKey: addForm.secretKey,
                 apiEndpoint: addForm.apiEndpoint,
                 canDeposit: true,
-                canWithdraw: true
+                canWithdraw: true,
+                isAutoWithdraw: false
             };
 
             const res = await api.payment.createGateway({
@@ -223,7 +214,6 @@ export default function PaymentPage() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">จัดการระบบชำระเงิน</h2>
@@ -247,7 +237,6 @@ export default function PaymentPage() {
                 </div>
             </div>
 
-            {/* Gateways Table */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -258,7 +247,7 @@ export default function PaymentPage() {
                                 <th className="px-6 py-4 text-right">ยอดเงินคงเหลือ</th>
                                 <th className="px-6 py-4 text-center">ฝากเงิน</th>
                                 <th className="px-6 py-4 text-center">ถอนเงิน</th>
-                                <th className="px-6 py-4 text-center">สถานะ</th>
+                                <th className="px-6 py-4 text-center">ออโต้</th>
                                 <th className="px-6 py-4 text-right">จัดการ</th>
                             </tr>
                         </thead>
@@ -350,16 +339,16 @@ export default function PaymentPage() {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <button
-                                                onClick={() => handleToggleStatus(gateway.id)}
+                                                onClick={() => handleToggleAuto(gateway.id, gateway.isAutoWithdraw || false)}
                                                 className={cn(
                                                     "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2",
-                                                    gateway.isActive ? 'bg-blue-600' : 'bg-slate-200'
+                                                    gateway.isAutoWithdraw ? 'bg-blue-600' : 'bg-slate-200'
                                                 )}
-                                                title="เปิด/ปิด ระบบหลัก"
+                                                title="เปิด/ปิด การถอนออโต้"
                                             >
                                                 <span className={cn(
                                                     "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                                                    gateway.isActive ? 'translate-x-6' : 'translate-x-1'
+                                                    gateway.isAutoWithdraw ? 'translate-x-6' : 'translate-x-1'
                                                 )} />
                                             </button>
                                         </td>
@@ -389,7 +378,6 @@ export default function PaymentPage() {
                 </div>
             </div>
 
-            {/* Add Gateway Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
@@ -500,7 +488,6 @@ export default function PaymentPage() {
                 </div>
             )}
 
-            {/* Edit Modal (Preserving logic, styling updated) */}
             {editingGateway && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
@@ -554,13 +541,13 @@ export default function PaymentPage() {
                                             />
                                             <p className="text-xs text-slate-400">ปล่อยว่างเพื่อใช้ค่า Default ของระบบ</p>
                                         </div>
-                                        <div className="flex gap-4 pt-4 border-t border-slate-100">
+                                        <div className="flex flex-col gap-2 pt-4 border-t border-slate-100">
                                             <label className="flex items-center gap-2 cursor-pointer">
                                                 <input
                                                     type="checkbox"
                                                     checked={configForm.canDeposit !== false}
                                                     onChange={e => setConfigForm({ ...configForm, canDeposit: e.target.checked })}
-                                                    className="w-4 h-4 text-blue-600 rounded"
+                                                    className="w-4 h-4 text-emerald-500 rounded"
                                                 />
                                                 <span className="text-sm text-slate-700">เปิดรับฝากเงิน</span>
                                             </label>
@@ -569,9 +556,18 @@ export default function PaymentPage() {
                                                     type="checkbox"
                                                     checked={configForm.canWithdraw !== false}
                                                     onChange={e => setConfigForm({ ...configForm, canWithdraw: e.target.checked })}
-                                                    className="w-4 h-4 text-blue-600 rounded"
+                                                    className="w-4 h-4 text-amber-500 rounded"
                                                 />
                                                 <span className="text-sm text-slate-700">เปิดโอนออก (ถอน)</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={configForm.isAutoWithdraw === true}
+                                                    onChange={e => setConfigForm({ ...configForm, isAutoWithdraw: e.target.checked })}
+                                                    className="w-4 h-4 text-blue-600 rounded"
+                                                />
+                                                <span className="text-sm text-slate-700">เปิดระบบถอนออโต้ (Auto API)</span>
                                             </label>
                                         </div>
                                     </>

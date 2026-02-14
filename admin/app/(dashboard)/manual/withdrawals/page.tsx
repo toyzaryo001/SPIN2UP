@@ -300,7 +300,7 @@ export default function PendingWithdrawalsPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">เหตุผลที่ปฏิเสธ <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium text-slate-700">เหตุผลที่ปฏิเสธ (ไม่บังคับ)</label>
                                 <textarea
                                     className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-sm"
                                     rows={3}

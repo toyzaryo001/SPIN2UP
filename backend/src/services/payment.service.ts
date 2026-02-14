@@ -106,7 +106,7 @@ export class PaymentService {
     /**
      * Create a withdrawal request (Payout)
      */
-    static async createWithdraw(userId: number, amount: number, bankAccountId: number) {
+    static async createWithdraw(userId: number, amount: number) {
         // 1. Validate Amount
         if (amount <= 0) throw new Error('Invalid amount');
 

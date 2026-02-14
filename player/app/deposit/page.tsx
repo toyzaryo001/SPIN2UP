@@ -46,6 +46,8 @@ export default function DepositPage() {
     const [generatingQr, setGeneratingQr] = useState(false);
     const [features, setFeatures] = useState<any>({});
     const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
+    const [withdrawAmount, setWithdrawAmount] = useState<string>("");
+    const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
 
     // Alert Modal State
     const [alertState, setAlertState] = useState<{
@@ -161,6 +163,51 @@ export default function DepositPage() {
             showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อ", "error");
         } finally {
             setGeneratingQr(false);
+        }
+    };
+
+    const handleWithdraw = async () => {
+        if (!withdrawAmount || Number(withdrawAmount) <= 0) {
+            showAlert("กรุณาระบุจำนวนเงิน", "warning");
+            return;
+        }
+
+        if (Number(user?.balance || 0) < Number(withdrawAmount)) {
+            showAlert("ยอดเงินคงเหลือไม่เพียงพอ", "error");
+            return;
+        }
+
+        setSubmittingWithdraw(true);
+        try {
+            const res = await fetch(`${API_URL}/wallet/withdraw`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem("token")}`
+                },
+                body: JSON.stringify({
+                    amount: Number(withdrawAmount)
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                showAlert(data.message || "ทำรายการถอนเงินสำเร็จ", "success");
+                setWithdrawAmount("");
+                // Refresh User Balance
+                const userRes = await fetch(`${API_URL}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
+                });
+                const userData = await userRes.json();
+                if (userData.success) setUser(userData.user);
+            } else {
+                showAlert(data.message || "ทำรายการไม่สำเร็จ", "error");
+            }
+        } catch (error) {
+            console.error("Withdraw error:", error);
+            showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อ", "error");
+        } finally {
+            setSubmittingWithdraw(false);
         }
     };
 
@@ -297,10 +344,13 @@ export default function DepositPage() {
         );
     }
 
+
+
     return (
         <PlayerLayout>
+            {/* ... (keep Banner and Tabs) ... */}
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {/* Banner */}
+                {/* Banner ... */}
                 <div style={{
                     background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
                     borderRadius: "16px",
@@ -347,6 +397,7 @@ export default function DepositPage() {
                 </div>
 
                 {activeTab === "deposit" ? (
+                    // ... (keep deposit content)
                     <>
                         {/* Channel Selection */}
                         <div style={{
@@ -503,7 +554,7 @@ export default function DepositPage() {
                         )}
                     </>
                 ) : (
-                    // Withdraw Form ... existing ...
+                    // Withdraw Form
                     <div style={{
                         background: "#21262D",
                         borderRadius: "16px",
@@ -511,7 +562,6 @@ export default function DepositPage() {
                         boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
                         border: "1px solid rgba(255,255,255,0.1)"
                     }}>
-                        {/* ... keep withdraw form as is ... */}
                         <div style={{ textAlign: "center", marginBottom: "24px" }}>
                             <p style={{ fontSize: "14px", color: "#8B949E", marginBottom: "6px" }}>ยอดเงินคงเหลือ</p>
                             <p style={{ fontSize: "32px", fontWeight: 900, color: "#FFD700", textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>
@@ -524,6 +574,8 @@ export default function DepositPage() {
                             <input
                                 type="number"
                                 placeholder="0.00"
+                                value={withdrawAmount}
+                                onChange={(e) => setWithdrawAmount(e.target.value)}
                                 style={{
                                     width: "100%",
                                     background: "rgba(255,255,255,0.05)",
@@ -543,6 +595,7 @@ export default function DepositPage() {
                             {[100, 300, 500, 1000].map((amt) => (
                                 <button
                                     key={amt}
+                                    onClick={() => setWithdrawAmount(amt.toString())}
                                     style={{
                                         padding: "12px",
                                         background: "rgba(255,255,255,0.05)",
@@ -592,19 +645,24 @@ export default function DepositPage() {
                             </div>
                         </div>
 
-                        <button style={{
-                            width: "100%",
-                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
-                            color: "#0D1117",
-                            border: "none",
-                            padding: "16px",
-                            borderRadius: "14px",
-                            fontSize: "18px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            boxShadow: "0 6px 20px rgba(255,215,0,0.4)"
-                        }}>
-                            ยืนยันถอนเงิน
+                        <button
+                            onClick={handleWithdraw}
+                            disabled={submittingWithdraw}
+                            style={{
+                                width: "100%",
+                                background: "linear-gradient(135deg, #FFD700, #FFC000)",
+                                color: "#0D1117",
+                                border: "none",
+                                padding: "16px",
+                                borderRadius: "14px",
+                                fontSize: "18px",
+                                fontWeight: 700,
+                                cursor: submittingWithdraw ? "not-allowed" : "pointer",
+                                opacity: submittingWithdraw ? 0.7 : 1,
+                                boxShadow: "0 6px 20px rgba(255,215,0,0.4)"
+                            }}
+                        >
+                            {submittingWithdraw ? "กำลังทำรายการ..." : "ยืนยันถอนเงิน"}
                         </button>
                     </div>
                 )}

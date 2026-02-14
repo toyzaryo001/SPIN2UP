@@ -38,7 +38,7 @@ export class BibPayProvider implements IPaymentProvider {
             // The interface creates the payload.
 
             const payload = {
-                bankName: user.bankName || 'Customer',
+                bankName: user.fullName || 'Customer',
                 bankNumber: user.bankAccount || '0000000000',
                 bankCode: bankCode,
                 amount: amount.toFixed(2),
@@ -102,14 +102,13 @@ export class BibPayProvider implements IPaymentProvider {
 
             // 2. Prepare Payload
             const payload = {
-                bankName: user.bankName,
+                bankName: user.fullName,
                 bankNumber: user.bankAccount,
                 bankCode: bankCode,
                 amount: amount.toFixed(2),
                 refferend: referenceId,
                 signatrure: this.config.apiKey,
-                // Some payout APIs require name
-                accountName: user.fullName,
+                // Removed accountName as it's not in the API
                 callbackUrl: this.config.callbackUrl || `${process.env.API_BASE_URL}/webhooks/payment/bibpay`
             };
 

@@ -99,21 +99,16 @@ router.post('/deposit', authMiddleware, async (req: AuthRequest, res) => {
 });
 
 // POST /api/wallet/withdraw - ถอนเงิน (สร้างรายการรอ)
-// POST /api/wallet/withdraw - ถอนเงิน (สร้างรายการรอ)
 router.post('/withdraw', authMiddleware, async (req: AuthRequest, res) => {
     try {
-        const { amount, bankAccountId } = req.body;
+        const { amount } = req.body;
         const userId = req.user!.userId;
 
         if (!amount || amount <= 0) {
             return res.status(400).json({ success: false, message: 'จำนวนเงินไม่ถูกต้อง' });
         }
 
-        if (!bankAccountId) {
-            return res.status(400).json({ success: false, message: 'กรุณาระบุบัญชีธนาคาร' });
-        }
-
-        const result = await PaymentService.createWithdraw(userId, amount, bankAccountId);
+        const result = await PaymentService.createWithdraw(userId, amount);
 
         if (!result.success) {
             return res.status(400).json(result);

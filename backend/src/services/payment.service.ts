@@ -116,60 +116,72 @@ export class PaymentService {
         if (Number(user.balance) < amount) throw new Error('Insufficient balance');
 
         // 3. Get Bank Account (User's)
-        // In this project, User model has bankName and bankAccount
         if (!user.bankAccount || !user.bankName) {
             throw new Error('User bank account not found');
         }
 
-        // 4. Check Auto Withdraw Condition
+        // ============================================
+        // BETFLIX SYNC: Deduct from Game Wallet First
+        // ============================================
+        if (user.betflixUsername) {
+            const success = await BetflixService.transfer(user.betflixUsername, -amount, `WDING_${Date.now()}`);
+            if (!success) {
+                throw new Error('ไม่สามารถถอนเงินออกจากเกมได้ (Game Wallet Error)');
+            }
+        } else {
+            // Check if system allows withdrawing without game wallet? 
+            // Usually no, but for safety in dev we might allow. 
+            // In Production "Single Wallet" implies user MUST have betflix wallet.
+            // We will proceed but log warning.
+            console.warn(`User ${user.username} has no betflix wallet, withdrawing local balance only.`);
+        }
+
+        // 4. Create Transaction (PENDING) & Deduct Local Balance
+        // We deduct balance immediately to prevent double spend
+        const transaction = await prisma.$transaction(async (tx) => {
+            // Deduct User Balance (Sync with Game)
+            await tx.user.update({
+                where: { id: userId },
+                data: { balance: { decrement: amount } }
+            });
+
+            return await tx.transaction.create({
+                data: {
+                    userId,
+                    type: 'WITHDRAW',
+                    amount: new Decimal(amount),
+                    balanceBefore: user.balance,
+                    balanceAfter: new Decimal(Number(user.balance) - amount),
+                    status: 'PENDING',
+                    note: 'Withdraw Request',
+                    paymentGatewayId: null // Pending assignment
+                }
+            });
+        });
+
+        // 5. Check Auto Withdraw Condition
         // Logic: Auto ON + Withdraw ON = Auto API
-        // Any other combination = Manual (Pending)
         let shouldAutoWithdraw = false;
         let activeGateway = null;
 
         try {
-            // Find the first active gateway (usually bibpay)
-            // We prioritize the one that supports withdrawal if multiple exist, but for now just get first active
             const gateways = await prisma.paymentGateway.findMany({ where: { isActive: true } });
-
             for (const gateway of gateways) {
                 try {
                     const config = JSON.parse(gateway.config);
-                    // Check if this gateway supports auto withdraw
-                    const canWithdraw = config.canWithdraw !== false; // Default true
-                    const isAuto = config.isAutoWithdraw === true;   // Default false
+                    const canWithdraw = config.canWithdraw !== false;
+                    const isAuto = config.isAutoWithdraw === true;
 
                     if (canWithdraw && isAuto) {
                         shouldAutoWithdraw = true;
                         activeGateway = gateway;
-                        break; // Found one, use it
+                        break;
                     }
                 } catch (e) { continue; }
             }
         } catch (error) {
             console.error('Error checking auto withdraw config', error);
         }
-
-        // 5. Create Transaction (PENDING)
-        // We deduct balance immediately to prevent double spend
-        const transaction = await prisma.transaction.create({
-            data: {
-                userId,
-                type: 'WITHDRAW',
-                amount: new Decimal(amount),
-                balanceBefore: user.balance,
-                balanceAfter: new Decimal(Number(user.balance) - amount),
-                status: 'PENDING',
-                note: shouldAutoWithdraw ? 'Auto Withdraw Request' : 'Manual Withdraw Request',
-                paymentGatewayId: activeGateway?.id || null
-            }
-        });
-
-        // Deduct User Balance
-        await prisma.user.update({
-            where: { id: userId },
-            data: { balance: { decrement: amount } }
-        });
 
         // 6. If Auto Withdraw is OFF, stop here.
         if (!shouldAutoWithdraw || !activeGateway) {
@@ -183,23 +195,22 @@ export class PaymentService {
 
         // 7. If Auto Withdraw is ON, proceed to convert to Payout
         try {
-            // Get Provider Instance from Factory
-            const provider = await PaymentFactory.getProvider(activeGateway.code);
+            // Update Gateway ID
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: {
+                    paymentGatewayId: activeGateway.id,
+                    note: 'Auto Withdraw Request'
+                }
+            });
 
-            if (!provider) {
-                return {
-                    success: true,
-                    message: 'สร้างรายการถอนเงินสำเร็จ (Auto provider not found)',
-                    transactionId: transaction.id,
-                    status: 'PENDING'
-                };
-            }
+            const provider = await PaymentFactory.getProvider(activeGateway.code);
+            if (!provider) throw new Error('Provider not found');
 
             // Call Provider Payout
             const referenceId = `PAYOUT_${transaction.id}`;
             await prisma.transaction.update({ where: { id: transaction.id }, data: { referenceId } });
 
-            // Note: provider.createPayout implementation usually expects (amount, user, refId)
             const result = await provider.createPayout(amount, user, referenceId);
 
             if (result.success) {
@@ -208,25 +219,12 @@ export class PaymentService {
                     data: {
                         externalId: result.transactionId,
                         rawResponse: JSON.stringify(result.rawResponse)
-                        // Status remains pending until webhook confirms 'success'
                     }
                 });
             } else {
-                // Provider rejected request -> Mark as Failed and Refund
-                await prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: {
-                        status: 'FAILED',
-                        note: `Auto Withdraw Failed: ${result.message || 'Provider Rejected'}`,
-                        rawResponse: JSON.stringify(result.rawResponse)
-                    }
-                });
-                // Refund
-                await prisma.user.update({
-                    where: { id: userId },
-                    data: { balance: { increment: amount } }
-                });
-                // We return failure here so user knows immediate fail
+                // Provider Rejected -> Refund EVERYTHING
+                await this.refundTransaction(transaction.id, userId, amount, `Auto Withdraw Failed: ${result.message}`);
+
                 return {
                     success: false,
                     message: `ทำรายการไม่สำเร็จ: ${result.message || 'Provider Rejected'}`,
@@ -239,19 +237,13 @@ export class PaymentService {
                 success: true,
                 message: 'ดำเนินการถอนเงินสำเร็จ (รอเงินเข้าบัญชี)',
                 transactionId: transaction.id,
-                status: 'PENDING' // API called, waiting for webhook/bank
+                status: 'PENDING'
             };
 
         } catch (error: any) {
             console.error('Auto Withdraw Error:', error);
-            // If error occurs during auto-process (e.g. network connectivity), 
-            // we keep it as PENDING for manual review rather than failing/refunding immediately, 
-            // unless we are sure it failed.
-            // But if we throw, the user sees error 500.
-            // We should swallow error and return PENDING with note.
-
-            // However, if we didn't get a result from provider, we don't know if it went through.
-            // Safest is to flag it for admin.
+            // If we are unsure if provider called, we keep PENDING.
+            // If we know it failed (e.g. factory error), we could refund, but safer to let admin Check.
             await prisma.transaction.update({
                 where: { id: transaction.id },
                 data: { note: `Auto Error: ${error.message}. Waiting Manual.` }
@@ -264,6 +256,31 @@ export class PaymentService {
                 status: 'PENDING'
             };
         }
+    }
+
+    // Helper to Refund
+    static async refundTransaction(transactionId: number, userId: number, amount: number, note: string) {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+
+        // 1. Refund Betflix
+        if (user?.betflixUsername) {
+            await BetflixService.transfer(user.betflixUsername, amount, `REFUND_${transactionId}`);
+        }
+
+        // 2. Refund Local & Update Status
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: userId },
+                data: { balance: { increment: amount } }
+            }),
+            prisma.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    status: 'FAILED',
+                    note: note
+                }
+            })
+        ]);
     }
 
     /**

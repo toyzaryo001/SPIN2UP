@@ -187,7 +187,8 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
 // POST /api/admin/manual/approve-withdrawal - อนุมัติถอน (ต้องมีสิทธิ์ approve_withdraw)
 router.post('/approve-withdrawal', requirePermission('manual', 'withdraw', 'manage'), async (req: AuthRequest, res) => {
     try {
-        const { transactionId } = req.body;
+        const { transactionId, mode, gatewayCode } = req.body;
+        // mode: 'manual' (default) | 'auto'
 
         const transaction = await prisma.transaction.findUnique({
             where: { id: Number(transactionId) },
@@ -202,51 +203,121 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdraw', 'mana
             return res.status(400).json({ success: false, message: 'รายการนี้ถูกดำเนินการแล้ว' });
         }
 
-        const newBalance = Number(transaction.user.balance) - Number(transaction.amount);
+        // NOTE: In Single Wallet Architecture, Balance was ALREADY deducted at creation.
+        // So here we DO NOT deduct balance again.
 
-        // Betflix Deduct (Withdraw)
-        if (transaction.user.betflixUsername) {
-            const success = await BetflixService.transfer(transaction.user.betflixUsername, -Number(transaction.amount), `WD_${transaction.id}`);
-            if (!success) return res.status(500).json({ success: false, message: 'ดึงเงินจากกระเป๋า Betflix ไม่สำเร็จ' });
+        if (mode === 'auto') {
+            // Auto Payout via Gateway
+            const { PaymentFactory } = require('../../services/payment/PaymentFactory'); // Dynamic import to avoid circular dependency if any
+
+            // 1. Get Provider
+            // Defualt to 'bibpay' or whatever is passed
+            const code = gatewayCode || 'bibpay';
+            const provider = await PaymentFactory.getProvider(code);
+
+            if (!provider) {
+                return res.status(400).json({ success: false, message: `Payment Provider ${code} not found` });
+            }
+
+            // 2. Prepare Reference
+            const refId = `PAYOUT_ADMIN_${transaction.id}`;
+            await prisma.transaction.update({ where: { id: transaction.id }, data: { referenceId: refId } });
+
+            // 3. Call Payout
+            const result = await provider.createPayout(Number(transaction.amount), transaction.user, refId);
+
+            if (result.success) {
+                // Success -> Mark Completed
+                await prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        status: 'COMPLETED',
+                        externalId: result.transactionId,
+                        rawResponse: JSON.stringify(result.rawResponse),
+                        adminId: req.user!.userId,
+                        note: (transaction.note || '') + ' [Auto-Approved]'
+                    },
+                });
+                return res.json({ success: true, message: 'ทำรายการถอนอัตโนมัติสำเร็จ' });
+            } else {
+                // Failed -> Return Error but KEEP PENDING (Admin can try again or Manual)
+                return res.status(400).json({
+                    success: false,
+                    message: `ทำรายการถอนอัตโนมัติไม่สำเร็จ: ${result.message}`,
+                    details: result.rawResponse
+                });
+            }
+
         } else {
-            // If direct wallet, maybe we should fail if no betflix user? 
-            return res.status(400).json({ success: false, message: 'ผู้ใช้ยังไม่ได้เชื่อมต่อ Betflix' });
-        }
-
-        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            await tx.user.update({
-                where: { id: transaction.userId },
-                data: { balance: new Decimal(newBalance) },
-            });
-
-            await tx.transaction.update({
+            // Manual Mode: Just update status
+            await prisma.transaction.update({
                 where: { id: transaction.id },
                 data: {
                     status: 'COMPLETED',
-                    balanceAfter: new Decimal(newBalance),
                     adminId: req.user!.userId,
+                    note: (transaction.note || '') + ' [Manual-Approved]'
                 },
             });
-        });
 
-        res.json({ success: true, message: 'อนุมัติสำเร็จ' });
-    } catch (error) {
+            return res.json({ success: true, message: 'อนุมัติสำเร็จ (Manual)' });
+        }
+
+    } catch (error: any) {
         console.error('Approve withdrawal error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด: ' + error.message });
     }
 });
 
 // POST /api/admin/manual/reject-withdrawal - ปฏิเสธถอน (ต้องมีสิทธิ์ reject_withdraw)
 router.post('/reject-withdrawal', requirePermission('manual', 'withdraw', 'manage'), async (req: AuthRequest, res) => {
     try {
-        const { transactionId, note } = req.body;
+        const { transactionId, note, refund } = req.body;
+        // refund: boolean (default true usually, but frontend should send explicit)
 
-        await prisma.transaction.update({
+        const transaction = await prisma.transaction.findUnique({
             where: { id: Number(transactionId) },
-            data: { status: 'REJECTED', note, adminId: req.user!.userId },
+            include: { user: true }
         });
 
-        res.json({ success: true, message: 'ปฏิเสธสำเร็จ' });
+        if (!transaction || transaction.status !== 'PENDING') {
+            return res.status(400).json({ success: false, message: 'รายการไม่ถูกต้อง' });
+        }
+
+        const shouldRefund = refund !== false; // Default to true if undefined, strictly check false
+
+        if (shouldRefund) {
+            // REFUND LOGIC: Return to Betflix & Local
+            const amount = Number(transaction.amount);
+
+            // 1. Return to Betflix
+            if (transaction.user.betflixUsername) {
+                await BetflixService.transfer(transaction.user.betflixUsername, amount, `REFUND_${transaction.id}`);
+            }
+
+            // 2. Return to Local & Update Status
+            await prisma.$transaction([
+                prisma.user.update({
+                    where: { id: transaction.userId },
+                    data: { balance: { increment: amount } }
+                }),
+                prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: { status: 'REJECTED', note, adminId: req.user!.userId }
+                })
+            ]);
+
+            return res.json({ success: true, message: 'ปฏิเสธและคืนยอดเงินสำเร็จ' });
+
+        } else {
+            // NO REFUND: Just mark Rejected (Confiscate)
+            await prisma.transaction.update({
+                where: { id: Number(transactionId) },
+                data: { status: 'REJECTED', note, adminId: req.user!.userId },
+            });
+
+            return res.json({ success: true, message: 'ปฏิเสธสำเร็จ (ไม่คืนยอด)' });
+        }
+
     } catch (error) {
         console.error('Reject withdrawal error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });

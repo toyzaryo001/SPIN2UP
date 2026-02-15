@@ -511,6 +511,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                         />
                     </div>
                 </div>
+            )}
 
             {/* Summary Cards */}
             {summary && ['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug) && (

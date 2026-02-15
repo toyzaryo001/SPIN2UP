@@ -4,6 +4,7 @@ import { formatBaht, formatDate } from "@/lib/utils";
 import { Search, Download, FileText, Check, X, UserPlus, AlertCircle, Loader2 } from "lucide-react";
 import { use, useState, useEffect } from "react";
 import api from "@/lib/api";
+import toast from 'react-hot-toast';
 
 // Map slugs to Page Titles and columns
 const reportConfig: Record<string, { title: string; columns: string[] }> = {
@@ -75,6 +76,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     const [activeTab, setActiveTab] = useState<'transactions' | 'unmatched'>('transactions');
     const [unmatchedLogs, setUnmatchedLogs] = useState<any[]>([]);
     const [resolveModal, setResolveModal] = useState<{ log: any; userQuery: string; usersList: any[]; selectedUser: any | null } | null>(null);
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean } | null>(null);
     const [resolving, setResolving] = useState(false);
 
     // Fetch Unmatched Logs
@@ -115,34 +117,44 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     };
 
     // Handle Resolve Action
+    // Handle Resolve Action
     const handleResolve = async (action: 'APPROVE' | 'REJECT') => {
         if (!resolveModal) return;
 
         if (action === 'APPROVE' && !resolveModal.selectedUser) {
-            alert("กรุณาเลือกผู้ใช้ที่จะเติมเงินให้");
+            toast.error("กรุณาเลือกผู้ใช้ก่อน");
             return;
         }
 
-        if (!confirm(action === 'APPROVE' ? `ยืนยันเติมเงินให้ ${resolveModal.selectedUser.username}?` : "ยืนยันปฏิเสธรายการ?")) return;
+        setConfirmModal({
+            isOpen: true,
+            title: action === 'APPROVE' ? "ยืนยันการเติมเงิน" : "ยืนยันการปฏิเสธ",
+            message: action === 'APPROVE'
+                ? `คุณต้องการเติมเงินให้ ${resolveModal.selectedUser.username} ใช่หรือไม่?`
+                : "คุณต้องการปฏิเสธรายการนี้ใช่หรือไม่?",
+            isDestructive: action === 'REJECT',
+            onConfirm: async () => {
+                setResolving(true);
+                try {
+                    const res = await api.post('/admin/transactions/resolve-sms', {
+                        logId: resolveModal.log.id,
+                        action,
+                        userId: resolveModal.selectedUser?.id
+                    });
 
-        setResolving(true);
-        try {
-            const res = await api.post('/admin/transactions/resolve-sms', {
-                logId: resolveModal.log.id,
-                action,
-                userId: resolveModal.selectedUser?.id
-            });
-
-            if (res.data.success) {
-                setResolveModal(null);
-                fetchUnmatchedLogs(); // Refresh list
-                alert("ดำเนินการสำเร็จ");
+                    if (res.data.success) {
+                        setResolveModal(null);
+                        setConfirmModal(null);
+                        fetchUnmatchedLogs(); // Refresh list
+                        toast.success("ดำเนินการสำเร็จ");
+                    }
+                } catch (error: any) {
+                    toast.error(error.response?.data?.message || "เกิดข้อผิดพลาด");
+                } finally {
+                    setResolving(false);
+                }
             }
-        } catch (error: any) {
-            alert(error.response?.data?.message || "เกิดข้อผิดพลาด");
-        } finally {
-            setResolving(false);
-        }
+        });
     };
 
     // Fetch Data
@@ -757,6 +769,34 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+            {/* Confirm Modal */}
+            {confirmModal && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 text-center">
+                            <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${confirmModal.isDestructive ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                {confirmModal.isDestructive ? <AlertCircle size={24} /> : <Check size={24} />}
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">{confirmModal.title}</h3>
+                            <p className="text-slate-500 mb-6">{confirmModal.message}</p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setConfirmModal(null)}
+                                    className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    onClick={confirmModal.onConfirm}
+                                    className={`flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 font-medium ${confirmModal.isDestructive ? 'bg-red-600' : 'bg-emerald-600'}`}
+                                >
+                                    ยืนยัน
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

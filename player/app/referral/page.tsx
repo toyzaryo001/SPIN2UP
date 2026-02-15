@@ -232,7 +232,7 @@ export default function ReferralPage() {
                                         fontWeight: 700,
                                         color: "#0288D1"
                                     }}>
-                                        {ref.username.substring(0, 1).toUpperCase()}
+                                        {(ref.username || "?").substring(0, 1).toUpperCase()}
                                     </div>
                                     <div>
                                         <p style={{ fontWeight: 700, color: "#333", fontSize: "14px", margin: 0 }}>{ref.username}</p>

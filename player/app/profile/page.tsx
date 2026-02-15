@@ -220,7 +220,7 @@ export default function ProfilePage() {
                         <InfoRow label="ธนาคาร" value={
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <BankLogo bankCode={user.bankName} width={24} height={24} />
-                                <span>{BANK_NAMES[user.bankName.toUpperCase()] || user.bankName}</span>
+                                <span>{user.bankName ? (BANK_NAMES[user.bankName.toUpperCase()] || user.bankName) : "-"}</span>
                             </div>
                         } />
                         <InfoRow label="เลขบัญชี" value={user.bankAccount} />

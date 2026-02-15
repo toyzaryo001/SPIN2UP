@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import prisma from '../../lib/db.js';
+import { BetflixService } from '../../services/betflix.service';
 
 const router = Router();
 
@@ -175,29 +176,19 @@ router.post('/resolve-sms', async (req, res) => {
             let betflixSuccess = false;
             let betflixError = '';
 
-            // Should import BetflixService if not available, or use a dynamic import/require if strictly standardizing imports is hard here
-            // Assuming BetflixService is available or I will add import
-            // I'll add the import at the top of file
             try {
                 if (user.betflixUsername) {
-                    // Need to ensure BetflixService is imported. 
-                    // Since I can't see the top imports right now in this chunk, I will assume I need to add it.
-                    // IMPORTANT: I will add the import in a separate step or assume it's available.
-                    // Wait, I see the file content in history. It imports 'prisma'. It DOES NOT import BetflixService.
-                    // I need to add the import. I will do that in a separate replacement or try to do it here if I can view the top.
-                    // For now, I'll rely on the user to have it or I'll do a second edit.
-                    // Actually, let's use a `require` fallback or just assume I'll fix imports next.
-                    // Better: I will use `require` inside here to avoid breaking top-level if I can't edit top easily.
-                    // Or better: I will Edit the top of the file first in next step? No, replacing content here is file-end.
-                    // I will add the route logic here, and then I will add the import in a separate tool call.
-
-                    // Logic continues...
-                    const { BetflixService } = require('../../services/betflix.service');
+                    console.log(`[ResolveSMS] Transferring ${depositAmount} to ${user.betflixUsername}...`);
+                    // Use clean BetflixService import
                     betflixSuccess = await BetflixService.transfer(user.betflixUsername, depositAmount, `MANUAL_${transaction.id}`);
+                    if (!betflixSuccess) betflixError = 'Betflix API returned failure';
                 } else {
-                    betflixSuccess = true; // No betflix account, just local balance
+                    console.warn(`[ResolveSMS] User ${user.username} has no Betflix Username. Skipping Betflix transfer.`);
+                    betflixSuccess = true; // Treat as success for local balance
+                    betflixError = 'No Betflix Username';
                 }
             } catch (err: any) {
+                console.error('[ResolveSMS] Betflix Exception:', err);
                 betflixError = err.message || 'Betflix transfer failed';
             }
 
@@ -216,7 +207,7 @@ router.post('/resolve-sms', async (req, res) => {
                     })
                 ]);
 
-                return res.json({ success: true, message: 'อนุมัติยอดฝากสำเร็จ' });
+                return res.json({ success: true, message: 'อนุมัติยอดฝากและเติมเงินสำเร็จ' });
             } else {
                 await prisma.transaction.update({
                     where: { id: transaction.id },

@@ -646,91 +646,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                             </button>
                         </div>
                     </div>
-                    {/* Resolve Modal */}
-                    {resolveModal && (
-                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
-                                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                                    <h3 className="font-bold text-slate-800">จัดการรายการฝากเงิน</h3>
-                                    <button onClick={() => setResolveModal(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-                                </div>
 
-                                <div className="p-6 space-y-4">
-                                    <div className="bg-slate-50 p-3 rounded-lg text-sm space-y-2">
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-500">ธนาคาร/เบอร์:</span>
-                                            <span className="font-semibold">{resolveModal.log.sourceBank} {resolveModal.log.sourceAccount}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-500">ยอดเงิน:</span>
-                                            <span className="font-bold text-emerald-600">{formatBaht(resolveModal.log.amount)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-500">ข้อความ:</span>
-                                            <span className="text-xs text-slate-600">{resolveModal.log.rawMessage}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-700">ค้นหาผู้ใช้เพื่อเติมเงิน</label>
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                            <input
-                                                type="text"
-                                                placeholder="Username หรือ เบอร์โทร..."
-                                                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                                                value={resolveModal.userQuery}
-                                                onChange={(e) => handleSearchUser(e.target.value)}
-                                            />
-                                        </div>
-                                        {resolveModal.usersList.length > 0 && !resolveModal.selectedUser && (
-                                            <div className="border border-slate-100 rounded-lg max-h-40 overflow-y-auto divide-y divide-slate-100">
-                                                {resolveModal.usersList.map(u => (
-                                                    <div
-                                                        key={u.id}
-                                                        onClick={() => setResolveModal({ ...resolveModal, selectedUser: u, usersList: [] })}
-                                                        className="p-2 hover:bg-slate-50 cursor-pointer flex justify-between items-center"
-                                                    >
-                                                        <div>
-                                                            <div className="font-bold text-sm text-slate-700">{u.username}</div>
-                                                            <div className="text-xs text-slate-500">{u.fullName || '-'}</div>
-                                                        </div>
-                                                        <div className="text-xs text-slate-400">{u.phone}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {resolveModal.selectedUser && (
-                                        <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-lg flex justify-between items-center">
-                                            <div>
-                                                <div className="text-xs text-emerald-600 font-medium">ผู้ใช้ที่เลือก:</div>
-                                                <div className="font-bold text-emerald-800">{resolveModal.selectedUser.username}</div>
-                                            </div>
-                                            <button onClick={() => setResolveModal({ ...resolveModal, selectedUser: null })} className="text-emerald-400 hover:text-emerald-600"><X size={16} /></button>
-                                        </div>
-                                    )}
-
-                                    <div className="flex gap-3 pt-2">
-                                        <button
-                                            onClick={() => handleResolve('APPROVE')}
-                                            disabled={resolving}
-                                            className={`flex-1 py-2 rounded-lg font-bold flex justify-center items-center gap-2 ${!resolveModal.selectedUser ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                                        // Actually, if I want to show toast, I should NOT disable it or use cursor-not-allowed if I want them to click it.
-                                        // But standard UI usually disables invalid buttons.
-                                        // User said "กดไม่ได้ไม่มีอะไรเกิดขึ้นเลย" (Cannot click, nothing happens).
-                                        // They clearly want feedback.
-                                        // So I will make it LOOK clickable or at least handles the click.
-                                        >
-                                            {resolving ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
-                                            ยืนยันเติมเงิน
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             ) : (
                 /* Unmatched Table */
@@ -774,6 +690,86 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+            {/* Resolve Modal - Moved to Root Level */}
+            {resolveModal && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <h3 className="font-bold text-slate-800">จัดการรายการฝากเงิน</h3>
+                            <button onClick={() => setResolveModal(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="bg-slate-50 p-3 rounded-lg text-sm space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">ธนาคาร/เบอร์:</span>
+                                    <span className="font-semibold">{resolveModal.log.sourceBank} {resolveModal.log.sourceAccount}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">ยอดเงิน:</span>
+                                    <span className="font-bold text-emerald-600">{formatBaht(resolveModal.log.amount)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">ข้อความ:</span>
+                                    <span className="text-xs text-slate-600">{resolveModal.log.rawMessage}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700">ค้นหาผู้ใช้เพื่อเติมเงิน</label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Username หรือ เบอร์โทร..."
+                                        className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                                        value={resolveModal.userQuery}
+                                        onChange={(e) => handleSearchUser(e.target.value)}
+                                    />
+                                </div>
+                                {resolveModal.usersList.length > 0 && !resolveModal.selectedUser && (
+                                    <div className="border border-slate-100 rounded-lg max-h-40 overflow-y-auto divide-y divide-slate-100">
+                                        {resolveModal.usersList.map(u => (
+                                            <div
+                                                key={u.id}
+                                                onClick={() => setResolveModal({ ...resolveModal, selectedUser: u, usersList: [] })}
+                                                className="p-2 hover:bg-slate-50 cursor-pointer flex justify-between items-center"
+                                            >
+                                                <div>
+                                                    <div className="font-bold text-sm text-slate-700">{u.username}</div>
+                                                    <div className="text-xs text-slate-500">{u.fullName || '-'}</div>
+                                                </div>
+                                                <div className="text-xs text-slate-400">{u.phone}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {resolveModal.selectedUser && (
+                                <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <div className="text-xs text-emerald-600 font-medium">ผู้ใช้ที่เลือก:</div>
+                                        <div className="font-bold text-emerald-800">{resolveModal.selectedUser.username}</div>
+                                    </div>
+                                    <button onClick={() => setResolveModal({ ...resolveModal, selectedUser: null })} className="text-emerald-400 hover:text-emerald-600"><X size={16} /></button>
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => handleResolve('APPROVE')}
+                                    disabled={resolving}
+                                    className={`flex-1 py-2 rounded-lg font-bold flex justify-center items-center gap-2 ${!resolveModal.selectedUser ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                                >
+                                    {resolving ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
+                                    ยืนยันเติมเงิน
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

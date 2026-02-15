@@ -210,7 +210,7 @@ router.get('/streak-stats', authMiddleware, async (req: AuthRequest, res) => {
             where: {
                 userId,
                 type: 'DEPOSIT',
-                status: 'APPROVED', // Assuming APPROVED is payment success
+                status: { in: ['APPROVED', 'COMPLETED'] }, // Support both manual and auto deposits
                 createdAt: { gte: sevenDaysAgo }
             },
             select: {

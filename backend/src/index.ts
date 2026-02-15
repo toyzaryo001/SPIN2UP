@@ -17,6 +17,7 @@ import smsWebhookRoutes from './routes/sms-webhook.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import { initJwtSecret } from './utils/jwt.js';
+import { BetLogSyncService } from './services/bet-log-sync.service.js';
 
 dotenv.config();
 
@@ -103,6 +104,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`Health check available at http://0.0.0.0:${PORT}/api/health`);
+
+    // Start Bet Log Sync (Every 1 minute)
+    console.log('🚀 Starting Bet Log Sync Service...');
+    setInterval(() => {
+        BetLogSyncService.syncLogs().catch(err => console.error('Sync Error:', err));
+    }, 60 * 1000);
+    // Run all immediately on start
+    BetLogSyncService.syncLogs().catch(err => console.error('Initial Sync Error:', err));
 });
 
 export default app;

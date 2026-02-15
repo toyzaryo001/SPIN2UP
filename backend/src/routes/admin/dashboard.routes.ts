@@ -122,9 +122,11 @@ router.get('/', async (req, res) => {
         });
         const depositUserIdSet = new Set(depositUserIds.map(d => d.userId));
 
-        const betUserIds = await prisma.gameSession.findMany({
+        const betUserIds = await prisma.transaction.findMany({
             where: {
-                playedAt: { gte: filterStart, lte: filterEnd }
+                type: 'BET',
+                status: 'COMPLETED',
+                createdAt: { gte: filterStart, lte: filterEnd }
             },
             select: { userId: true },
             distinct: ['userId']

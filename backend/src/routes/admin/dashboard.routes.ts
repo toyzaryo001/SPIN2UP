@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { requirePermission } from '../../middlewares/auth.middleware.js';
+import { BetflixService } from '../../services/betflix.service.js';
+import dayjs from 'dayjs';
 
 const router = Router();
 
@@ -110,32 +112,39 @@ router.get('/', async (req, res) => {
             firstDepositCount = firstDeposits._count;
         }
 
-        // Active users (deposited AND bet in range) - ต้องผ่าน 2 เงื่อนไข
-        const depositUserIds = await prisma.transaction.findMany({
+
+        // Active Users: Users who Deposited AND Played today
+        // 1. Get users who deposited today
+        const depositors = await prisma.transaction.findMany({
             where: {
                 type: 'DEPOSIT',
                 status: 'COMPLETED',
                 createdAt: { gte: filterStart, lte: filterEnd }
             },
-            select: { userId: true },
+            select: { userId: true, user: { select: { username: true, betflixUsername: true } } },
             distinct: ['userId']
         });
-        const depositUserIdSet = new Set(depositUserIds.map(d => d.userId));
 
-        const betUserIds = await prisma.transaction.findMany({
-            where: {
-                type: 'BET',
-                status: 'COMPLETED',
-                createdAt: { gte: filterStart, lte: filterEnd }
-            },
-            select: { userId: true },
-            distinct: ['userId']
-        });
-        const betUserIdSet = new Set(betUserIds.map(b => b.userId));
+        // 2. Check betting activity for these depositors via API (Concurrency: 5)
+        let activeUserCount = 0;
+        const apiStart = dayjs(filterStart).format('YYYY-MM-DD');
+        const apiEnd = dayjs(filterEnd).format('YYYY-MM-DD');
+        const batchSize = 5;
 
-        // Intersection: users who both deposited AND bet
-        const activeUserIds = [...depositUserIdSet].filter(id => betUserIdSet.has(id));
-        const activeUserCount = activeUserIds.length;
+        for (let i = 0; i < depositors.length; i += batchSize) {
+            const batch = depositors.slice(i, i + batchSize);
+            const results = await Promise.all(batch.map(async (d) => {
+                if (!d.user.betflixUsername) return false;
+                try {
+                    const report = await BetflixService.getReportSummary(d.user.betflixUsername, apiStart, apiEnd);
+                    // Active if turnover or winloss is recorded (activity exists)
+                    return report && (Number(report.turnover) > 0 || Number(report.winloss) !== 0);
+                } catch (e) {
+                    return false;
+                }
+            }));
+            activeUserCount += results.filter(isActive => isActive).length;
+        }
 
         // Returning customers (registered before filter start, deposited in range)
         const returningCustomers = await prisma.transaction.findMany({

@@ -649,24 +649,28 @@ export class BetflixService {
         params.append('id', lastId.toString());
 
         // 1. Try 'report/getBetlogNEW' (GET) - Reference Primary
+        // 1. Try 'report/getBetlogNEW' (GET) - Reference Primary
         try {
             // Note: Reference uses 'report/getBetlogNEW' but some use '/v4/get_bet_log'
             // We follow Reference logic: report/getBetlogNEW
             const res = await api.get('/v4/report/getBetlogNEW', { params: Object.fromEntries(params) });
             if (res.data.status !== 'error') return res.data.data || [];
-        } catch (e) { }
+            else console.error('[GetBetLog] GET report/getBetlogNEW Error:', res.data);
+        } catch (e: any) { console.error('[GetBetLog] GET report/getBetlogNEW Exception:', e.message); }
 
         // 2. Try 'report/getBetlogNEW' (POST) - Reference Fallback
         try {
             const res = await api.post('/v4/report/getBetlogNEW', params);
             if (res.data.status !== 'error') return res.data.data || [];
-        } catch (e) { }
+            else console.error('[GetBetLog] POST report/getBetlogNEW Error:', res.data);
+        } catch (e: any) { console.error('[GetBetLog] POST report/getBetlogNEW Exception:', e.message); }
 
         // 3. Try '/v4/get_bet_log' (POST) - Common V4 Fallback
         try {
             const res = await api.post('/v4/get_bet_log', params);
             if (res.data.status !== 'error') return res.data.data || [];
-        } catch (e) { }
+            else console.error('[GetBetLog] POST v4/get_bet_log Error:', res.data);
+        } catch (e: any) { console.error('[GetBetLog] POST v4/get_bet_log Exception:', e.message); }
 
         return [];
     }

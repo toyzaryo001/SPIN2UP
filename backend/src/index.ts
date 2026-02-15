@@ -105,13 +105,13 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`Health check available at http://0.0.0.0:${PORT}/api/health`);
 
-    // Start Bet Log Sync (Every 1 minute)
-    console.log('🚀 Starting Bet Log Sync Service...');
-    setInterval(() => {
-        BetLogSyncService.syncLogs().catch(err => console.error('Sync Error:', err));
-    }, 60 * 1000);
+    // Start Bet Log Sync (Disabled: API requires valid lastId which is unavailable)
+    // console.log('🚀 Starting Bet Log Sync Service...');
+    // setInterval(() => {
+    //     BetLogSyncService.syncLogs().catch(err => console.error('Sync Error:', err));
+    // }, 60 * 1000);
     // Run all immediately on start
-    BetLogSyncService.syncLogs().catch(err => console.error('Initial Sync Error:', err));
+    // BetLogSyncService.syncLogs().catch(err => console.error('Initial Sync Error:', err));
 });
 
 export default app;

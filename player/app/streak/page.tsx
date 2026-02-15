@@ -18,26 +18,39 @@ export default function StreakPage() {
     const { user, loading: authLoading } = useAuth(true);
     const [settings, setSettings] = useState<StreakDay[]>([]);
     const [loading, setLoading] = useState(true);
-    const [currentStreak] = useState(0); // TODO: Fetch from user data
+    const [currentStreak, setCurrentStreak] = useState(0);
 
     useEffect(() => {
-        const fetchSettings = async () => {
+        const fetchData = async () => {
             try {
-                const res = await axios.get(`${API_URL}/public/streak`);
-                if (Array.isArray(res.data)) {
-                    setSettings(res.data);
+                const [settingsRes, statsRes] = await Promise.all([
+                    axios.get(`${API_URL}/public/streak`),
+                    user ? axios.get(`${API_URL}/users/streak-stats`, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                    }) : Promise.resolve({ data: { success: true, data: { currentStreak: 0 } } })
+                ]);
+
+                if (Array.isArray(settingsRes.data)) {
+                    setSettings(settingsRes.data);
+                }
+
+                if (statsRes.data.success) {
+                    setCurrentStreak(statsRes.data.data.currentStreak);
                 }
             } catch (error) {
-                console.error("Failed to fetch streak settings", error);
+                console.error("Failed to fetch streak data", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchSettings();
-    }, []);
+
+        if (!authLoading) {
+            fetchData();
+        }
+    }, [authLoading, user]);
 
     if (authLoading || loading) {
-        return <PlayerLayout><div style={{ padding: "40px", textAlign: "center" }}>กำลังโหลด...</div></PlayerLayout>;
+        return <PlayerLayout><div className="flex h-[50vh] items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div></div></PlayerLayout>;
     }
 
     if (!user) return null;

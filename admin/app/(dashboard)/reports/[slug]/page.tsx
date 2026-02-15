@@ -792,8 +792,10 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                 </button>
                                 <button
                                     onClick={confirmModal.onConfirm}
-                                    className={`flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 font-medium ${confirmModal.isDestructive ? 'bg-red-600' : 'bg-emerald-600'}`}
+                                    disabled={resolving}
+                                    className={`flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 font-medium flex justify-center items-center gap-2 ${confirmModal.isDestructive ? 'bg-red-600' : 'bg-emerald-600'} ${resolving ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
+                                    {resolving && <Loader2 className="animate-spin" size={16} />}
                                     ยืนยัน
                                 </button>
                             </div>

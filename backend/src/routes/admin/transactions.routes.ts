@@ -155,90 +155,130 @@ router.get('/unmatched-sms', async (req, res) => {
 router.post('/resolve-sms', async (req, res) => {
     try {
         const { logId, action, userId } = req.body; // action: 'APPROVE' | 'REJECT'
-        const adminId = (req as any).user?.userId; // Assuming auth middleware populates this
+        const adminId = (req as any).user?.userId;
 
-        const log = await prisma.smsWebhookLog.findUnique({ where: { id: Number(logId) } });
-        if (!log) return res.status(404).json({ success: false, message: 'ไม่พบรายการ SMS' });
+        // 1. Initial Check (Read-only)
+        const checkLog = await prisma.smsWebhookLog.findUnique({ where: { id: Number(logId) } });
+        if (!checkLog) return res.status(404).json({ success: false, message: 'ไม่พบรายการ SMS' });
 
-        if (log.status !== 'NO_MATCH') {
+        if (checkLog.status !== 'NO_MATCH' && checkLog.status !== 'PROCESSING') {
             return res.status(400).json({ success: false, message: 'รายการนี้ถูกจัดการไปแล้ว' });
         }
 
+        // Action: REJECT
         if (action === 'REJECT') {
-            await prisma.smsWebhookLog.update({
-                where: { id: Number(logId) },
+            // Atomic update for REJECT
+            const updated = await prisma.smsWebhookLog.updateMany({
+                where: { id: Number(logId), status: 'NO_MATCH' },
                 data: { status: 'REJECTED', errorMessage: `Rejected by Admin #${adminId}` }
             });
+
+            if (updated.count === 0) {
+                return res.status(400).json({ success: false, message: 'ไม่สามารถปฏิเสธรายการได้ (อาจถูกทำรายการไปแล้ว)' });
+            }
+
             return res.json({ success: true, message: 'ปฏิเสธรายการสำเร็จ' });
         }
 
+        // Action: APPROVE
         if (action === 'APPROVE') {
             if (!userId) return res.status(400).json({ success: false, message: 'ต้องระบุผู้ใช้สำหรับรายการที่อนุมัติ' });
 
-            const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
-            if (!user) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
-
-            // Create Transaction & Deposit Logic (Similar to Webhook)
-            const depositAmount = Number(log.amount);
-            const balanceBefore = Number(user.balance);
-
-            // 1. Create Transaction
-            const transaction = await prisma.transaction.create({
-                data: {
-                    userId: user.id,
-                    type: 'DEPOSIT',
-                    subType: 'MANUAL_MATCH', // Indicate manual match
-                    amount: depositAmount,
-                    balanceBefore: balanceBefore,
-                    balanceAfter: balanceBefore + depositAmount,
-                    status: 'PENDING',
-                    note: `Manual Match SMS - ${log.sourceBank} ${log.sourceAccount}`,
-                    adminId: adminId
-                }
+            // 1. ATOMIC LOCK: Try to set status to 'PROCESSING'
+            // Only succeeds if status is currently 'NO_MATCH'
+            const locked = await prisma.smsWebhookLog.updateMany({
+                where: { id: Number(logId), status: 'NO_MATCH' },
+                data: { status: 'PROCESSING' }
             });
 
-            // 2. Deposit to Betflix (if applicable)
-            let betflixSuccess = false;
-            let betflixError = '';
-
-            try {
-                if (user.betflixUsername) {
-                    console.log(`[ResolveSMS] Transferring ${depositAmount} to ${user.betflixUsername}...`);
-                    // Use clean BetflixService import
-                    betflixSuccess = await BetflixService.transfer(user.betflixUsername, depositAmount, `MANUAL_${transaction.id}`);
-                    if (!betflixSuccess) betflixError = 'Betflix API returned failure';
-                } else {
-                    console.warn(`[ResolveSMS] User ${user.username} has no Betflix Username. Skipping Betflix transfer.`);
-                    betflixSuccess = true; // Treat as success for local balance
-                    betflixError = 'No Betflix Username';
-                }
-            } catch (err: any) {
-                console.error('[ResolveSMS] Betflix Exception:', err);
-                betflixError = err.message || 'Betflix transfer failed';
+            if (locked.count === 0) {
+                // If failed to lock, it means another request took it or it's already done
+                return res.status(400).json({ success: false, message: 'รายการนี้กำลังถูกดำเนินการหรือเสร็จสิ้นไปแล้ว' });
             }
 
-            if (betflixSuccess) {
-                await prisma.$transaction([
-                    prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'COMPLETED' } }),
-                    prisma.user.update({ where: { id: user.id }, data: { balance: { increment: depositAmount } } }),
-                    prisma.smsWebhookLog.update({
-                        where: { id: log.id },
-                        data: {
-                            status: 'MANUAL_MATCH',
-                            matchedUserId: user.id,
-                            transactionId: transaction.id,
-                            errorMessage: `Matched by Admin #${adminId}`
-                        }
-                    })
-                ]);
+            // Now we own the lock. Proceed with logic.
+            // If anything fails below, we MUST revert status to 'NO_MATCH' or set to 'FAILED'
+            try {
+                const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
+                if (!user) {
+                    // Revert lock
+                    await prisma.smsWebhookLog.update({ where: { id: Number(logId) }, data: { status: 'NO_MATCH' } });
+                    return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+                }
 
-                return res.json({ success: true, message: 'อนุมัติยอดฝากและเติมเงินสำเร็จ' });
-            } else {
-                await prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: { status: 'FAILED', note: `Betflix Error: ${betflixError}` }
+                // Create Transaction & Deposit Logic
+                const depositAmount = Number(checkLog.amount);
+                const balanceBefore = Number(user.balance);
+
+                const transaction = await prisma.transaction.create({
+                    data: {
+                        userId: user.id,
+                        type: 'DEPOSIT',
+                        subType: 'MANUAL_MATCH',
+                        amount: depositAmount,
+                        balanceBefore: balanceBefore,
+                        balanceAfter: balanceBefore + depositAmount,
+                        status: 'PENDING',
+                        note: `Manual Match SMS - ${checkLog.sourceBank} ${checkLog.sourceAccount}`,
+                        adminId: adminId
+                    }
                 });
-                return res.status(500).json({ success: false, message: 'เติมเงิน Betflix ไม่สำเร็จ: ' + betflixError });
+
+                // Deposit to Betflix
+                let betflixSuccess = false;
+                let betflixError = '';
+
+                try {
+                    if (user.betflixUsername) {
+                        console.log(`[ResolveSMS] Transferring ${depositAmount} to ${user.betflixUsername}...`);
+                        betflixSuccess = await BetflixService.transfer(user.betflixUsername, depositAmount, `MANUAL_${transaction.id}`);
+                        if (!betflixSuccess) betflixError = 'Betflix API returned failure';
+                    } else {
+                        console.warn(`[ResolveSMS] User ${user.username} has no Betflix Username. Skipping Betflix transfer.`);
+                        betflixSuccess = true;
+                        betflixError = 'No Betflix Username';
+                    }
+                } catch (err: any) {
+                    console.error('[ResolveSMS] Betflix Exception:', err);
+                    betflixError = err.message || 'Betflix transfer failed';
+                }
+
+                if (betflixSuccess) {
+                    await prisma.$transaction([
+                        prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'COMPLETED' } }),
+                        prisma.user.update({ where: { id: user.id }, data: { balance: { increment: depositAmount } } }),
+                        prisma.smsWebhookLog.update({
+                            where: { id: Number(logId) },
+                            data: {
+                                status: 'MANUAL_MATCH',
+                                matchedUserId: user.id,
+                                transactionId: transaction.id,
+                                errorMessage: `Matched by Admin #${adminId}`
+                            }
+                        })
+                    ]);
+                    return res.json({ success: true, message: 'อนุมัติยอดฝากและเติมเงินสำเร็จ' });
+                } else {
+                    // Failed to transfer to Betflix
+                    await prisma.transaction.update({
+                        where: { id: transaction.id },
+                        data: { status: 'FAILED', note: `Betflix Error: ${betflixError}` }
+                    });
+                    // Revert SMS log to NO_MATCH so it can be tried again? Or keep as FAILED?
+                    // Usually better to keep as FAILED or NO_MATCH. Let's set to NO_MATCH to allow retry, but log error.
+                    await prisma.smsWebhookLog.update({
+                        where: { id: Number(logId) },
+                        data: { status: 'NO_MATCH', errorMessage: `Failed: ${betflixError}` }
+                    });
+                    return res.status(500).json({ success: false, message: 'เติมเงิน Betflix ไม่สำเร็จ: ' + betflixError });
+                }
+
+            } catch (innerError) {
+                // Unexpected error during processing (e.g. database error)
+                console.error('Inner resolve error:', innerError);
+                // Unlock
+                await prisma.smsWebhookLog.update({ where: { id: Number(logId) }, data: { status: 'NO_MATCH' } });
+                return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดระหว่างดำเนินการ' });
             }
         }
 

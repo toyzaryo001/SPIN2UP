@@ -715,8 +715,13 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                     <div className="flex gap-3 pt-2">
                                         <button
                                             onClick={() => handleResolve('APPROVE')}
-                                            disabled={!resolveModal.selectedUser || resolving}
-                                            className="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-bold hover:bg-emerald-700 disabled:opacity-50 flex justify-center items-center gap-2"
+                                            disabled={resolving}
+                                            className={`flex-1 py-2 rounded-lg font-bold flex justify-center items-center gap-2 ${!resolveModal.selectedUser ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                                        // Actually, if I want to show toast, I should NOT disable it or use cursor-not-allowed if I want them to click it.
+                                        // But standard UI usually disables invalid buttons.
+                                        // User said "กดไม่ได้ไม่มีอะไรเกิดขึ้นเลย" (Cannot click, nothing happens).
+                                        // They clearly want feedback.
+                                        // So I will make it LOOK clickable or at least handles the click.
                                         >
                                             {resolving ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
                                             ยืนยันเติมเงิน
@@ -761,7 +766,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                             <td className="px-6 py-4">
                                                 <div className="flex gap-2">
                                                     <button onClick={() => setResolveModal({ log, userQuery: '', usersList: [], selectedUser: null })} className="p-2 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200" title="อนุมัติ"><Check size={16} /></button>
-                                                    <button onClick={() => { if (confirm('ยืนยันปฏิเสธ?')) { setResolveModal({ log, userQuery: '', usersList: [], selectedUser: null }); handleResolve('REJECT'); } }} className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200" title="ปฏิเสธ"><X size={16} /></button>
+                                                    <button onClick={() => { setResolveModal({ log, userQuery: '', usersList: [], selectedUser: null }); setTimeout(() => handleResolve('REJECT'), 100); }} className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200" title="ปฏิเสธ"><X size={16} /></button>
                                                 </div>
                                             </td>
                                         </tr>

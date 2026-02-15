@@ -4,6 +4,31 @@ import { BetflixService } from '../../services/betflix.service';
 
 const router = Router();
 
+// GET /api/admin/transactions/stats - จำนวนรายการรอตรวจสอบ (สำหรับ Badge)
+router.get('/stats', async (req, res) => {
+    try {
+        const [pendingWithdraw, unmatchedDeposit] = await Promise.all([
+            prisma.transaction.count({
+                where: { type: 'WITHDRAW', status: 'PENDING' }
+            }),
+            prisma.smsWebhookLog.count({
+                where: { status: 'NO_MATCH' }
+            })
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                pendingWithdraw,
+                unmatchedDeposit
+            }
+        });
+    } catch (error) {
+        console.error('Get transaction stats error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 // GET /api/admin/transactions - รายการธุรกรรมทั้งหมด
 router.get('/', async (req, res) => {
     try {

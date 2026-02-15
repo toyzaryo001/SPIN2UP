@@ -168,6 +168,7 @@ export default function Sidebar() {
   const [loading, setLoading] = useState(true);
   const [brandName, setBrandName] = useState("ADMIN");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [stats, setStats] = useState({ pendingWithdraw: 0, unmatchedDeposit: 0 });
 
   // Fetch admin permissions and branding on mount
   useEffect(() => {
@@ -196,7 +197,6 @@ export default function Sidebar() {
             }
           }
         }
-
       } catch (error) {
         console.error('Failed to fetch sidebar data:', error);
         setPermissions({});
@@ -204,7 +204,25 @@ export default function Sidebar() {
         setLoading(false);
       }
     };
+
     fetchData();
+
+    // Polling for stats (every 15 seconds)
+    const fetchStats = async () => {
+      try {
+        const res = await api.get('/admin/transactions/stats');
+        if (res.data.success) {
+          setStats(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stats", err);
+      }
+    };
+
+    fetchStats(); // Initial fetch
+    const interval = setInterval(fetchStats, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Restore scroll position when pathname changes or component mounts
@@ -356,6 +374,16 @@ export default function Sidebar() {
                               >
                                 <div className={cn("w-1.5 h-1.5 rounded-full", isSubActive ? "bg-yellow-500" : "bg-slate-600")} />
                                 {sub.label}
+                                {sub.label === 'รายงานฝากเงิน' && stats.unmatchedDeposit > 0 && (
+                                  <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center animate-pulse">
+                                    {stats.unmatchedDeposit}
+                                  </span>
+                                )}
+                                {sub.label === 'รายการรอถอน' && stats.pendingWithdraw > 0 && (
+                                  <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center animate-pulse">
+                                    {stats.pendingWithdraw}
+                                  </span>
+                                )}
                               </Link>
                             );
                           })}

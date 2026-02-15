@@ -199,7 +199,7 @@ export class PaymentService {
         if (!shouldAutoWithdraw || !activeGateway) {
             return {
                 success: true,
-                message: 'สร้างรายการถอนเงินสำเร็จ รอตรวจสอบ (Manual)',
+                message: 'สร้างรายการถอนเงินสำเร็จ รอตรวจสอบ',
                 transactionId: transaction.id,
                 status: 'PENDING'
             };

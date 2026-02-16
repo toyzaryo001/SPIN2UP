@@ -13,6 +13,7 @@ interface Agent {
     isMain: boolean;
     upline?: string;
     apiKey?: string;
+    apiSecret?: string;
     xApiKey?: string;
     xApiCat?: string;
     gameEntrance?: string;

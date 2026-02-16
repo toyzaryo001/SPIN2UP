@@ -1,0 +1,6 @@
+Message: Request failed with status code 403
+Response Data: {
+  "status": "0",
+  "code": "INVALID_IP",
+  "message": "Your IP 2405:9800:ba30:8245:107a:7c78:d5cd:bd2a should be registered in the whitelist of the API panel."
+}

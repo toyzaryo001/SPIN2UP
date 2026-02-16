@@ -199,6 +199,10 @@ router.put('/agent/:id', requirePermission('agents', 'settings', 'manage'), asyn
             },
         });
 
+        // Clear Agent Factory Cache to apply new settings immediately
+        const { AgentFactory } = await import('../../services/agents/AgentFactory.js');
+        AgentFactory.clearCache(config.code);
+
         res.json({ success: true, data: config });
     } catch (error: any) {
         console.error('Update agent config error:', error);

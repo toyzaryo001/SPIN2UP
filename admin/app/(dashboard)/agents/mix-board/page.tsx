@@ -25,6 +25,7 @@ interface Game {
     agentId?: number | null;
     isActive: boolean;
     providerId: number;
+    thumbnail?: string;
 }
 
 export default function MixBoardPage() {

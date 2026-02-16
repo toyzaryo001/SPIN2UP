@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { Save, ArrowLeft, Settings, Database, Gamepad2, Activity, Trash2, AlertTriangle } from "lucide-react";
+import { Save, ArrowLeft, Settings, Database, Gamepad2, Activity, Trash2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Agent {
@@ -34,6 +34,7 @@ export default function AgentDetailPage() {
 
     // Form Stats
     const [formData, setFormData] = useState<Partial<Agent>>({});
+    const [showToken, setShowToken] = useState(false);
 
     useEffect(() => {
         if (id) fetchAgent();
@@ -258,13 +259,22 @@ export default function AgentDetailPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Agent Token (Secret)</label>
-                                    <input
-                                        type="password"
-                                        value={formData.xApiKey || ''}
-                                        onChange={(e) => setFormData({ ...formData, xApiKey: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono"
-                                        placeholder="Token..."
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showToken ? "text" : "password"}
+                                            value={formData.xApiKey || ''}
+                                            onChange={(e) => setFormData({ ...formData, xApiKey: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono pr-10"
+                                            placeholder="Token..."
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowToken(!showToken)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                        >
+                                            {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-slate-400 mt-1">ใช้สำหรับฟิลด์ agent_token</p>
                                 </div>
                             </div>

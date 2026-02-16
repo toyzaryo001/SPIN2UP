@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { Save, ArrowLeft, Settings, Database, Gamepad2, Activity, Trash2, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Save, ArrowLeft, Settings, Database, Gamepad2, Activity, Trash2, AlertTriangle, Eye, EyeOff, Search, RefreshCw, LayoutGrid, Library } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Agent {
@@ -41,6 +41,11 @@ export default function AgentDetailPage() {
     // Test Room Data State
     const [providers, setProviders] = useState<any[]>([]);
     const [gamesList, setGamesList] = useState<any[]>([]);
+
+    // Game Library State
+    const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [gameSearchTerm, setGameSearchTerm] = useState('');
 
     useEffect(() => {
         if (id) fetchAgent();
@@ -133,15 +138,13 @@ export default function AgentDetailPage() {
                 >
                     <Activity size={16} /> ห้องทดสอบ (Test Room)
                 </button>
-                {/* Future: Games Tab */}
-                {/* <button
+                <button
                     onClick={() => setActiveTab('games')}
-                    className={`px-6 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${
-                        activeTab === 'games' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
-                    }`}
+                    className={`px-6 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'games' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
                 >
-                    <Gamepad2 size={16} /> เกมที่ผูกไว้
-                </button> */}
+                    <Library size={16} /> คลังเกม (Game Library)
+                </button>
             </div>
 
             {/* Content */}
@@ -663,34 +666,240 @@ export default function AgentDetailPage() {
                         </div>
                     </div>
                 )}
-            </div>
-            {/* Response Modal */}
-            {responseModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                            <h3 className="font-bold text-lg">{responseModal.title}</h3>
-                            <button
-                                onClick={() => setResponseModal(null)}
-                                className="p-1 hover:bg-slate-100 rounded-full"
-                            >
-                                <ArrowLeft size={20} />
-                            </button>
+
+                {/* 4. Game Library (New) */}
+                {activeTab === 'games' && (
+                    <div className="animate-in fade-in duration-300 h-[calc(100vh-250px)] flex gap-6">
+                        {/* Left Sidebar: Providers */}
+                        <div className="w-1/3 min-w-[300px] flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                                        <Database size={18} className="text-blue-500" /> ค่ายเกม ({providers.length})
+                                    </h3>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const toastId = toast.loading('กำลังดึงข้อมูลค่ายเกม...');
+                                                const res = await api.post('/admin/agents/test-providers', { agentId: agent.id });
+                                                toast.dismiss(toastId);
+                                                if (res.data.success) {
+                                                    toast.success(`อัปเดต ${res.data.data.length} ค่าย`);
+                                                    setProviders(res.data.data);
+                                                } else {
+                                                    toast.error(res.data.message);
+                                                }
+                                            } catch (e: any) {
+                                                toast.error(e.message);
+                                            }
+                                        }}
+                                        className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-blue-600 transition-colors"
+                                        title="Sync Providers"
+                                    >
+                                        <RefreshCw size={16} />
+                                    </button>
+                                </div>
+                                <div className="relative">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="ค้นหาค่ายเกม..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                                {providers.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+                                        <Database size={48} className="mb-4 opacity-20" />
+                                        <p>ยังไม่มีข้อมูลค่ายเกม</p>
+                                        <button
+                                            onClick={() => (document.querySelector('button[title="Sync Providers"]') as HTMLElement)?.click()}
+                                            className="mt-4 text-blue-500 hover:underline text-sm"
+                                        >
+                                            กด Sync เพื่อดึงข้อมูล
+                                        </button>
+                                    </div>
+                                ) : (
+                                    providers
+                                        .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.code.toLowerCase().includes(searchTerm.toLowerCase()))
+                                        .map((p, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => {
+                                                    setSelectedProvider(p);
+                                                    setGamesList([]); // Clear games when switching provider
+                                                }}
+                                                className={`w-full text-left p-3 rounded-lg flex items-center gap-3 transition-all ${selectedProvider?.code === p.code
+                                                        ? 'bg-blue-50 border-blue-200 shadow-sm ring-1 ring-blue-500/20'
+                                                        : 'hover:bg-slate-50 border border-transparent'
+                                                    }`}
+                                            >
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-sm ${selectedProvider?.code === p.code ? 'bg-blue-500 text-white' : 'bg-white text-slate-400 border border-slate-100'
+                                                    }`}>
+                                                    {p.code.substring(0, 2)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className={`font-bold text-sm truncate ${selectedProvider?.code === p.code ? 'text-blue-700' : 'text-slate-700'}`}>
+                                                        {p.name}
+                                                    </div>
+                                                    <div className="text-xs text-slate-400 font-mono truncate">{p.code}</div>
+                                                </div>
+                                                {p.status === 1 && <div className="w-2 h-2 rounded-full bg-emerald-500"></div>}
+                                            </button>
+                                        ))
+                                )}
+                            </div>
                         </div>
-                        <div className="p-4 overflow-auto bg-slate-50 font-mono text-xs">
-                            <pre>{JSON.stringify(responseModal.data, null, 2)}</pre>
-                        </div>
-                        <div className="p-4 border-t border-slate-100 flex justify-end">
-                            <button
-                                onClick={() => setResponseModal(null)}
-                                className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900"
-                            >
-                                Close
-                            </button>
+
+                        {/* Right Content: Games */}
+                        <div className="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            {selectedProvider ? (
+                                <>
+                                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white z-10">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 bg-slate-900 text-white rounded-lg flex items-center justify-center text-lg font-bold shadow-md">
+                                                {selectedProvider.code.substring(0, 2)}
+                                            </div>
+                                            <div>
+                                                <h2 className="text-xl font-bold text-slate-800">{selectedProvider.name}</h2>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-mono px-2 py-0.5 bg-slate-100 text-slate-500 rounded border border-slate-200">
+                                                        {selectedProvider.code}
+                                                    </span>
+                                                    <span className="text-xs text-slate-400">
+                                                        {gamesList.length > 0 ? `${gamesList.length} เกม` : 'รอการดึงข้อมูล...'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="ค้นหาเกม..."
+                                                    value={gameSearchTerm}
+                                                    onChange={(e) => setGameSearchTerm(e.target.value)}
+                                                    className="w-48 pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const toastId = toast.loading(`กำลังดึงเกมของ ${selectedProvider.name}...`);
+                                                        const res = await api.post('/admin/agents/test-games-list', {
+                                                            providerCode: selectedProvider.code,
+                                                            agentId: agent.id
+                                                        });
+                                                        toast.dismiss(toastId);
+                                                        if (res.data.success) {
+                                                            toast.success(`พบ ${res.data.data.length} เกม`);
+                                                            setGamesList(res.data.data);
+                                                        } else {
+                                                            toast.error(res.data.message);
+                                                        }
+                                                    } catch (e: any) {
+                                                        toast.error(e.message);
+                                                    }
+                                                }}
+                                                className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-900 flex items-center gap-2 text-sm font-medium shadow-sm transition-all active:scale-95"
+                                            >
+                                                <RefreshCw size={16} /> ดึงเกมล่าสุด
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+                                        {gamesList.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                                <Gamepad2 size={64} className="mb-4 opacity-10" />
+                                                <p className="text-lg font-medium text-slate-500">ยังไม่มีรายการเกม</p>
+                                                <p className="text-sm mb-6">กดปุ่ม "ดึงเกมล่าสุด" เพื่อโหลดข้อมูล</p>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                                {gamesList
+                                                    .filter(g =>
+                                                        (typeof g.game_name === 'object' ? (g.game_name.en || g.game_name.th) : g.game_name).toLowerCase().includes(gameSearchTerm.toLowerCase()) ||
+                                                        g.game_code.toLowerCase().includes(gameSearchTerm.toLowerCase())
+                                                    )
+                                                    .map((g, i) => (
+                                                        <div key={i} className="group bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-300 transition-all overflow-hidden relative cursor-default">
+                                                            <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden">
+                                                                {g.banner || g.img ? (
+                                                                    <img src={g.banner || g.img} alt={g.game_code} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                                                        <Gamepad2 size={32} />
+                                                                    </div>
+                                                                )}
+                                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[1px]">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(g.game_code);
+                                                                            toast.success('Copy Code: ' + g.game_code);
+                                                                        }}
+                                                                        className="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-50 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-200"
+                                                                    >
+                                                                        Copy Code
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="p-3">
+                                                                <h4 className="font-bold text-sm text-slate-700 truncate" title={typeof g.game_name === 'object' ? g.game_name.en : g.game_name}>
+                                                                    {typeof g.game_name === 'object' ? g.game_name.en : g.game_name}
+                                                                </h4>
+                                                                <p className="text-xs text-slate-400 font-mono mt-1 truncate">{g.game_code}</p>
+                                                            </div>
+                                                            {/* Status Dot */}
+                                                            {g.status === 1 && (
+                                                                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 shadow-sm ring-1 ring-white"></div>
+                                                            )}
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400 p-12 text-center bg-slate-50/50">
+                                    <LayoutGrid size={64} className="mb-6 opacity-10" />
+                                    <h3 className="text-xl font-bold text-slate-600 mb-2">เลือกค่ายเกมจากด้านซ้าย</h3>
+                                    <p className="max-w-xs mx-auto">เลือกค่ายเกมเพื่อดูรายการเกมทั้งหมด ตรวจสอบสถานะ และดึงข้อมูลล่าสุด</p>
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
-    );
+                )}
+                {responseModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                <h3 className="font-bold text-lg">{responseModal.title}</h3>
+                                <button
+                                    onClick={() => setResponseModal(null)}
+                                    className="p-1 hover:bg-slate-100 rounded-full"
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
+                            </div>
+                            <div className="p-4 overflow-auto bg-slate-50 font-mono text-xs">
+                                <pre>{JSON.stringify(responseModal.data, null, 2)}</pre>
+                            </div>
+                            <div className="p-4 border-t border-slate-100 flex justify-end">
+                                <button
+                                    onClick={() => setResponseModal(null)}
+                                    className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+            );
 }

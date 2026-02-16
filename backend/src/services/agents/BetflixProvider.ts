@@ -217,9 +217,11 @@ export class BetflixProvider implements IAgentService {
     }
 
     async getGames(providerCode: string): Promise<any[]> {
-    } catch(e) {
-        console.error('Betflix Get Games Error', e);
+        // Betflix doesn't support get games list easily
         return [];
     }
-}
+
+    async debug(): Promise<any> {
+        return await BetflixService.checkStatus();
+    }
 }

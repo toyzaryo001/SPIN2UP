@@ -60,6 +60,28 @@ router.get('/connection-test', requirePermission('agents', 'connection_test', 'v
         console.error('Connection test error:', error);
         res.json({ success: false, message: 'การทดสอบล้มเหลว', latency });
     }
+}
+});
+
+// GET /api/admin/agents/debug-connection - ดู Raw Response
+router.get('/debug-connection', requirePermission('agents', 'connection_test', 'view'), async (req, res) => {
+    try {
+        const { agentId } = req.query;
+        if (!agentId) return res.status(400).json({ success: false, message: 'Missing agentId' });
+
+        const { AgentFactory } = await import('../../services/agents/AgentFactory.js');
+        const agentService = await AgentFactory.getAgentById(Number(agentId));
+
+        let debugData = { message: 'Debug not implemented for this provider' };
+        if (agentService.debug) {
+            debugData = await agentService.debug();
+        }
+
+        res.json({ success: true, data: debugData });
+    } catch (error: any) {
+        console.error('Debug connection error:', error);
+        res.status(500).json({ success: false, message: error.message, error });
+    }
 });
 
 // POST /api/admin/agents/test-register - ทดสอบสมัครสมาชิก

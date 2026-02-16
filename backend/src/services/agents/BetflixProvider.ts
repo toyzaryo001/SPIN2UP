@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { IAgentService } from './IAgentService';
 import prisma from '../../lib/db';
+import { BetflixService } from '../betflix.service';
 
 export class BetflixProvider implements IAgentService {
     readonly agentCode = 'BETFLIX';

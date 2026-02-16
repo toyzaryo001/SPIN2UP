@@ -35,6 +35,7 @@ export default function AgentDetailPage() {
     // Form Stats
     const [formData, setFormData] = useState<Partial<Agent>>({});
     const [showToken, setShowToken] = useState(false);
+    const [responseModal, setResponseModal] = useState<{ title: string; data: any } | null>(null);
 
     useEffect(() => {
         if (id) fetchAgent();
@@ -658,6 +659,33 @@ export default function AgentDetailPage() {
                     </div>
                 )}
             </div>
+            {/* Response Modal */}
+            {responseModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                            <h3 className="font-bold text-lg">{responseModal.title}</h3>
+                            <button
+                                onClick={() => setResponseModal(null)}
+                                className="p-1 hover:bg-slate-100 rounded-full"
+                            >
+                                <ArrowLeft size={20} />
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-auto bg-slate-50 font-mono text-xs">
+                            <pre>{JSON.stringify(responseModal.data, null, 2)}</pre>
+                        </div>
+                        <div className="p-4 border-t border-slate-100 flex justify-end">
+                            <button
+                                onClick={() => setResponseModal(null)}
+                                className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -126,15 +126,35 @@ router.get('/agent', requirePermission('agents', 'settings', 'view'), async (req
 // POST /api/admin/settings/agent (ต้องมีสิทธิ์ settings.agents)
 router.post('/agent', requirePermission('agents', 'settings', 'manage'), async (req, res) => {
     try {
-        const { name, apiKey, apiSecret, callbackUrl, rtp, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance } = req.body;
+        const { name, apiKey, apiSecret, callbackUrl, rtp, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance, code, isMain, isActive } = req.body;
+
+        // Validation for unique code is handled by DB, but we can check early if needed
 
         const config = await prisma.agentConfig.create({
-            data: { name, apiKey, apiSecret, callbackUrl, rtp: rtp || 0.96, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance },
+            data: {
+                name,
+                apiKey,
+                apiSecret,
+                callbackUrl,
+                rtp: rtp ? Number(rtp) : 0.96,
+                minBet: minBet ? Number(minBet) : 1,
+                maxBet: maxBet ? Number(maxBet) : 10000,
+                upline,
+                xApiKey,
+                xApiCat,
+                gameEntrance,
+                code: code ? code.toUpperCase() : 'BETFLIX', // Default to BETFLIX if not provided
+                isMain: isMain ?? false,
+                isActive: isActive ?? true
+            },
         });
 
         res.status(201).json({ success: true, data: config });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Create agent config error:', error);
+        if (error.code === 'P2002') {
+            return res.status(400).json({ success: false, message: 'Agent Code นี้มีอยู่ในระบบแล้ว' });
+        }
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });
@@ -142,14 +162,35 @@ router.post('/agent', requirePermission('agents', 'settings', 'manage'), async (
 // PUT /api/admin/settings/agent/:id (ต้องมีสิทธิ์ settings.agents)
 router.put('/agent/:id', requirePermission('agents', 'settings', 'manage'), async (req, res) => {
     try {
+        const { id } = req.params;
+        const { name, apiKey, apiSecret, callbackUrl, rtp, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance, code, isMain, isActive } = req.body;
+
         const config = await prisma.agentConfig.update({
-            where: { id: Number(req.params.id) },
-            data: req.body,
+            where: { id: Number(id) },
+            data: {
+                name,
+                apiKey,
+                apiSecret,
+                callbackUrl,
+                rtp: rtp ? Number(rtp) : undefined,
+                minBet: minBet ? Number(minBet) : undefined,
+                maxBet: maxBet ? Number(maxBet) : undefined,
+                upline,
+                xApiKey,
+                xApiCat,
+                gameEntrance,
+                code: code ? code.toUpperCase() : undefined,
+                isMain,
+                isActive
+            },
         });
 
         res.json({ success: true, data: config });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Update agent config error:', error);
+        if (error.code === 'P2002') {
+            return res.status(400).json({ success: false, message: 'Agent Code นี้มีอยู่ในระบบแล้ว' });
+        }
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });

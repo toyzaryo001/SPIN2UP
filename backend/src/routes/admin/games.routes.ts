@@ -7,12 +7,20 @@ const router = Router();
 // GET /api/admin/games - รายการเกม
 router.get('/', requirePermission('games', 'view'), async (req, res) => {
     try {
-        const { providerId, isActive, isHot, isNew } = req.query;
+        const { providerId, isActive, isHot, isNew, agentId } = req.query;
         const where: any = {};
         if (providerId) where.providerId = Number(providerId);
         if (isActive !== undefined) where.isActive = isActive === 'true';
         if (isHot !== undefined) where.isHot = isHot === 'true';
         if (isNew !== undefined) where.isNew = isNew === 'true';
+
+        if (agentId !== undefined) {
+            if (agentId === 'null') {
+                where.agentId = null;
+            } else {
+                where.agentId = Number(agentId);
+            }
+        }
 
         const games = await prisma.game.findMany({
             where,

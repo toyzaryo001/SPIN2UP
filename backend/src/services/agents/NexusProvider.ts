@@ -173,4 +173,8 @@ export class NexusProvider implements IAgentService {
         }
         return [];
     }
+
+    async debug(): Promise<any> {
+        return await this.request('provider_list');
+    }
 }

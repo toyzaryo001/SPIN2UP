@@ -217,18 +217,9 @@ export class BetflixProvider implements IAgentService {
     }
 
     async getGames(providerCode: string): Promise<any[]> {
-        try {
-            const api = await this.getApi();
-            const res = await api.get('/v4/game/list', {
-                params: { provider: providerCode }
-            });
-            if (res.data.status === 'success' || res.data.status === 1) {
-                return res.data.data || [];
-            }
-            return [];
-        } catch (e) {
-            console.error('Betflix Get Games Error', e);
-            return [];
-        }
+    } catch(e) {
+        console.error('Betflix Get Games Error', e);
+        return [];
     }
+}
 }

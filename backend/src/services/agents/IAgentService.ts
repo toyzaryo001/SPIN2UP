@@ -52,6 +52,7 @@ export interface IAgentService {
      * Check if the agent API is online
      */
     checkStatus(): Promise<boolean>;
+    debug?(): Promise<any>;
 
     /**
      * Check Main Agent Balance (The credit we hold with them)

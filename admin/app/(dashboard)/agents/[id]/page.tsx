@@ -410,6 +410,23 @@ export default function AgentDetailPage() {
                                     >
                                         <Activity size={18} /> ตรวจสอบสถานะ & เครดิต
                                     </button>
+
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const res = await api.get(`/admin/agents/debug-connection?agentId=${agent.id}`);
+                                                setResponseModal({
+                                                    title: 'Debug API Response',
+                                                    data: res.data.data
+                                                });
+                                            } catch (e: any) {
+                                                toast.error('Debug Failed');
+                                            }
+                                        }}
+                                        className="mt-2 w-full text-xs text-slate-400 hover:text-slate-600 underline"
+                                    >
+                                        ดู Raw Response (Debug)
+                                    </button>
                                 </div>
                             </div>
                         </div>

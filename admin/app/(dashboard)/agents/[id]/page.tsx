@@ -263,8 +263,8 @@ export default function AgentDetailPage() {
                                     <div className="relative">
                                         <input
                                             type={showToken ? "text" : "password"}
-                                            value={formData.xApiKey || ''}
-                                            onChange={(e) => setFormData({ ...formData, xApiKey: e.target.value })}
+                                            value={formData.apiSecret || ''}
+                                            onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
                                             className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono pr-10"
                                             placeholder="Token..."
                                         />

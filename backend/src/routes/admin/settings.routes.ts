@@ -123,6 +123,20 @@ router.get('/agent', requirePermission('agents', 'settings', 'view'), async (req
     }
 });
 
+// GET /api/admin/settings/agent/:id (ต้องมีสิทธิ์ settings.agents)
+router.get('/agent/:id', requirePermission('agents', 'settings', 'view'), async (req, res) => {
+    try {
+        const config = await prisma.agentConfig.findUnique({
+            where: { id: Number(req.params.id) }
+        });
+        if (!config) return res.status(404).json({ success: false, message: 'ไม่พบ Agent' });
+        res.json({ success: true, data: config });
+    } catch (error) {
+        console.error('Get agent detail error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 // POST /api/admin/settings/agent (ต้องมีสิทธิ์ settings.agents)
 router.post('/agent', requirePermission('agents', 'settings', 'manage'), async (req, res) => {
     try {

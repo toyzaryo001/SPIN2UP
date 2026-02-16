@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { BetflixService } from '../../services/betflix.service.js';
 import { requirePermission } from '../../middlewares/auth.middleware.js';
+import prisma from '../../lib/db.js';
 
 const router = Router();
 

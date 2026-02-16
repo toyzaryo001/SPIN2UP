@@ -12,14 +12,14 @@ async function main() {
         const config = await prisma.agentConfig.findFirst({ where: { isActive: true } });
         if (!config) return;
 
-        console.log('Using Config Agent:', config.agentUsername || config.sitePrefix || 'UNKNOWN');
+        console.log('Using Config Agent:', config.upline || 'UNKNOWN');
         // We need 'upline' param. It might be the agent username or site prefix.
         // Usually it's the Agent Username used to login to Betflix agent system.
-        // In config, we have 'agentUsername' (username) and 'prefix' (sitePrefix).
-        const upline = config.agentUsername;
+        // In config, we have 'upline'.
+        const upline = config.upline;
 
         if (!upline) {
-            console.log('Error: Agent Username not found in config. Cannot call summariez.');
+            console.log('Error: Agent Upline (Username) not found in config. Cannot call summariez.');
             console.log('Config:', config);
             return;
         }

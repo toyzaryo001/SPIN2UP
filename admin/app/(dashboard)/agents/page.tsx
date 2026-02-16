@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Plus, Sliders, X, Save, AlertTriangle, Trash2, Star } from "lucide-react";
+import { Plus, Sliders, X, Save, AlertTriangle, Trash2, Star, Settings } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Agent {
@@ -235,10 +235,11 @@ export default function AgentsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => openModal(agent)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg">
-                                                    <Sliders size={18} />
-                                                </button>
-                                                <button onClick={() => openDeleteModal(agent)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg">
+                                                <a href={`/agents/${agent.id}`} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg flex items-center gap-1 border border-blue-100 bg-white shadow-sm transition-all hover:shadow-md">
+                                                    <Settings size={16} />
+                                                    <span className="text-xs font-bold">ตั้งค่า</span>
+                                                </a>
+                                                <button onClick={() => openDeleteModal(agent)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg border border-transparent hover:border-red-100">
                                                     <Trash2 size={18} />
                                                 </button>
                                             </div>

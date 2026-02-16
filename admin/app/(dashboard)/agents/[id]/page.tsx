@@ -481,6 +481,81 @@ export default function AgentDetailPage() {
                                 </button>
                             </div>
                         </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Test 4: Fetch Providers */}
+                            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                                <h4 className="font-bold text-slate-700 mb-4 border-b pb-2">4. ทดสอบดึงค่ายเกม (Providers)</h4>
+                                <div className="space-y-4">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const toastId = toast.loading('กำลังดึงข้อมูลค่ายเกม...');
+                                                const res = await api.post('/admin/agents/test-providers', { agentId: agent.id });
+                                                toast.dismiss(toastId);
+
+                                                if (res.data.success) {
+                                                    toast.success(`พบ ${res.data.data.length} ค่าย (${res.data.latency}ms)`);
+                                                    console.log('Providers:', res.data.data);
+                                                    alert(`พบ ${res.data.data.length} ค่าย (ดูใน Console สำหรับข้อมูลดิบ)\n\nตัวอย่าง: ${JSON.stringify(res.data.data.slice(0, 3), null, 2)}...`);
+                                                } else {
+                                                    toast.error(`ล้มเหลว: ${res.data.message}`);
+                                                }
+                                            } catch (e: any) {
+                                                toast.error(e.message);
+                                            }
+                                        }}
+                                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 w-full flex justify-center items-center gap-2"
+                                    >
+                                        <Database size={16} /> ดึงรายชื่อค่ายเกม
+                                    </button>
+                                    <p className="text-xs text-slate-400 text-center">ดูผลลัพธ์ละเอียดใน F12 (Console)</p>
+                                </div>
+                            </div>
+
+                            {/* Test 5: Fetch Games List */}
+                            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                                <h4 className="font-bold text-slate-700 mb-4 border-b pb-2">5. ทดสอบดึงรายชื่อเกม (Games)</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-slate-500 uppercase">Provider Code</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
+                                                placeholder="pg, joker"
+                                                id="test-list-provider"
+                                                defaultValue="pg"
+                                            />
+                                            <button
+                                                onClick={async () => {
+                                                    const providerCode = (document.getElementById('test-list-provider') as HTMLInputElement).value;
+                                                    try {
+                                                        const toastId = toast.loading('กำลังดึงรายชื่อเกม...');
+                                                        const res = await api.post('/admin/agents/test-games-list', { providerCode, agentId: agent.id });
+                                                        toast.dismiss(toastId);
+
+                                                        if (res.data.success) {
+                                                            toast.success(`พบ ${res.data.data.length} เกม (${res.data.latency}ms)`);
+                                                            console.log('Games:', res.data.data);
+                                                            alert(`พบ ${res.data.data.length} เกม (ดูใน Console สำหรับข้อมูลดิบ)\n\nตัวอย่าง: ${JSON.stringify(res.data.data.slice(0, 3), null, 2)}...`);
+                                                        } else {
+                                                            toast.error(`ล้มเหลว: ${res.data.message}`);
+                                                        }
+                                                    } catch (e: any) {
+                                                        toast.error(e.message);
+                                                    }
+                                                }}
+                                                className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-orange-700"
+                                            >
+                                                ดึงเกม
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-400 text-center">ดูผลลัพธ์ละเอียดใน F12 (Console)</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

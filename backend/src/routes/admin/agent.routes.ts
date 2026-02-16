@@ -8,7 +8,18 @@ const router = Router();
 // GET /api/admin/agents/balance - ดูยอดเงิน Agent
 router.get('/balance', async (req, res) => {
     try {
-        const balance = await BetflixService.getAgentBalance();
+        const { agentId } = req.query;
+        let balance = 0;
+
+        if (agentId) {
+            const { AgentFactory } = await import('../../services/agents/AgentFactory.js');
+            const agentService = await AgentFactory.getAgentById(Number(agentId));
+            balance = await agentService.getAgentBalance();
+        } else {
+            // Fallback for legacy calls or default
+            balance = await BetflixService.getAgentBalance();
+        }
+
         res.json({ success: true, data: { balance } });
     } catch (error) {
         console.error('Get agent balance error:', error);
@@ -18,13 +29,38 @@ router.get('/balance', async (req, res) => {
 
 // GET /api/admin/agents/connection-test - ทดสอบการเชื่อมต่อ
 router.get('/connection-test', requirePermission('agents', 'connection_test', 'view'), async (req, res) => {
+    const start = Date.now();
     try {
-        const result = await BetflixService.checkStatus();
-        res.json({ success: true, data: result });
-    } catch (error) {
-        console.error('Connection test error:', error);
-        res.status(500).json({ success: false, message: 'การทดสอบล้มเหลว' });
+        const { agentId } = req.query;
+        let isConnected = false;
+
+        if (agentId) {
+            const { AgentFactory } = await import('../../services/agents/AgentFactory.js');
+            const agentService = await AgentFactory.getAgentById(Number(agentId));
+            // Use getGameProviders as a ping since checkStatus might not be implemented in all perfectly
+            // Or if checkStatus is available on interface
+            if (typeof agentService.checkStatus === 'function') {
+                isConnected = await agentService.checkStatus();
+            } else {
+                // Fallback ping
+                try {
+                    await agentService.getGameProviders();
+                    isConnected = true;
+                } catch (e) { isConnected = false; }
+            }
+        }
+    } else {
+        const status = await BetflixService.checkStatus();
+        isConnected = status.server.success && status.auth.success;
     }
+
+    const latency = Date.now() - start;
+    res.json({ success: true, data: isConnected, latency });
+} catch (error) {
+    const latency = Date.now() - start;
+    console.error('Connection test error:', error);
+    res.json({ success: false, message: 'การทดสอบล้มเหลว', latency });
+}
 });
 
 // POST /api/admin/agents/test-register - ทดสอบสมัครสมาชิก

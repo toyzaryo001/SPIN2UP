@@ -333,10 +333,75 @@ export default function AgentDetailPage() {
                             <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
                                 <Activity size={18} /> ห้องทดสอบระบบ (Test Room)
                             </h3>
-                            <p className="text-sm text-slate-500">
-                                ใช้สำหรับทดสอบการเชื่อมต่อกับ Agent API จริง โดยตรง ไม่ผ่านระบบกระเป๋าเงินหลักของเว็บ
-                                <br />เหมาะสำหรับตรวจสอบว่า API Key ถูกต้องหรือไม่
+                            <p className="text-sm text-slate-500 mb-4">
+                                ใช้สำหรับทดสอบการเชื่อมต่อกับ Agent API จริง โดยตรง
                             </p>
+
+                            {/* NEW: Connection Status & Credit Card */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                                <div className="flex-1 w-full">
+                                    <h4 className="text-sm font-semibold text-slate-500 uppercase mb-2">สถานะการเชื่อมต่อ (Connection)</h4>
+                                    <div className="flex items-center gap-3">
+                                        <div id="status-indicator" className="w-4 h-4 rounded-full bg-slate-300"></div>
+                                        <span id="status-text" className="font-bold text-lg text-slate-700">รอตรวจสอบ...</span>
+                                        <span id="status-latency" className="text-xs text-slate-400 font-mono ml-2"></span>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 w-full border-t md:border-t-0 md:border-l border-slate-100 md:pl-6 pt-4 md:pt-0">
+                                    <h4 className="text-sm font-semibold text-slate-500 uppercase mb-2">เครดิต Agent (Credit)</h4>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl font-bold text-slate-800">฿</span>
+                                        <span id="agent-credit" className="text-3xl font-bold text-slate-900 tracking-tight">--</span>
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-1">ยอดเงินคงเหลือในกระดาน Agent</p>
+                                </div>
+
+                                <div>
+                                    <button
+                                        onClick={async () => {
+                                            const indicator = document.getElementById('status-indicator');
+                                            const text = document.getElementById('status-text');
+                                            const latencyEl = document.getElementById('status-latency');
+                                            const creditEl = document.getElementById('agent-credit');
+
+                                            if (indicator) indicator.className = 'w-4 h-4 rounded-full bg-yellow-400 animate-pulse';
+                                            if (text) text.innerText = 'กำลังตรวจสอบ...';
+
+                                            try {
+                                                // 1. Check Connection
+                                                const resConn = await api.get(`/admin/agents/connection-test?agentId=${agent.id}`);
+                                                const isOnline = resConn.data.success && resConn.data.data;
+                                                const latency = resConn.data.latency || 0;
+
+                                                if (indicator) indicator.className = isOnline ? 'w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'w-4 h-4 rounded-full bg-red-500';
+                                                if (text) {
+                                                    text.innerText = isOnline ? 'ONLINE (เชื่อมต่อสำเร็จ)' : 'OFFLINE (เชื่อมต่อไม่ได้)';
+                                                    text.className = isOnline ? 'font-bold text-lg text-emerald-600' : 'font-bold text-lg text-red-600';
+                                                }
+                                                if (latencyEl) latencyEl.innerText = `${latency}ms`;
+
+                                                // 2. Check Credit
+                                                const resBal = await api.get(`/admin/agents/balance?agentId=${agent.id}`);
+                                                if (creditEl && resBal.data.success) {
+                                                    creditEl.innerText = resBal.data.data.balance.toLocaleString('th-TH', { minimumFractionDigits: 2 });
+                                                }
+
+                                                toast.success('อัปเดตสถานะเรียบร้อย');
+
+                                            } catch (e: any) {
+                                                console.error(e);
+                                                if (indicator) indicator.className = 'w-4 h-4 rounded-full bg-red-500';
+                                                if (text) text.innerText = 'Network Error';
+                                                toast.error('ตรวจสอบล้มเหลว');
+                                            }
+                                        }}
+                                        className="bg-slate-800 text-white px-6 py-3 rounded-lg hover:bg-slate-900 shadow-sm flex items-center gap-2 font-medium transition-all active:scale-95"
+                                    >
+                                        <Activity size={18} /> ตรวจสอบสถานะ & เครดิต
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

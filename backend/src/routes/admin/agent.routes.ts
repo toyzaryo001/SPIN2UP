@@ -60,7 +60,6 @@ router.get('/connection-test', requirePermission('agents', 'connection_test', 'v
         console.error('Connection test error:', error);
         res.json({ success: false, message: 'การทดสอบล้มเหลว', latency });
     }
-}
 });
 
 // GET /api/admin/agents/debug-connection - ดู Raw Response

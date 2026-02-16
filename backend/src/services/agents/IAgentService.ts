@@ -57,4 +57,14 @@ export interface IAgentService {
      * Check Main Agent Balance (The credit we hold with them)
      */
     getAgentBalance(): Promise<number>;
+
+    /**
+     * Get List of Game Providers
+     */
+    getGameProviders(): Promise<any[]>;
+
+    /**
+     * Get List of Games for specific provider
+     */
+    getGames(providerCode: string): Promise<any[]>;
 }

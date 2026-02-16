@@ -156,4 +156,20 @@ export class NexusProvider implements IAgentService {
         }
         return 0;
     }
+
+    async getGameProviders(): Promise<any[]> {
+        const res = await this.request('provider_list');
+        if (res.status === 1 && Array.isArray(res.providers)) {
+            return res.providers;
+        }
+        return [];
+    }
+
+    async getGames(providerCode: string): Promise<any[]> {
+        const res = await this.request('game_list', { provider_code: providerCode });
+        if (res.status === 1 && Array.isArray(res.games)) {
+            return res.games;
+        }
+        return [];
+    }
 }

@@ -38,6 +38,10 @@ export default function AgentDetailPage() {
     const [showToken, setShowToken] = useState(false);
     const [responseModal, setResponseModal] = useState<{ title: string; data: any } | null>(null);
 
+    // Test Room Data State
+    const [providers, setProviders] = useState<any[]>([]);
+    const [gamesList, setGamesList] = useState<any[]>([]);
+
     useEffect(() => {
         if (id) fetchAgent();
     }, [id]);

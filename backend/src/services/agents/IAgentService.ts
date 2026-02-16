@@ -51,7 +51,7 @@ export interface IAgentService {
     /**
      * Check if the agent API is online
      */
-    checkStatus(): Promise<boolean>;
+    checkStatus(): Promise<any>;
     debug?(): Promise<any>;
 
     /**

@@ -187,20 +187,12 @@ export class BetflixProvider implements IAgentService {
         }
     }
 
-    async checkStatus(): Promise<boolean> {
-        try {
-            const api = await this.getApi();
-            const res = await api.post('/v4/get_status');
-            return res.data.status === 'success';
-        } catch (e) {
-            return false;
-        }
+    async checkStatus(): Promise<any> {
+        return await BetflixService.checkStatus();
     }
 
     async getAgentBalance(): Promise<number> {
-        // Betflix doesn't expose a simple "Get Agent Balance" via API easily without specific Main User
-        // For now returning 0 or mock
-        return 0;
+        return await BetflixService.getAgentBalance();
     }
 
     async getGameProviders(): Promise<any[]> {

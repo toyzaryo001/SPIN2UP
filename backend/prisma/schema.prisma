@@ -236,6 +236,9 @@ model Game {
   agentId     Int?           // Override Provider's default agent
   agent       AgentConfig?   @relation(fields: [agentId], references: [id])
 
+  upstreamProviderCode String?  // For Mix Providers: Stores original provider code (e.g., 'pgsoft')
+
+
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 

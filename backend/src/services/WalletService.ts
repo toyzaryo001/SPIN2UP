@@ -102,10 +102,14 @@ export class WalletService {
         }
 
         // 4. Launch
+        const finalProviderCode = game.upstreamProviderCode || game.provider?.slug || '';
+
+        console.log(`[WalletService] Launching Game: ${game.slug} (Provider: ${finalProviderCode})`);
+
         const url = await targetAgentService.launchGame(
             targetAccount.externalUsername,
             game.slug, // Or game.code? Need to check game schema mapping
-            game.provider?.slug || '', // Provider code
+            finalProviderCode,
             lang
         );
 

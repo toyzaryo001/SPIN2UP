@@ -52,4 +52,12 @@ export class AgentFactory {
 
         return this.getAgent(config.code);
     }
+
+    static clearCache(agentCode?: string) {
+        if (agentCode) {
+            this.instances.delete(agentCode.toUpperCase());
+        } else {
+            this.instances.clear();
+        }
+    }
 }

@@ -1,0 +1,935 @@
+API List
+API endpoint:https://api.nexusggr.com
+_____________________________________________________________________
+Game API
+1. Get Provider List
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "provider_list",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d"
+    }
+
+
+
+                                                        
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "providers": [
+            {
+                "code": "PRAGMATIC",
+                "name": "Pragmatic Play",
+                "status": 1 // 1: open, 0: maintenancing
+            },
+            ...
+        ]
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "INTERNAL_ERROR"
+    }
+
+
+2. Get Game List
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "game_list",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "provider_code": "PRAGMATIC"
+    }
+
+
+
+    "PRAGMATIC","PGSOFT","REELKINGDOM","FATPANDA"
+    "HABANERO","BOOONGO","PLAYSON","CQ9","EVOPLAY","TOPTREND","DREAMTECH",
+    "PRAGMATICLIVE","EVOLUTION", "EZUGI"
+
+
+
+    {
+        "method": "game_list_v2",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "provider_code": "PRAGMATIC"
+    }
+
+
+
+    - Available for "game_list_v2": 
+    "PRAGMATIC","PGSOFT","REELKINGDOM","FATPANDA","HABANERO", "CQ9"
+   
+
+                                                        
+Response Ex:
+
+
+    - Success:
+
+    v1:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "games": [
+            {
+                "game_code": "vs243mwarrior",
+                "game_name": "Monkey Warrior",
+                "banner": "https://.../vs243mwarrior.png",
+                "status": 1
+            },
+            ...
+        ]
+    }
+
+    v2:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "games": [
+            {
+                "id": 1,
+                "game_code": "vs243mwarrior",
+                "game_name": {
+                    "hi": "मंकी वारियर™",
+                    "vi": "Chiến Binh Khỉ",
+                    "ko": "몽키 워리어",
+                    "th": "นักรบลิง",
+                    "zh-hant": "酷猴戰士",
+                    "zh-hans": "酷猴战士",
+                    ...
+                }
+            }
+            ...
+        ]
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "INTERNAL_ERROR"
+    }
+
+
+3. Launch Game
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "game_launch",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test",
+        "provider_code": "PRAGMATIC",
+        "game_code": "vs20doghouse",
+        "lang": "en"
+    }
+
+
+
+    {
+        "method": "game_launch",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test",
+        "provider_code": "EVOLUTION",
+        "game_code": "nxpkul2hgclallno", // Optional - When it is empty, lobby url is returned.
+        "lang": "en"
+    }
+
+
+                                                        
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "launch_url": "http://kgame-tw1.pplaygame.net/..."
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "INVALID_PROVIDER"
+    }
+
+
+
+4. Get Balance of Agent and User
+Request Ex: 
+POST https://api.nexusggr.com
+
+    // When you get balance of agent only, you can omit the 'user_code'
+    {
+        "method": "money_info",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d"
+    }
+
+
+
+
+
+
+    {
+        "method": "money_info",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test"
+    }
+
+
+
+
+
+
+
+    {
+        "method": "money_info",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "all_users": true 
+    }
+
+
+                                                        
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "agent": {
+            "agent_code": "9avertp",
+            "balance": 1000000,
+        }
+    }
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "agent": {
+            "agent_code": "9avertp",
+            "balance": 1000000,
+        },
+        "user": {
+            "user_code": "test",
+            "balance": 100000,
+        }
+    }
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "agent": {
+            "agent_code": "chmng2",
+            "balance": 99550000
+        },
+        "user_list": [
+            {
+                "user_code": "test",
+                "balance": 450000
+            },
+            {
+                "user_code": "test2",
+                "balance": 20000
+            }
+        ]
+    }
+
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "INVALID_PARAMETER"
+    }
+
+
+
+5. Get Game History
+Request Ex: Copy
+POST https://api.nexusggr.com
+
+    {
+        "method": "get_game_log",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test",
+        "game_type": "slot",
+        "start": "2022-09-29 00:00:00",
+        "end": "2022-09-30 23:59:00",
+        "page": 0,
+        "perPage": 1000
+    }
+
+
+
+
+
+    [ debit, credit, debit_credit ]
+
+    - "debit" // Only send bet amount
+        "txn_type": "debit"
+        "bet": 2000   // Valid
+        "win": 0      // Invalid (Don't use!)
+        "txn_id": "64a83..."
+
+    - "credit" // Only send win amount
+        "txn_type": "credit"
+        "bet": 0     // Invalid (Don't use!)
+        "win": 1500  // Valid
+        "txn_id": "64a83..."
+
+    - "debit_credit"// Send bet and win amount
+        "txn_type": "debit_credit"
+        "bet": 2000  // Valid
+        "win": 1500  // Valid
+
+
+                                                        
+Response Ex:
+
+
+    - Success
+    {
+        "status": 1,
+        "total_count": 112,
+        "page": 0,
+        "perPage": 10,
+        "slot": [
+            {
+                "history_id": 245,
+                "agent_code": "9avertp",
+                "user_code": "test",
+                "provider_code": "PRAGMATIC",
+                "game_code": "vs20doghouse",
+                "type": "BASE",
+                "bet_money": 2000,
+                "win_money": 0,
+                "txn_id": "64a83f2fc597acc9004eec52c3f84c30",
+                "txn_type": "debit_credit",
+                "user_start_balance": 1741708,
+                "user_end_balance": 1739708,
+                "agent_start_balance": 98981676,
+                "agent_end_balance": 98981676,
+                "created_at": "2022-09-29T12:50:42.000Z"
+            },
+            ...
+        ]
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "error": "INVALID_PARAMETER"
+    }
+
+
+_____________________________________________________________________
+
+Transfer API
+
+1. Create New User
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "user_create",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test"
+    }
+
+
+                                                    
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS"
+        "user_code": "test",
+        "user_balance": 0,
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "DUPLICATED_USER"
+    }
+
+
+2. Deposit User Balance
+Request Ex:
+POST https://api.nexusggr.com
+
+    {
+        "method": "user_deposit",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test",
+        "amount": 10000,
+        "agent_sign"："UNIQUE_ID"   // Optional to prevent duplicated
+    }
+
+
+                                                    
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1, 
+        "msg": "SUCCESS",
+        "agent_balance": 990000,
+        "user_balance": 10000
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "INSUFFICIENT_AGENT_FUNDS"
+    }
+
+
+3. Withdraw User Balance
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "user_withdraw",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test",
+        "amount": 10000,
+        "agent_sign"："UNIQUE_ID"   // Optional to prevent duplicated
+    }
+
+
+                                                    
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS"
+        "agent_balance": 100000,
+        "user_balance": 10000
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "INSUFFICIENT_USER_FUNDS" 
+    }
+
+
+
+4. Reset User Balance
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "user_withdraw_reset",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test"
+    }
+
+
+
+
+
+
+
+
+
+    {
+        "method": "user_withdraw_reset",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "all_users": true 
+    }
+
+
+                                                    
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "agent": {
+            "agent_code": "9avertp",
+            "balance": 1000000,
+        },
+        "user": {
+            "user_code": "test",
+            "withdraw_amount": 5600,
+            "balance": 0
+        }
+    }
+
+
+    - Success:
+    {
+        "status": 1,
+        "msg": "SUCCESS",
+        "agent": {
+            "agent_code": "9avertp",
+            "balance": 1076850
+        },
+        "user_list": [
+            {
+                "user_code": "test",
+                "withdraw_amount": 20000,
+                "balance": 0
+            },
+            {
+                "user_code": "test2",
+                "withdraw_amount": 56850,
+                "balance": 0
+            }
+        ]
+    }
+
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "INVALID_PARAMETER"
+    }
+
+
+
+5. Transfer Status
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "transfer_status",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_code": "test",
+        "agent_sign"："UNIQUE_ID"   // Required
+    }
+
+
+
+                                                        
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1, 
+        "msg": "SUCCESS",
+        "amount": 10000,
+        "agent_balance": 990000,
+        "user_balance": 10000,
+        "type": "user_deposit"
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "NOT FOUND"
+    }
+
+_____________________________________________________________________
+
+Call API (For Slot Game)
+
+1. Get Call Players (Current Playing Users)
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "call_players",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d"
+    }
+
+
+            
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "data": [
+            {
+            "user_code": "test",
+            "provider_code": "PRAGMATIC",
+            "game_code": "vs20doghouse",
+            "bet": 1600,
+            "balance": 11804848.2,
+            "total_debit": 1271837.75,
+            "total_credit": 3383894.16,
+            "target_rtp": 92,
+            "real_rtp": 266.06
+            }
+        ]
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "Invalid Agent."
+    }
+
+
+2. Get Call List
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "call_list",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "provider_code": "PRAGMATIC",
+        "game_code": "vs20doghouse"
+    }
+
+
+            
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "calls": [
+            {
+                "rtp": 75615,
+                "call_type": "Free"
+            },
+            {
+                "rtp": 62185,
+                "call_type": "Free"
+            },
+            {
+                "rtp": 45010,
+                "call_type": "Free"
+            },
+        ]
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "External Error"
+    }
+
+
+3. Call Apply
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "call_apply",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "provider_code": "PRAGMATIC",
+        "game_code": "vs20doghouse",
+        "user_code": "test",
+        "call_rtp" : 45010, // You can get this value from Call List API
+        "call_type" : 1 // 1: Common Free, 2: Buy Bonus Free
+    }
+
+            
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "called_money": 720160,       // bet * ( rtp / 100 ) 
+        "msg": "SUCCESS"
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "Processing call is existed."
+    }
+
+
+4. Get Call History
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "call_history",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "offset" : 0,
+        "limit" : 100
+    }
+
+
+
+
+
+    Call Reference
+
+    - status
+    0: Waiting
+    1: Processing
+    2: Finished
+    3: Rejected By GameServer (Because Bet Amount Changed)
+    4: Canceled By Cancel API & Cancel Button Pressing
+
+    - expect, missed, real
+    Admin apply 1000 money Call, Then this is expect money.
+    User received 800 money, Then this is real money.
+    200 money is missed money.
+    This missed money will be return to Admin.
+
+    Why missed money?
+
+    Because PRAGMATIC Free option game;
+    ex: 5 Lions Megaways, The Dog House Megaways, Wild Booster ...
+
+
+
+            
+Response Ex:
+
+
+    - Success:
+    {
+    "stat   us": 1,
+    "data": [
+            {
+            "id": 93,
+            "agent_code": "9avertp",
+            "user_code": "test",
+            "provider_code": "PRAGMATIC",
+            "game_code": "vs20doghouse",
+            "bet": 1600,
+            "user_prev": null,
+            "user_after": null,
+            "agent_prev": 901200,
+            "agent_after": 181040,
+            "expect": 720160,
+            "missed": 720160,
+            "real": 0,
+            "rtp": 45010,
+            "type": "common",
+            "status": 0, // Waiting
+            "msg": null,
+            "created_at": "2023-02-23T04:02:45.000Z",
+            "updated_at": "2023-02-23T04:02:46.000Z"
+            },
+            {
+            "id": 94,
+            "agent_code": "9avertp",
+            "user_code": "test",
+            "provider_code": "PRAGMATIC",
+            "game_code": "vs20doghouse",
+            "bet": 1600,
+            "user_prev": null,
+            "user_after": null,
+            "agent_prev": 901200,
+            "agent_after": 181040,
+            "expect": 720160,
+            "missed": 720160,
+            "real": 0,
+            "rtp": 45010,
+            "type": "common",
+            "status": 1, // Processing
+            "msg": "Processing",
+            "created_at": "2023-02-23T04:02:45.000Z",
+            "updated_at": "2023-02-23T04:02:46.000Z"
+            },
+            {
+            "id": 95,
+            "agent_code": "9avertp",
+            "user_code": "test",
+            "provider_code": "PRAGMATIC",
+            "game_code": "vs20doghouse",
+            "bet": 2000,
+            "user_prev": 10748348.2,
+            "user_after": 10748348.2,
+            "agent_prev": 8588141.8,
+            "agent_after": 8586141.8,
+            "expect": 2000,
+            "missed": 0,
+            "real": 2000,
+            "rtp": 100,
+            "type": "common",
+            "status": 2, // Finished
+            "msg": "Finished",
+            "created_at": "2023-02-23T00:48:38.000Z",
+            "updated_at": "2023-02-23T00:50:30.000Z"
+            },
+            {
+            "id": 106,
+            "agent_code": "9avertp",
+            "user_code": "test",
+            "provider_code": "PRAGMATIC",
+            "game_code": "vs20doghouse",
+            "bet": 2000,
+            "user_prev": null,
+            "user_after": null,
+            "agent_prev": 6338441.8,
+            "agent_after": 6338441.8,
+            "expect": 900200,
+            "missed": 900200,
+            "real": 0,
+            "rtp": 45010,
+            "type": "common",
+            "status": 3, //Rejected By GameServer (Bet amount changed)
+            "msg": "Rejected (callBet = 2000, currentBet = 1600)}",
+            "created_at": "2023-02-23T01:37:13.000Z",
+            "updated_at": "2023-02-23T01:37:18.000Z"
+            },
+            {
+            "id": 107,
+            "agent_code": "9avertp",
+            "user_code": "test",
+            "provider_code": "PRAGMATIC",
+            "game_code": "vs20doghouse",
+            "bet": 1600,
+            "user_prev": null,
+            "user_after": null,
+            "agent_prev": 6338441.8,
+            "agent_after": 6338441.8,
+            "expect": 720160,
+            "missed": 720160,
+            "real": 0,
+            "rtp": 45010,
+            "type": "common",
+            "status": 4, //Canceled by Cancel API or Cancel Button Click
+            "msg": "Canceled by User",
+            "created_at": "2023-02-23T01:43:58.000Z",
+            "updated_at": "2023-02-23T01:44:04.000Z"
+            }
+        ]
+    }
+
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "Invalid Agent."
+    }
+
+
+5. Call Cancel
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "call_cancel",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "call_id" : 109 // You can get from Call History API
+    }
+
+
+
+                
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "canceled_money": 720160,
+        "msg": "SUCCESS"
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "There is no waiting call."
+    }
+
+
+6. Control User RTP
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "control_rtp",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "provider_code": "PRAGMATIC",
+        "user_code": "test",
+        "rtp" : 92
+    }
+
+
+
+
+                
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "changed_rtp": 92
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "Invalid Parameter.",
+        "detail": "rtp must be less than or equal to 95"
+    }
+
+
+7. Control Users RTP
+Request Ex: 
+POST https://api.nexusggr.com
+
+    {
+        "method": "control_users_rtp",
+        "agent_code": "9avertp",
+        "agent_token": "be10b71f00f097f73e93695b7670ca5d",
+        "user_codes": "[\"test1\",\"test2\"]",  // Stringified JSON
+        "rtp" : 92
+    }
+
+
+
+
+                
+Response Ex:
+
+
+    - Success:
+    {
+        "status": 1,
+        "changed_rtp": 92
+    }
+
+    - Failure:
+    {
+        "status": 0,
+        "msg": "Invalid JSON"
+    }

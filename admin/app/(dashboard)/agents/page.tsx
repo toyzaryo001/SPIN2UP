@@ -2,17 +2,18 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Plus, Sliders, X, Save, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, Sliders, X, Save, AlertTriangle, Trash2, Star } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Agent {
     id: number;
     name: string;
-    // prefix: string; // Deprecated or mapped to upline?
-    upline?: string; // New field
-    apiKey?: string; // Endpoint
-    xApiKey?: string;
-    xApiCat?: string;
+    code: string; // Added code
+    isMain: boolean; // Added isMain
+    upline?: string;
+    apiKey?: string;
+    xApiKey?: string; // API Key / Token
+    xApiCat?: string; // Secret / Cat
     gameEntrance?: string;
     callbackUrl?: string;
     rtp: number;
@@ -30,10 +31,12 @@ export default function AgentsPage() {
     const [deletingAgent, setDeletingAgent] = useState<Agent | null>(null);
 
     const [formData, setFormData] = useState({
-        name: "BETFLIX", // Default to BETFLIX
+        name: "Betflix",
+        code: "BETFLIX",
+        isMain: false,
         upline: "",
         apiKey: "https://api.bfx.fail",
-        xApiKey: "",
+        xApiKey: "", // Used as Token for Nexus
         xApiCat: "",
         gameEntrance: "",
         callbackUrl: "",
@@ -66,8 +69,10 @@ export default function AgentsPage() {
             setEditingAgent(agent);
             setFormData({
                 name: agent.name,
+                code: agent.code || agent.name.toUpperCase(),
+                isMain: agent.isMain || false,
                 upline: agent.upline || "",
-                apiKey: agent.apiKey || "https://api.bfx.fail",
+                apiKey: agent.apiKey || "",
                 xApiKey: agent.xApiKey || "",
                 xApiCat: agent.xApiCat || "",
                 gameEntrance: agent.gameEntrance || "",
@@ -80,7 +85,9 @@ export default function AgentsPage() {
         } else {
             setEditingAgent(null);
             setFormData({
-                name: "BETFLIX",
+                name: "Betflix",
+                code: "BETFLIX",
+                isMain: false,
                 upline: "",
                 apiKey: "https://api.bfx.fail",
                 xApiKey: "",
@@ -103,13 +110,14 @@ export default function AgentsPage() {
 
     const handleSave = async () => {
         if (!formData.name.trim()) {
-            toast.error("กรุณาเลือก Agent");
+            toast.error("กรุณากรอกชื่อ Agent");
             return;
         }
-        // if (!formData.upline.trim()) {
-        //     toast.error("กรุณากรอก Upline"); // Optional validation
-        //     return;
-        // }
+        if (!formData.code.trim()) {
+            toast.error("กรุณาระบุ Code (เช่น BETFLIX, NEXUS)");
+            return;
+        }
+
         setIsSaving(true);
         try {
             const payload = {
@@ -127,9 +135,9 @@ export default function AgentsPage() {
             setIsModalOpen(false);
             fetchAgents();
             toast.success("บันทึกสำเร็จ");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Save error:", error);
-            toast.error("เกิดข้อผิดพลาด");
+            toast.error(error.response?.data?.message || "เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
         }
@@ -157,10 +165,23 @@ export default function AgentsPage() {
         }
     };
 
+    // Helper to auto-fill defaults based on Type
+    const handleTypeChange = (type: string) => {
+        let updates: any = { code: type };
+        if (type === 'BETFLIX') {
+            updates.name = 'Betflix (Main)';
+            updates.apiKey = 'https://api.bfx.fail';
+        } else if (type === 'NEXUS') {
+            updates.name = 'Nexus';
+            updates.apiKey = 'https://api.nexusggr.com';
+        }
+        setFormData({ ...formData, ...updates });
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-slate-800">จัดการ Agent & เกม</h2>
+                <h2 className="text-2xl font-bold text-slate-800">จัดการ Agent (API Connection)</h2>
                 <button
                     onClick={() => openModal()}
                     className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2"
@@ -176,10 +197,10 @@ export default function AgentsPage() {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-slate-50 text-slate-500 font-medium">
                             <tr>
-                                <th className="px-6 py-4">ชื่อ Agent</th>
-                                <th className="px-6 py-4">Upline</th>
+                                <th className="px-6 py-4">Code</th>
+                                <th className="px-6 py-4">ชื่อเรียก</th>
                                 <th className="px-6 py-4">Endpoint</th>
-                                <th className="px-6 py-4 text-center">RTP</th>
+                                <th className="px-6 py-4 text-center">Main</th>
                                 <th className="px-6 py-4 text-center">สถานะ</th>
                                 <th className="px-6 py-4 text-center">จัดการ</th>
                             </tr>
@@ -190,11 +211,19 @@ export default function AgentsPage() {
                             ) : (
                                 agents.map((agent) => (
                                     <tr key={agent.id} className="hover:bg-slate-50">
+                                        <td className="px-6 py-4">
+                                            <span className="font-mono font-bold bg-slate-100 px-2 py-1 rounded text-slate-600">
+                                                {agent.code}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4 font-bold text-slate-800">{agent.name}</td>
-                                        <td className="px-6 py-4 font-mono text-slate-600">{agent.upline || "-"}</td>
                                         <td className="px-6 py-4 font-mono text-xs text-slate-500 truncate max-w-[150px]">{agent.apiKey || "-"}</td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="font-bold text-yellow-600">{(agent.rtp * 100).toFixed(0)}%</span>
+                                            {agent.isMain && (
+                                                <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold">
+                                                    <Star size={12} fill="currentColor" /> Main
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <button
@@ -231,34 +260,58 @@ export default function AgentsPage() {
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
                         </div>
                         <div className="space-y-4">
+
+                            {/* Template Selection */}
+                            {!editingAgent && (
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <button
+                                        onClick={() => handleTypeChange('BETFLIX')}
+                                        className={`p-3 border rounded-lg text-center ${formData.code === 'BETFLIX' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                        Betflix
+                                    </button>
+                                    <button
+                                        onClick={() => handleTypeChange('NEXUS')}
+                                        className={`p-3 border rounded-lg text-center ${formData.code === 'NEXUS' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                        Nexus
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อ Agent</label>
-                                    <select
-                                        value={formData.name}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            const updates: any = { name: val };
-                                            if (val === 'BETFLIX' && !formData.apiKey) {
-                                                updates.apiKey = "https://api.bfx.fail";
-                                            }
-                                            setFormData({ ...formData, ...updates });
-                                        }}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 bg-white"
-                                    >
-                                        <option value="BETFLIX">BETFLIX</option>
-                                        {/* Future: Add more providers option */}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Upline (Prefix)</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Agent Code (System)</label>
                                     <input
                                         type="text"
-                                        value={formData.upline}
-                                        onChange={(e) => setFormData({ ...formData, upline: e.target.value })}
-                                        placeholder="เช่น px89"
+                                        value={formData.code}
+                                        onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 font-mono uppercase"
+                                        placeholder="EX: BETFLIX"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Display Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                <input
+                                    type="checkbox"
+                                    id="isMain"
+                                    checked={formData.isMain}
+                                    onChange={(e) => setFormData({ ...formData, isMain: e.target.checked })}
+                                    className="w-5 h-5 rounded border-slate-300 text-blue-500"
+                                />
+                                <div>
+                                    <label htmlFor="isMain" className="text-sm font-bold text-slate-800">ตั้งเป็น Main Agent</label>
+                                    <p className="text-xs text-slate-500">ใช้เป็นค่าเริ่มต้นสำหรับเกมที่ไม่ได้ระบุค่าย และใช้ยืนยันยอดเงินหลัก</p>
                                 </div>
                             </div>
 
@@ -272,40 +325,99 @@ export default function AgentsPage() {
                                 />
                             </div>
 
-                            {/* Betflix Specific Fields */}
-                            {formData.name === 'BETFLIX' && (
+                            {/* Dynamic Fields based on Type */}
+                            {formData.code === 'BETFLIX' ? (
                                 <>
                                     <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Upline (Prefix)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.upline}
+                                                onChange={(e) => setFormData({ ...formData, upline: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                            />
+                                        </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">x-api-key</label>
                                             <input
                                                 type="text"
                                                 value={formData.xApiKey}
                                                 onChange={(e) => setFormData({ ...formData, xApiKey: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm"
                                             />
                                         </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">x-api-cat</label>
                                             <input
                                                 type="text"
                                                 value={formData.xApiCat}
                                                 onChange={(e) => setFormData({ ...formData, xApiCat: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Game Entrance</label>
+                                            <input
+                                                type="text"
+                                                value={formData.gameEntrance}
+                                                onChange={(e) => setFormData({ ...formData, gameEntrance: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
                                             />
                                         </div>
                                     </div>
+                                </>
+                            ) : formData.code === 'NEXUS' ? (
+                                <>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Agent Code (Upline)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.upline}
+                                                onChange={(e) => setFormData({ ...formData, upline: e.target.value })}
+                                                placeholder="Nexus Agent Code"
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Agent Token (Secret)</label>
+                                            <input
+                                                type="password"
+                                                value={formData.xApiKey} // Reuse xApiKey for Token
+                                                onChange={(e) => setFormData({ ...formData, xApiKey: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded">
+                                        * Nexus ใช้ช่อง <strong>Agent Code</strong> เป็น 'agent_code' และ <strong>Token</strong> เป็น 'agent_token'
+                                    </p>
+                                </>
+                            ) : (
+                                // Generic Fallback
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Game Entrance URL</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Key 1 (Upline/Prefix)</label>
                                         <input
                                             type="text"
-                                            value={formData.gameEntrance}
-                                            onChange={(e) => setFormData({ ...formData, gameEntrance: e.target.value })}
-                                            placeholder="https://..."
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                            value={formData.upline}
+                                            onChange={(e) => setFormData({ ...formData, upline: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
                                         />
                                     </div>
-                                </>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Key 2 (API Key/Token)</label>
+                                        <input
+                                            type="text"
+                                            value={formData.xApiKey}
+                                            onChange={(e) => setFormData({ ...formData, xApiKey: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        />
+                                    </div>
+                                </div>
                             )}
 
                             <div>
@@ -314,7 +426,6 @@ export default function AgentsPage() {
                                     type="text"
                                     value={formData.callbackUrl}
                                     onChange={(e) => setFormData({ ...formData, callbackUrl: e.target.value })}
-                                    placeholder="https://..."
                                     className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 />
                             </div>

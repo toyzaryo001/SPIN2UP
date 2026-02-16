@@ -33,6 +33,9 @@ model User {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  lastActiveAgentId Int?      // Tracks where the user's money currently resides
+  externalAccounts  UserExternalAccount[]
+
   transactions  Transaction[]
   gameSessions  GameSession[]
   rewards       RewardClaim[]
@@ -42,6 +45,23 @@ model User {
   @@index([phone])
   @@index([referrerCode])
   @@index([createdAt])
+}
+
+// บัญชีภายนอก (สำหรับ Mix Board / Multi-Agent)
+model UserExternalAccount {
+  id              Int         @id @default(autoincrement())
+  userId          Int
+  user            User        @relation(fields: [userId], references: [id])
+  agentId         Int
+  agent           AgentConfig @relation(fields: [agentId], references: [id])
+  externalUsername String
+  externalPassword String
+  balance         Decimal     @default(0) // Cached balance (optional)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([userId, agentId])
+  @@index([externalUsername])
 }
 
 // แอดมิน/พนักงาน (แยกจาก User)
@@ -185,6 +205,10 @@ model GameProvider {
   isActive    Boolean       @default(true)
   isLobbyMode Boolean       @default(false)  // ค่ายที่เปิดเกมผ่าน Lobby (เช่น FUNKY)
   sortOrder   Int           @default(0)
+  
+  defaultAgentId Int?
+  defaultAgent   AgentConfig? @relation(fields: [defaultAgentId], references: [id])
+
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   
@@ -208,6 +232,10 @@ model Game {
   isHot       Boolean        @default(false)
   isNew       Boolean        @default(false)
   sortOrder   Int            @default(0)
+  
+  agentId     Int?           // Override Provider's default agent
+  agent       AgentConfig?   @relation(fields: [agentId], references: [id])
+
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -215,6 +243,7 @@ model Game {
 
   @@index([providerId])
   @@index([isActive])
+  @@index([agentId])
 }
 
 // Session การเล่น
@@ -341,6 +370,15 @@ model AgentConfig {
   minBet      Decimal  @default(1)
   maxBet      Decimal  @default(10000)
   isActive    Boolean  @default(true)
+  
+  // New Fields for Mix Board
+  code        String   @unique @default("BETFLIX") // BETFLIX, NEXUS
+  isMain      Boolean  @default(false)
+  
+  games       Game[]
+  providers   GameProvider[]
+  userAccounts UserExternalAccount[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

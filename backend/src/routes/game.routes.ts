@@ -224,99 +224,90 @@ router.get('/user/history', authMiddleware, async (req: AuthRequest, res) => {
 
 // POST /api/games/launch - เข้าเล่นเกม (Betflix Direct Play)
 // POST /api/games/launch - เข้าเล่นเกม (Betflix Direct Play)
+// POST /api/games/launch - เข้าเล่นเกม (Mix Board / Multi-Agent)
 router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
     try {
-        const { providerCode, gameCode, lang = 'thai' } = req.body;
-        console.log('🎮 Launch Request:', { providerCode, gameCode, lang, userId: req.user?.userId });
+        const { providerCode, gameCode, lang = 'th' } = req.body;
+        const userId = req.user!.userId;
 
-        const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-        if (!user) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+        console.log('🎮 Launch Request:', { providerCode, gameCode, lang, userId });
 
-        console.log('👤 User found:', { id: user.id, phone: user.phone, betflixUsername: user.betflixUsername });
-
-        if (!user.betflixUsername) {
-            // Auto-register if missing
-            console.log('📝 No betflixUsername, auto-registering...');
-            const betflixUser = await BetflixService.register(user.phone);
-            if (betflixUser) {
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { betflixUsername: betflixUser.username, betflixPassword: betflixUser.password }
-                });
-                user.betflixUsername = betflixUser.username;
-                console.log('✅ Betflix user registered:', betflixUser.username);
-            } else {
-                console.error('❌ Betflix register failed');
-                return res.status(400).json({ success: false, message: 'ไม่สามารถเชื่อมต่อระบบเกมได้ (Betflix Register Failed)' });
-            }
-        } else {
-            // Auto-fix: if betflixUsername is in wrong format (raw phone without prefix), re-register
-            const currentUsername = user.betflixUsername;
-            const isRawPhone = /^\d{10}$/.test(currentUsername); // e.g., "0642938073"
-
-            // Fix: Don't hardcode 'chkk' check. Just check if it looks like a raw phone number.
-            // If we really want to check prefix, we should get it from config, but checking raw phone is usually enough
-            // to catch users who haven't been properly registered with a prefix.
-            if (isRawPhone) {
-                console.log(`⚠️ betflixUsername "${currentUsername}" is in wrong format, re-registering...`);
-                const betflixUser = await BetflixService.register(user.phone);
-                if (betflixUser) {
-                    await prisma.user.update({
-                        where: { id: user.id },
-                        data: { betflixUsername: betflixUser.username, betflixPassword: betflixUser.password }
-                    });
-                    user.betflixUsername = betflixUser.username;
-                    console.log('✅ Betflix username fixed:', betflixUser.username);
-                } else {
-                    console.warn('⚠️ Re-register failed, continuing with existing username');
+        // 1. Try to find local Game record to determine Agent
+        // We match gameCode with slug (assuming they are consistent) or just provider match?
+        // Usually gameCode passed from frontend IS the slug in our DB
+        const game = await prisma.game.findFirst({
+            where: {
+                slug: gameCode,
+                isActive: true,
+                provider: {
+                    slug: providerCode
                 }
-            }
-        }
-
-        const betflixUser = user.betflixUsername!;
-        console.log('🔑 Launching with betflixUsername:', betflixUser);
-
-        // Use new launchGame method with fallback to lobby behavior if no valid game/provider
-        const referer = req.headers.referer || req.headers.origin || 'https://domain.com';
-        const returnUrl = `${referer}`;
+            },
+            include: { provider: true }
+        });
 
         let url: string | null = null;
         let errorDetail = '';
 
-        if (providerCode) {
-            console.log('🚀 Calling launchGame:', { betflixUser, providerCode, gameCode, lang, returnUrl });
+        if (game) {
+            console.log(`✅ Found Local Game ID: ${game.id} (Agent ID: ${game.agentId || 'Default'})`);
             try {
-                url = await BetflixService.launchGame(betflixUser, providerCode, gameCode, lang, returnUrl);
-                console.log('📍 launchGame result:', url);
-            } catch (launchError: any) {
-                console.error('❌ launchGame threw error:', launchError.message);
-                errorDetail = launchError.message;
+                // Use WalletService which handles Agent Swapping
+                const { WalletService } = await import('../services/WalletService.js');
+                url = await WalletService.launchGame(userId, game.id, lang);
+            } catch (e: any) {
+                console.error('❌ WalletService Launch Error:', e);
+                errorDetail = e.message;
             }
         } else {
-            // Legacy/Lobby mode
-            console.log('🏠 Calling getPlayUrl (lobby mode)');
-            url = await BetflixService.getPlayUrl(betflixUser);
-            console.log('📍 getPlayUrl result:', url);
+            // Fallback: Legacy/Direct mode (Assume Main Agent / Betflix)
+            console.log('⚠️ Game not found in local DB. Fallback to Main Agent Direct Launch.');
+
+            try {
+                const { AgentFactory } = await import('../services/agents/AgentFactory.js');
+                const mainAgent = await AgentFactory.getMainAgent();
+
+                // We need the User's external account for this Agent
+                // For Main Agent (Betflix), we can try to find or register on the fly?
+                // But WalletService logic is cleaner. 
+                // Let's just try to launch directly if we have username?
+                // Actually, best effort:
+
+                const user = await prisma.user.findUnique({
+                    where: { id: userId },
+                    include: { externalAccounts: true }
+                });
+
+                if (user) {
+                    // Register if needed (simple check)
+                    let extAccount = user.externalAccounts.find(a => a.agentId === (mainAgent as any).configCache?.id); // Hacky access?
+                    // Better: Just register to ensure we have credentials
+                    const creds = await mainAgent.register(user.id, user.phone);
+
+                    if (creds) {
+                        url = await mainAgent.launchGame(creds.username, gameCode, providerCode, lang);
+                    }
+                }
+            } catch (e: any) {
+                console.error('❌ Direct Launch Error:', e);
+                errorDetail = e.message;
+            }
         }
 
         if (!url) {
-            console.error('❌ No URL returned from Betflix');
-            // Return detailed error message
-            const errorMsg = errorDetail
-                ? `ไม่สามารถเปิดเกมได้: ${errorDetail}`
-                : 'ไม่สามารถขอ URL เข้าเกมได้ - กรุณาตรวจสอบการตั้งค่า API หรือลองใหม่อีกครั้ง';
             return res.status(500).json({
                 success: false,
-                message: errorMsg,
-                debug: { providerCode, gameCode, betflixUser }
+                message: errorDetail || 'ไม่สามารถเข้าเล่นเกมได้ (Launch Failed)',
+                debug: { providerCode, gameCode }
             });
         }
 
-        console.log('✅ Returning game URL:', url);
+        console.log('✅ Returns URL:', url);
         res.json({ success: true, data: { url } });
+
     } catch (error: any) {
-        console.error('Launch game error:', error);
-        res.status(500).json({ success: false, message: `เกิดข้อผิดพลาด: ${error.message || 'Unknown error'}` });
+        console.error('Launch generic error:', error);
+        res.status(500).json({ success: false, message: `เกิดข้อผิดพลาด: ${error.message}` });
     }
 });
 

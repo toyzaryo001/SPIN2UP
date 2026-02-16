@@ -126,4 +126,33 @@ router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
     }
 });
 
+// PATCH /api/admin/games/bulk-update-agent - กำหนด Agent ให้กับเกมหลายรายการ
+router.patch('/bulk-update-agent', requirePermission('games', 'edit'), async (req, res) => {
+    try {
+        const { gameIds, agentId } = req.body;
+
+        if (!Array.isArray(gameIds) || gameIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'กรุณาเลือกเกมอย่างน้อย 1 รายการ' });
+        }
+
+        // Validate Agent ID if provided
+        if (agentId) {
+            const agent = await prisma.agentConfig.findUnique({ where: { id: Number(agentId) } });
+            if (!agent) {
+                return res.status(404).json({ success: false, message: 'ไม่พบ Agent ที่ระบุ' });
+            }
+        }
+
+        await prisma.game.updateMany({
+            where: { id: { in: gameIds.map(Number) } },
+            data: { agentId: agentId ? Number(agentId) : null },
+        });
+
+        res.json({ success: true, message: `อัปเดต ${gameIds.length} รายการเรียบร้อยแล้ว` });
+    } catch (error) {
+        console.error('Bulk update agent error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 export default router;

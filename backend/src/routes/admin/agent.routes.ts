@@ -48,19 +48,18 @@ router.get('/connection-test', requirePermission('agents', 'connection_test', 'v
                     isConnected = true;
                 } catch (e) { isConnected = false; }
             }
+        } else {
+            const status = await BetflixService.checkStatus();
+            isConnected = status.server.success && status.auth.success;
         }
-    } else {
-        const status = await BetflixService.checkStatus();
-        isConnected = status.server.success && status.auth.success;
-    }
 
-    const latency = Date.now() - start;
-    res.json({ success: true, data: isConnected, latency });
-} catch (error) {
-    const latency = Date.now() - start;
-    console.error('Connection test error:', error);
-    res.json({ success: false, message: 'การทดสอบล้มเหลว', latency });
-}
+        const latency = Date.now() - start;
+        res.json({ success: true, data: isConnected, latency });
+    } catch (error) {
+        const latency = Date.now() - start;
+        console.error('Connection test error:', error);
+        res.json({ success: false, message: 'การทดสอบล้มเหลว', latency });
+    }
 });
 
 // POST /api/admin/agents/test-register - ทดสอบสมัครสมาชิก

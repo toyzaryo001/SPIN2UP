@@ -101,11 +101,85 @@ router.post('/test-game', requirePermission('agents', 'connection_test', 'view')
                 latency
             });
         } else {
-            res.json({ success: false, message: 'ไม่สามารถสร้าง URL เกมได้', latency });
+            res.json({ success: false, message: 'ไม่ได้รับ URL เกม', latency });
         }
     } catch (error: any) {
         const latency = Date.now() - start;
         console.error('Test game error:', error);
+        res.json({ success: false, message: error.message || 'เกิดข้อผิดพลาด', latency });
+    }
+});
+
+// POST /api/admin/agents/test-providers - ทดสอบดึงค่ายเกม
+router.post('/test-providers', requirePermission('agents', 'connection_test', 'view'), async (req, res) => {
+    const start = Date.now();
+    try {
+        const { agentId } = req.body;
+
+        // Dynamically import AgentFactory to avoid circular dependency issues if any
+        const { AgentFactory } = await import('../../services/agents/AgentFactory.js');
+
+        let agentService;
+        if (agentId) {
+            agentService = await AgentFactory.getAgentById(Number(agentId));
+        } else {
+            agentService = BetflixService;
+        }
+
+        // Safety check if method exists
+        if (typeof (agentService as any).getGameProviders !== 'function') {
+            return res.json({ success: false, message: 'Agent นี้ยังไม่รองรับการดึงค่ายเกม', latency: 0 });
+        }
+
+        const providers = await (agentService as any).getGameProviders();
+        const latency = Date.now() - start;
+
+        res.json({
+            success: true,
+            data: providers,
+            latency
+        });
+    } catch (error: any) {
+        const latency = Date.now() - start;
+        console.error('Test providers error:', error);
+        res.json({ success: false, message: error.message || 'เกิดข้อผิดพลาด', latency });
+    }
+});
+
+// POST /api/admin/agents/test-games-list - ทดสอบดึงรายชื่อเกม
+router.post('/test-games-list', requirePermission('agents', 'connection_test', 'view'), async (req, res) => {
+    const start = Date.now();
+    try {
+        const { agentId, providerCode } = req.body;
+
+        if (!providerCode) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุ Provider Code' });
+        }
+
+        const { AgentFactory } = await import('../../services/agents/AgentFactory.js');
+
+        let agentService;
+        if (agentId) {
+            agentService = await AgentFactory.getAgentById(Number(agentId));
+        } else {
+            agentService = BetflixService;
+        }
+
+        if (typeof (agentService as any).getGames !== 'function') {
+            return res.json({ success: false, message: 'Agent นี้ยังไม่รองรับการดึงเกม', latency: 0 });
+        }
+
+        const games = await (agentService as any).getGames(providerCode);
+        const latency = Date.now() - start;
+
+        res.json({
+            success: true,
+            data: games,
+            latency
+        });
+    } catch (error: any) {
+        const latency = Date.now() - start;
+        console.error('Test games list error:', error);
         res.json({ success: false, message: error.message || 'เกิดข้อผิดพลาด', latency });
     }
 });

@@ -159,6 +159,7 @@ export class NexusProvider implements IAgentService {
 
     async getGameProviders(): Promise<any[]> {
         const res = await this.request('provider_list');
+        console.log('Nexus Provider List Response:', JSON.stringify(res)); // Debug Log
         if (res.status === 1 && Array.isArray(res.providers)) {
             return res.providers;
         }

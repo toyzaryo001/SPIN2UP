@@ -119,6 +119,13 @@ export default function AgentDetailPage() {
                 >
                     <Database size={16} /> การเชื่อมต่อ (API)
                 </button>
+                <button
+                    onClick={() => setActiveTab('test')}
+                    className={`px-6 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'test' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                >
+                    <Activity size={16} /> ห้องทดสอบ (Test Room)
+                </button>
                 {/* Future: Games Tab */}
                 {/* <button
                     onClick={() => setActiveTab('games')}

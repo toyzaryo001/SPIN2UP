@@ -195,11 +195,23 @@ router.post('/sync/clear', requirePermission('agents', 'import', 'manage'), asyn
 router.post('/sync/:code', requirePermission('agents', 'import', 'manage'), async (req, res) => {
     try {
         const { code } = req.params;
+        // Check if code is 'nexus' special keyword? No, let's use explicit route.
         const result = await GameSyncService.syncGamesForProvider(code);
         res.json({ success: true, data: { provider: code, ...result } });
     } catch (error: any) {
         console.error(`Sync provider ${req.params.code} error:`, error);
         res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
+    }
+});
+
+// POST /api/admin/providers/sync/nexus/all - Sync All Nexus Games
+router.post('/sync/nexus/all', requirePermission('agents', 'import', 'manage'), async (req, res) => {
+    try {
+        const results = await GameSyncService.syncNexusGames();
+        res.json({ success: true, data: results });
+    } catch (error: any) {
+        console.error('Sync Nexus error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Nexus Sync Failed' });
     }
 });
 

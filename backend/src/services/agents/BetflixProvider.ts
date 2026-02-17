@@ -170,19 +170,10 @@ export class BetflixProvider implements IAgentService {
 
     async launchGame(externalUsername: string, gameCode: string, providerCode: string, lang: string = 'en'): Promise<string | null> {
         try {
-            const config = await this.getConfig();
-            const apiUser = await this.applyPrefix(externalUsername);
-            const gameProvider = config.gameEntrance ? `${config.gameEntrance}/${providerCode}` : providerCode;
-
-            const url = `${config.apiUrl}/play.php?`;
-            const params = new URLSearchParams();
-            params.append('username', apiUser);
-            params.append('provider', gameProvider);
-            params.append('code', gameCode);
-            params.append('lang', lang);
-
-            return url + params.toString();
+            // Delegate to the main service which has the robust launch logic (Token/API V4)
+            return await BetflixService.launchGame(externalUsername, providerCode, gameCode, lang);
         } catch (e) {
+            console.error('BetflixProvider Launch Error:', e);
             return null;
         }
     }

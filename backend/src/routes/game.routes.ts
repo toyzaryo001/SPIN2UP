@@ -239,9 +239,7 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
             where: {
                 slug: gameCode,
                 isActive: true,
-                provider: {
-                    slug: providerCode
-                }
+                // provider: { slug: providerCode } // Remove strict check for Mix support
             },
             include: { provider: true }
         });
@@ -251,6 +249,11 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
 
         if (game) {
             console.log(`✅ Found Local Game ID: ${game.id} (Agent ID: ${game.agentId || 'Default'})`);
+
+            // Critical Mix Fix: If providerCode doesn't match game.provider.slug, we might be in a Mix scenario.
+            // But WalletService needs the *original* provider code to launch the game on the Agent.
+            // game.upstreamProviderCode should have this. If not, we fallback to game.provider.slug.
+
             try {
                 // Use WalletService which handles Agent Swapping
                 const { WalletService } = await import('../services/WalletService.js');

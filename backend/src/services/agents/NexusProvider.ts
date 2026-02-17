@@ -138,10 +138,15 @@ export class NexusProvider implements IAgentService {
     }
 
     async launchGame(externalUsername: string, gameCode: string, providerCode: string, lang: string = 'en'): Promise<string | null> {
-        // Strip -mix suffix if present (Safety Net)
-        let finalProviderCode = providerCode;
-        if (finalProviderCode.endsWith('-mix')) {
-            finalProviderCode = finalProviderCode.replace(/-mix$/i, '');
+        // 1. Strip -mix suffix
+        let finalProviderCode = providerCode.replace(/-mix$/i, '');
+
+        // 2. Normalize to Uppercase (Nexus requires uppercase codes like PGSOFT, PRAGMATIC)
+        finalProviderCode = finalProviderCode.toUpperCase();
+
+        // 3. Specific Mappings
+        if (finalProviderCode === 'PG') {
+            finalProviderCode = 'PGSOFT';
         }
 
         const res = await this.request('game_launch', {

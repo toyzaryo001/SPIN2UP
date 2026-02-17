@@ -1,3 +1,4 @@
+
 import axios, { AxiosInstance } from 'axios';
 import { IAgentService } from './IAgentService';
 import prisma from '../../lib/db';
@@ -153,41 +154,37 @@ export class NexusProvider implements IAgentService {
         if (res.status === 1 && res.launch_url) {
             let finalUrl = res.launch_url;
 
+            // Validate protocol
+            if (finalUrl && !finalUrl.startsWith('http')) {
+                finalUrl = `https://${finalUrl}`;
+            }
+
+            // Domain Replacement Logic (Optional, if Game Entrance is configured)
             try {
-                // If Game Entrance is configured, replace the domain
                 const config = await this.getConfig();
                 if (config.gameEntrance) {
                     const urlObj = new URL(finalUrl);
-
-                    // Handle case where gameEntrance is just domain (e.g. "game.example.com") 
-                    // or full URL (e.g. "https://game.example.com")
                     let entranceHost = config.gameEntrance;
-
-                    // Remove protocol and trailing slash for cleaner host extraction if needed, 
-                    // but URL constructor is safer if we just prepend https if missing
                     if (!entranceHost.startsWith('http')) {
                         entranceHost = `https://${entranceHost}`;
                     }
-
                     const entranceObj = new URL(entranceHost);
 
-                    // Replace hostname (keeps path and query params)
+                    // Replace hostname
                     urlObj.hostname = entranceObj.hostname;
-
-                    // Force HTTPS if entrance is HTTPS, or just respect entrance protocol
                     urlObj.protocol = entranceObj.protocol;
 
                     finalUrl = urlObj.toString();
-                    console.log(`[Nexus] Replaced launch URL domain to: ${urlObj.hostname}`);
                 }
             } catch (e) {
                 console.error('[Nexus] Error replacing launch URL domain:', e);
-                // Fallback to original URL if replacement fails
             }
 
             return finalUrl;
         }
-        return null;
+
+        // Throw Error with Message (Fixes 500 Generic Error)
+        throw new Error(res.msg || res.message || 'NEXUS_LAUNCH_FAILED');
     }
 
     async checkStatus(): Promise<boolean> {

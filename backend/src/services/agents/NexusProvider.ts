@@ -149,10 +149,28 @@ export class NexusProvider implements IAgentService {
             finalProviderCode = 'PGSOFT';
         }
 
+        // 4. Clean Game Code (Strip provider prefix if present)
+        // Nexus often expects raw game codes (e.g. "medusa") not "pgsoft-medusa"
+        let finalGameCode = gameCode;
+        const prefixes = [
+            `${finalProviderCode.toLowerCase()}-`, // pgsoft-
+            `${finalProviderCode.toLowerCase()}_`, // pgsoft_
+            'pg-', 'pp-', 'joker-', 'jili-', 'fc-', 'ka-', 'amb-' // Common short codes
+        ];
+
+        for (const prefix of prefixes) {
+            if (finalGameCode.toLowerCase().startsWith(prefix)) {
+                finalGameCode = finalGameCode.substring(prefix.length);
+                break;
+            }
+        }
+
+        console.log(`[Nexus] Launching: Provider=${finalProviderCode}, Game=${finalGameCode} (Original=${gameCode}), User=${externalUsername}`);
+
         const res = await this.request('game_launch', {
             user_code: externalUsername,
             provider_code: finalProviderCode,
-            game_code: gameCode,
+            game_code: finalGameCode,
             lang: lang
         });
 

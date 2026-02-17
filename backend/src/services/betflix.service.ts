@@ -52,10 +52,23 @@ export class BetflixService {
                 };
             }
 
+            // Flexible URL Logic: Check if apiKey is a URL or a Key
+            let realApiUrl = 'https://api.bfx.fail'; // Default
+            let realApiKey = config.xApiKey || '';
+
+            if (config.apiKey && config.apiKey.startsWith('http')) {
+                realApiUrl = config.apiKey;
+            } else if (config.apiKey && !config.xApiKey) {
+                // Config Mismatch: User put Key in URL field, and Key field is empty
+                // Recover the key from the URL field
+                console.warn(`[Betflix] Detected Key in URL field (${config.apiKey.substring(0, 5)}...). Recovering as API Key.`);
+                realApiKey = config.apiKey;
+            }
+
             // Update cache
             configCache = {
-                apiUrl: config.apiKey || 'https://api.bfx.fail',
-                apiKey: config.xApiKey || '',
+                apiUrl: realApiUrl,
+                apiKey: realApiKey,
                 apiCat: config.xApiCat || '',
                 prefix: config.upline || '', // Mapping upline to prefix (be31kk)
                 sitePrefix: sitePrefix,      // Site prefix (CHKK)
@@ -503,7 +516,8 @@ export class BetflixService {
                 params.append('username', apiUser);
                 params.append('provider', attempt.provider);
                 if (attempt.gamecode) params.append('gamecode', attempt.gamecode);
-                params.append('language', lang);
+                const apiLang = (lang === 'th' || lang === 'thai') ? 'thai' : 'english';
+                params.append('language', apiLang);
                 params.append('openGame', 'true');
                 if (returnUrl) params.append('returnUrl', returnUrl);
 

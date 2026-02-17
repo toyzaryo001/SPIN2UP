@@ -33,8 +33,15 @@ export class NexusProvider implements IAgentService {
     private async getApi(): Promise<AxiosInstance> {
         const config = await this.getConfig();
         if (!this.api) {
+            // Flexible URL Logic: Check if apiKey is a URL or a Key
+            let baseUrl = config.apiKey || 'https://api.nexusggr.com';
+            if (baseUrl && !baseUrl.startsWith('http')) {
+                console.warn(`[Nexus] Invalid API URL in config (starts with ${baseUrl.substring(0, 5)}...). Using default.`);
+                baseUrl = 'https://api.nexusggr.com';
+            }
+
             this.api = axios.create({
-                baseURL: config.apiKey || 'https://api.nexusggr.com', // Using apiKey field as Base URL
+                baseURL: baseUrl, // Using validated Base URL
                 timeout: 15000,
                 headers: { 'Content-Type': 'application/json' }
             });

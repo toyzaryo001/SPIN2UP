@@ -102,7 +102,12 @@ export class WalletService {
         }
 
         // 4. Launch
-        const finalProviderCode = game.upstreamProviderCode || game.provider?.slug || '';
+        let finalProviderCode = (game as any).upstreamProviderCode || game.provider?.slug || '';
+
+        // Fallback: If provider code has "-mix" and no upstream code, strip it (Safety Net)
+        if (!(game as any).upstreamProviderCode && finalProviderCode.endsWith('-mix')) {
+            finalProviderCode = finalProviderCode.replace(/-mix$/i, '');
+        }
 
         console.log(`[WalletService] Launching Game: ${game.slug} (Provider: ${finalProviderCode})`);
 

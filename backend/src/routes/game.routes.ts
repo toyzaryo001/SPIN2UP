@@ -310,7 +310,15 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
 
     } catch (error: any) {
         console.error('Launch generic error:', error);
-        res.status(500).json({ success: false, message: `เกิดข้อผิดพลาด: ${error.message}` });
+        res.status(500).json({
+            success: false,
+            message: `เกิดข้อผิดพลาด: ${error.message}`,
+            debug: {
+                originalError: error.message,
+                providerCode: req.body.providerCode,
+                gameCode: req.body.gameCode
+            }
+        });
     }
 });
 

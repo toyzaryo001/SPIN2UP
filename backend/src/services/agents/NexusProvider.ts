@@ -130,9 +130,15 @@ export class NexusProvider implements IAgentService {
     }
 
     async launchGame(externalUsername: string, gameCode: string, providerCode: string, lang: string = 'en'): Promise<string | null> {
+        // Strip -mix suffix if present (Safety Net)
+        let finalProviderCode = providerCode;
+        if (finalProviderCode.endsWith('-mix')) {
+            finalProviderCode = finalProviderCode.replace(/-mix$/i, '');
+        }
+
         const res = await this.request('game_launch', {
             user_code: externalUsername,
-            provider_code: providerCode,
+            provider_code: finalProviderCode,
             game_code: gameCode,
             lang: lang
         });

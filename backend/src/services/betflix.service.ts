@@ -416,9 +416,24 @@ export class BetflixService {
                 'km-table': 'km',
                 'km_table': 'km',
                 'fishing': 'jl', // Default fishing to JILI
+
+                // MIX PROVIDER MAPPINGS (Safety Net)
+                'pg-mix': 'pg',
+                'pgsoft-mix': 'pg',
+                'pp-mix': 'pp',
+                'pragmatic-mix': 'pp',
+                'joker-mix': 'joker',
+                'jili-mix': 'jl',
+                'jl-mix': 'jl',
+                'amb-mix': 'askmebet',
             };
 
-            const inputProvider = providerCode.toLowerCase().trim();
+            // Generic fallback: Strip "-mix" suffix if no explicit map found
+            let inputProvider = providerCode.toLowerCase().trim();
+            if (inputProvider.endsWith('-mix') && !providerMap[inputProvider]) {
+                inputProvider = inputProvider.replace(/-mix$/, '');
+            }
+
             const apiProvider = providerMap[inputProvider] || inputProvider;
 
             // 2. Build Attempt Templates (Provider + GameCode Combinations)

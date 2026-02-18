@@ -215,16 +215,16 @@ export default function MixBoardPage() {
 
     // Helper to open edit modal
     const openEditModal = () => {
-        // Helper to open edit modal
-        const openEditModal = () => {
-            const provider = allProviders.find(p => p.id === targetProviderId);
-            if (provider) {
-                setEditingProvider(provider);
-                setNewProviderName(provider.name);
-                setNewProviderSlug(provider.slug);
-                setShowEditModal(true);
-            }
-        };
+        const provider = allProviders.find(p => p.id === targetProviderId);
+        if (provider) {
+            setEditingProvider(provider);
+            setNewProviderName(provider.name);
+            setNewProviderSlug(provider.slug);
+            setShowEditModal(true);
+        }
+    };
+
+    const handleMoveGames = async () => {
         if (selectedSourceGameIds.length === 0 || !targetProviderId) {
             toast.error("กรุณาเลือกเกมและค่ายปลายทาง");
             return;
@@ -441,20 +441,15 @@ export default function MixBoardPage() {
                             onChange={(e) => setTargetProviderId(e.target.value ? Number(e.target.value) : null)}
                             className="w-full text-sm border-emerald-300 ring-emerald-200 rounded-lg focus:ring-emerald-500"
                         >
-                            <select
-                                value={targetProviderId || ""}
-                                onChange={(e) => setTargetProviderId(e.target.value ? Number(e.target.value) : null)}
-                                className="w-full text-sm border-emerald-300 ring-emerald-200 rounded-lg focus:ring-emerald-500"
-                            >
-                                <option value="">-- เลือกค่ายปลายทาง --</option>
-                                {/* Use allProviders here */}
-                                {allProviders.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name} ({p._count?.games || 0})</option>
-                                ))}
-                            </select>
-                            <div className="text-xs text-emerald-600 font-medium text-right">
-                                มี {targetGames.length} เกมในค่ายนี้
-                            </div>
+                            <option value="">-- เลือกค่ายปลายทาง --</option>
+                            {/* Use allProviders here */}
+                            {allProviders.map(p => (
+                                <option key={p.id} value={p.id}>{p.name} ({p._count?.games || 0})</option>
+                            ))}
+                        </select>
+                        <div className="text-xs text-emerald-600 font-medium text-right">
+                            มี {targetGames.length} เกมในค่ายนี้
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-50/50">

@@ -104,34 +104,27 @@ router.patch('/:id', requirePermission('agents', 'providers', 'manage'), async (
     }
 });
 
-// DELETE /api/admin/providers/:id - ลบค่ายเกม (Cascade: Sessions -> Games -> Provider)
+// DELETE /api/admin/providers/:id - ลบค่ายเกม (Safety Check: Must be empty)
 router.delete('/:id', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
     try {
         const id = Number(req.params.id);
 
-        // 1. Find all games in this provider
-        const games = await prisma.game.findMany({
-            where: { providerId: id },
-            select: { id: true }
+        // 1. Check for games
+        const gameCount = await prisma.game.count({
+            where: { providerId: id }
         });
-        const gameIds = games.map(g => g.id);
 
-        if (gameIds.length > 0) {
-            // 2. Delete all sessions for these games
-            await prisma.gameSession.deleteMany({
-                where: { gameId: { in: gameIds } }
-            });
-
-            // 3. Delete all games
-            await prisma.game.deleteMany({
-                where: { providerId: id }
+        if (gameCount > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `ไม่สามารถลบค่ายเกมนี้ได้! มีเกมคงเหลือ ${gameCount} เกม\nกรุณาย้ายเกมออกไปที่ค่ายอื่นก่อน (ใช้เมนู Mix Board)`
             });
         }
 
-        // 4. Delete the provider
+        // 2. Delete the provider (Safe now)
         await prisma.gameProvider.delete({ where: { id } });
 
-        res.json({ success: true, message: 'ลบค่ายเกมและข้อมูลเกมทั้งหมดสำเร็จ' });
+        res.json({ success: true, message: 'ลบค่ายเกมเรียบร้อยแล้ว' });
     } catch (error) {
         console.error('Delete provider error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบค่ายเกม' });

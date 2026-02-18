@@ -5,6 +5,26 @@ import prisma from '../../lib/db.js';
 
 const router = Router();
 
+// GET /api/admin/agents - รายการ Agents
+router.get('/', async (req, res) => {
+    try {
+        const { type } = req.query;
+        // If type=credit, we might want to filter or just return all for now
+        // In the future, we can add 'type' to AgentConfig if needed.
+        // For now, return all active agents.
+
+        const configs = await prisma.agentConfig.findMany({
+            where: { isActive: true },
+            orderBy: { id: 'asc' }
+        });
+
+        res.json({ success: true, data: configs });
+    } catch (error) {
+        console.error('Get agents list error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 // GET /api/admin/agents/balance - ดูยอดเงิน Agent
 router.get('/balance', async (req, res) => {
     try {

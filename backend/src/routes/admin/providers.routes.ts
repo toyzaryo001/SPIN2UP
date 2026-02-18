@@ -8,15 +8,25 @@ const router = Router();
 // GET /api/admin/providers - รายการค่ายเกม
 router.get('/', requirePermission('agents', 'providers', 'view'), async (req, res) => {
     try {
-        const { categoryId } = req.query;
+        const { categoryId, agentId } = req.query;
         const where: any = {};
         if (categoryId) where.categoryId = Number(categoryId);
+
+        // Filter by Agent (Find providers that have games in this agent)
+        if (agentId !== undefined) {
+            if (agentId === 'null') {
+                // For Nexus (which means default/null agent), filter providers where games have agentId=null
+                where.games = { some: { agentId: null } };
+            } else {
+                where.games = { some: { agentId: Number(agentId) } };
+            }
+        }
 
         const providers = await prisma.gameProvider.findMany({
             where,
             include: {
                 category: { select: { name: true } },
-                _count: { select: { games: true } }
+                _count: { select: { games: true } } // This count might need adjustment if we want count-per-agent, but standard count is fine for now
             },
             orderBy: { sortOrder: 'asc' },
         });

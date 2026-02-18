@@ -3,9 +3,9 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function updateAdminRole() {
-    const result = await prisma.user.updateMany({
+    const result = await prisma.admin.updateMany({
         where: { username: 'admin' },
-        data: { role: 'SUPER_ADMIN' }
+        data: { isSuperAdmin: true }
     });
 
     console.log('✅ Updated admin to SUPER_ADMIN:', result.count, 'record(s)');

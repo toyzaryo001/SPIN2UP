@@ -301,7 +301,7 @@ export default function MixBoardPage() {
             </div>
 
             {/* Main Dual Pane Content */}
-            <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden">
+            <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden h-[calc(100vh-200px)]">
 
                 {/* LEFT PANE: SOURCE */}
                 <div className="col-span-12 md:col-span-5 bg-white rounded-xl shadow border border-slate-200 flex flex-col">

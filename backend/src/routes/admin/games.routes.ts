@@ -18,7 +18,25 @@ router.get('/', requirePermission('games', 'view'), async (req, res) => {
             if (agentId === 'null') {
                 where.agentId = null;
             } else {
-                where.agentId = Number(agentId);
+                // Check if this agent is main?
+                // We'll trust the frontend sends correct ID.
+                // But for "Main Agent" (e.g., BETFLIX), games are often stored as NULL.
+                // So if we query Agent ID 1, we should also include NULL if 1 is Main.
+
+                // Optimized: Check ID against known Main ID or DB query
+                const agent = await prisma.agentConfig.findUnique({
+                    where: { id: Number(agentId) },
+                    select: { isMain: true }
+                });
+
+                if (agent && agent.isMain) {
+                    where.OR = [
+                        { agentId: Number(agentId) },
+                        { agentId: null }
+                    ];
+                } else {
+                    where.agentId = Number(agentId);
+                }
             }
         }
 

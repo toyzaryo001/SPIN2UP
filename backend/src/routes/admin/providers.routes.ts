@@ -13,12 +13,29 @@ router.get('/', requirePermission('agents', 'providers', 'view'), async (req, re
         if (categoryId) where.categoryId = Number(categoryId);
 
         // Filter by Agent (Find providers that have games in this agent)
+        // Filter by Agent (Find providers that have games in this agent)
         if (agentId !== undefined) {
             if (agentId === 'null') {
                 // For Nexus (which means default/null agent), filter providers where games have agentId=null
                 where.games = { some: { agentId: null } };
             } else {
-                where.games = { some: { agentId: Number(agentId) } };
+                const agent = await prisma.agentConfig.findUnique({
+                    where: { id: Number(agentId) },
+                    select: { isMain: true }
+                });
+
+                if (agent && agent.isMain) {
+                    where.games = {
+                        some: {
+                            OR: [
+                                { agentId: Number(agentId) },
+                                { agentId: null }
+                            ]
+                        }
+                    };
+                } else {
+                    where.games = { some: { agentId: Number(agentId) } };
+                }
             }
         }
 

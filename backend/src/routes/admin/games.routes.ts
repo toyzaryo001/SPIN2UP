@@ -104,6 +104,57 @@ router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
     }
 });
 
+// PATCH /api/admin/games/bulk-update-images - อัปเดตรูปภาพเกมหลายรายการ (JSON)
+router.patch('/bulk-update-images', requirePermission('games', 'edit'), async (req, res) => {
+    try {
+        const { items } = req.body; // [{ name: "Game Name", image_url: "url" }]
+
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุข้อมูลให้ถูกต้อง' });
+        }
+
+        let updatedCount = 0;
+        let notFoundNames: string[] = [];
+
+        for (const item of items) {
+            if (!item.name || !item.image_url) continue;
+
+            // Find game by name (Case Insensitive logic handled by Prisma or manual find)
+            // Prisma doesn't support case-insensitive findUnique easily on non-id, so findFirst
+            // We'll iterate or findFirst. Since "name" is unique-ish but not strictly unique index in schema maybe?
+            // Let's assume name is unique enough or we update all matches.
+
+            // Use findFirst with mode: 'insensitive' if Postgres, checking schema capabilities
+            // Or just updateMany to be safe if multiple games have same name?
+
+            const result = await prisma.game.updateMany({
+                where: {
+                    name: {
+                        equals: item.name,
+                        mode: 'insensitive' // Requires Preview Feature on some Prisma versions, but usually standard in Postgres
+                    }
+                },
+                data: { thumbnail: item.image_url }
+            });
+
+            if (result.count > 0) {
+                updatedCount += result.count;
+            } else {
+                notFoundNames.push(item.name);
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `อัปเดตสำเร็จ ${updatedCount} รายการ`,
+            data: { updatedCount, notFoundNames }
+        });
+    } catch (error) {
+        console.error('Bulk update images error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 // PATCH /api/admin/games/bulk-update-agent - กำหนด Agent ให้กับเกมหลายรายการ
 router.patch('/bulk-update-agent', requirePermission('games', 'edit'), async (req, res) => {
     try {

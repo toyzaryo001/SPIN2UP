@@ -107,7 +107,7 @@ router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
 // PATCH /api/admin/games/bulk-update-images - อัปเดตรูปภาพเกมหลายรายการ (JSON)
 router.patch('/bulk-update-images', requirePermission('games', 'edit'), async (req, res) => {
     try {
-        const { items } = req.body; // [{ name: "Game Name", image_url: "url" }]
+        const { items, providerId } = req.body; // [{ name: "Game Name", image_url: "url" }], providerId (optional)
 
         if (!Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ success: false, message: 'กรุณาระบุข้อมูลให้ถูกต้อง' });
@@ -127,13 +127,20 @@ router.patch('/bulk-update-images', requirePermission('games', 'edit'), async (r
             // Use findFirst with mode: 'insensitive' if Postgres, checking schema capabilities
             // Or just updateMany to be safe if multiple games have same name?
 
+            const where: any = {
+                name: {
+                    equals: item.name,
+                    mode: 'insensitive' // Requires Preview Feature on some Prisma versions, but usually standard in Postgres
+                }
+            };
+
+            // If providerId is specified, scope the update
+            if (providerId) {
+                where.providerId = Number(providerId);
+            }
+
             const result = await prisma.game.updateMany({
-                where: {
-                    name: {
-                        equals: item.name,
-                        mode: 'insensitive' // Requires Preview Feature on some Prisma versions, but usually standard in Postgres
-                    }
-                },
+                where,
                 data: { thumbnail: item.image_url }
             });
 

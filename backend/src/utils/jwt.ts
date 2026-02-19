@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/db.js';
 
-// 7 days in seconds
-const JWT_EXPIRES_IN_SECONDS = 7 * 24 * 60 * 60;
+// 6 hours in seconds
+const JWT_EXPIRES_IN_SECONDS = 6 * 60 * 60;
 
 // Cache for JWT secret to avoid hitting DB on every request
 let cachedSecret: string | null = null;

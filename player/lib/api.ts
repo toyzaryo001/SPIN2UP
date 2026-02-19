@@ -62,4 +62,21 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+// Handle 401 Unauthorized
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            if (typeof window !== 'undefined') {
+                // Prevent infinite loop if login fails
+                if (!window.location.pathname.includes('/login')) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/';
+                }
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

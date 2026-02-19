@@ -158,9 +158,9 @@ const GameCard = ({ title, provider, image, color, hot, isNew, type, onPlay }: a
           </div>
         )}
         {/* New Badge */}
-        {!hot && isNew && (
-          <div className="absolute top-0 right-0 bg-gradient-to-l from-blue-500 to-transparent pl-4 pr-1 py-1">
-            <div className="flex items-center gap-1 text-white text-[10px] font-black uppercase italic pr-1">
+        {isNew && (
+          <div className="absolute top-0 left-0 bg-gradient-to-r from-blue-500 to-transparent pr-4 pl-1 py-1">
+            <div className="flex items-center gap-1 text-white text-[10px] font-black uppercase italic pl-1">
               <Sparkles size={12} fill="white" className="animate-pulse" /> NEW
             </div>
           </div>

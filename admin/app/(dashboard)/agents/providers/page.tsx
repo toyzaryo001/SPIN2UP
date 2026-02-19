@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Building2, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical, Loader2, Gamepad2 } from "lucide-react";
+import { Building2, Plus, Edit, Trash2, X, Save, ToggleLeft, ToggleRight, GripVertical, Loader2, Gamepad2, Upload, Image as ImageIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 // DnD Kit
@@ -92,6 +92,58 @@ export default function ProvidersPage() {
 
     // Saving Order State
     const [isSavingOrder, setIsSavingOrder] = useState(false);
+    const [uploading, setUploading] = useState(false);
+
+    // --- Logo Upload Handler ---
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            toast.error('กรุณาเลือกไฟล์รูปภาพ');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('ไฟล์ต้องมีขนาดไม่เกิน 5MB');
+            return;
+        }
+
+        setUploading(true);
+        try {
+            // Convert to Base64
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    const base64 = reader.result as string;
+                    const res = await api.post('/admin/upload', {
+                        image: base64,
+                        folder: 'provider-logos'
+                    });
+                    if (res.data.success) {
+                        setFormData(prev => ({ ...prev, logo: res.data.data.url }));
+                        toast.success('อัพโหลดโลโก้สำเร็จ');
+                    }
+                } catch (err: any) {
+                    toast.error(err.response?.data?.message || 'อัพโหลดไม่สำเร็จ');
+                } finally {
+                    setUploading(false);
+                }
+            };
+            reader.onerror = () => {
+                toast.error('อ่านไฟล์ไม่สำเร็จ');
+                setUploading(false);
+            };
+            reader.readAsDataURL(file);
+        } catch (err) {
+            toast.error('เกิดข้อผิดพลาด');
+            setUploading(false);
+        }
+        // Reset input so same file can be selected again
+        e.target.value = '';
+    };
 
     // Sensors for DnD
     const sensors = useSensors(
@@ -351,8 +403,34 @@ export default function ProvidersPage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">URL โลโก้</label>
-                                <input type="text" value={formData.logo} onChange={(e) => setFormData({ ...formData, logo: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
+                                <label className="block text-sm font-medium mb-1">โลโก้</label>
+                                {formData.logo ? (
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                        <img src={formData.logo} alt="Logo" className="w-16 h-16 rounded-lg object-contain border border-slate-200 bg-white" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs text-slate-500 truncate">{formData.logo}</p>
+                                        </div>
+                                        <button type="button" onClick={() => setFormData({ ...formData, logo: '' })} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="ลบโลโก้">
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploading ? 'border-yellow-400 bg-yellow-50' : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/50'}`}>
+                                        {uploading ? (
+                                            <div className="flex flex-col items-center gap-1">
+                                                <Loader2 size={24} className="text-yellow-500 animate-spin" />
+                                                <span className="text-xs text-yellow-600 font-medium">กำลังอัพโหลด...</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-1">
+                                                <Upload size={24} className="text-slate-400" />
+                                                <span className="text-xs text-slate-500">คลิกเพื่ออัพโหลดรูปโลโก้</span>
+                                                <span className="text-[10px] text-slate-400">PNG, JPG, WEBP (ไม่เกิน 5MB)</span>
+                                            </div>
+                                        )}
+                                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" disabled={uploading} />
+                                    </label>
+                                )}
                             </div>
                             <div className="flex items-center">
                                 <input type="checkbox" id="provActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded" />

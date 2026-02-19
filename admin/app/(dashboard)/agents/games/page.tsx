@@ -38,6 +38,7 @@ export default function GamesPage() {
 
     const [isUpdateImagesModalOpen, setIsUpdateImagesModalOpen] = useState(false);
     const [imageUpdateJson, setImageUpdateJson] = useState("");
+    const [imageUpdateProviderId, setImageUpdateProviderId] = useState("");
     const [updatingImages, setUpdatingImages] = useState(false);
 
     useEffect(() => { fetchData(); fetchProviders(); }, []);
@@ -125,7 +126,7 @@ export default function GamesPage() {
             }
 
             setUpdatingImages(true);
-            const res = await api.patch("/admin/games/bulk-update-images", { items });
+            const res = await api.patch("/admin/games/bulk-update-images", { items, providerId: imageUpdateProviderId });
 
             if (res.data.success) {
                 toast.success(res.data.message);
@@ -313,6 +314,22 @@ export default function GamesPage() {
                                 <p className="text-sm text-slate-500 mt-1">วาง JSON Array ที่มี name และ image_url</p>
                             </div>
                             <button onClick={() => setIsUpdateImagesModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-1 text-slate-700">เลือกค่ายเกม (Filter by Provider)</label>
+                            <select
+                                value={imageUpdateProviderId}
+                                onChange={(e) => setImageUpdateProviderId(e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 bg-slate-50"
+                            >
+                                <option value="">ทุกค่าย (อัพเดททั้งหมดที่ชื่อตรงกัน)</option>
+                                {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                            <p className="text-xs text-slate-400 mt-1">
+                                * หากเลือกค่าย ระบบจะอัพเดทเฉพาะเกมในค่ายนั้นที่มีชื่อตรงกับใน JSON<br />
+                                * หากไม่เลือก จะอัพเดททุกเกมที่มีชื่อตรงกัน (ระวังชื่อซ้ำ)
+                            </p>
                         </div>
 
                         <div className="flex-1 border rounded-lg overflow-hidden mb-4">

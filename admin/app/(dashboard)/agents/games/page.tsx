@@ -36,12 +36,43 @@ export default function GamesPage() {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [deletingItem, setDeletingItem] = useState<Game | null>(null);
 
+    // Pagination State
+    const [page, setPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
+    const [totalGames, setTotalGames] = useState(0);
+    const limit = 20;
+
     const [isUpdateImagesModalOpen, setIsUpdateImagesModalOpen] = useState(false);
     const [imageUpdateJson, setImageUpdateJson] = useState("");
     const [imageUpdateProviderId, setImageUpdateProviderId] = useState("");
     const [updatingImages, setUpdatingImages] = useState(false);
 
-    useEffect(() => { fetchData(); fetchProviders(); }, []);
+    // Debounce Search
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            setPage(1); // Reset to page 1 on search change
+            fetchData(1);
+        }, 500);
+        return () => clearTimeout(timeoutId);
+    }, [search, filterProvider]);
+
+    useEffect(() => {
+        fetchProviders();
+    }, []);
+
+    // Initial Fetch call is handled by the search/filter useEffect (debounced)
+    // But we need to handle page changes separately to avoid double fetching or race conditions?
+    // Actually, simply adding page to the dependency of a separate effect is cleaner.
+
+    // Let's separate effects:
+    // 1. Search/Filter change -> Set Page 1.
+    // 2. Page change -> Fetch Data.
+
+    // To avoid double fetch when search changes (Search changes -> Page=1, Page changes -> Fetch),
+    // We can just call fetchData in the Page effect, and ensure Search effect only sets Page=1 if it's not already 1.
+    // If it is 1, we still need to fetch.
+
+    // Simpler approach: Single Function called by effects.
 
     const fetchProviders = async () => {
         try {
@@ -50,12 +81,33 @@ export default function GamesPage() {
         } catch (error) { console.error(error); }
     };
 
-    const fetchData = async () => {
+    const fetchData = async (pageNum = page) => {
+        setLoading(true);
         try {
-            const res = await api.get("/admin/games");
-            if (res.data.success) setGames(res.data.data);
+            const res = await api.get("/admin/games", {
+                params: {
+                    page: pageNum,
+                    limit,
+                    search, // Backend handles search now
+                    providerId: filterProvider === 'all' ? undefined : filterProvider
+                }
+            });
+            if (res.data.success) {
+                setGames(res.data.data);
+                if (res.data.pagination) {
+                    setTotalGames(res.data.pagination.total);
+                    setLastPage(res.data.pagination.totalPages);
+                }
+            }
         } catch (error) { console.error(error); }
         finally { setLoading(false); }
+    };
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= lastPage) {
+            setPage(newPage);
+            fetchData(newPage);
+        }
     };
 
     const openModal = (item?: Game) => {
@@ -85,7 +137,8 @@ export default function GamesPage() {
     const toggle = async (id: number, field: 'isActive' | 'isHot' | 'isNew', value: boolean) => {
         try {
             await api.patch(`/admin/games/${id}`, { [field]: !value });
-            fetchData();
+            // Update local state to avoid full refetch for just a toggle (User Experience)
+            setGames(prev => prev.map(g => g.id === id ? { ...g, [field]: !value } : g));
         } catch (error) { console.error(error); }
     };
 
@@ -145,11 +198,8 @@ export default function GamesPage() {
         }
     };
 
-    const filtered = games.filter(g => {
-        const matchSearch = g.name.toLowerCase().includes(search.toLowerCase());
-        const matchProvider = filterProvider === "all" || g.providerId === Number(filterProvider);
-        return matchSearch && matchProvider;
-    });
+    // No client-side filtering needed anymore
+    // const filtered = games...
 
     return (
         <div className="space-y-6">
@@ -160,7 +210,7 @@ export default function GamesPage() {
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold text-slate-800">จัดการเกม</h2>
-                        <p className="text-sm text-slate-500">เกมทั้งหมดในระบบ</p>
+                        <p className="text-sm text-slate-500">เกมทั้งหมด {totalGames} รายการ</p>
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -184,71 +234,97 @@ export default function GamesPage() {
                 </select>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-slate-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-4 text-left">เกม</th>
-                            <th className="px-6 py-4 text-left">ค่าย</th>
-                            <th className="px-6 py-4 text-center">HOT</th>
-                            <th className="px-6 py-4 text-center">NEW</th>
-                            <th className="px-6 py-4 text-center">สถานะ</th>
-                            <th className="px-6 py-4 text-center">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {loading ? (
-                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">กำลังโหลด...</td></tr>
-                        ) : filtered.length === 0 ? (
-                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">ไม่พบเกม</td></tr>
-                        ) : (
-                            filtered.map(game => (
-                                <tr key={game.id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            {game.thumbnail && <img src={game.thumbnail} alt={game.name} className="w-10 h-10 rounded object-cover" />}
-                                            <div>
-                                                <p className="font-medium text-slate-900 flex items-center gap-2">
-                                                    {game.name}
-                                                    {game.isHot && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-xs flex items-center gap-0.5"><Flame size={12} /> HOT</span>}
-                                                    {game.isNew && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-xs flex items-center gap-0.5"><Sparkles size={12} /> NEW</span>}
-                                                </p>
-                                                <p className="text-xs text-slate-400">{game.slug}</p>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-50 text-slate-500 font-medium">
+                            <tr>
+                                <th className="px-6 py-4 text-left">เกม</th>
+                                <th className="px-6 py-4 text-left">ค่าย</th>
+                                <th className="px-6 py-4 text-center">HOT</th>
+                                <th className="px-6 py-4 text-center">NEW</th>
+                                <th className="px-6 py-4 text-center">สถานะ</th>
+                                <th className="px-6 py-4 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {loading ? (
+                                <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">กำลังโหลด...</td></tr>
+                            ) : games.length === 0 ? (
+                                <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">ไม่พบเกม</td></tr>
+                            ) : (
+                                games.map(game => (
+                                    <tr key={game.id} className="hover:bg-slate-50">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                {game.thumbnail && <img src={game.thumbnail} alt={game.name} className="w-10 h-10 rounded object-cover" />}
+                                                <div>
+                                                    <p className="font-medium text-slate-900 flex items-center gap-2">
+                                                        {game.name}
+                                                        {game.isHot && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-xs flex items-center gap-0.5"><Flame size={12} /> HOT</span>}
+                                                        {game.isNew && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-xs flex items-center gap-0.5"><Sparkles size={12} /> NEW</span>}
+                                                    </p>
+                                                    <p className="text-xs text-slate-400">{game.slug}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {game.provider ? (
-                                            <div>
-                                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{game.provider.name}</span>
-                                                <p className="text-xs text-slate-400 mt-1">{game.provider.category?.name}</p>
-                                            </div>
-                                        ) : <span className="text-slate-300">-</span>}
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <button onClick={() => toggle(game.id, 'isHot', game.isHot)} className={`p-1.5 rounded ${game.isHot ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-300'}`}>
-                                            <Flame size={18} />
-                                        </button>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <button onClick={() => toggle(game.id, 'isNew', game.isNew)} className={`p-1.5 rounded ${game.isNew ? 'bg-blue-100 text-blue-500' : 'bg-slate-100 text-slate-300'}`}>
-                                            <Sparkles size={18} />
-                                        </button>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <button onClick={() => toggle(game.id, 'isActive', game.isActive)}>
-                                            {game.isActive ? <ToggleRight size={24} className="text-emerald-500" /> : <ToggleLeft size={24} className="text-slate-300" />}
-                                        </button>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <button onClick={() => openModal(game)} className="p-2 hover:bg-slate-100 rounded"><Edit size={16} /></button>
-                                        <button onClick={() => confirmDelete(game)} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {game.provider ? (
+                                                <div>
+                                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{game.provider.name}</span>
+                                                    <p className="text-xs text-slate-400 mt-1">{game.provider.category?.name}</p>
+                                                </div>
+                                            ) : <span className="text-slate-300">-</span>}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button onClick={() => toggle(game.id, 'isHot', game.isHot)} className={`p-1.5 rounded ${game.isHot ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-300'}`}>
+                                                <Flame size={18} />
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button onClick={() => toggle(game.id, 'isNew', game.isNew)} className={`p-1.5 rounded ${game.isNew ? 'bg-blue-100 text-blue-500' : 'bg-slate-100 text-slate-300'}`}>
+                                                <Sparkles size={18} />
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button onClick={() => toggle(game.id, 'isActive', game.isActive)}>
+                                                {game.isActive ? <ToggleRight size={24} className="text-emerald-500" /> : <ToggleLeft size={24} className="text-slate-300" />}
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button onClick={() => openModal(game)} className="p-2 hover:bg-slate-100 rounded"><Edit size={16} /></button>
+                                            <button onClick={() => confirmDelete(game)} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50">
+                    <p className="text-sm text-slate-500">
+                        {totalGames > 0 ? `แสดง ${((page - 1) * limit) + 1} - ${Math.min(page * limit, totalGames)} จากทั้งหมด ${totalGames} รายการ` : 'ไม่พบรายการ'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => handlePageChange(page - 1)}
+                            disabled={page === 1}
+                            className="px-3 py-1 border border-slate-300 rounded text-sm disabled:opacity-50 hover:bg-white"
+                        >
+                            ก่อนหน้า
+                        </button>
+                        <span className="text-sm font-medium text-slate-700">หน้าที่ {page} / {lastPage}</span>
+                        <button
+                            onClick={() => handlePageChange(page + 1)}
+                            disabled={page === lastPage}
+                            className="px-3 py-1 border border-slate-300 rounded text-sm disabled:opacity-50 hover:bg-white"
+                        >
+                            ถัดไป
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Modal */}

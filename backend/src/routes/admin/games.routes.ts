@@ -7,8 +7,17 @@ const router = Router();
 // GET /api/admin/games - รายการเกม
 router.get('/', requirePermission('games', 'view'), async (req, res) => {
     try {
-        const { providerId, isActive, isHot, isNew, agentId } = req.query;
+        const { providerId, isActive, isHot, isNew, agentId, search, page, limit } = req.query;
         const where: any = {};
+
+        // Search Logic
+        if (search) {
+            where.OR = [
+                { name: { contains: String(search), mode: "insensitive" } },
+                { slug: { contains: String(search), mode: "insensitive" } }
+            ];
+        }
+
         if (providerId) where.providerId = Number(providerId);
         if (isActive !== undefined) where.isActive = isActive === 'true';
         if (isHot !== undefined) where.isHot = isHot === 'true';
@@ -18,28 +27,47 @@ router.get('/', requirePermission('games', 'view'), async (req, res) => {
             if (agentId === 'null') {
                 where.agentId = null;
             } else {
-                // Check if this agent is main?
-                // We'll trust the frontend sends correct ID.
-                // But for "Main Agent" (e.g., BETFLIX), games are often stored as NULL.
-                // So if we query Agent ID 1, we should also include NULL if 1 is Main.
-
-                // Optimized: Check ID against known Main ID or DB query
                 const agent = await prisma.agentConfig.findUnique({
                     where: { id: Number(agentId) },
                     select: { isMain: true }
                 });
 
                 if (agent && agent.isMain) {
-                    where.OR = [
-                        { agentId: Number(agentId) },
-                        { agentId: null }
-                    ];
+                    // Combine search OR with agent OR is tricky
+                    // Prisma AND/OR logic:
+                    // where = { AND: [ { OR: search }, { OR: agent } ] }
+
+                    const agentCondition = {
+                        OR: [
+                            { agentId: Number(agentId) },
+                            { agentId: null }
+                        ]
+                    };
+
+                    if (where.OR) {
+                        where.AND = [
+                            { OR: where.OR },
+                            agentCondition
+                        ];
+                        delete where.OR;
+                    } else {
+                        where.OR = agentCondition.OR;
+                    }
                 } else {
                     where.agentId = Number(agentId);
                 }
             }
         }
 
+        // Pagination Logic
+        const pageNum = Number(page) || 1;
+        const limitNum = Number(limit) || 20;
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get Total Count
+        const total = await prisma.game.count({ where });
+
+        // Get Data
         const games = await prisma.game.findMany({
             where,
             include: {
@@ -48,9 +76,20 @@ router.get('/', requirePermission('games', 'view'), async (req, res) => {
                 }
             },
             orderBy: { sortOrder: 'asc' },
+            skip: skip,
+            take: limitNum,
         });
 
-        res.json({ success: true, data: games });
+        res.json({
+            success: true,
+            data: games,
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total,
+                totalPages: Math.ceil(total / limitNum)
+            }
+        });
     } catch (error) {
         console.error('Get games error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });

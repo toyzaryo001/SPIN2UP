@@ -1,55 +1,78 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import axios from "axios";
 
 // 6 Hours in milliseconds
 const IDLE_TIMEOUT = 6 * 60 * 60 * 1000;
+
+// Flag to prevent multiple redirects
+let isRedirecting = false;
+
+function performLogout() {
+    if (typeof window !== 'undefined' && !isRedirecting) {
+        isRedirecting = true;
+        localStorage.removeItem('token');
+        localStorage.removeItem('lastActive');
+        window.location.href = '/';
+    }
+}
 
 export default function SessionManager() {
     const timeoutRef = useRef<NodeJS.Timeout>(null);
     const lastActiveRef = useRef<number>(Date.now());
 
-    const logout = () => {
-        if (typeof window !== 'undefined') {
-            // Clear ALL session data to prevent loop
-            localStorage.removeItem('token');
-            localStorage.removeItem('lastActive');
-
-            // Only redirect if not already on homepage
-            if (window.location.pathname !== '/') {
-                window.location.href = '/';
-            }
-        }
-    };
-
-    const resetTimer = () => {
-        lastActiveRef.current = Date.now();
-        localStorage.setItem('lastActive', Date.now().toString());
-
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-        }
-
-        timeoutRef.current = setTimeout(logout, IDLE_TIMEOUT);
-    };
-
     useEffect(() => {
-        // Only activate if user is logged in
+        // === GLOBAL AXIOS 401 INTERCEPTOR ===
+        // This catches 401 from ALL axios calls (raw axios + api instance)
+        const interceptorId = axios.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                if (error.response && error.response.status === 401) {
+                    const token = localStorage.getItem('token');
+                    // Only redirect if user WAS logged in (token expired)
+                    if (token) {
+                        performLogout();
+                    }
+                }
+                return Promise.reject(error);
+            }
+        );
+
+        // === IDLE TIMEOUT LOGIC ===
         const token = localStorage.getItem('token');
-        if (!token) return; // Not logged in, do nothing
+        if (!token) {
+            // Not logged in, only keep the 401 interceptor active
+            return () => {
+                axios.interceptors.response.eject(interceptorId);
+            };
+        }
 
         // Check if session expired while away
         const storedLastActive = localStorage.getItem('lastActive');
         if (storedLastActive) {
             const timeSinceLastActive = Date.now() - parseInt(storedLastActive);
             if (timeSinceLastActive > IDLE_TIMEOUT) {
-                logout();
-                return;
+                performLogout();
+                return () => {
+                    axios.interceptors.response.eject(interceptorId);
+                };
             }
         }
 
         // Events to listen for activity
         const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+
+        const resetTimer = () => {
+            lastActiveRef.current = Date.now();
+            localStorage.setItem('lastActive', Date.now().toString());
+
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+
+            timeoutRef.current = setTimeout(performLogout, IDLE_TIMEOUT);
+        };
 
         const handleActivity = () => {
             // Throttling: Only reset if more than 1 minute has passed
@@ -68,20 +91,20 @@ export default function SessionManager() {
 
         // Interval to check localStorage (for multi-tab sync)
         const checkInterval = setInterval(() => {
-            // Re-check token in case it was removed by another tab
             const currentToken = localStorage.getItem('token');
-            if (!currentToken) return; // Already logged out
+            if (!currentToken) return;
 
             const stored = localStorage.getItem('lastActive');
             if (stored) {
                 const timeSince = Date.now() - parseInt(stored);
                 if (timeSince > IDLE_TIMEOUT) {
-                    logout();
+                    performLogout();
                 }
             }
-        }, 60000); // Check every minute
+        }, 60000);
 
         return () => {
+            axios.interceptors.response.eject(interceptorId);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             clearInterval(checkInterval);
             events.forEach(event => {
@@ -90,5 +113,5 @@ export default function SessionManager() {
         };
     }, []);
 
-    return null; // Render nothing
+    return null;
 }

@@ -62,25 +62,5 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Handle 401 Unauthorized
-let isRedirecting = false;
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response && error.response.status === 401) {
-            if (typeof window !== 'undefined' && !isRedirecting) {
-                const token = localStorage.getItem('token');
-                // Only redirect if user WAS logged in (token existed but is now invalid)
-                if (token) {
-                    isRedirecting = true;
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('lastActive');
-                    window.location.href = '/';
-                }
-            }
-        }
-        return Promise.reject(error);
-    }
-);
-
 export default api;
+

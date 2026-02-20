@@ -10,7 +10,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = headersList.get('host') || '';
   const domain = host.split(':')[0]; // Remove port
   let apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-  if (process.env.NODE_ENV === 'production' && !apiUrl.startsWith('https://')) {
+  // Force HTTPS in production or when not localhost
+  if (apiUrl.startsWith('http://') && !apiUrl.includes('localhost')) {
     apiUrl = apiUrl.replace('http://', 'https://');
   }
   const API_URL = apiUrl + "/api";

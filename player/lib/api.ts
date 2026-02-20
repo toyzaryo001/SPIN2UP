@@ -2,8 +2,14 @@ import axios from 'axios';
 
 let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-// Force HTTPS in production (client-side only or if we can detect env)
-if (process.env.NODE_ENV === 'production' && !apiUrl.startsWith('https://')) {
+// Force HTTPS if the page is served over HTTPS (runtime check, works in browser)
+// This prevents Mixed Content warnings regardless of NODE_ENV at build time
+if (typeof window !== 'undefined' && window.location.protocol === 'https:' && apiUrl.startsWith('http://')) {
+    apiUrl = apiUrl.replace('http://', 'https://');
+}
+
+// Also force in production build (server-side rendering)
+if (process.env.NODE_ENV === 'production' && apiUrl.startsWith('http://') && !apiUrl.includes('localhost')) {
     apiUrl = apiUrl.replace('http://', 'https://');
 }
 

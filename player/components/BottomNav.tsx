@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Home, Wallet, Gamepad2, Gift, User, Loader2 } from "lucide-react";
+import { Home, Wallet, Gamepad2, Gift, User } from "lucide-react";
 
 export default function BottomNav() {
     const router = useRouter();
     const pathname = usePathname();
-    const [loadingGame, setLoadingGame] = useState(false);
 
     const isHome = pathname === "/";
     const isDeposit = pathname === "/deposit" || pathname === "/withdraw";
+    const isGames = pathname === "/games";
     const isActivity = pathname === "/activity" || pathname === "/promotions" || pathname === "/commission" || pathname === "/rank" || pathname === "/streak" || pathname === "/cashback";
     const isProfile = pathname === "/profile";
 
@@ -36,28 +35,14 @@ export default function BottomNav() {
                     <span className="text-[10px] mt-1 font-medium font-sans">ฝากถอน</span>
                 </button>
 
-                {/* 3. Play Game (Center Prominent) */}
+                {/* 3. Play Game (Center Prominent) - Navigate to /games */}
                 <div className="relative flex justify-center h-full items-center">
                     <button
-                        onClick={() => {
-                            setLoadingGame(true);
-                            // Simulate loading then redirect to action=play
-                            setTimeout(() => {
-                                const currentUrl = new URL(window.location.href);
-                                currentUrl.searchParams.set('action', 'play');
-                                router.push(currentUrl.toString());
-                                setLoadingGame(false);
-                            }, 300);
-                        }}
-                        disabled={loadingGame}
-                        className="absolute -top-5 w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 border-4 border-[#0b1120] flex flex-col items-center justify-center text-black shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1 disabled:opacity-80 disabled:cursor-not-allowed"
+                        onClick={() => router.push("/games")}
+                        className={`absolute -top-5 w-14 h-14 rounded-full border-4 border-[#0b1120] flex flex-col items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)] transform active:scale-95 transition-transform hover:scale-105 hover:-translate-y-1 ${isGames ? 'bg-gradient-to-r from-yellow-300 to-yellow-500 text-black' : 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black'}`}
                     >
-                        {loadingGame ? (
-                            <Loader2 size={24} className="animate-spin text-black" />
-                        ) : (
-                            <Gamepad2 size={24} className="animate-pulse" />
-                        )}
-                        <span className="text-[8px] font-black mt-0.5">{loadingGame ? 'รอสักครู่' : 'เล่นเกม'}</span>
+                        <Gamepad2 size={24} className={isGames ? '' : 'animate-pulse'} />
+                        <span className="text-[8px] font-black mt-0.5">เล่นเกม</span>
                     </button>
                 </div>
 

@@ -1,21 +1,24 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 
 // 6 Hours in milliseconds
 const IDLE_TIMEOUT = 6 * 60 * 60 * 1000;
 
 export default function SessionManager() {
-    const router = useRouter();
     const timeoutRef = useRef<NodeJS.Timeout>(null);
     const lastActiveRef = useRef<number>(Date.now());
 
     const logout = () => {
         if (typeof window !== 'undefined') {
+            // Clear ALL session data to prevent loop
             localStorage.removeItem('token');
-            // Optional: Call logout API if needed
-            window.location.href = '/';
+            localStorage.removeItem('lastActive');
+
+            // Only redirect if not already on homepage
+            if (window.location.pathname !== '/') {
+                window.location.href = '/';
+            }
         }
     };
 
@@ -31,7 +34,11 @@ export default function SessionManager() {
     };
 
     useEffect(() => {
-        // Initial check on mount
+        // Only activate if user is logged in
+        const token = localStorage.getItem('token');
+        if (!token) return; // Not logged in, do nothing
+
+        // Check if session expired while away
         const storedLastActive = localStorage.getItem('lastActive');
         if (storedLastActive) {
             const timeSinceLastActive = Date.now() - parseInt(storedLastActive);
@@ -45,7 +52,7 @@ export default function SessionManager() {
         const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
 
         const handleActivity = () => {
-            // Throttling: Only reset if more than 1 minute has passed to save performance
+            // Throttling: Only reset if more than 1 minute has passed
             if (Date.now() - lastActiveRef.current > 60000) {
                 resetTimer();
             }
@@ -59,8 +66,12 @@ export default function SessionManager() {
         // Set initial timer
         resetTimer();
 
-        // Separate interval to check localStorage (for multi-tab sync)
+        // Interval to check localStorage (for multi-tab sync)
         const checkInterval = setInterval(() => {
+            // Re-check token in case it was removed by another tab
+            const currentToken = localStorage.getItem('token');
+            if (!currentToken) return; // Already logged out
+
             const stored = localStorage.getItem('lastActive');
             if (stored) {
                 const timeSince = Date.now() - parseInt(stored);

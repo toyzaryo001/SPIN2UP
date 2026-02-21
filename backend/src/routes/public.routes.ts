@@ -62,7 +62,16 @@ router.get('/games', async (req: Request, res: Response) => {
         // Filter by category through provider relation
         const include: any = {
             provider: {
-                select: { id: true, name: true, slug: true, logo: true, categoryId: true }
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    logo: true,
+                    categoryId: true,
+                    category: {
+                        select: { slug: true }
+                    }
+                }
             }
         };
 

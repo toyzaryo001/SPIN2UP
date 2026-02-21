@@ -205,20 +205,31 @@ const Footer = ({ settings }: any) => (
 
 // --- HomeContent (Banners + Featured Games) ---
 const HomeContent = ({ games, banners, providers, onPlay }: any) => {
-  const MOCK_GAMES = [
-    { title: "Treasures of Aztec", provider: "PG Soft", color: "bg-gradient-to-br from-green-800 to-green-950", hot: true, type: 'slot' },
-    { title: "Roma Legacy", provider: "Joker", color: "bg-gradient-to-br from-yellow-700 to-yellow-900", hot: true, type: 'slot' },
-    { title: "Sweet Bonanza", provider: "Pragmatic", color: "bg-gradient-to-br from-blue-600 to-blue-900", hot: true, type: 'slot' },
-    { title: "Lucky Neko", provider: "PG Soft", color: "bg-gradient-to-br from-yellow-600 to-yellow-800", hot: false, type: 'slot' },
-  ];
+  const popularSlots = (games || []).filter((g: any) => {
+    const catSlug = g.provider?.category?.slug || g.category?.slug || '';
+    const isSlot = catSlug === 'slots' || catSlug === 'slot' || g.type === 'SLOT';
+    return isSlot && (g.isHot || g.isNew);
+  }).slice(0, 10);
 
-  const displayGames = games && games.length > 0 ? games.map((g: any, i: number) => ({
-    title: g.name, provider: g.provider?.name || "Game",
+  const popularCasino = (games || []).filter((g: any) => {
+    const catSlug = g.provider?.category?.slug || g.category?.slug || '';
+    const isCasino = catSlug === 'casino' || catSlug === 'live-casino' || g.type === 'CASINO';
+    return isCasino && (g.isHot || g.isNew);
+  }).slice(0, 10);
+
+  // Fallback for general featured games if specific categories are empty or for desktop layout compatibility
+  const featuredGames = (games || []).filter((g: any) => g.isHot || g.isNew).slice(0, 10);
+
+  const formatGameData = (g: any) => ({
+    title: g.name,
+    provider: g.provider?.name || "Game",
     image: g.thumbnail || g.image || "",
-    color: MOCK_GAMES[i % MOCK_GAMES.length].color,
-    hot: g.isHot, isNew: g.isNew, slug: g.slug,
-    providerCode: g.provider?.slug, type: 'slot'
-  })) : MOCK_GAMES;
+    hot: g.isHot,
+    isNew: g.isNew,
+    slug: g.slug,
+    providerCode: g.provider?.slug,
+    type: (g.provider?.category?.slug?.includes('casino') || g.type === 'CASINO') ? 'casino' : 'slot'
+  });
 
   return (
     <div className="animate-fade-in space-y-6 md:space-y-8">
@@ -272,128 +283,132 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
 
       {/* Mobile: Quick Featured Games */}
       <div className="md:hidden space-y-6 animate-fade-in-up">
-        {(() => {
-          const slotGames = games.filter((g: any) => {
-            const catSlug = g.provider?.category?.slug || g.category?.slug || '';
-            const isSlot = catSlug === 'slots' || catSlug === 'slot' || g.type === 'SLOT';
-            return isSlot && (g.isHot || g.isNew);
-          });
-          const displaySlots = slotGames.length > 0 ? slotGames.slice(0, 10) : displayGames.slice(0, 10);
-          return displaySlots.length > 0 ? (
-            <div>
-              <div className="flex items-center gap-2 mb-3 bg-[#1e293b] p-2.5 rounded-lg border border-slate-700">
-                <Gamepad2 className="text-yellow-400" size={18} />
-                <h2 className="text-sm font-bold text-white">สล็อตยอดฮิต</h2>
-              </div>
-              <div className="grid grid-cols-5 gap-1.5 stagger-children">
-                {displaySlots.map((game: any, i: number) => (
-                  <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
-                    <div className="aspect-[4/5] w-full relative bg-slate-800">
-                      {(game.thumbnail || game.image) ? (
-                        <img src={game.thumbnail || game.image} alt={game.name || game.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
-                          <Gamepad2 size={20} className="text-slate-600" />
-                        </div>
-                      )}
-                      {/* HOT Badge */}
-                      {game.isHot && (
-                        <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
-                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
-                            <Flame size={8} fill="white" /> HOT
-                          </div>
-                        </div>
-                      )}
-                      {/* NEW Badge */}
-                      {game.isNew && (
-                        <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
-                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
-                            <Sparkles size={8} fill="white" /> NEW
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="bg-[#1e293b] p-1 text-center">
-                      <span className="text-[8px] text-slate-300 line-clamp-1">{game.name || game.title}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {popularSlots.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3 bg-[#1e293b] p-2.5 rounded-lg border border-slate-700">
+              <Gamepad2 className="text-yellow-400" size={18} />
+              <h2 className="text-sm font-bold text-white">สล็อตยอดฮิต</h2>
             </div>
-          ) : null;
-        })()}
+            <div className="grid grid-cols-5 gap-1.5 stagger-children">
+              {popularSlots.map((game: any, i: number) => (
+                <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
+                  <div className="aspect-[4/5] w-full relative bg-slate-800">
+                    {(game.thumbnail || game.image) ? (
+                      <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
+                        <Gamepad2 size={20} className="text-slate-600" />
+                      </div>
+                    )}
+                    {game.isHot && (
+                      <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
+                        <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                          <Flame size={8} fill="white" /> HOT
+                        </div>
+                      </div>
+                    )}
+                    {game.isNew && (
+                      <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
+                        <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                          <Sparkles size={8} fill="white" /> NEW
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-[#1e293b] p-1 text-center">
+                    <span className="text-[8px] text-slate-300 line-clamp-1">{game.name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {(() => {
-          const casinoGames = games.filter((g: any) => {
-            const catSlug = g.provider?.category?.slug || g.category?.slug || '';
-            const isCasino = catSlug === 'casino' || catSlug === 'live-casino' || g.type === 'CASINO';
-            return isCasino && (g.isHot || g.isNew);
-          });
-          return casinoGames.length > 0 ? (
-            <div>
-              <div className="flex items-center gap-2 mb-3 bg-gradient-to-r from-green-900/40 to-green-800/20 p-2.5 rounded-lg border border-green-700/40">
-                <Dices className="text-green-400" size={18} />
-                <h2 className="text-sm font-bold text-white">คาสิโนยอดฮิต</h2>
-              </div>
-              <div className="grid grid-cols-5 gap-1.5">
-                {casinoGames.slice(0, 10).map((game: any, i: number) => (
-                  <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
-                    <div className="aspect-[4/5] w-full relative bg-slate-800">
-                      {(game.thumbnail || game.image) ? (
-                        <img src={game.thumbnail || game.image} alt={game.name || game.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 to-slate-800">
-                          <Dices size={20} className="text-green-600" />
-                        </div>
-                      )}
-                      {/* HOT Badge */}
-                      {game.isHot && (
-                        <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
-                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
-                            <Flame size={8} fill="white" /> HOT
-                          </div>
-                        </div>
-                      )}
-                      {/* NEW Badge */}
-                      {game.isNew && (
-                        <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
-                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
-                            <Sparkles size={8} fill="white" /> NEW
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="bg-[#1e293b] p-1 text-center">
-                      <span className="text-[8px] text-slate-300 line-clamp-1">{game.name || game.title}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {popularCasino.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3 bg-gradient-to-r from-green-900/40 to-green-800/20 p-2.5 rounded-lg border border-green-700/40">
+              <Dices className="text-green-400" size={18} />
+              <h2 className="text-sm font-bold text-white">คาสิโนยอดฮิต</h2>
             </div>
-          ) : null;
-        })()}
+            <div className="grid grid-cols-5 gap-1.5">
+              {popularCasino.map((game: any, i: number) => (
+                <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
+                  <div className="aspect-[4/5] w-full relative bg-slate-800">
+                    {(game.thumbnail || game.image) ? (
+                      <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 to-slate-800">
+                        <Dices size={20} className="text-green-600" />
+                      </div>
+                    )}
+                    {game.isHot && (
+                      <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
+                        <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                          <Flame size={8} fill="white" /> HOT
+                        </div>
+                      </div>
+                    )}
+                    {game.isNew && (
+                      <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
+                        <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                          <Sparkles size={8} fill="white" /> NEW
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-[#1e293b] p-1 text-center">
+                    <span className="text-[8px] text-slate-300 line-clamp-1">{game.name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Desktop: Jackpot + Hot Games */}
+      {/* Desktop: Jackpot */}
       <div className="hidden md:block"><JackpotBar /></div>
 
-      <div className="relative hidden md:block">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-orange-500/20 border border-orange-500/40 flex items-center justify-center">
-              <Flame className="text-orange-500 fill-orange-500 animate-pulse" />
-            </div>
-            เกมยอดฮิต <span className="text-sm font-normal text-slate-500 not-italic tracking-normal self-end mb-1 custom-font">ยอดนิยมวันนี้</span>
-          </h2>
+      {/* Desktop: Popular Slots */}
+      {popularSlots.length > 0 && (
+        <div className="relative hidden md:block">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center">
+                <Gamepad2 className="text-yellow-500 fill-yellow-500" />
+              </div>
+              สล็อตยอดฮิต <span className="text-sm font-normal text-slate-500 not-italic tracking-normal self-end mb-1 custom-font">ยอดนิยมวันนี้</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+            {popularSlots.map((game: any, i: number) => (
+              <GameCard key={i} {...formatGameData(game)} onPlay={() => onPlay && onPlay(game)} />
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-          {displayGames.slice(0, 10).map((game: any, i: number) => (
-            <GameCard key={i} {...game} onPlay={() => onPlay && onPlay(game)} />
-          ))}
-        </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      {/* Desktop: Popular Casino */}
+      {popularCasino.length > 0 && (
+        <div className="relative hidden md:block mt-20">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+                <Dices className="text-green-500 fill-green-500" />
+              </div>
+              คาสิโนยอดฮิต <span className="text-sm font-normal text-slate-500 not-italic tracking-normal self-end mb-1 custom-font">ยอดนิยมวันนี้</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+            {popularCasino.map((game: any, i: number) => (
+              <GameCard key={i} {...formatGameData(game)} onPlay={() => onPlay && onPlay(game)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Layout Bottom Sections */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mt-20">
         <div className="md:col-span-1 hidden md:block">
           <Sidebar title="ค่ายเกมชั้นนำ" items={providers.slice(0, 10)} active={null} />
         </div>
@@ -432,6 +447,8 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
     </div>
   );
 };
+
+
 
 // --- MAIN PAGE LOGIC ---
 function HomePageLogic() {

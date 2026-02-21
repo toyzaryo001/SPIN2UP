@@ -41,7 +41,13 @@ export default function AuthModals({
                 if (onLoginSuccess) onLoginSuccess(res.data.data.user);
                 router.replace("/");
             }
-        } catch (err: any) { setError(err.response?.data?.message || "Login failed"); }
+        } catch (err: any) {
+            if (err.response?.status === 409 && err.response?.data?.code === 'DUPLICATE_LOGIN') {
+                setError('⚠️ บัญชีนี้มีการใช้งานอยู่ ทั้งสองเซสชั่นถูกบังคับออก กรุณาเข้าสู่ระบบใหม่');
+            } else {
+                setError(err.response?.data?.message || "Login failed");
+            }
+        }
         finally { setLoading(false); }
     };
 

@@ -19,6 +19,29 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     try {
         const payload = verifyToken(token);
         req.user = payload;
+
+        // === SESSION TOKEN VALIDATION (for players only) ===
+        if (payload.sessionToken && payload.role === 'USER') {
+            // Async check — validate sessionToken against DB
+            prisma.user.findUnique({
+                where: { id: payload.userId },
+                select: { sessionToken: true }
+            }).then(user => {
+                if (!user || user.sessionToken !== payload.sessionToken) {
+                    return res.status(403).json({
+                        success: false,
+                        code: 'SESSION_KICKED',
+                        message: 'มีการพยายามเข้าสู่ระบบบัญชีนี้จากที่อื่น เซสชั่นถูกบังคับออก กรุณาเข้าสู่ระบบใหม่',
+                    });
+                }
+                next();
+            }).catch(() => {
+                // DB error — allow through to avoid false kicks
+                next();
+            });
+            return; // Don't call next() here, wait for async
+        }
+
         next();
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Token ไม่ถูกต้องหรือหมดอายุ' });

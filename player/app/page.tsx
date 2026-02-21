@@ -470,7 +470,16 @@ function HomePageLogic() {
     else if (action === "register") { setShowRegister(true); setShowLogin(false); }
   }, [searchParams]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Call backend to clear sessionToken
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        await axios.post(`${API_URL}/auth/logout`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) { /* ignore */ }
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);

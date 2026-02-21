@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { z } from 'zod';
 import prisma from '../lib/db.js';
 import { signToken } from '../utils/jwt.js';
@@ -176,14 +177,33 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง' });
         }
 
-        // Update last login
+        // === DUPLICATE LOGIN CHECK ===
+        // If user already has an active sessionToken, someone is already logged in
+        if (user.sessionToken) {
+            // Clear the old session (kick the existing user)
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { sessionToken: null },
+            });
+            // Refuse the new login too — both parties must re-login
+            return res.status(409).json({
+                success: false,
+                code: 'DUPLICATE_LOGIN',
+                message: 'ตรวจพบการเข้าสู่ระบบซ้ำ บัญชีนี้มีการใช้งานอยู่ ทั้งสองเซสชั่นถูกบังคับออก กรุณาเข้าสู่ระบบใหม่',
+            });
+        }
+
+        // Generate unique session token
+        const sessionToken = crypto.randomUUID();
+
+        // Update last login + set sessionToken
         await prisma.user.update({
             where: { id: user.id },
-            data: { lastLoginAt: new Date() },
+            data: { lastLoginAt: new Date(), sessionToken },
         });
 
-        // Generate token (for player, role is always USER)
-        const token = signToken({ userId: user.id, role: 'USER' });
+        // Generate JWT with sessionToken embedded
+        const token = signToken({ userId: user.id, role: 'USER', sessionToken });
 
         res.json({
             success: true,
@@ -203,6 +223,23 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// POST /api/auth/logout - Clear session token
+router.post('/logout', authMiddleware, async (req: any, res) => {
+    try {
+        const userId = req.user?.userId;
+        if (userId) {
+            await prisma.user.update({
+                where: { id: userId },
+                data: { sessionToken: null },
+            });
+        }
+        res.json({ success: true, message: 'ออกจากระบบสำเร็จ' });
+    } catch (error) {
+        // Even if DB update fails, return success (client will clear token anyway)
+        res.json({ success: true, message: 'ออกจากระบบสำเร็จ' });
     }
 });
 

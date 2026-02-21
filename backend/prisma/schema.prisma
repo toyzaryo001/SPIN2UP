@@ -30,6 +30,7 @@ model User {
   betflixUsername String?     @unique
   betflixPassword String?
   lastLoginAt   DateTime?
+  sessionToken  String?       // UUID for single-session enforcement
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

@@ -14,6 +14,7 @@ export interface JwtPayload {
     role: string;
     isAdmin?: boolean;
     prefix?: string;
+    sessionToken?: string;
 }
 
 /**

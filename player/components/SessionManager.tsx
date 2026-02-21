@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import axios from "axios";
+import { API_URL } from "@/lib/api";
 
 // 6 Hours in milliseconds
 const IDLE_TIMEOUT = 6 * 60 * 60 * 1000;
@@ -12,6 +13,13 @@ let isRedirecting = false;
 function performLogout() {
     if (typeof window !== 'undefined' && !isRedirecting) {
         isRedirecting = true;
+        // Call backend to clear sessionToken (fire-and-forget)
+        const token = localStorage.getItem('token');
+        if (token) {
+            axios.post(`${API_URL}/auth/logout`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            }).catch(() => { }); // Ignore errors
+        }
         localStorage.removeItem('token');
         localStorage.removeItem('lastActive');
         window.location.href = '/';
@@ -23,8 +31,7 @@ export default function SessionManager() {
     const lastActiveRef = useRef<number>(Date.now());
 
     useEffect(() => {
-        // === GLOBAL AXIOS 401 INTERCEPTOR ===
-        // This catches 401 from ALL axios calls (raw axios + api instance)
+        // === GLOBAL AXIOS 401 + SESSION_KICKED INTERCEPTOR ===
         const interceptorId = axios.interceptors.response.use(
             (response) => response,
             (error) => {
@@ -35,6 +42,17 @@ export default function SessionManager() {
                         performLogout();
                     }
                 }
+
+                // SESSION_KICKED: Another login attempt detected, session invalidated
+                if (error.response && error.response.status === 403 && error.response.data?.code === 'SESSION_KICKED') {
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        // Show alert before logging out
+                        alert('⚠️ มีการพยายามเข้าสู่ระบบบัญชีนี้จากที่อื่น\n\nเซสชั่นของคุณถูกบังคับออก กรุณาเข้าสู่ระบบใหม่\n\nหากไม่ใช่คุณ กรุณาเปลี่ยนรหัสผ่านทันที');
+                        performLogout();
+                    }
+                }
+
                 return Promise.reject(error);
             }
         );

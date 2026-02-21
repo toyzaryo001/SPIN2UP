@@ -87,7 +87,16 @@ export default function Header({
     const handleLogin = onLogin || (() => router.push("/?action=login"));
     const handleRegister = onRegister || (() => router.push("/?action=register"));
 
-    const handleLogout = onLogout || (() => {
+    const handleLogout = onLogout || (async () => {
+        // Call backend to clear sessionToken
+        const token = localStorage.getItem("token");
+        if (token) {
+            try {
+                await axios.post(`${API_URL}/auth/logout`, {}, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } catch (e) { /* ignore */ }
+        }
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         setInternalUser(null);

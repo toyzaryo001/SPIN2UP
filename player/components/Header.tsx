@@ -194,7 +194,7 @@ export default function Header({
                             </div>
 
                             {/* Balance */}
-                            <div className="text-right mr-2 hidden sm:block">
+                            <div className="text-right mr-2">
                                 <span className="text-xs text-green-400 block">Balance</span>
                                 <span className="font-mono font-bold text-gradient-gold text-lg">฿{Number(user.balance).toLocaleString()}</span>
                             </div>

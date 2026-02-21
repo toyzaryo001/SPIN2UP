@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Gamepad2, Dices, Trophy, Gift, Flame, ChevronRight,
+  Gamepad2, Dices, Trophy, Gift, Flame, ChevronRight, Sparkles,
   Star, Users, User, Play
 } from 'lucide-react';
 import axios from "axios";
@@ -275,14 +275,15 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
         {(() => {
           const slotGames = games.filter((g: any) => {
             const catSlug = g.provider?.category?.slug || g.category?.slug || '';
-            return catSlug === 'slots' || catSlug === 'slot' || g.type === 'SLOT';
+            const isSlot = catSlug === 'slots' || catSlug === 'slot' || g.type === 'SLOT';
+            return isSlot && (g.isHot || g.isNew);
           });
           const displaySlots = slotGames.length > 0 ? slotGames.slice(0, 10) : displayGames.slice(0, 10);
           return displaySlots.length > 0 ? (
             <div>
               <div className="flex items-center gap-2 mb-3 bg-[#1e293b] p-2.5 rounded-lg border border-slate-700">
                 <Gamepad2 className="text-yellow-400" size={18} />
-                <h2 className="text-sm font-bold text-white">สล็อต ยอดนิยม</h2>
+                <h2 className="text-sm font-bold text-white">สล็อตยอดฮิต</h2>
               </div>
               <div className="grid grid-cols-5 gap-1.5 stagger-children">
                 {displaySlots.map((game: any, i: number) => (
@@ -293,6 +294,22 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
                           <Gamepad2 size={20} className="text-slate-600" />
+                        </div>
+                      )}
+                      {/* HOT Badge */}
+                      {game.isHot && (
+                        <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
+                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                            <Flame size={8} fill="white" /> HOT
+                          </div>
+                        </div>
+                      )}
+                      {/* NEW Badge */}
+                      {game.isNew && (
+                        <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
+                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                            <Sparkles size={8} fill="white" /> NEW
+                          </div>
                         </div>
                       )}
                     </div>
@@ -309,16 +326,17 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
         {(() => {
           const casinoGames = games.filter((g: any) => {
             const catSlug = g.provider?.category?.slug || g.category?.slug || '';
-            return catSlug === 'casino' || catSlug === 'live-casino' || g.type === 'CASINO';
+            const isCasino = catSlug === 'casino' || catSlug === 'live-casino' || g.type === 'CASINO';
+            return isCasino && (g.isHot || g.isNew);
           });
           return casinoGames.length > 0 ? (
             <div>
               <div className="flex items-center gap-2 mb-3 bg-gradient-to-r from-green-900/40 to-green-800/20 p-2.5 rounded-lg border border-green-700/40">
                 <Dices className="text-green-400" size={18} />
-                <h2 className="text-sm font-bold text-white">คาสิโน ยอดนิยม</h2>
+                <h2 className="text-sm font-bold text-white">คาสิโนยอดฮิต</h2>
               </div>
               <div className="grid grid-cols-5 gap-1.5">
-                {casinoGames.slice(0, 5).map((game: any, i: number) => (
+                {casinoGames.slice(0, 10).map((game: any, i: number) => (
                   <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
                     <div className="aspect-[4/5] w-full relative bg-slate-800">
                       {(game.thumbnail || game.image) ? (
@@ -326,6 +344,22 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 to-slate-800">
                           <Dices size={20} className="text-green-600" />
+                        </div>
+                      )}
+                      {/* HOT Badge */}
+                      {game.isHot && (
+                        <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
+                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                            <Flame size={8} fill="white" /> HOT
+                          </div>
+                        </div>
+                      )}
+                      {/* NEW Badge */}
+                      {game.isNew && (
+                        <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
+                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                            <Sparkles size={8} fill="white" /> NEW
+                          </div>
                         </div>
                       )}
                     </div>

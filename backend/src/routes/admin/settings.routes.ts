@@ -296,6 +296,10 @@ router.post('/features/init', requirePermission('settings', 'features', 'manage'
             { key: 'vip', name: 'VIP/แร้งก์', description: 'แสดงระบบ VIP และแร้งก์' },
             { key: 'streak', name: 'ฝากต่อเนื่อง', description: 'อนุญาตให้ใช้ระบบฝากต่อเนื่อง' },
             { key: 'games', name: 'เกม', description: 'แสดงรายการเกมในหน้าผู้เล่น' },
+            { key: 'manual_deposit', name: 'ฝากเงินมือ (Manual)', description: 'แสดงเลขบัญชีให้ลูกค้าโอนและแจ้งสลิป (กรณีออโต้ปิด)' },
+            { key: 'ranking_board', name: 'ตารางอันดับ', description: 'แสดงตารางผู้เล่นที่ได้รับรางวัลในหน้าหลัก' },
+            { key: 'announcement_popup', name: 'ป๊อปอัพประกาศ', description: 'แสดงประกาศเมื่อเข้าเว็บไซต์ครั้งแรก' },
+            { key: 'line_notify', name: 'แจ้งเตือน LINE', description: 'ส่งการแจ้งเตือนฝาก-ถอนเข้ากลุ่ม LINE' },
             { key: 'maintenance', name: 'โหมดซ่อมบำรุง', description: 'ปิดเว็บชั่วคราว (แสดงหน้า maintenance)' },
         ];
 

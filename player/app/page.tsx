@@ -87,6 +87,45 @@ const JackpotBar = () => {
   );
 };
 
+// --- Announcement Modal ---
+const AnnouncementModal = ({ announcement, onClose }: { announcement: any; onClose: () => void }) => {
+  if (!announcement) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative w-full max-w-lg bg-[#1a1a2e] rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(250,204,21,0.2)] border border-white/10 animate-scale-up">
+        {announcement.image && (
+          <div className="aspect-video w-full relative">
+            <img src={announcement.image} alt={announcement.title} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a2e] via-transparent to-transparent"></div>
+          </div>
+        )}
+        <div className="p-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30">
+              <span className="text-xl">📢</span>
+            </div>
+            <h2 className="text-2xl font-black text-white">{announcement.title || "ประกาศจากระบบ"}</h2>
+          </div>
+          <div className="text-slate-300 leading-relaxed whitespace-pre-line mb-8 text-lg">
+            {announcement.content}
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500 text-black font-black py-4 rounded-2xl transition-all shadow-lg shadow-yellow-500/20 active:scale-[0.98]"
+          >
+            ตกลง รับทราบ
+          </button>
+        </div>
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full bg-black/30 text-white/50 hover:text-white transition-colors">
+          <ChevronRight className="rotate-180" size={24} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // --- TopBanner ---
 const TopBanner = ({ banners }: { banners: any[] }) => {
   const [current, setCurrent] = useState(0);
@@ -204,7 +243,7 @@ const Footer = ({ settings }: any) => (
 );
 
 // --- HomeContent (Banners + Featured Games) ---
-const HomeContent = ({ games, banners, providers, apiCategories, onPlay }: any) => {
+const HomeContent = ({ games, banners, providers, apiCategories, onPlay, features }: any) => {
   const router = useRouter();
 
   // Icon Mapping for Categories from Admin
@@ -257,30 +296,32 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay }: any) 
       <TopBanner banners={banners} />
 
       {/* Floating Category Bar (Tabs) */}
-      <div className="sticky top-[80px] z-40 bg-[#0D1117]/80 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5 shadow-2xl mb-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth px-2">
-          <button
-            onClick={() => router.push('/games')}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
-          >
-            <Sparkles size={16} className="text-yellow-400" />
-            <span className="text-sm font-bold text-white">ทั้งหมด</span>
-          </button>
-          {displayCategories.map((cat: any, i: number) => {
-            const { icon: Icon, color: iconColor } = getCategoryIcon(cat.slug);
-            return (
-              <button
-                key={i}
-                onClick={() => router.push(`/games?tab=${cat.slug}`)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
-              >
-                <Icon size={16} className={iconColor} />
-                <span className="text-sm font-bold text-slate-300 group-hover:text-white">{cat.name}</span>
-              </button>
-            );
-          })}
+      {features?.games !== false && (
+        <div className="sticky top-[80px] z-40 bg-[#0D1117]/80 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5 shadow-2xl mb-6 overflow-hidden">
+          <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth px-2">
+            <button
+              onClick={() => router.push('/games')}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
+            >
+              <Sparkles size={16} className="text-yellow-400" />
+              <span className="text-sm font-bold text-white">ทั้งหมด</span>
+            </button>
+            {displayCategories.map((cat: any, i: number) => {
+              const { icon: Icon, color: iconColor } = getCategoryIcon(cat.slug);
+              return (
+                <button
+                  key={i}
+                  onClick={() => router.push(`/games?tab=${cat.slug}`)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
+                >
+                  <Icon size={16} className={iconColor} />
+                  <span className="text-sm font-bold text-slate-300 group-hover:text-white">{cat.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Side Banners + Activity Buttons */}
       {(() => {
@@ -329,95 +370,97 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay }: any) 
       })()}
 
       {/* Mobile: Quick Featured Games */}
-      <div className="md:hidden space-y-6 animate-fade-in-up">
-        {popularSlots.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3 bg-[#1e293b] p-2.5 rounded-lg border border-slate-700">
-              <Gamepad2 className="text-yellow-400" size={18} />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">สล็อตยอดฮิต</h2>
-            </div>
-            <div className="grid grid-cols-5 gap-1.5 stagger-children">
-              {popularSlots.map((game: any, i: number) => (
-                <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
-                  <div className="aspect-[4/5] w-full relative bg-slate-800">
-                    {(game.thumbnail || game.image) ? (
-                      <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
-                        <Gamepad2 size={20} className="text-slate-600" />
-                      </div>
-                    )}
-                    {game.isHot && (
-                      <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
-                        <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
-                          <Flame size={8} fill="white" /> HOT
+      {features?.games !== false && (
+        <div className="md:hidden space-y-6 animate-fade-in-up">
+          {popularSlots.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3 bg-[#1e293b] p-2.5 rounded-lg border border-slate-700">
+                <Gamepad2 className="text-yellow-400" size={18} />
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">สล็อตยอดฮิต</h2>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5 stagger-children">
+                {popularSlots.map((game: any, i: number) => (
+                  <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
+                    <div className="aspect-[4/5] w-full relative bg-slate-800">
+                      {(game.thumbnail || game.image) ? (
+                        <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
+                          <Gamepad2 size={20} className="text-slate-600" />
                         </div>
-                      </div>
-                    )}
-                    {game.isNew && (
-                      <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
-                        <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
-                          <Sparkles size={8} fill="white" /> NEW
+                      )}
+                      {game.isHot && (
+                        <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
+                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                            <Flame size={8} fill="white" /> HOT
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                      {game.isNew && (
+                        <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
+                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                            <Sparkles size={8} fill="white" /> NEW
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-[#1e293b] p-1 text-center">
+                      <span className="text-[8px] text-slate-300 line-clamp-1 font-bold">{game.name}</span>
+                    </div>
                   </div>
-                  <div className="bg-[#1e293b] p-1 text-center">
-                    <span className="text-[8px] text-slate-300 line-clamp-1 font-bold">{game.name}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {popularCasino.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3 bg-gradient-to-r from-green-900/40 to-green-800/20 p-2.5 rounded-lg border border-green-700/40">
-              <Dices className="text-green-400" size={18} />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">คาสิโนยอดฮิต</h2>
-            </div>
-            <div className="grid grid-cols-5 gap-1.5">
-              {popularCasino.map((game: any, i: number) => (
-                <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
-                  <div className="aspect-[4/5] w-full relative bg-slate-800">
-                    {(game.thumbnail || game.image) ? (
-                      <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 to-slate-800">
-                        <Dices size={20} className="text-green-600" />
-                      </div>
-                    )}
-                    {game.isHot && (
-                      <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
-                        <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
-                          <Flame size={8} fill="white" /> HOT
+          {popularCasino.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3 bg-gradient-to-r from-green-900/40 to-green-800/20 p-2.5 rounded-lg border border-green-700/40">
+                <Dices className="text-green-400" size={18} />
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">คาสิโนยอดฮิต</h2>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {popularCasino.map((game: any, i: number) => (
+                  <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
+                    <div className="aspect-[4/5] w-full relative bg-slate-800">
+                      {(game.thumbnail || game.image) ? (
+                        <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 to-slate-800">
+                          <Dices size={20} className="text-green-600" />
                         </div>
-                      </div>
-                    )}
-                    {game.isNew && (
-                      <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
-                        <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
-                          <Sparkles size={8} fill="white" /> NEW
+                      )}
+                      {game.isHot && (
+                        <div className="absolute top-0 right-0 bg-red-600/90 px-1 py-0.5 rounded-bl">
+                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                            <Flame size={8} fill="white" /> HOT
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                      {game.isNew && (
+                        <div className="absolute top-0 left-0 bg-blue-500/90 px-1 py-0.5 rounded-br">
+                          <div className="flex items-center gap-0.5 text-white text-[7px] font-black">
+                            <Sparkles size={8} fill="white" /> NEW
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-[#1e293b] p-1 text-center">
+                      <span className="text-[8px] text-slate-300 line-clamp-1 font-bold">{game.name}</span>
+                    </div>
                   </div>
-                  <div className="bg-[#1e293b] p-1 text-center">
-                    <span className="text-[8px] text-slate-300 line-clamp-1 font-bold">{game.name}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Desktop: Jackpot */}
       <div className="hidden md:block"><JackpotBar /></div>
 
       {/* Desktop: Popular Slots */}
-      {popularSlots.length > 0 && (
+      {features?.games !== false && popularSlots.length > 0 && (
         <div className="relative hidden md:block">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
@@ -436,7 +479,7 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay }: any) 
       )}
 
       {/* Desktop: Popular Casino */}
-      {popularCasino.length > 0 && (
+      {features?.games !== false && popularCasino.length > 0 && (
         <div className="relative hidden md:block mt-20">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
@@ -479,35 +522,37 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay }: any) 
           <Sidebar title="ค่ายเกมชั้นนำ" items={providers.slice(0, 10)} active={null} />
         </div>
         <div className="md:col-span-3">
-          <div className="glass-card rounded-2xl p-8 relative overflow-hidden h-full">
-            <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
-              <Trophy className="text-yellow-400" size={32} />
-              ผู้ชนะล่าสุด
-              <span className="text-xs font-bold bg-green-500 text-black px-2 py-1 rounded ml-auto">LIVE FEED</span>
-            </h3>
-            <div className="space-y-4 max-h-[500px] overflow-hidden relative">
-              <div className="absolute top-0 w-full h-10 bg-gradient-to-b from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
-              <div className="absolute bottom-0 w-full h-10 bg-gradient-to-t from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-all group hover:bg-white/10">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center relative">
-                      <User className="text-blue-400 group-hover:text-white transition-colors" />
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black border-2 border-[#0f172a]">#{i}</div>
+          {features?.ranking_board !== false && (
+            <div className="glass-card rounded-2xl p-8 relative overflow-hidden h-full">
+              <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
+                <Trophy className="text-yellow-400" size={32} />
+                ผู้ชนะล่าสุด
+                <span className="text-xs font-bold bg-green-500 text-black px-2 py-1 rounded ml-auto">LIVE FEED</span>
+              </h3>
+              <div className="space-y-4 max-h-[500px] overflow-hidden relative">
+                <div className="absolute top-0 w-full h-10 bg-gradient-to-b from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
+                <div className="absolute bottom-0 w-full h-10 bg-gradient-to-t from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-all group hover:bg-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center relative">
+                        <User className="text-blue-400 group-hover:text-white transition-colors" />
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black border-2 border-[#0f172a]">#{i}</div>
+                      </div>
+                      <div>
+                        <div className="text-white font-bold tracking-wide">User888***{i}</div>
+                        <div className="text-xs text-slate-400">{i % 2 === 0 ? "Mahjong Ways 2" : "Baccarat"}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-white font-bold tracking-wide">User888***{i}</div>
-                      <div className="text-xs text-slate-400">{i % 2 === 0 ? "Mahjong Ways 2" : "Baccarat"}</div>
+                    <div className="text-right">
+                      <div className="text-gradient-green font-mono font-black text-xl">+฿{(Math.random() * 50000).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                      <div className="text-[10px] text-slate-500">Just now</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-gradient-green font-mono font-black text-xl">+฿{(Math.random() * 50000).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    <div className="text-[10px] text-slate-500">Just now</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -515,6 +560,23 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay }: any) 
 };
 
 
+
+// --- Maintenance Overlay ---
+const MaintenanceOverlay = () => (
+  <div className="fixed inset-0 z-[9999] bg-[#0b1120] flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+    <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-6 border border-red-500/30">
+      <Settings className="text-red-500 w-12 h-12 animate-spin-slow" />
+    </div>
+    <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter mb-4 uppercase">UNDER MAINTENANCE</h1>
+    <div className="h-1 w-24 bg-red-500 mb-6"></div>
+    <p className="text-slate-400 text-lg md:text-xl max-w-md font-sans">
+      ขออภัยในความไม่สะดวก ขณะนี้เว็บไซต์กำลังอยู่ระหว่างการซ่อมบำรุงเพื่อเพิ่มประสิทธิภาพในการให้บริการ
+    </p>
+    <div className="mt-12 text-slate-500 text-sm font-mono tracking-widest uppercase">
+      Please check back slowly later
+    </div>
+  </div>
+);
 
 // --- MAIN PAGE LOGIC ---
 function HomePageLogic() {
@@ -530,6 +592,9 @@ function HomePageLogic() {
   const [banners, setBanners] = useState<any[]>([]);
   const [providers, setProviders] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
+  const [features, setFeatures] = useState<any>({});
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
   const [refreshingBalance, setRefreshingBalance] = useState(false);
 
   const [apiCategories, setApiCategories] = useState<any[]>([]);
@@ -539,22 +604,40 @@ function HomePageLogic() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [gameRes, bannerRes, providerRes, settingRes, categoryRes] = await Promise.all([
+        const [gameRes, bannerRes, providerRes, settingRes, categoryRes, announceRes] = await Promise.all([
           axios.get(`${API_URL}/public/games`),
           axios.get(`${API_URL}/public/banners`),
           axios.get(`${API_URL}/public/providers`),
           axios.get(`${API_URL}/public/settings`),
-          axios.get(`${API_URL}/public/categories`)
+          axios.get(`${API_URL}/public/categories`),
+          axios.get(`${API_URL}/public/announcements`),
         ]);
         if (Array.isArray(gameRes.data)) setGames(gameRes.data);
         if (Array.isArray(bannerRes.data)) setBanners(bannerRes.data);
         if (Array.isArray(providerRes.data)) setProviders(providerRes.data);
-        if (settingRes.data && settingRes.data.settings) setSettings(settingRes.data.settings);
+        if (settingRes.data) {
+          if (settingRes.data.settings) setSettings(settingRes.data.settings);
+          if (settingRes.data.features) {
+            setFeatures(settingRes.data.features);
+            if (settingRes.data.features.announcement_popup !== false) {
+              const hasShown = sessionStorage.getItem('announcement_shown');
+              if (!hasShown) {
+                setShowAnnouncement(true);
+              }
+            }
+          }
+        }
         if (Array.isArray(categoryRes.data)) setApiCategories(categoryRes.data);
+        if (Array.isArray(announceRes.data)) setAnnouncements(announceRes.data);
       } catch (err) { console.error("Failed to fetch public data", err); }
     };
     fetchData();
   }, []);
+
+  const closeAnnouncement = () => {
+    setShowAnnouncement(false);
+    sessionStorage.setItem('announcement_shown', 'true');
+  };
 
   // Check Auth & Poll User Data
   const fetchUser = async () => {
@@ -587,8 +670,15 @@ function HomePageLogic() {
   useEffect(() => {
     const action = searchParams.get("action");
     if (action === "login") { setShowLogin(true); setShowRegister(false); }
-    else if (action === "register") { setShowRegister(true); setShowLogin(false); }
-  }, [searchParams]);
+    else if (action === "register") {
+      if (features.registration === false) {
+        router.push('/');
+      } else {
+        setShowRegister(true);
+        setShowLogin(false);
+      }
+    }
+  }, [searchParams, features.registration]);
 
   const handleLogout = async () => {
     // Call backend to clear sessionToken
@@ -608,32 +698,49 @@ function HomePageLogic() {
 
   return (
     <div className="min-h-screen bg-[#0b1120] text-slate-200 font-sans selection:bg-yellow-500 selection:text-black pb-20">
+      {features.maintenance && <MaintenanceOverlay />}
+      {showAnnouncement && announcements.length > 0 && (
+        <AnnouncementModal
+          announcement={announcements[0]}
+          onClose={closeAnnouncement}
+        />
+      )}
+
       <Header
         onLogin={() => setShowLogin(true)}
-        onRegister={() => setShowRegister(true)}
+        onRegister={() => features.registration !== false && setShowRegister(true)}
         user={user}
         onLogout={handleLogout}
         settings={settings}
+        features={features}
         onRefresh={fetchUser}
         isRefreshing={refreshingBalance}
       />
 
       <main className="w-full px-2 md:px-4 py-4 md:py-8 max-w-7xl mx-auto">
-        <HomeContent games={games} banners={banners} providers={providers} apiCategories={apiCategories} onPlay={handlePlayGame} />
+        <HomeContent
+          games={games}
+          banners={banners}
+          providers={providers}
+          apiCategories={apiCategories}
+          onPlay={handlePlayGame}
+          features={features}
+        />
       </main>
 
       <Footer settings={settings} />
-      <BottomNav />
+      <BottomNav features={features} />
 
       {/* Auth Modals */}
       <AuthModals
         showLogin={showLogin}
-        showRegister={showRegister}
+        showRegister={showRegister && features.registration !== false}
         onCloseLogin={() => setShowLogin(false)}
         onCloseRegister={() => setShowRegister(false)}
-        onSwitchToRegister={() => setShowRegister(true)}
+        onSwitchToRegister={() => features.registration !== false && setShowRegister(true)}
         onSwitchToLogin={() => setShowLogin(true)}
         onLoginSuccess={(u) => setUser(u)}
+        features={features}
       />
 
       {/* Contact Button */}

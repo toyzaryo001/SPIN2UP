@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../lib/db.js';
 import { parseBankSMS, matchBankName, matchAccountLast4, generateMessageHash, getBankThaiName } from '../services/sms-parser.service.js';
 import { BetflixService } from '../services/betflix.service.js';
+import { LineNotifyService } from '../services/line-notify.service.js';
 
 const router = Router();
 
@@ -296,6 +297,13 @@ router.post('/webhook', async (req, res) => {
                     matchLevel: 3
                 }
             });
+
+            // Notify Admins via LINE
+            LineNotifyService.notifyDeposit(
+                matchedUser.username,
+                depositAmount,
+                `Automatic SMS (${parsed.sourceBank})`
+            ).catch(err => console.error('[LineNotify] Error:', err));
 
             const elapsed = Date.now() - startTime;
             console.log(`[Webhook] ✅ Deposit completed in ${elapsed}ms`);

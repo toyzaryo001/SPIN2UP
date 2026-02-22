@@ -417,6 +417,7 @@ export default function DepositPage() {
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
                                 {channels.filter(ch => {
                                     if (ch.id === 'promptpay' && features.auto_deposit === false) return false;
+                                    if ((ch.id === 'bank' || ch.id === 'truemoney') && features.manual_deposit === false) return false;
                                     return true;
                                 }).map((ch) => (
                                     <button

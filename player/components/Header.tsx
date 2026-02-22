@@ -12,6 +12,7 @@ interface HeaderProps {
     onLogin?: () => void;
     onRegister?: () => void;
     onLogout?: () => void;
+    features?: any;
     onRefresh?: () => void;
     isRefreshing?: boolean;
 }
@@ -23,7 +24,8 @@ export default function Header({
     onRegister,
     onLogout,
     onRefresh,
-    isRefreshing: propIsRefreshing
+    isRefreshing: propIsRefreshing,
+    features: propFeatures
 }: HeaderProps) {
     const router = useRouter();
 
@@ -35,6 +37,7 @@ export default function Header({
     // Differentiate between controlled (props) and uncontrolled (internal) modes
     const user = propUser !== undefined ? propUser : internalUser;
     const settings = propSettings !== undefined ? propSettings : internalSettings;
+    const features = propFeatures !== undefined ? propFeatures : internalSettings?.features; // Fallback if settings has features
     const isRefreshing = propIsRefreshing !== undefined ? propIsRefreshing : internalRefreshing;
 
     // --- INTERNAL DATA FETCHING (For Inner Pages) ---
@@ -160,11 +163,11 @@ export default function Header({
                 {/* Central Navigation (Desktop Only) */}
                 <div className="flex-1 hidden md:flex items-center justify-center gap-2 lg:gap-8">
                     {[
-                        { label: 'หน้าหลัก', href: '/', icon: Home },
-                        { label: 'ฝาก/ถอน', href: '/deposit', icon: Wallet },
-                        { label: 'กิจกรรม', href: '/activity', icon: Gift },
-                        { label: 'โปรไฟล์', href: '/profile', icon: User },
-                    ].map((item, index) => (
+                        { label: 'หน้าหลัก', href: '/', icon: Home, visible: true },
+                        { label: 'ฝาก/ถอน', href: '/deposit', icon: Wallet, visible: features?.deposit !== false || features?.withdraw !== false },
+                        { label: 'กิจกรรม', href: '/activity', icon: Gift, visible: features?.promotions !== false || features?.referral !== false || features?.cashback !== false || features?.streak !== false },
+                        { label: 'โปรไฟล์', href: '/profile', icon: User, visible: true },
+                    ].filter(item => item.visible).map((item, index) => (
                         <button
                             key={index}
                             onClick={() => router.push(item.href)}
@@ -221,7 +224,7 @@ export default function Header({
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 gap-3 w-full md:flex md:items-center mt-1 md:mt-0">
+                        <div className={`grid ${features?.registration !== false ? 'grid-cols-2' : 'grid-cols-1'} gap-3 w-full md:flex md:items-center mt-1 md:mt-0`}>
                             {/* Login Button (Blue) */}
                             <button
                                 onClick={handleLogin}
@@ -230,12 +233,14 @@ export default function Header({
                                 เข้าสู่ระบบ
                             </button>
                             {/* Register Button (Green) */}
-                            <button
-                                onClick={handleRegister}
-                                className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-white bg-gradient-to-r from-green-500 to-green-600 hover:to-green-400 transition-all shadow-lg shadow-green-500/30 border border-green-400/50"
-                            >
-                                สมัครสมาชิก
-                            </button>
+                            {features?.registration !== false && (
+                                <button
+                                    onClick={handleRegister}
+                                    className="w-full md:w-auto px-4 py-2.5 rounded-xl md:rounded-full font-bold text-sm md:text-base text-white bg-gradient-to-r from-green-500 to-green-600 hover:to-green-400 transition-all shadow-lg shadow-green-500/30 border border-green-400/50"
+                                >
+                                    สมัครสมาชิก
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

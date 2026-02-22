@@ -15,15 +15,30 @@ export default function WithdrawPage() {
     const [amount, setAmount] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [user, setUser] = useState<any>(null);
-    const [minWithdraw, setMinWithdraw] = useState(100); // Default, could fetch from settings
+    const [features, setFeatures] = useState<any>({});
+    const [minWithdraw, setMinWithdraw] = useState(100);
 
     // Quick amounts for easy selection
     const quickAmounts = [100, 300, 500, 1000, 2000, 5000];
 
     useEffect(() => {
         fetchUserData();
-        // In a real app, we might also fetch withdraw settings here (min/max/status)
+        fetchFeatures();
     }, []);
+
+    const fetchFeatures = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/public/settings`);
+            if (res.data.success && res.data.features) {
+                setFeatures(res.data.features);
+                if (res.data.features.withdraw === false) {
+                    router.push("/");
+                }
+            }
+        } catch (error) {
+            console.error("Fetch features error:", error);
+        }
+    };
 
     const fetchUserData = async () => {
         try {

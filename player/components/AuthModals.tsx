@@ -15,11 +15,12 @@ interface AuthModalsProps {
     onSwitchToRegister: () => void;
     onSwitchToLogin: () => void;
     onLoginSuccess?: (user: any) => void;
+    features?: any;
 }
 
 export default function AuthModals({
     showLogin, showRegister, onCloseLogin, onCloseRegister,
-    onSwitchToRegister, onSwitchToLogin, onLoginSuccess
+    onSwitchToRegister, onSwitchToLogin, onLoginSuccess, features
 }: AuthModalsProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -98,10 +99,12 @@ export default function AuthModals({
                             </button>
                         </form>
 
-                        <div className="text-center mt-8 pt-6 border-t border-white/5">
-                            <span className="text-slate-500 text-sm">ยังไม่มีบัญชี? </span>
-                            <button onClick={() => { onCloseLogin(); onSwitchToRegister(); }} className="text-yellow-500 font-bold hover:underline ml-1">สมัครสมาชิกที่นี่</button>
-                        </div>
+                        {features?.registration !== false && (
+                            <div className="text-center mt-8 pt-6 border-t border-white/5">
+                                <span className="text-slate-500 text-sm">ยังไม่มีบัญชี? </span>
+                                <button onClick={() => { onCloseLogin(); onSwitchToRegister(); }} className="text-yellow-500 font-bold hover:underline ml-1">สมัครสมาชิกที่นี่</button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

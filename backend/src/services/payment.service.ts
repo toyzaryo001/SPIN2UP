@@ -2,6 +2,7 @@ import prisma from '../lib/db';
 import { PaymentFactory } from './payment/PaymentFactory';
 import { BetflixService } from './betflix.service';
 import { Decimal } from '@prisma/client/runtime/library';
+import { LineNotifyService } from './line-notify.service';
 
 export class PaymentService {
 
@@ -164,6 +165,9 @@ export class PaymentService {
                 }
             });
         });
+
+        // Notify Admins via LINE
+        LineNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[LineNotify] Error:', err));
 
         // 5. Check Auto Withdraw Condition
         // Logic: Auto Feature ON + Gateway Auto ON + Gateway Withdraw ON
@@ -378,6 +382,13 @@ export class PaymentService {
                             rawResponse: JSON.stringify(result.rawResponse)
                         }
                     });
+
+                    // Notify Admins via LINE
+                    LineNotifyService.notifyDeposit(
+                        transaction.user?.username || 'Unknown',
+                        amount,
+                        transaction.subType || 'Automatic'
+                    ).catch(err => console.error('[LineNotify] Error:', err));
                 } else {
                     // Betflix Failed: Mark Transaction as FAILED (UserBalance NOT incremented)
                     await prisma.transaction.update({

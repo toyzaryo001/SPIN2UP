@@ -205,6 +205,7 @@ const Footer = ({ settings }: any) => (
 
 // --- HomeContent (Banners + Featured Games) ---
 const HomeContent = ({ games, banners, providers, onPlay }: any) => {
+  const router = useRouter();
   const popularSlots = (games || []).filter((g: any) => {
     const catSlug = g.provider?.category?.slug || g.category?.slug || '';
     const isSlot = catSlug === 'slots' || catSlug === 'slot' || g.type === 'SLOT';
@@ -217,8 +218,8 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
     return isCasino && (g.isHot || g.isNew);
   }).slice(0, 10);
 
-  // Fallback for general featured games if specific categories are empty or for desktop layout compatibility
-  const featuredGames = (games || []).filter((g: any) => g.isHot || g.isNew).slice(0, 10);
+  // Fallback for general featured games
+  const featuredGames = (games || []).slice(0, 10);
 
   const formatGameData = (g: any) => ({
     title: g.name,
@@ -231,16 +232,45 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
     type: (g.provider?.category?.slug?.includes('casino') || g.type === 'CASINO') ? 'casino' : 'slot'
   });
 
+  const categories = [
+    { name: "สล็อต", slug: "slots", icon: Gamepad2, color: "from-yellow-500/20 to-yellow-600/5", border: "border-yellow-500/20", iconColor: "text-yellow-400" },
+    { name: "คาสิโนสด", slug: "casino", icon: Dices, color: "from-green-500/20 to-green-600/5", border: "border-green-500/20", iconColor: "text-green-400" },
+    { name: "ยิงปลา", slug: "fishing", icon: Sparkles, color: "from-blue-500/20 to-blue-600/5", border: "border-blue-500/20", iconColor: "text-blue-400" },
+    { name: "กีฬา", slug: "sports", icon: Trophy, color: "from-red-500/20 to-red-600/5", border: "border-red-500/20", iconColor: "text-red-400" }
+  ];
+
   return (
     <div className="animate-fade-in space-y-6 md:space-y-8">
       <TopBanner banners={banners} />
+
+      {/* Categories Navigation (MANUAL TABS) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-8 animate-fade-in-up">
+        {categories.map((cat, i) => (
+          <div
+            key={i}
+            onClick={() => router.push(`/games?category=${cat.slug}`)}
+            className={`relative p-4 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br ${cat.color} ${cat.border} border border-white/5 hover:border-white/20 transition-all cursor-pointer group overflow-hidden shadow-xl`}
+          >
+            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <cat.icon size={100} />
+            </div>
+            <div className="relative z-10 flex flex-col items-start gap-2">
+              <div className={`p-2 rounded-xl bg-black/40 ${cat.iconColor}`}>
+                <cat.icon size={24} />
+              </div>
+              <h3 className="text-base md:text-xl font-black text-white italic tracking-tighter uppercase">{cat.name}</h3>
+              <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">หมวดหมู่ทั้งหมด</span>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Side Banners + Activity Buttons */}
       {(() => {
         const sideBanners = banners ? banners.filter((b: any) => b.position === 'SIDE') : [];
         const hasSideBanners = sideBanners.length > 0;
         return (
-          <div className={`grid grid-cols-1 ${hasSideBanners ? 'md:grid-cols-4' : 'md:grid-cols-1'} gap-3 md:gap-4 mb-8 md:mb-12 animate-fade-in`}>
+          <div className={`grid grid-cols-1 ${hasSideBanners ? 'md:grid-cols-4' : 'md:grid-cols-1'} gap-3 md:gap-4 mb-4 md:mb-8 animate-fade-in`}>
             {hasSideBanners && (
               <div className="md:col-span-3 h-full min-h-[160px]">
                 {(() => {
@@ -259,22 +289,22 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
                 })()}
               </div>
             )}
-            <div className={`${hasSideBanners ? 'md:col-span-1 grid-cols-2' : 'w-full grid-cols-2 md:grid-cols-4'} grid gap-2 md:gap-3 h-full`}>
-              <button onClick={() => window.location.href = '/commission'} className={`h-20 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-900/40 border border-blue-500/30 hover:border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all group`}>
+            <div className={`${hasSideBanners ? 'md:col-span-1 grid-cols-4 md:grid-cols-2' : 'w-full grid-cols-4'} grid gap-2 md:gap-3 h-full`}>
+              <button onClick={() => router.push('/referral')} className={`h-22 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-600/20 to-blue-900/40 border border-blue-500/30 hover:border-blue-400 transition-all group shadow-lg`}>
                 <Users className="text-blue-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
-                <span className="text-[10px] md:text-xs font-bold text-blue-100 group-hover:text-white">แนะนำเพื่อน</span>
+                <span className="text-[8px] md:text-xs font-bold text-blue-100 uppercase tracking-widest text-center">แนะนำเพื่อน</span>
               </button>
-              <button onClick={() => window.location.href = '/streak'} className={`h-20 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-green-600/20 to-green-900/40 border border-green-500/30 hover:border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] transition-all group`}>
-                <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📅</span>
-                <span className="text-[10px] md:text-xs font-bold text-green-100 group-hover:text-white">ฝากต่อเนื่อง</span>
+              <button onClick={() => router.push('/streak')} className={`h-22 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl md:rounded-2xl bg-gradient-to-br from-green-600/20 to-green-900/40 border border-green-500/30 hover:border-green-400 transition-all group shadow-lg`}>
+                <span className="text-xl md:text-2xl mb-1 group-hover:scale-110 transition-transform">📅</span>
+                <span className="text-[8px] md:text-xs font-bold text-green-100 uppercase tracking-widest text-center">ฝากต่อเนื่อง</span>
               </button>
-              <button onClick={() => window.location.href = '/cashback'} className={`h-20 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-red-600/20 to-red-900/40 border border-red-500/30 hover:border-red-400 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all group`}>
-                <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">💸</span>
-                <span className="text-[10px] md:text-xs font-bold text-red-100 group-hover:text-white">คืนยอดเสีย</span>
+              <button onClick={() => router.push('/cashback')} className={`h-22 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl md:rounded-2xl bg-gradient-to-br from-red-600/20 to-red-900/40 border border-red-500/30 hover:border-red-400 transition-all group shadow-lg`}>
+                <span className="text-xl md:text-2xl mb-1 group-hover:scale-110 transition-transform">💸</span>
+                <span className="text-[8px] md:text-xs font-bold text-red-100 uppercase tracking-widest text-center">คืนยอดเสีย</span>
               </button>
-              <button onClick={() => window.location.href = '/rank'} className={`h-20 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-yellow-600/20 to-yellow-900/40 border border-yellow-500/30 hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all group`}>
+              <button onClick={() => router.push('/rank')} className={`h-22 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl md:rounded-2xl bg-gradient-to-br from-yellow-600/20 to-yellow-900/40 border border-yellow-500/30 hover:border-yellow-400 transition-all group shadow-lg`}>
                 <Trophy className="text-yellow-400 mb-1 group-hover:scale-110 transition-transform" size={24} />
-                <span className="text-[10px] md:text-xs font-bold text-yellow-100 group-hover:text-white">RANK</span>
+                <span className="text-[8px] md:text-xs font-bold text-yellow-100 uppercase tracking-widest text-center">RANKING</span>
               </button>
             </div>
           </div>
@@ -287,7 +317,7 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
           <div>
             <div className="flex items-center gap-2 mb-3 bg-[#1e293b] p-2.5 rounded-lg border border-slate-700">
               <Gamepad2 className="text-yellow-400" size={18} />
-              <h2 className="text-sm font-bold text-white">สล็อตยอดฮิต</h2>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">สล็อตยอดฮิต</h2>
             </div>
             <div className="grid grid-cols-5 gap-1.5 stagger-children">
               {popularSlots.map((game: any, i: number) => (
@@ -316,7 +346,7 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
                     )}
                   </div>
                   <div className="bg-[#1e293b] p-1 text-center">
-                    <span className="text-[8px] text-slate-300 line-clamp-1">{game.name}</span>
+                    <span className="text-[8px] text-slate-300 line-clamp-1 font-bold">{game.name}</span>
                   </div>
                 </div>
               ))}
@@ -328,7 +358,7 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
           <div>
             <div className="flex items-center gap-2 mb-3 bg-gradient-to-r from-green-900/40 to-green-800/20 p-2.5 rounded-lg border border-green-700/40">
               <Dices className="text-green-400" size={18} />
-              <h2 className="text-sm font-bold text-white">คาสิโนยอดฮิต</h2>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">คาสิโนยอดฮิต</h2>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
               {popularCasino.map((game: any, i: number) => (
@@ -357,7 +387,7 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
                     )}
                   </div>
                   <div className="bg-[#1e293b] p-1 text-center">
-                    <span className="text-[8px] text-slate-300 line-clamp-1">{game.name}</span>
+                    <span className="text-[8px] text-slate-300 line-clamp-1 font-bold">{game.name}</span>
                   </div>
                 </div>
               ))}
@@ -407,13 +437,32 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
         </div>
       )}
 
+      {/* Fallback Featured Games Section */}
+      {(popularSlots.length === 0 && popularCasino.length === 0) && (
+        <div className="relative hidden md:block">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center">
+                <Flame className="text-indigo-400 fill-indigo-400" />
+              </div>
+              เกมแนะนำ <span className="text-sm font-normal text-slate-500 not-italic tracking-normal self-end mb-1 custom-font">FEATURED GAMES</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+            {featuredGames.map((game: any, i: number) => (
+              <GameCard key={i} {...formatGameData(game)} onPlay={() => onPlay && onPlay(game)} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Desktop Layout Bottom Sections */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mt-20">
         <div className="md:col-span-1 hidden md:block">
           <Sidebar title="ค่ายเกมชั้นนำ" items={providers.slice(0, 10)} active={null} />
         </div>
         <div className="md:col-span-3">
-          <div className="glass-card rounded-2xl p-8 relative overflow-hidden">
+          <div className="glass-card rounded-2xl p-8 relative overflow-hidden h-full">
             <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
               <Trophy className="text-yellow-400" size={32} />
               ผู้ชนะล่าสุด

@@ -271,7 +271,7 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay }: any) 
             return (
               <button
                 key={i}
-                onClick={() => router.push(`/games?category=${cat.slug}`)}
+                onClick={() => router.push(`/games?tab=${cat.slug}`)}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
               >
                 <Icon size={16} className={iconColor} />

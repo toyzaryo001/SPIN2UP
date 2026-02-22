@@ -158,23 +158,20 @@ export default function Header({
                 </div>
 
                 {/* Central Navigation (Desktop Only) */}
-                <div className="flex-1 hidden md:flex items-center justify-center gap-1 lg:gap-4">
+                <div className="flex-1 hidden md:flex items-center justify-center gap-2 lg:gap-8">
                     {[
                         { label: 'หน้าหลัก', href: '/', icon: Home },
-                        { label: 'สล็อต', href: '/games?category=slots', icon: Gamepad2 },
-                        { label: 'คาสิโนสด', href: '/games?category=casino', icon: Dices },
-                        { label: 'ยิงปลา', href: '/games?category=fishing', icon: Sparkles },
-                        { label: 'กีฬา', href: '/games?category=sports', icon: Trophy },
                         { label: 'ฝาก/ถอน', href: '/deposit', icon: Wallet },
                         { label: 'กิจกรรม', href: '/activity', icon: Gift },
+                        { label: 'โปรไฟล์', href: '/profile', icon: User },
                     ].map((item, index) => (
                         <button
                             key={index}
                             onClick={() => router.push(item.href)}
-                            className="flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-white/5 py-2 px-3 rounded-full transition-all group"
+                            className="flex items-center gap-2 text-slate-300 hover:text-white hover:bg-white/5 py-2 px-4 rounded-full transition-all group"
                         >
                             <item.icon className="w-4 h-4 text-slate-400 group-hover:text-yellow-400 transition-colors" />
-                            <span className="font-bold text-xs lg:text-sm whitespace-nowrap">{item.label}</span>
+                            <span className="font-bold text-sm lg:text-base">{item.label}</span>
                         </button>
                     ))}
                 </div>

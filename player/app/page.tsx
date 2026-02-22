@@ -243,26 +243,27 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
     <div className="animate-fade-in space-y-6 md:space-y-8">
       <TopBanner banners={banners} />
 
-      {/* Categories Navigation (MANUAL TABS) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-8 animate-fade-in-up">
-        {categories.map((cat, i) => (
-          <div
-            key={i}
-            onClick={() => router.push(`/games?category=${cat.slug}`)}
-            className={`relative p-4 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br ${cat.color} ${cat.border} border border-white/5 hover:border-white/20 transition-all cursor-pointer group overflow-hidden shadow-xl`}
+      {/* Floating Category Bar (Tabs) */}
+      <div className="sticky top-[80px] z-40 bg-[#0D1117]/80 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5 shadow-2xl mb-6">
+        <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+          <button
+            onClick={() => router.push('/games')}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
           >
-            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <cat.icon size={100} />
-            </div>
-            <div className="relative z-10 flex flex-col items-start gap-2">
-              <div className={`p-2 rounded-xl bg-black/40 ${cat.iconColor}`}>
-                <cat.icon size={24} />
-              </div>
-              <h3 className="text-base md:text-xl font-black text-white italic tracking-tighter uppercase">{cat.name}</h3>
-              <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">หมวดหมู่ทั้งหมด</span>
-            </div>
-          </div>
-        ))}
+            <Sparkles size={16} className="text-yellow-400" />
+            <span className="text-sm font-bold text-white">ทั้งหมด</span>
+          </button>
+          {categories.map((cat, i) => (
+            <button
+              key={i}
+              onClick={() => router.push(`/games?category=${cat.slug}`)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
+            >
+              <cat.icon size={16} className={cat.iconColor} />
+              <span className="text-sm font-bold text-slate-300 group-hover:text-white">{cat.name}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Side Banners + Activity Buttons */}

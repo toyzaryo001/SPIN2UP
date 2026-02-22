@@ -204,8 +204,25 @@ const Footer = ({ settings }: any) => (
 );
 
 // --- HomeContent (Banners + Featured Games) ---
-const HomeContent = ({ games, banners, providers, onPlay }: any) => {
+const HomeContent = ({ games, banners, providers, apiCategories, onPlay }: any) => {
   const router = useRouter();
+
+  // Icon Mapping for Categories from Admin
+  const getCategoryIcon = (slug: string) => {
+    switch (slug?.toLowerCase()) {
+      case 'slot':
+      case 'slots': return { icon: Gamepad2, color: "text-yellow-400" };
+      case 'casino':
+      case 'live-casino': return { icon: Dices, color: "text-green-400" };
+      case 'fishing': return { icon: Sparkles, color: "text-blue-400" };
+      case 'sports': return { icon: Trophy, color: "text-red-400" };
+      case 'arcade': return { icon: Sparkles, color: "text-purple-400" };
+      case 'lotto':
+      case 'huay': return { icon: Gift, color: "text-pink-400" };
+      default: return { icon: Gamepad2, color: "text-slate-400" };
+    }
+  };
+
   const popularSlots = (games || []).filter((g: any) => {
     const catSlug = g.provider?.category?.slug || g.category?.slug || '';
     const isSlot = catSlug === 'slots' || catSlug === 'slot' || g.type === 'SLOT';
@@ -232,20 +249,16 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
     type: (g.provider?.category?.slug?.includes('casino') || g.type === 'CASINO') ? 'casino' : 'slot'
   });
 
-  const categories = [
-    { name: "สล็อต", slug: "slots", icon: Gamepad2, color: "from-yellow-500/20 to-yellow-600/5", border: "border-yellow-500/20", iconColor: "text-yellow-400" },
-    { name: "คาสิโนสด", slug: "casino", icon: Dices, color: "from-green-500/20 to-green-600/5", border: "border-green-500/20", iconColor: "text-green-400" },
-    { name: "ยิงปลา", slug: "fishing", icon: Sparkles, color: "from-blue-500/20 to-blue-600/5", border: "border-blue-500/20", iconColor: "text-blue-400" },
-    { name: "กีฬา", slug: "sports", icon: Trophy, color: "from-red-500/20 to-red-600/5", border: "border-red-500/20", iconColor: "text-red-400" }
-  ];
+  // Use API categories if available, else empty array
+  const displayCategories = apiCategories || [];
 
   return (
     <div className="animate-fade-in space-y-6 md:space-y-8">
       <TopBanner banners={banners} />
 
       {/* Floating Category Bar (Tabs) */}
-      <div className="sticky top-[80px] z-40 bg-[#0D1117]/80 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5 shadow-2xl mb-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+      <div className="sticky top-[80px] z-40 bg-[#0D1117]/80 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5 shadow-2xl mb-6 overflow-hidden">
+        <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth px-2">
           <button
             onClick={() => router.push('/games')}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
@@ -253,16 +266,19 @@ const HomeContent = ({ games, banners, providers, onPlay }: any) => {
             <Sparkles size={16} className="text-yellow-400" />
             <span className="text-sm font-bold text-white">ทั้งหมด</span>
           </button>
-          {categories.map((cat, i) => (
-            <button
-              key={i}
-              onClick={() => router.push(`/games?category=${cat.slug}`)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
-            >
-              <cat.icon size={16} className={cat.iconColor} />
-              <span className="text-sm font-bold text-slate-300 group-hover:text-white">{cat.name}</span>
-            </button>
-          ))}
+          {displayCategories.map((cat: any, i: number) => {
+            const { icon: Icon, color: iconColor } = getCategoryIcon(cat.slug);
+            return (
+              <button
+                key={i}
+                onClick={() => router.push(`/games?category=${cat.slug}`)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group whitespace-nowrap"
+              >
+                <Icon size={16} className={iconColor} />
+                <span className="text-sm font-bold text-slate-300 group-hover:text-white">{cat.name}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -516,22 +532,25 @@ function HomePageLogic() {
   const [settings, setSettings] = useState<any>({});
   const [refreshingBalance, setRefreshingBalance] = useState(false);
 
+  const [apiCategories, setApiCategories] = useState<any[]>([]);
   const handlePlayGame = useGameLauncher(() => setShowLogin(true));
 
   // Fetch Public Data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [gameRes, bannerRes, providerRes, settingRes] = await Promise.all([
+        const [gameRes, bannerRes, providerRes, settingRes, categoryRes] = await Promise.all([
           axios.get(`${API_URL}/public/games`),
           axios.get(`${API_URL}/public/banners`),
           axios.get(`${API_URL}/public/providers`),
-          axios.get(`${API_URL}/public/settings`)
+          axios.get(`${API_URL}/public/settings`),
+          axios.get(`${API_URL}/public/categories`)
         ]);
         if (Array.isArray(gameRes.data)) setGames(gameRes.data);
         if (Array.isArray(bannerRes.data)) setBanners(bannerRes.data);
         if (Array.isArray(providerRes.data)) setProviders(providerRes.data);
         if (settingRes.data && settingRes.data.settings) setSettings(settingRes.data.settings);
+        if (Array.isArray(categoryRes.data)) setApiCategories(categoryRes.data);
       } catch (err) { console.error("Failed to fetch public data", err); }
     };
     fetchData();
@@ -600,7 +619,7 @@ function HomePageLogic() {
       />
 
       <main className="w-full px-2 md:px-4 py-4 md:py-8 max-w-7xl mx-auto">
-        <HomeContent games={games} banners={banners} providers={providers} onPlay={handlePlayGame} />
+        <HomeContent games={games} banners={banners} providers={providers} apiCategories={apiCategories} onPlay={handlePlayGame} />
       </main>
 
       <Footer settings={settings} />

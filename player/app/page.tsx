@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Gamepad2, Dices, Trophy, Gift, Flame, ChevronRight, Sparkles,
-  Star, Users, User, Play
+  Star, Users, User, Play, Settings
 } from 'lucide-react';
 import axios from "axios";
 import ContactDrawer from "@/components/ContactDrawer";

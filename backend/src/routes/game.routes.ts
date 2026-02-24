@@ -235,44 +235,22 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
         let url: string | null = null;
         let errorDetail = '';
 
-        // 0. Check if this is a Lobby-mode provider (no individual Game records in DB)
+
+        // 0. Lobby-mode providers: Skip DB game lookup, go straight to direct agent launch
+        //    (They don't have individual Game records, so DB lookup will always fail)
         const lobbyProvider = await prisma.gameProvider.findFirst({
             where: {
                 slug: providerCode,
                 isLobbyMode: true,
                 isActive: true
-            },
-            include: { defaultAgent: true }
+            }
         });
 
         if (lobbyProvider) {
-            console.log(`🏟️ Lobby Mode Provider: ${lobbyProvider.name} (Agent ID: ${lobbyProvider.defaultAgentId || 'Main'})`);
-
-            try {
-                const { AgentFactory } = await import('../services/agents/AgentFactory.js');
-                const agent = lobbyProvider.defaultAgentId
-                    ? await AgentFactory.getAgentById(lobbyProvider.defaultAgentId)
-                    : await AgentFactory.getMainAgent();
-
-                const user = await prisma.user.findUnique({
-                    where: { id: userId },
-                    include: { externalAccounts: true }
-                });
-
-                if (user) {
-                    const creds = await agent.register(user.id, user.phone);
-                    console.log(`🏟️ Lobby Register result:`, creds ? `username=${creds.username}` : 'null');
-                    if (creds) {
-                        // Lobby providers: send empty gameCode to open the provider lobby
-                        url = await agent.launchGame(creds.username, '', providerCode, lang);
-                        console.log(`🏟️ Lobby Launch URL:`, url ? url.substring(0, 80) + '...' : 'null');
-                    }
-                }
-            } catch (e: any) {
-                console.error('❌ Lobby Launch Error:', e);
-                errorDetail = e.message;
-            }
+            console.log(`🏟️ Lobby Mode Provider detected: ${lobbyProvider.name} — skipping DB game lookup, using direct agent launch.`);
+            // Don't try to find a Game record — fall through directly to the fallback block
         }
+
 
         // 1. If not lobby or lobby failed, try to find local Game record
         if (!url) {

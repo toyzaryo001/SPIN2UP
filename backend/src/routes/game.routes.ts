@@ -281,8 +281,16 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
 
             try {
                 const { AgentFactory } = await import('../services/agents/AgentFactory.js');
-                const mainAgent = await AgentFactory.getMainAgent();
-                console.log(`🚀 Got main agent: ${mainAgent.agentCode}`);
+
+                // Get main agent config (need the ID to match externalAccounts)
+                const mainAgentConfig = await prisma.agentConfig.findFirst({
+                    where: { isMain: true, isActive: true }
+                }) || await prisma.agentConfig.findFirst({ orderBy: { id: 'asc' } });
+
+                if (!mainAgentConfig) throw new Error('No agent config found');
+
+                const mainAgent = await AgentFactory.getAgent(mainAgentConfig.code);
+                console.log(`🚀 Main agent: ${mainAgentConfig.code} (ID: ${mainAgentConfig.id})`);
 
                 const user = await prisma.user.findUnique({
                     where: { id: userId },
@@ -293,19 +301,43 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
                     console.error('❌ User not found:', userId);
                     errorDetail = 'User not found';
                 } else {
-                    console.log(`🚀 User found: ${user.username}, phone: ${user.phone}`);
+                    console.log(`🚀 User: ${user.username}, phone: ${user.phone}, accounts: ${user.externalAccounts.length}`);
 
-                    const creds = await mainAgent.register(user.id, user.phone);
-                    console.log(`🚀 Register result:`, creds ? `username=${creds.username}` : 'NULL — register failed');
+                    // Use existing externalAccount (same pattern as WalletService)
+                    let externalUsername: string | null = null;
+                    const existingAccount = user.externalAccounts.find((a: any) => a.agentId === mainAgentConfig.id);
 
-                    if (creds) {
+                    if (existingAccount) {
+                        externalUsername = existingAccount.externalUsername;
+                        console.log(`🚀 Existing account found: ${externalUsername}`);
+                    } else {
+                        // Only register if no existing account
+                        console.log(`🚀 No existing account for agent ${mainAgentConfig.id}, registering...`);
+                        const creds = await mainAgent.register(user.id, user.phone);
+                        if (creds) {
+                            externalUsername = creds.username;
+                            // Save for future use (ignore duplicate errors)
+                            await prisma.userExternalAccount.create({
+                                data: {
+                                    userId: user.id,
+                                    agentId: mainAgentConfig.id,
+                                    externalUsername: creds.username,
+                                    externalPassword: creds.password || '',
+                                }
+                            }).catch(() => { });
+                            console.log(`🚀 Registered new: ${externalUsername}`);
+                        } else {
+                            console.error(`🚀 Register failed for user ${user.username}`);
+                        }
+                    }
+
+                    if (externalUsername) {
                         // For lobby providers, send empty gameCode to open the whole lobby
-                        // For regular games, send the original gameCode  
                         const launchGameCode = lobbyProvider ? '' : gameCode;
-                        console.log(`🚀 Calling launchGame(${creds.username}, gameCode='${launchGameCode}', provider='${providerCode}', lang='${lang}')`);
+                        console.log(`🚀 launchGame(${externalUsername}, '${launchGameCode}', '${providerCode}', '${lang}')`);
 
-                        url = await mainAgent.launchGame(creds.username, launchGameCode, providerCode, lang);
-                        console.log(`🚀 LaunchGame result:`, url ? `URL=${url.substring(0, 100)}...` : 'NULL — launch failed');
+                        url = await mainAgent.launchGame(externalUsername, launchGameCode, providerCode, lang);
+                        console.log(`🚀 Result:`, url ? `URL=${url.substring(0, 100)}...` : 'NULL');
                     }
                 }
             } catch (e: any) {

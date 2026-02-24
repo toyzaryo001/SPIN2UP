@@ -58,6 +58,18 @@ function getDateRange(preset: string, customStart: string, customEnd: string): {
     return { start, end };
 }
 
+// Export CSV utility
+function exportToCsv(filename: string, headers: string[], rows: string[][]) {
+    const BOM = '\uFEFF';
+    const csvContent = BOM + [headers.join(','), ...rows.map(r => r.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
 export default function ReportPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = use(params);
     const config = reportConfig[slug] || { title: "รายงาน", columns: [] };
@@ -78,6 +90,9 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     const [resolveModal, setResolveModal] = useState<{ log: any; userQuery: string; usersList: any[]; selectedUser: any | null } | null>(null);
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean } | null>(null);
     const [resolving, setResolving] = useState(false);
+    const [unmatchedPage, setUnmatchedPage] = useState(1);
+    const unmatchedPerPage = 20;
+    const [exporting, setExporting] = useState(false);
 
     // Fetch Unmatched Logs
     const fetchUnmatchedLogs = async () => {
@@ -444,9 +459,52 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-slate-800">{config.title}</h2>
                 <div className="flex gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+                    <button
+                        disabled={exporting || data.length === 0}
+                        onClick={async () => {
+                            setExporting(true);
+                            try {
+                                // Fetch all data for export (up to 10000 rows)
+                                const { start, end } = getDateRange(dateRange, customStart, customEnd);
+                                const startISO = start.toISOString();
+                                const endISO = end.toISOString();
+
+                                if (['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
+                                    const typeMap: Record<string, string> = { "deposit": "DEPOSIT", "withdraw": "WITHDRAW", "bonus": "BONUS", "new-users-deposit": "DEPOSIT" };
+                                    const res = await api.get(`/admin/transactions?page=1&limit=10000&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}${search ? `&search=${search}` : ''}`);
+                                    const txs = res.data?.data?.transactions || [];
+                                    if (slug === 'withdraw') {
+                                        exportToCsv(config.title, ['วันที่', 'Username', 'ชื่อ', 'จำนวนเงิน', 'ธนาคาร', 'เลขบัญชี', 'สถานะ', 'ผู้ทำรายการ'],
+                                            txs.map((t: any) => [formatDate(t.createdAt), t.user?.username, t.user?.fullName, t.amount, t.user?.bankName, t.user?.bankAccount, t.status, t.adminId ? `Admin #${t.adminId}` : 'Auto']));
+                                    } else {
+                                        exportToCsv(config.title, ['วันที่', 'Username', 'ชื่อ', 'จำนวนเงิน', 'ช่องทาง', 'สถานะ', 'ผู้ทำรายการ'],
+                                            txs.map((t: any) => [formatDate(t.createdAt), t.user?.username, t.user?.fullName, t.amount, t.subType || t.type, t.status, t.adminId ? `Admin #${t.adminId}` : 'System']));
+                                    }
+                                } else if (['new-users', 'inactive-users'].includes(slug)) {
+                                    const res = await api.get(`/admin/users?page=1&limit=10000${slug === 'new-users' ? `&startDate=${startISO}&endDate=${endISO}&sort=createdAt&order=desc` : '&sort=lastLoginAt&order=asc'}${search ? `&search=${search}` : ''}`);
+                                    const users = res.data?.data?.users || res.data?.data || [];
+                                    if (slug === 'new-users') {
+                                        exportToCsv(config.title, ['วันที่สมัคร', 'Username', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'ธนาคาร', 'ยอดเงิน'],
+                                            users.map((u: any) => [formatDate(u.createdAt), u.username || u.phone, u.fullName, u.phone, u.bankName, u.balance || 0]));
+                                    } else {
+                                        exportToCsv(config.title, ['Username', 'ชื่อ-นามสกุล', 'เข้าใช้ล่าสุด', 'ยอดคงเหลือ', 'สถานะ'],
+                                            users.map((u: any) => [u.username || u.phone, u.fullName, u.lastLoginAt ? formatDate(u.lastLoginAt) : 'ไม่เคยเข้าใช้', u.balance || 0, u.isActive !== false ? 'Active' : 'Inactive']));
+                                    }
+                                } else if (slug === 'profit-loss' && summary) {
+                                    exportToCsv(config.title, ['ยอดฝากรวม', 'ยอดถอนรวม', 'โบนัสรวม', 'กำไรสุทธิ'],
+                                        [[summary.deposit, summary.withdraw, summary.bonus, summary.profit]]);
+                                }
+                                toast.success('Export สำเร็จ');
+                            } catch (err) {
+                                toast.error('Export ไม่สำเร็จ');
+                            } finally {
+                                setExporting(false);
+                            }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    >
                         <Download size={18} />
-                        Export Excel
+                        {exporting ? 'กำลัง Export...' : 'Export Excel'}
                     </button>
                 </div>
             </div>
@@ -667,7 +725,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                 {unmatchedLogs.length === 0 ? (
                                     <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">ไม่พบรายการค้างตรวจสอบ</td></tr>
                                 ) : (
-                                    unmatchedLogs.map((log) => (
+                                    unmatchedLogs.slice((unmatchedPage - 1) * unmatchedPerPage, unmatchedPage * unmatchedPerPage).map((log) => (
                                         <tr key={log.id} className="hover:bg-slate-50">
                                             <td className="px-6 py-4 text-slate-500">{formatDate(log.createdAt)}</td>
                                             <td className="px-6 py-4 text-xs text-slate-600 max-w-md truncate" title={log.rawMessage}>{log.rawMessage}</td>
@@ -716,6 +774,28 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                             </tbody>
                         </table>
                     </div>
+                    {/* Unmatched Pagination */}
+                    {unmatchedLogs.length > unmatchedPerPage && (
+                        <div className="p-4 border-t border-slate-100 flex justify-between items-center text-sm text-slate-500">
+                            <div>หน้า {unmatchedPage} จาก {Math.ceil(unmatchedLogs.length / unmatchedPerPage)} ({unmatchedLogs.length} รายการ)</div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setUnmatchedPage(p => Math.max(1, p - 1))}
+                                    disabled={unmatchedPage === 1}
+                                    className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
+                                >
+                                    ก่อนหน้า
+                                </button>
+                                <button
+                                    onClick={() => setUnmatchedPage(p => Math.min(Math.ceil(unmatchedLogs.length / unmatchedPerPage), p + 1))}
+                                    disabled={unmatchedPage === Math.ceil(unmatchedLogs.length / unmatchedPerPage)}
+                                    className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
+                                >
+                                    ถัดไป
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
             {/* Resolve Modal - Moved to Root Level */}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { formatBaht, formatDate } from "@/lib/utils";
-import { Search, UserPlus, Edit, X, Save, AlertTriangle, CheckCircle, Trash2, RotateCw, Copy, History, Ban, ArrowUpCircle, ArrowDownCircle, TrendingUp, TrendingDown } from "lucide-react";
+import { Search, UserPlus, Edit, X, Save, AlertTriangle, CheckCircle, Trash2, RotateCw, Copy, History, Ban, ArrowUpCircle, ArrowDownCircle, TrendingUp, TrendingDown, Download } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface User {
@@ -264,13 +264,42 @@ export default function MembersPage() {
                         <RotateCw size={20} />
                     </button>
                 </div>
-                <button
-                    onClick={openCreateModal}
-                    className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-yellow-500/20 transition-all"
-                >
-                    <UserPlus size={20} />
-                    <span>เพิ่มสมาชิก</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={async () => {
+                            try {
+                                const res = await api.get('/admin/users?page=1&limit=10000');
+                                const allUsers = res.data?.data?.users || res.data?.data || [];
+                                const BOM = '\uFEFF';
+                                const headers = ['Username', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'ธนาคาร', 'เลขบัญชี', 'ยอดคงเหลือ', 'สถานะ', 'วันที่สมัคร'];
+                                const rows = allUsers.map((u: any) => [
+                                    u.username, u.fullName, u.phone, u.bankName, u.bankAccount, u.balance || 0, u.status, formatDate(u.createdAt)
+                                ].map((c: any) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','));
+                                const csv = BOM + [headers.join(','), ...rows].join('\n');
+                                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(blob);
+                                link.download = `สมาชิก_${new Date().toISOString().slice(0, 10)}.csv`;
+                                link.click();
+                                URL.revokeObjectURL(link.href);
+                                toast.success('Export สำเร็จ');
+                            } catch {
+                                toast.error('Export ไม่สำเร็จ');
+                            }
+                        }}
+                        className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-all"
+                    >
+                        <Download size={18} />
+                        Export
+                    </button>
+                    <button
+                        onClick={openCreateModal}
+                        className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-yellow-500/20 transition-all"
+                    >
+                        <UserPlus size={20} />
+                        <span>เพิ่มสมาชิก</span>
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}

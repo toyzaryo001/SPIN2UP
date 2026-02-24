@@ -332,11 +332,10 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
                     }
 
                     if (externalUsername) {
-                        // For lobby providers, send empty gameCode to open the whole lobby
-                        const launchGameCode = lobbyProvider ? '' : gameCode;
-                        console.log(`🚀 launchGame(${externalUsername}, '${launchGameCode}', '${providerCode}', '${lang}')`);
+                        // Always send original gameCode — BetflixService handles prefix stripping
+                        console.log(`🚀 launchGame(${externalUsername}, '${gameCode}', '${providerCode}', '${lang}')`);
 
-                        url = await mainAgent.launchGame(externalUsername, launchGameCode, providerCode, lang);
+                        url = await mainAgent.launchGame(externalUsername, gameCode, providerCode, lang);
                         console.log(`🚀 Result:`, url ? `URL=${url.substring(0, 100)}...` : 'NULL');
                     }
                 }

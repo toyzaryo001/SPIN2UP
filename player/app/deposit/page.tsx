@@ -90,11 +90,11 @@ export default function DepositPage() {
 
     const fetchConfig = async () => {
         try {
-            const res = await fetch(`${API_URL}/auth/config?domain=${window.location.hostname}`);
+            const res = await fetch(`${API_URL}/public/settings`);
             const data = await res.json();
-            if (data.success && data.data && data.data.features) {
-                setFeatures(data.data.features);
-                if (data.data.features.deposit === false && activeTab === 'deposit') {
+            if (data.features) {
+                setFeatures(data.features);
+                if (data.features.deposit === false && activeTab === 'deposit') {
                     setActiveTab('withdraw');
                 }
             }

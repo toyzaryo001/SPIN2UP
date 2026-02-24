@@ -178,14 +178,12 @@ export default function FeaturesPage() {
                         <RefreshCw size={16} />
                         รีเฟรช
                     </button>
-                    {features.length === 0 && (
-                        <button
-                            onClick={initFeatures}
-                            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 rounded-lg text-black font-bold text-sm transition-colors"
-                        >
-                            สร้าง Features เริ่มต้น
-                        </button>
-                    )}
+                    <button
+                        onClick={initFeatures}
+                        className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 rounded-lg text-black font-bold text-sm transition-colors"
+                    >
+                        ซิงค์ Features
+                    </button>
                 </div>
             </div>
 
@@ -204,7 +202,7 @@ export default function FeaturesPage() {
             ) : features.length === 0 ? (
                 <div className="text-center py-10 text-slate-400">
                     <p>ยังไม่มี features</p>
-                    <p className="text-sm mt-2">กดปุ่ม &ldquo;สร้าง Features เริ่มต้น&rdquo; เพื่อสร้าง</p>
+                    <p className="text-sm mt-2">กดปุ่ม &ldquo;ซิงค์ Features&rdquo; เพื่อสร้าง</p>
                 </div>
             ) : (
                 <div className="space-y-6">

@@ -261,8 +261,11 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
 
                 if (user) {
                     const creds = await agent.register(user.id, user.phone);
+                    console.log(`🏟️ Lobby Register result:`, creds ? `username=${creds.username}` : 'null');
                     if (creds) {
-                        url = await agent.launchGame(creds.username, gameCode, providerCode, lang);
+                        // Lobby providers: send empty gameCode to open the provider lobby
+                        url = await agent.launchGame(creds.username, '', providerCode, lang);
+                        console.log(`🏟️ Lobby Launch URL:`, url ? url.substring(0, 80) + '...' : 'null');
                     }
                 }
             } catch (e: any) {

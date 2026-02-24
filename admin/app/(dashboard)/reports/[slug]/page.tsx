@@ -682,7 +682,32 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                             <td className="px-6 py-4">
                                                 <div className="flex gap-2">
                                                     <button onClick={() => setResolveModal({ log, userQuery: '', usersList: [], selectedUser: null })} className="p-2 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200" title="อนุมัติ"><Check size={16} /></button>
-                                                    <button onClick={() => { setResolveModal({ log, userQuery: '', usersList: [], selectedUser: null }); setTimeout(() => handleResolve('REJECT'), 100); }} className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200" title="ปฏิเสธ"><X size={16} /></button>
+                                                    <button onClick={() => {
+                                                        setConfirmModal({
+                                                            isOpen: true,
+                                                            title: "ยืนยันการปฏิเสธ",
+                                                            message: `คุณต้องการปฏิเสธรายการ ${formatBaht(log.amount)} จาก ${log.sourceBank} ใช่หรือไม่?`,
+                                                            isDestructive: true,
+                                                            onConfirm: async () => {
+                                                                setResolving(true);
+                                                                try {
+                                                                    const res = await api.post('/admin/transactions/resolve-sms', {
+                                                                        logId: log.id,
+                                                                        action: 'REJECT',
+                                                                    });
+                                                                    if (res.data.success) {
+                                                                        setConfirmModal(null);
+                                                                        fetchUnmatchedLogs();
+                                                                        toast.success("ปฏิเสธรายการสำเร็จ");
+                                                                    }
+                                                                } catch (error: any) {
+                                                                    toast.error(error.response?.data?.message || "เกิดข้อผิดพลาด");
+                                                                } finally {
+                                                                    setResolving(false);
+                                                                }
+                                                            }
+                                                        });
+                                                    }} className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200" title="ปฏิเสธ"><X size={16} /></button>
                                                 </div>
                                             </td>
                                         </tr>

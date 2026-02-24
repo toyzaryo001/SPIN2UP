@@ -253,7 +253,7 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
 
 
         // 1. If not lobby or lobby failed, try to find local Game record
-        if (!url) {
+        if (!url && !lobbyProvider) {
             const game = await prisma.game.findFirst({
                 where: {
                     slug: gameCode,
@@ -272,29 +272,45 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
                     console.error('❌ WalletService Launch Error:', e);
                     errorDetail = e.message;
                 }
-            } else {
-                // Fallback: Legacy/Direct mode (Main Agent)
-                console.log('⚠️ Game not found in local DB. Fallback to Main Agent Direct Launch.');
+            }
+        }
 
-                try {
-                    const { AgentFactory } = await import('../services/agents/AgentFactory.js');
-                    const mainAgent = await AgentFactory.getMainAgent();
+        // 2. If still no URL (lobby or game not in DB), use Main Agent Direct Launch
+        if (!url) {
+            console.log(`🚀 Direct Agent Launch — lobbyProvider: ${lobbyProvider?.name || 'none'}, providerCode: ${providerCode}, gameCode: ${gameCode}`);
 
-                    const user = await prisma.user.findUnique({
-                        where: { id: userId },
-                        include: { externalAccounts: true }
-                    });
+            try {
+                const { AgentFactory } = await import('../services/agents/AgentFactory.js');
+                const mainAgent = await AgentFactory.getMainAgent();
+                console.log(`🚀 Got main agent: ${mainAgent.agentCode}`);
 
-                    if (user) {
-                        const creds = await mainAgent.register(user.id, user.phone);
-                        if (creds) {
-                            url = await mainAgent.launchGame(creds.username, gameCode, providerCode, lang);
-                        }
+                const user = await prisma.user.findUnique({
+                    where: { id: userId },
+                    include: { externalAccounts: true }
+                });
+
+                if (!user) {
+                    console.error('❌ User not found:', userId);
+                    errorDetail = 'User not found';
+                } else {
+                    console.log(`🚀 User found: ${user.username}, phone: ${user.phone}`);
+
+                    const creds = await mainAgent.register(user.id, user.phone);
+                    console.log(`🚀 Register result:`, creds ? `username=${creds.username}` : 'NULL — register failed');
+
+                    if (creds) {
+                        // For lobby providers, send empty gameCode to open the whole lobby
+                        // For regular games, send the original gameCode  
+                        const launchGameCode = lobbyProvider ? '' : gameCode;
+                        console.log(`🚀 Calling launchGame(${creds.username}, gameCode='${launchGameCode}', provider='${providerCode}', lang='${lang}')`);
+
+                        url = await mainAgent.launchGame(creds.username, launchGameCode, providerCode, lang);
+                        console.log(`🚀 LaunchGame result:`, url ? `URL=${url.substring(0, 100)}...` : 'NULL — launch failed');
                     }
-                } catch (e: any) {
-                    console.error('❌ Direct Launch Error:', e);
-                    errorDetail = e.message;
                 }
+            } catch (e: any) {
+                console.error('❌ Direct Launch Error:', e.message, e.stack);
+                errorDetail = e.message;
             }
         }
 

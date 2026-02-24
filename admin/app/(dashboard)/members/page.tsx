@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { formatBaht, formatDate } from "@/lib/utils";
-import { Search, UserPlus, Edit, Ban, X, Save, AlertTriangle, CheckCircle, Trash2, RotateCw } from "lucide-react";
+import { Search, UserPlus, Edit, X, Save, AlertTriangle, CheckCircle, Trash2, RotateCw, Copy, History, Ban, ArrowUpCircle, ArrowDownCircle, TrendingUp, TrendingDown } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface User {
@@ -20,6 +20,77 @@ interface User {
     createdAt: string;
 }
 
+interface HistoryItem {
+    id: number;
+    type: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+    subType?: string;
+    note?: string;
+}
+
+// --- Bank Logo ---
+const BANK_FILE_MAP: Record<string, string> = {
+    "kbank": "KBANK", "scb": "SCB", "ktb": "KTB", "bbl": "BBL", "bay": "BAY",
+    "tmb": "TTB", "ttb": "TTB", "gsb": "GSB", "ghb": "GHB", "baac": "BAAC",
+    "uob": "UOB", "cimb": "CIMB", "kkp": "KKP", "tisco": "TISCO", "lhb": "LHB",
+    "tcrb": "TCRB", "ibank": "IBANK", "icbc": "ICBC", "hsbc": "HSBC", "citi": "CITI",
+    "promptpay": "PromptPay", "truemoney": "TrueMoney", "lh": "LHB", "isbt": "IBANK", "sme": "SME",
+};
+
+function BankLogo({ code, size = 28 }: { code: string; size?: number }) {
+    const normalizedCode = code.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const fileName = BANK_FILE_MAP[normalizedCode] || code.toUpperCase();
+    const logoUrl = `/bank-logos/${fileName}.png`;
+
+    return (
+        <img
+            src={logoUrl}
+            alt={code}
+            width={size}
+            height={size}
+            className="rounded bg-white object-contain shrink-0"
+            onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent && !parent.querySelector('.bank-fallback')) {
+                    const fallback = document.createElement('div');
+                    fallback.className = 'bank-fallback rounded bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold shrink-0';
+                    fallback.style.width = `${size}px`;
+                    fallback.style.height = `${size}px`;
+                    fallback.style.fontSize = `${size * 0.35}px`;
+                    fallback.textContent = code.slice(0, 2).toUpperCase();
+                    parent.appendChild(fallback);
+                }
+            }}
+        />
+    );
+}
+
+// --- Copy to Clipboard ---
+function CopyButton({ text }: { text: string }) {
+    const handleCopy = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            await navigator.clipboard.writeText(text);
+            toast.success("คัดลอกแล้ว", { duration: 1500 });
+        } catch {
+            toast.error("คัดลอกไม่สำเร็จ");
+        }
+    };
+
+    return (
+        <button
+            onClick={handleCopy}
+            className="ml-1.5 p-0.5 text-slate-300 hover:text-blue-500 transition-colors rounded"
+            title="คัดลอก Username"
+        >
+            <Copy size={13} />
+        </button>
+    );
+}
+
 export default function MembersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -29,12 +100,14 @@ export default function MembersPage() {
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [statusUser, setStatusUser] = useState<User | null>(null);
     const [deleteUser, setDeleteUser] = useState<User | null>(null);
-    const [currentUserRole, setCurrentUserRole] = useState<string>("");
+    const [historyUser, setHistoryUser] = useState<User | null>(null);
+    const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historySummary, setHistorySummary] = useState({ totalDeposit: 0, totalWithdraw: 0, profit: 0 });
 
     const [formData, setFormData] = useState({
         username: "",
@@ -69,19 +142,6 @@ export default function MembersPage() {
         return () => clearTimeout(timer);
     }, [search, page]);
 
-    // Get current user role from token
-    useEffect(() => {
-        const token = localStorage.getItem("admin_token");
-        if (token) {
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                setCurrentUserRole(payload.role || "");
-            } catch (e) {
-                console.error("Failed to parse token");
-            }
-        }
-    }, []);
-
     const openCreateModal = () => {
         setEditingUser(null);
         setFormData({ username: "", fullName: "", phone: "", password: "", bankName: "", bankAccount: "", lineId: "" });
@@ -102,9 +162,40 @@ export default function MembersPage() {
         setIsModalOpen(true);
     };
 
-    const openStatusModal = (user: User) => {
-        setStatusUser(user);
-        setIsStatusModalOpen(true);
+    const openHistoryModal = async (user: User) => {
+        setHistoryUser(user);
+        setIsHistoryModalOpen(true);
+        setHistoryLoading(true);
+        try {
+            const res = await api.get(`/admin/users/${user.id}`);
+            if (res.data.success) {
+                const userData = res.data.data;
+                // Get transactions
+                const txRes = await api.get(`/admin/transactions?userId=${user.id}&limit=50`);
+                if (txRes.data.success) {
+                    setHistoryData(txRes.data.data.transactions || txRes.data.data || []);
+                }
+                // Calculate summary
+                const allTx = txRes.data?.data?.transactions || txRes.data?.data || [];
+                let totalDeposit = 0, totalWithdraw = 0;
+                allTx.forEach((tx: any) => {
+                    if (tx.status === 'COMPLETED' || tx.status === 'APPROVED') {
+                        if (tx.type === 'DEPOSIT') totalDeposit += Number(tx.amount);
+                        if (tx.type === 'WITHDRAW') totalWithdraw += Number(tx.amount);
+                    }
+                });
+                setHistorySummary({
+                    totalDeposit,
+                    totalWithdraw,
+                    profit: totalDeposit - totalWithdraw
+                });
+            }
+        } catch (error) {
+            console.error("Fetch history error:", error);
+            toast.error("ไม่สามารถโหลดประวัติได้");
+        } finally {
+            setHistoryLoading(false);
+        }
     };
 
     const handleSave = async () => {
@@ -126,12 +217,13 @@ export default function MembersPage() {
     };
 
     const handleToggleStatus = async () => {
-        if (!statusUser) return;
+        if (!editingUser) return;
         try {
-            const newStatus = statusUser.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-            await api.patch(`/admin/users/${statusUser.id}/status`, { status: newStatus });
-            setIsStatusModalOpen(false);
+            const newStatus = editingUser.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+            await api.patch(`/admin/users/${editingUser.id}/status`, { status: newStatus });
+            setEditingUser({ ...editingUser, status: newStatus });
             fetchUsers();
+            toast.success(newStatus === "SUSPENDED" ? "ระงับบัญชีแล้ว" : "เปิดใช้งานบัญชีแล้ว");
         } catch (error) {
             console.error("Status change error:", error);
             toast.error("เกิดข้อผิดพลาด");
@@ -227,7 +319,10 @@ export default function MembersPage() {
                                     <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div>
-                                                <p className="font-bold text-slate-800">{user.username}</p>
+                                                <div className="flex items-center">
+                                                    <p className="font-bold text-slate-800">{user.username}</p>
+                                                    <CopyButton text={user.username} />
+                                                </div>
                                                 <p className="text-slate-500 mt-0.5">{user.fullName}</p>
                                                 <div className="flex items-center gap-1 text-slate-400 mt-1 text-xs">
                                                     <span>{user.phone}</span>
@@ -241,8 +336,13 @@ export default function MembersPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-slate-600">
-                                            <p>{user.bankName}</p>
-                                            <p className="text-slate-500 text-xs mt-0.5">{user.bankAccount}</p>
+                                            <div className="flex items-center gap-2">
+                                                <BankLogo code={user.bankName} />
+                                                <div>
+                                                    <p className="font-medium">{user.bankName}</p>
+                                                    <p className="text-slate-500 text-xs mt-0.5">{user.bankAccount}</p>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <p className="font-bold text-emerald-600">{formatBaht(user.balance)}</p>
@@ -266,12 +366,12 @@ export default function MembersPage() {
                                             {formatDate(user.createdAt)}
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
+                                            <div className="flex items-center justify-center gap-1">
                                                 <button onClick={() => openEditModal(user)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="แก้ไข">
                                                     <Edit size={18} />
                                                 </button>
-                                                <button onClick={() => openStatusModal(user)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="เปลี่ยนสถานะ">
-                                                    <Ban size={18} />
+                                                <button onClick={() => openHistoryModal(user)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="ประวัติ">
+                                                    <History size={18} />
                                                 </button>
                                                 <button onClick={() => openDeleteModal(user)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="ลบสมาชิก">
                                                     <Trash2 size={18} />
@@ -318,14 +418,23 @@ export default function MembersPage() {
                             </button>
                         </div>
                         <div className="space-y-4">
+                            {/* Username (locked when editing) */}
+                            {editingUser && (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                                    <div className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-500 select-all cursor-default flex items-center gap-2">
+                                        <span>{editingUser.username}</span>
+                                        <span className="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded">ล็อค</span>
+                                    </div>
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">เบอร์โทร</label>
                                 <input
                                     type="text"
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    disabled={!!editingUser}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg disabled:bg-slate-100 text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     placeholder="0812345678"
                                 />
                                 {!editingUser && (
@@ -400,6 +509,39 @@ export default function MembersPage() {
                                     className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                 />
                             </div>
+
+                            {/* Suspend / Activate Toggle (only in edit mode) */}
+                            {editingUser && (
+                                <div className="border-t border-slate-200 pt-4 mt-2">
+                                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${editingUser.status === 'ACTIVE' ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                                                {editingUser.status === 'ACTIVE' ? (
+                                                    <CheckCircle className="text-emerald-500" size={18} />
+                                                ) : (
+                                                    <Ban className="text-red-500" size={18} />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-slate-700">
+                                                    สถานะบัญชี: <span className={editingUser.status === 'ACTIVE' ? 'text-emerald-600' : 'text-red-600'}>
+                                                        {editingUser.status === 'ACTIVE' ? 'ปกติ' : 'ระงับ'}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={handleToggleStatus}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${editingUser.status === 'ACTIVE'
+                                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                                : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                                }`}
+                                        >
+                                            {editingUser.status === 'ACTIVE' ? 'ระงับบัญชี' : 'เปิดใช้งาน'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
@@ -422,47 +564,109 @@ export default function MembersPage() {
             )
             }
 
-            {/* Status Change Modal */}
-            {
-                isStatusModalOpen && statusUser && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-xl w-full max-w-sm p-6 shadow-2xl">
-                            <div className="flex flex-col items-center text-center">
-                                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${statusUser.status === 'ACTIVE' ? 'bg-red-100' : 'bg-emerald-100'}`}>
-                                    {statusUser.status === 'ACTIVE' ? (
-                                        <AlertTriangle className="text-red-500" size={32} />
-                                    ) : (
-                                        <CheckCircle className="text-emerald-500" size={32} />
-                                    )}
-                                </div>
-                                <h3 className="text-xl font-bold mb-2">
-                                    {statusUser.status === 'ACTIVE' ? 'ระงับบัญชี' : 'เปิดใช้งานบัญชี'}
-                                </h3>
-                                <p className="text-slate-500 mb-6">
-                                    {statusUser.status === 'ACTIVE'
-                                        ? `คุณต้องการระงับบัญชี ${statusUser.username} ใช่หรือไม่?`
-                                        : `คุณต้องการเปิดใช้งานบัญชี ${statusUser.username} ใช่หรือไม่?`
-                                    }
-                                </p>
+            {/* History Modal */}
+            {isHistoryModalOpen && historyUser && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-800">ประวัติสมาชิก</h3>
+                                <p className="text-slate-500 text-sm">{historyUser.username} — {historyUser.fullName}</p>
                             </div>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setIsStatusModalOpen(false)}
-                                    className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
-                                >
-                                    ยกเลิก
-                                </button>
-                                <button
-                                    onClick={handleToggleStatus}
-                                    className={`flex-1 px-4 py-2 text-white rounded-lg ${statusUser.status === 'ACTIVE' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
-                                >
-                                    ยืนยัน
-                                </button>
-                            </div>
+                            <button onClick={() => setIsHistoryModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                                <X size={20} />
+                            </button>
                         </div>
+
+                        {historyLoading ? (
+                            <div className="py-12 text-center text-slate-400">กำลังโหลดข้อมูล...</div>
+                        ) : (
+                            <>
+                                {/* Summary Cards */}
+                                <div className="grid grid-cols-3 gap-3 mb-6">
+                                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+                                        <div className="flex items-center justify-center gap-1 text-emerald-500 mb-1">
+                                            <ArrowDownCircle size={16} />
+                                            <span className="text-xs font-medium">ฝากรวม</span>
+                                        </div>
+                                        <p className="text-xl font-bold text-emerald-700">{formatBaht(historySummary.totalDeposit)}</p>
+                                    </div>
+                                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                                        <div className="flex items-center justify-center gap-1 text-red-500 mb-1">
+                                            <ArrowUpCircle size={16} />
+                                            <span className="text-xs font-medium">ถอนรวม</span>
+                                        </div>
+                                        <p className="text-xl font-bold text-red-700">{formatBaht(historySummary.totalWithdraw)}</p>
+                                    </div>
+                                    <div className={`${historySummary.profit >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'} border rounded-xl p-4 text-center`}>
+                                        <div className={`flex items-center justify-center gap-1 ${historySummary.profit >= 0 ? 'text-blue-500' : 'text-amber-500'} mb-1`}>
+                                            {historySummary.profit >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                                            <span className="text-xs font-medium">กำไร-ขาดทุน</span>
+                                        </div>
+                                        <p className={`text-xl font-bold ${historySummary.profit >= 0 ? 'text-blue-700' : 'text-amber-700'}`}>
+                                            {historySummary.profit >= 0 ? '+' : ''}{formatBaht(historySummary.profit)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Transaction List */}
+                                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left">ประเภท</th>
+                                                <th className="px-4 py-3 text-right">จำนวน</th>
+                                                <th className="px-4 py-3 text-center">สถานะ</th>
+                                                <th className="px-4 py-3 text-right">เวลา</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {historyData.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="px-4 py-8 text-center text-slate-400">ไม่พบรายการ</td>
+                                                </tr>
+                                            ) : (
+                                                historyData.slice(0, 30).map((tx) => (
+                                                    <tr key={tx.id} className="hover:bg-slate-50">
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${tx.type === 'DEPOSIT' ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                                                                    {tx.type === 'DEPOSIT' ? (
+                                                                        <ArrowDownCircle size={14} className="text-emerald-500" />
+                                                                    ) : (
+                                                                        <ArrowUpCircle size={14} className="text-red-500" />
+                                                                    )}
+                                                                </div>
+                                                                <span className="font-medium text-slate-700">{tx.type === 'DEPOSIT' ? 'ฝาก' : 'ถอน'}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className={`px-4 py-3 text-right font-bold ${tx.type === 'DEPOSIT' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                            {tx.type === 'DEPOSIT' ? '+' : '-'}{formatBaht(tx.amount)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${tx.status === 'COMPLETED' || tx.status === 'APPROVED'
+                                                                ? 'bg-emerald-100 text-emerald-700'
+                                                                : tx.status === 'PENDING'
+                                                                    ? 'bg-yellow-100 text-yellow-700'
+                                                                    : 'bg-red-100 text-red-700'
+                                                                }`}>
+                                                                {tx.status === 'COMPLETED' || tx.status === 'APPROVED' ? 'สำเร็จ' : tx.status === 'PENDING' ? 'รอดำเนินการ' : 'ไม่สำเร็จ'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right text-xs text-slate-500">
+                                                            {formatDate(tx.createdAt)}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
+                        )}
                     </div>
-                )
-            }
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && deleteUser && (

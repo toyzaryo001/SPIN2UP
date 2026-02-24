@@ -29,6 +29,7 @@ const PERMISSION_MATRIX = [
         features: [
             { key: 'deposit', label: 'ฝากเงิน (manual)' },
             { key: 'withdraw', label: 'ถอนเงิน (manual)' },
+            { key: 'withdrawals', label: 'รายการรอถอน' },
             { key: 'history', label: 'ประวัติรายการ' },
         ]
     },
@@ -56,6 +57,7 @@ const PERMISSION_MATRIX = [
             { key: 'notify', label: 'แจ้งเตือน (Line/TG)' },
             { key: 'banks', label: 'บัญชีธนาคาร' },
             { key: 'truemoney', label: 'TrueMoney' },
+            { key: 'logobank', label: 'LogoBank' },
             { key: 'payment', label: 'ระบบชำระเงิน' },
         ]
     },
@@ -84,6 +86,7 @@ const PERMISSION_MATRIX = [
             { key: 'categories', label: 'หมวดหมู่เกม' },
             { key: 'providers', label: 'ค่ายเกม' },
             { key: 'games', label: 'จัดการเกม' },
+            { key: 'mix_board', label: 'ตั้งค่าบอร์ดเกม (Mix)' },
             { key: 'connection_test', label: 'ทดสอบเชื่อมต่อ' },
         ]
     },
@@ -94,6 +97,7 @@ const PERMISSION_MATRIX = [
             { key: 'cashback', label: 'ตั้งค่ายอดเสีย' },
             { key: 'streak', label: 'ตั้งค่าฝากสะสม' },
             { key: 'commission', label: 'ตั้งค่าคอมมิชชั่น' },
+            { key: 'history', label: 'ประวัติการรับรางวัล' },
             { key: 'referral', label: 'แนะนำเพื่อน' },
             { key: 'ranks', label: 'จัดการ Rank' },
         ]

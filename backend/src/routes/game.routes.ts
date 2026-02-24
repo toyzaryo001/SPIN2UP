@@ -232,49 +232,27 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
 
         console.log('🎮 Launch Request:', { providerCode, gameCode, lang, userId });
 
-        // 1. Try to find local Game record to determine Agent
-        // We match gameCode with slug (assuming they are consistent) or just provider match?
-        // Usually gameCode passed from frontend IS the slug in our DB
-        const game = await prisma.game.findFirst({
-            where: {
-                slug: gameCode,
-                isActive: true,
-                // provider: { slug: providerCode } // Remove strict check for Mix support
-            },
-            include: { provider: true }
-        });
-
         let url: string | null = null;
         let errorDetail = '';
 
-        if (game) {
-            console.log(`✅ Found Local Game ID: ${game.id} (Agent ID: ${game.agentId || 'Default'})`);
+        // 0. Check if this is a Lobby-mode provider (no individual Game records in DB)
+        const lobbyProvider = await prisma.gameProvider.findFirst({
+            where: {
+                slug: providerCode,
+                isLobbyMode: true,
+                isActive: true
+            },
+            include: { defaultAgent: true }
+        });
 
-            // Critical Mix Fix: If providerCode doesn't match game.provider.slug, we might be in a Mix scenario.
-            // But WalletService needs the *original* provider code to launch the game on the Agent.
-            // game.upstreamProviderCode should have this. If not, we fallback to game.provider.slug.
-
-            try {
-                // Use WalletService which handles Agent Swapping
-                const { WalletService } = await import('../services/WalletService.js');
-                url = await WalletService.launchGame(userId, game.id, lang);
-            } catch (e: any) {
-                console.error('❌ WalletService Launch Error:', e);
-                errorDetail = e.message;
-            }
-        } else {
-            // Fallback: Legacy/Direct mode (Assume Main Agent / Betflix)
-            console.log('⚠️ Game not found in local DB. Fallback to Main Agent Direct Launch.');
+        if (lobbyProvider) {
+            console.log(`🏟️ Lobby Mode Provider: ${lobbyProvider.name} (Agent ID: ${lobbyProvider.defaultAgentId || 'Main'})`);
 
             try {
                 const { AgentFactory } = await import('../services/agents/AgentFactory.js');
-                const mainAgent = await AgentFactory.getMainAgent();
-
-                // We need the User's external account for this Agent
-                // For Main Agent (Betflix), we can try to find or register on the fly?
-                // But WalletService logic is cleaner. 
-                // Let's just try to launch directly if we have username?
-                // Actually, best effort:
+                const agent = lobbyProvider.defaultAgentId
+                    ? await AgentFactory.getAgentById(lobbyProvider.defaultAgentId)
+                    : await AgentFactory.getMainAgent();
 
                 const user = await prisma.user.findUnique({
                     where: { id: userId },
@@ -282,18 +260,60 @@ router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
                 });
 
                 if (user) {
-                    // Register if needed (simple check)
-                    let extAccount = user.externalAccounts.find(a => a.agentId === (mainAgent as any).configCache?.id); // Hacky access?
-                    // Better: Just register to ensure we have credentials
-                    const creds = await mainAgent.register(user.id, user.phone);
-
+                    const creds = await agent.register(user.id, user.phone);
                     if (creds) {
-                        url = await mainAgent.launchGame(creds.username, gameCode, providerCode, lang);
+                        url = await agent.launchGame(creds.username, gameCode, providerCode, lang);
                     }
                 }
             } catch (e: any) {
-                console.error('❌ Direct Launch Error:', e);
+                console.error('❌ Lobby Launch Error:', e);
                 errorDetail = e.message;
+            }
+        }
+
+        // 1. If not lobby or lobby failed, try to find local Game record
+        if (!url) {
+            const game = await prisma.game.findFirst({
+                where: {
+                    slug: gameCode,
+                    isActive: true,
+                },
+                include: { provider: true }
+            });
+
+            if (game) {
+                console.log(`✅ Found Local Game ID: ${game.id} (Agent ID: ${game.agentId || 'Default'})`);
+
+                try {
+                    const { WalletService } = await import('../services/WalletService.js');
+                    url = await WalletService.launchGame(userId, game.id, lang);
+                } catch (e: any) {
+                    console.error('❌ WalletService Launch Error:', e);
+                    errorDetail = e.message;
+                }
+            } else {
+                // Fallback: Legacy/Direct mode (Main Agent)
+                console.log('⚠️ Game not found in local DB. Fallback to Main Agent Direct Launch.');
+
+                try {
+                    const { AgentFactory } = await import('../services/agents/AgentFactory.js');
+                    const mainAgent = await AgentFactory.getMainAgent();
+
+                    const user = await prisma.user.findUnique({
+                        where: { id: userId },
+                        include: { externalAccounts: true }
+                    });
+
+                    if (user) {
+                        const creds = await mainAgent.register(user.id, user.phone);
+                        if (creds) {
+                            url = await mainAgent.launchGame(creds.username, gameCode, providerCode, lang);
+                        }
+                    }
+                } catch (e: any) {
+                    console.error('❌ Direct Launch Error:', e);
+                    errorDetail = e.message;
+                }
             }
         }
 

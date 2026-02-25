@@ -15,7 +15,7 @@ const reportConfig: Record<string, { title: string; columns: string[] }> = {
     "bonus": { title: "รายงานโบนัส", columns: ["วันที่", "Username", "ประเภท", "จำนวนเงิน", "สถานะ"] },
     "profit-loss": { title: "รายงานกำไรขาดทุน", columns: ["ยอดฝากรวม", "ยอดถอนรวม", "โบนัสรวม", "กำไรสุทธิ"] },
     "inactive-users": { title: "รายงานยูสไม่ออนไลน์", columns: ["Username", "ชื่อ-นามสกุล", "เข้าใช้ล่าสุด", "ยอดคงเหลือ", "สถานะ"] },
-    "win-lose": { title: "รายงานแพ้-ชนะ", columns: ["Username", "ยอดเล่นรวม", "ยอดชนะ", "ยอดแพ้", "RTP เฉลี่ย"] },
+    "win-lose": { title: "รายงานแพ้-ชนะ", columns: ["Username", "ยอดเล่นรวม", "ยอดชนะ", "ยอดแพ้", "RTP เฉลี่ย", "แหล่งข้อมูล"] },
 };
 
 // Calculate date range from preset
@@ -437,6 +437,11 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     <td className="px-6 py-4">
                         <span className={`text-xs px-2 py-1 rounded ${Number(item.rtp) > 100 ? 'bg-red-100 text-red-700' : Number(item.rtp) > 90 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                             {item.rtp}%
+                        </span>
+                    </td>
+                    <td className="px-6 py-4">
+                        <span className={`text-xs px-2 py-1 rounded ${item.source === 'Nexus' ? 'bg-purple-100 text-purple-700' : item.source === 'ทั้งคู่' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {item.source || 'BetFlix'}
                         </span>
                     </td>
                 </tr>

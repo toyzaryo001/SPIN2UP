@@ -241,6 +241,69 @@ export class NexusProvider implements IAgentService {
         return [];
     }
 
+    /**
+     * Get Game Log for a user (aggregated summary)
+     * Nexus returns individual bet records — we sum them up
+     * @param userCode External username on Nexus
+     * @param start Start datetime "YYYY-MM-DD HH:mm:ss"
+     * @param end End datetime "YYYY-MM-DD HH:mm:ss"
+     */
+    async getGameLog(userCode: string, start: string, end: string): Promise<{ totalBet: number; totalWin: number; count: number } | null> {
+        try {
+            let totalBet = 0;
+            let totalWin = 0;
+            let count = 0;
+            let page = 0;
+            const perPage = 1000;
+            let hasMore = true;
+
+            while (hasMore) {
+                const res = await this.request('get_game_log', {
+                    user_code: userCode,
+                    game_type: 'slot',
+                    start,
+                    end,
+                    page,
+                    perPage,
+                });
+
+                if (res.status !== 1 || !res.slot) {
+                    // If first page fails, return null
+                    if (page === 0) return null;
+                    break;
+                }
+
+                const records: any[] = res.slot || [];
+                for (const r of records) {
+                    // txn_type: debit (bet only), credit (win only), debit_credit (both)
+                    if (r.txn_type === 'debit') {
+                        totalBet += Number(r.bet_money || 0);
+                    } else if (r.txn_type === 'credit') {
+                        totalWin += Number(r.win_money || 0);
+                    } else {
+                        // debit_credit — both valid
+                        totalBet += Number(r.bet_money || 0);
+                        totalWin += Number(r.win_money || 0);
+                    }
+                    count++;
+                }
+
+                // Check if we need more pages
+                const totalCount = res.total_count || 0;
+                if ((page + 1) * perPage >= totalCount || records.length < perPage) {
+                    hasMore = false;
+                } else {
+                    page++;
+                }
+            }
+
+            return { totalBet, totalWin, count };
+        } catch (error: any) {
+            console.error(`[Nexus] getGameLog error for ${userCode}:`, error.message);
+            return null;
+        }
+    }
+
     async debug(): Promise<any> {
         return await this.request('provider_list');
     }

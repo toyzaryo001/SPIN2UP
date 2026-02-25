@@ -457,46 +457,61 @@ router.get('/all-deposits', requirePermission('reports', 'view_deposits'), async
     }
 });
 
-// GET /api/admin/reports/win-lose - รายงานแพ้-ชนะทั้งหมด (Betflix API)
+// GET /api/admin/reports/win-lose - รายงานแพ้-ชนะทั้งหมด (Betflix + Nexus)
 router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async (req, res) => {
     try {
         const { preset = 'today', startDate, endDate, page = 1, limit = 20, search } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
 
-        // Format dates for Betflix API (YYYY-MM-DD)
-        // Fix: Use UTC+7 for date string formatting to ensure we query the correct "local" day
+        // Format dates
         const startStr = dayjs(start).utcOffset(7).format('YYYY-MM-DD');
         const endStr = dayjs(end).utcOffset(7).format('YYYY-MM-DD');
+        const nexusStartStr = dayjs(start).utcOffset(7).format('YYYY-MM-DD HH:mm:ss');
+        const nexusEndStr = dayjs(end).utcOffset(7).format('YYYY-MM-DD HH:mm:ss');
 
-        // Get all users with betflixUsername
-        const where: any = {
-            betflixUsername: { not: null },
-            status: { not: 'DELETED' },
-        };
-        if (search) {
-            where.OR = [
-                { username: { contains: search } },
-                { fullName: { contains: search } },
-            ];
-        }
+        // Build search filter
+        const searchFilter = search ? {
+            OR: [
+                { username: { contains: search as string } },
+                { fullName: { contains: search as string } },
+            ],
+        } : {};
 
-        const users = await prisma.user.findMany({
-            where,
-            select: {
-                id: true,
-                username: true,
-                fullName: true,
-                betflixUsername: true,
+        // ========== 1. BetFlix Users ==========
+        const betflixUsersPromise = prisma.user.findMany({
+            where: {
+                betflixUsername: { not: null },
+                status: { not: 'DELETED' },
+                ...searchFilter,
             },
+            select: { id: true, username: true, fullName: true, betflixUsername: true },
             orderBy: { createdAt: 'desc' },
         });
 
-        // Fetch Betflix report for each user (concurrency limited)
-        const results: any[] = [];
+        // ========== 2. Nexus Users (from UserExternalAccount) ==========
+        const nexusAgent = await prisma.agentConfig.findUnique({ where: { code: 'NEXUS' } });
+        const nexusUsersPromise = nexusAgent ? prisma.userExternalAccount.findMany({
+            where: { agentId: nexusAgent.id },
+            include: {
+                user: {
+                    select: { id: true, username: true, fullName: true, status: true },
+                },
+            },
+        }).then(accounts => accounts.filter(a => {
+            if (a.user.status === 'DELETED') return false;
+            if (!search) return true;
+            const s = (search as string).toLowerCase();
+            return (a.user.username?.toLowerCase().includes(s) || a.user.fullName?.toLowerCase().includes(s));
+        })) : Promise.resolve([]);
+
+        const [betflixUsers, nexusAccounts] = await Promise.all([betflixUsersPromise, nexusUsersPromise]);
+
+        // ========== 3. Fetch BetFlix reports (batch of 5) ==========
+        const betflixResults = new Map<number, { turnover: number; winloss: number }>();
         const batchSize = 5;
 
-        for (let i = 0; i < users.length; i += batchSize) {
-            const batch = users.slice(i, i + batchSize);
+        for (let i = 0; i < betflixUsers.length; i += batchSize) {
+            const batch = betflixUsers.slice(i, i + batchSize);
             const batchResults = await Promise.all(
                 batch.map(async (user) => {
                     try {
@@ -505,20 +520,11 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
                             startStr,
                             endStr
                         );
-
                         if (report) {
-                            const turnover = Number(report.turnover || 0);
-                            const winloss = Number(report.winloss || 0);
-                            const validAmount = Number(report.valid_amount || 0);
-
                             return {
-                                id: user.id,
-                                username: user.username,
-                                fullName: user.fullName,
-                                turnover,
-                                validAmount,
-                                winloss,
-                                rtp: turnover > 0 ? ((turnover + winloss) / turnover * 100).toFixed(2) : '0.00',
+                                userId: user.id,
+                                turnover: Number(report.turnover || 0),
+                                winloss: Number(report.winloss || 0),
                             };
                         }
                         return null;
@@ -527,23 +533,99 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
                     }
                 })
             );
-            results.push(...batchResults.filter(r => r !== null));
+            for (const r of batchResults) {
+                if (r) betflixResults.set(r.userId, { turnover: r.turnover, winloss: r.winloss });
+            }
         }
 
-        // Sort by turnover descending (most active first), filter out zero-activity
-        const filtered = results.filter(r => r.turnover > 0 || r.winloss !== 0);
-        filtered.sort((a, b) => b.turnover - a.turnover);
+        // ========== 4. Fetch Nexus game logs (batch of 5) ==========
+        const nexusResults = new Map<number, { turnover: number; winloss: number }>();
+
+        if (nexusAgent && nexusAccounts.length > 0) {
+            const { NexusProvider } = await import('../../services/agents/NexusProvider');
+            const nexus = new NexusProvider();
+
+            for (let i = 0; i < nexusAccounts.length; i += batchSize) {
+                const batch = nexusAccounts.slice(i, i + batchSize);
+                const batchResults = await Promise.all(
+                    batch.map(async (account) => {
+                        try {
+                            const log = await nexus.getGameLog(
+                                account.externalUsername,
+                                nexusStartStr,
+                                nexusEndStr
+                            );
+                            if (log && (log.totalBet > 0 || log.totalWin > 0)) {
+                                const turnover = log.totalBet;
+                                const winloss = log.totalWin - log.totalBet; // win-bet = player profit (negative = house wins)
+                                return {
+                                    userId: account.userId,
+                                    turnover,
+                                    winloss,
+                                };
+                            }
+                            return null;
+                        } catch {
+                            return null;
+                        }
+                    })
+                );
+                for (const r of batchResults) {
+                    if (r) nexusResults.set(r.userId, { turnover: r.turnover, winloss: r.winloss });
+                }
+            }
+        }
+
+        // ========== 5. Merge results per userId ==========
+        const allUserIds = new Set<number>();
+        const userInfoMap = new Map<number, { username: string; fullName: string | null }>();
+
+        for (const u of betflixUsers) {
+            allUserIds.add(u.id);
+            userInfoMap.set(u.id, { username: u.username || '', fullName: u.fullName });
+        }
+        for (const a of nexusAccounts) {
+            allUserIds.add(a.userId);
+            if (!userInfoMap.has(a.userId)) {
+                userInfoMap.set(a.userId, { username: a.user.username || '', fullName: a.user.fullName });
+            }
+        }
+
+        const mergedResults: any[] = [];
+        for (const userId of allUserIds) {
+            const bf = betflixResults.get(userId);
+            const nx = nexusResults.get(userId);
+
+            const turnover = (bf?.turnover || 0) + (nx?.turnover || 0);
+            const winloss = (bf?.winloss || 0) + (nx?.winloss || 0);
+
+            if (turnover === 0 && winloss === 0) continue; // Skip zero activity
+
+            const info = userInfoMap.get(userId)!;
+            mergedResults.push({
+                id: userId,
+                username: info.username,
+                fullName: info.fullName,
+                turnover,
+                winloss,
+                rtp: turnover > 0 ? ((turnover + winloss) / turnover * 100).toFixed(2) : '0.00',
+                source: bf && nx ? 'ทั้งคู่' : bf ? 'BetFlix' : 'Nexus',
+            });
+        }
+
+        // Sort by turnover descending (most active first)
+        mergedResults.sort((a, b) => b.turnover - a.turnover);
 
         // Pagination
-        const total = filtered.length;
+        const total = mergedResults.length;
         const pageNum = Number(page);
         const limitNum = Number(limit);
         const totalPages = Math.ceil(total / limitNum);
-        const paged = filtered.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+        const paged = mergedResults.slice((pageNum - 1) * limitNum, pageNum * limitNum);
 
         // Summary
-        const totalTurnover = filtered.reduce((sum, r) => sum + r.turnover, 0);
-        const totalWinloss = filtered.reduce((sum, r) => sum + r.winloss, 0);
+        const totalTurnover = mergedResults.reduce((sum, r) => sum + r.turnover, 0);
+        const totalWinloss = mergedResults.reduce((sum, r) => sum + r.winloss, 0);
         const avgRtp = totalTurnover > 0 ? ((totalTurnover + totalWinloss) / totalTurnover * 100).toFixed(2) : '0.00';
 
         res.json({

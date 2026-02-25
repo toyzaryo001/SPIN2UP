@@ -21,6 +21,7 @@ function performLogout() {
             }).catch(() => { }); // Ignore errors
         }
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
         localStorage.removeItem('lastActive');
         window.location.href = '/';
     }

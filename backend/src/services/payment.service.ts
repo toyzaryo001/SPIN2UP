@@ -360,8 +360,28 @@ export class PaymentService {
                         console.error('[Payment] Betflix transfer error:', err);
                         betflixError = err.message;
                     }
-                } else {
-                    betflixSuccess = true; // No game ID, treat as system only success
+                } else if (transaction.user) {
+                    // ถ้ายังไม่มี BetFlix account → register ก่อน
+                    try {
+                        const reg = await BetflixService.register(transaction.user.phone);
+                        if (reg) {
+                            await prisma.user.update({
+                                where: { id: transaction.userId },
+                                data: { betflixUsername: reg.username, betflixPassword: reg.password }
+                            });
+                            console.log(`[Payment] Auto-registered Betflix for ${transaction.user.username}: ${reg.username}`);
+                            betflixSuccess = await BetflixService.transfer(
+                                reg.username,
+                                amount,
+                                `PAYMENT_${transaction.id}`
+                            );
+                        } else {
+                            betflixError = 'Betflix register returned null';
+                        }
+                    } catch (err: any) {
+                        console.error('[Payment] Betflix register/transfer error:', err);
+                        betflixError = err.message;
+                    }
                 }
 
                 if (betflixSuccess) {

@@ -234,9 +234,20 @@ router.post('/resolve-sms', async (req, res) => {
                         betflixSuccess = await BetflixService.transfer(user.betflixUsername, depositAmount, `MANUAL_${transaction.id}`);
                         if (!betflixSuccess) betflixError = 'Betflix API returned failure';
                     } else {
-                        console.warn(`[ResolveSMS] User ${user.username} has no Betflix Username. Skipping Betflix transfer.`);
-                        betflixSuccess = true;
-                        betflixError = 'No Betflix Username';
+                        // ถ้ายังไม่มี BetFlix account → register ก่อน
+                        console.log(`[ResolveSMS] User ${user.username} has no Betflix Username. Registering...`);
+                        const reg = await BetflixService.register(user.phone);
+                        if (reg) {
+                            await prisma.user.update({
+                                where: { id: user.id },
+                                data: { betflixUsername: reg.username, betflixPassword: reg.password }
+                            });
+                            console.log(`[ResolveSMS] Registered Betflix: ${reg.username}. Transferring...`);
+                            betflixSuccess = await BetflixService.transfer(reg.username, depositAmount, `MANUAL_${transaction.id}`);
+                            if (!betflixSuccess) betflixError = 'Betflix transfer failed after register';
+                        } else {
+                            betflixError = 'Betflix register returned null';
+                        }
                     }
                 } catch (err: any) {
                     console.error('[ResolveSMS] Betflix Exception:', err);

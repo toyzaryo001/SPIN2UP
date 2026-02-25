@@ -154,7 +154,28 @@ export class RewardService {
 
         const amount = target.claimable;
 
-        // Transaction
+        // ============================================
+        // BETFLIX SYNC: Deposit to Game Wallet FIRST
+        // หักจากกระดานหลัก (Agent) → เติมเข้า User game wallet
+        // ============================================
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) throw new Error('User not found');
+
+        if (user.betflixUsername) {
+            const transferSuccess = await BetflixService.transfer(
+                user.betflixUsername,
+                amount,
+                `REWARD_${type}_${Date.now()}`
+            );
+            if (!transferSuccess) {
+                throw new Error('ไม่สามารถเติมเงินเข้ากระเป๋าเกมได้ (Betflix Transfer Failed)');
+            }
+        } else {
+            // ถ้าไม่มี betflix account ไม่ให้รับ reward (ป้องกันเสกเงิน)
+            throw new Error('ไม่มีกระเป๋าเกม ไม่สามารถรับรางวัลได้');
+        }
+
+        // DB Transaction — only after game wallet deposit succeeded
         return await prisma.$transaction(async (tx) => {
             // 1. Create Claim Record
             await tx.rewardClaim.create({
@@ -167,11 +188,8 @@ export class RewardService {
                 }
             });
 
-            // 2. Add Credit to User
-            // Note: Should we add to 'balance' or 'bonusBalance'? 
-            // Usually CashBack/Commission -> Main Balance (Withdrawable)
-            // But let's check current 'User' model. Assuming 'balance' is main.
-            const user = await tx.user.update({
+            // 2. Update local balance (synced with game wallet)
+            const updatedUser = await tx.user.update({
                 where: { id: userId },
                 data: {
                     balance: { increment: amount }
@@ -184,14 +202,14 @@ export class RewardService {
                     userId,
                     type: type === 'CASHBACK' ? 'REWARD_CASHBACK' : 'REWARD_COMMISSION',
                     amount: amount,
-                    balanceBefore: Number(user.balance) - amount, // approx
-                    balanceAfter: Number(user.balance),
+                    balanceBefore: Number(updatedUser.balance) - amount,
+                    balanceAfter: Number(updatedUser.balance),
                     status: 'COMPLETED',
                     note: `${type} for period ${target.periodStart.split(' ')[0]}`
                 }
             });
 
-            return { success: true, amount, balance: user.balance };
+            return { success: true, amount, balance: updatedUser.balance };
         });
     }
 }

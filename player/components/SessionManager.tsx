@@ -21,7 +21,6 @@ function performLogout() {
             }).catch(() => { }); // Ignore errors
         }
         localStorage.removeItem('token');
-        localStorage.removeItem('user');
         localStorage.removeItem('lastActive');
         window.location.href = '/';
     }
@@ -32,14 +31,6 @@ export default function SessionManager() {
     const lastActiveRef = useRef<number>(Date.now());
 
     useEffect(() => {
-        // Auto-cleanup: if user exists but token is gone, clear stale user data
-        const existingUser = localStorage.getItem('user');
-        const existingToken = localStorage.getItem('token');
-        if (existingUser && !existingToken) {
-            localStorage.removeItem('user');
-            localStorage.removeItem('lastActive');
-        }
-
         // === GLOBAL AXIOS 401 + SESSION_KICKED INTERCEPTOR ===
         const interceptorId = axios.interceptors.response.use(
             (response) => response,

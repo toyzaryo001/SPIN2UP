@@ -344,44 +344,20 @@ export class PaymentService {
             if (typeUpper === 'DEPOSIT') {
                 const amount = result.amount || Number(transaction.amount);
 
-                // 2. Transfer to Betflix (Game Wallet) FIRST (Like AUTO_SMS)
+                // 2. Transfer to Betflix (Game Wallet) FIRST
                 let betflixSuccess = false;
                 let betflixError = '';
 
-                if (transaction.user?.betflixUsername) {
-                    try {
-                        console.log(`[Payment] Auto-transferring ${amount} to Betflix for ${transaction.user.username}`);
-                        betflixSuccess = await BetflixService.transfer(
-                            transaction.user.betflixUsername,
-                            amount,
-                            `PAYMENT_${transaction.id}`
-                        );
-                    } catch (err: any) {
-                        console.error('[Payment] Betflix transfer error:', err);
-                        betflixError = err.message;
-                    }
-                } else if (transaction.user) {
-                    // ถ้ายังไม่มี BetFlix account → register ก่อน
-                    try {
-                        const reg = await BetflixService.register(transaction.user.phone);
-                        if (reg) {
-                            await prisma.user.update({
-                                where: { id: transaction.userId },
-                                data: { betflixUsername: reg.username, betflixPassword: reg.password }
-                            });
-                            console.log(`[Payment] Auto-registered Betflix for ${transaction.user.username}: ${reg.username}`);
-                            betflixSuccess = await BetflixService.transfer(
-                                reg.username,
-                                amount,
-                                `PAYMENT_${transaction.id}`
-                            );
-                        } else {
-                            betflixError = 'Betflix register returned null';
-                        }
-                    } catch (err: any) {
-                        console.error('[Payment] Betflix register/transfer error:', err);
-                        betflixError = err.message;
-                    }
+                if (transaction.user) {
+                    const betflixResult = await BetflixService.ensureAndTransfer(
+                        transaction.userId,
+                        transaction.user.phone,
+                        transaction.user.betflixUsername,
+                        amount,
+                        `PAYMENT_${transaction.id}`
+                    );
+                    betflixSuccess = betflixResult.success;
+                    betflixError = betflixResult.error || '';
                 }
 
                 if (betflixSuccess) {

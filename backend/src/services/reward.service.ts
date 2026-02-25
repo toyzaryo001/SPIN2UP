@@ -161,18 +161,11 @@ export class RewardService {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new Error('User not found');
 
-        if (user.betflixUsername) {
-            const transferSuccess = await BetflixService.transfer(
-                user.betflixUsername,
-                amount,
-                `REWARD_${type}_${Date.now()}`
-            );
-            if (!transferSuccess) {
-                throw new Error('ไม่สามารถเติมเงินเข้ากระเป๋าเกมได้ (Betflix Transfer Failed)');
-            }
-        } else {
-            // ถ้าไม่มี betflix account ไม่ให้รับ reward (ป้องกันเสกเงิน)
-            throw new Error('ไม่มีกระเป๋าเกม ไม่สามารถรับรางวัลได้');
+        const betflixResult = await BetflixService.ensureAndTransfer(
+            userId, user.phone, user.betflixUsername, amount, `REWARD_${type}_${Date.now()}`
+        );
+        if (!betflixResult.success) {
+            throw new Error(betflixResult.error || 'ไม่สามารถเติมเงินเข้ากระเป๋าเกมได้');
         }
 
         // DB Transaction — only after game wallet deposit succeeded

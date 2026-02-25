@@ -271,7 +271,61 @@ export class BetflixService {
     }
 
     /**
-     * Seamless: Auto Transfer IN (Create User -> Deposit)
+     * Ensure BetFlix account exists & Transfer
+     * ลอจิกกลาง: ตรวจว่ามี betflixUsername หรือยัง → ถ้ายังไม่มี register → transfer
+     * ใช้แทนที่ copy-paste pattern ทุกจุด
+     * 
+     * @param userId - User ID in our DB
+     * @param registerKey - Phone or identifier for BetFlix register
+     * @param currentBetflixUsername - Current betflixUsername (null if not registered)
+     * @param amount - Amount to transfer (positive = deposit, negative = withdraw)
+     * @param ref - Reference ID
+     * @returns { success, betflixUsername, error? }
+     */
+    static async ensureAndTransfer(
+        userId: number,
+        registerKey: string,
+        currentBetflixUsername: string | null,
+        amount: number,
+        ref: string
+    ): Promise<{ success: boolean; betflixUsername: string | null; error?: string }> {
+        let betflixUsername = currentBetflixUsername;
+
+        // 1. Register if no account
+        if (!betflixUsername) {
+            try {
+                const reg = await this.register(registerKey);
+                if (reg) {
+                    await prisma.user.update({
+                        where: { id: userId },
+                        data: { betflixUsername: reg.username, betflixPassword: reg.password }
+                    });
+                    betflixUsername = reg.username;
+                    console.log(`[BetflixService] Auto-registered for userId ${userId}: ${betflixUsername}`);
+                }
+            } catch (err: any) {
+                return { success: false, betflixUsername: null, error: `Register failed: ${err.message}` };
+            }
+        }
+
+        if (!betflixUsername) {
+            return { success: false, betflixUsername: null, error: 'Cannot create BetFlix account' };
+        }
+
+        // 2. Transfer
+        try {
+            const success = await this.transfer(betflixUsername, amount, ref);
+            if (!success) {
+                return { success: false, betflixUsername, error: 'BetFlix transfer returned failure' };
+            }
+            return { success: true, betflixUsername };
+        } catch (err: any) {
+            return { success: false, betflixUsername, error: `Transfer failed: ${err.message}` };
+        }
+    }
+
+    /**
+     * Seamless: Auto Transfer IN (Legacy — uses ensureAndTransfer internally)
      */
     static async autoTransferIn(phone: string, amount: number): Promise<{ success: boolean; username?: string }> {
         // 1. Ensure User Exists

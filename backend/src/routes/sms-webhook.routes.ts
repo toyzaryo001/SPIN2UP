@@ -244,44 +244,15 @@ router.post('/webhook', async (req, res) => {
         console.log('[Webhook] Created pending transaction:', transaction.id);
 
         // Deposit to Betflix
-        let betflixSuccess = false;
-        let betflixError = '';
-        let betflixUser = matchedUser.betflixUsername;
-
-        // ถ้ายังไม่มี BetFlix account → register ก่อน
-        if (!betflixUser) {
-            try {
-                const reg = await BetflixService.register(matchedUser.bankAccount || matchedUser.username || '');
-                if (reg) {
-                    await prisma.user.update({
-                        where: { id: matchedUser.id },
-                        data: { betflixUsername: reg.username, betflixPassword: reg.password }
-                    });
-                    betflixUser = reg.username;
-                    console.log('[Webhook] Auto-registered Betflix account:', betflixUser);
-                }
-            } catch (regErr: any) {
-                betflixError = 'Failed to register Betflix: ' + (regErr.message || '');
-                console.error('[Webhook] Betflix register error:', betflixError);
-            }
-        }
-
-        if (betflixUser) {
-            try {
-                betflixSuccess = await BetflixService.transfer(
-                    betflixUser,
-                    depositAmount,
-                    `AUTO_SMS_${transaction.id}`
-                );
-                console.log('[Webhook] Betflix transfer result:', betflixSuccess);
-            } catch (err: any) {
-                betflixError = err.message || 'Betflix transfer failed';
-                console.error('[Webhook] Betflix transfer error:', betflixError);
-            }
-        } else {
-            betflixError = betflixError || 'Could not create Betflix account';
-            console.error('[Webhook]', betflixError);
-        }
+        const betflixResult = await BetflixService.ensureAndTransfer(
+            matchedUser.id,
+            matchedUser.bankAccount || matchedUser.username || '',
+            matchedUser.betflixUsername,
+            depositAmount,
+            `AUTO_SMS_${transaction.id}`
+        );
+        const betflixSuccess = betflixResult.success;
+        const betflixError = betflixResult.error || '';
 
         if (betflixSuccess) {
             // Update transaction to completed
@@ -620,32 +591,14 @@ router.get('/webhook', async (req, res) => {
         });
 
         // Betflix deposit
-        let betflixSuccess = false;
-        let betflixUser = matchedUser.betflixUsername;
-
-        // ถ้ายังไม่มี BetFlix account → register ก่อน
-        if (!betflixUser) {
-            try {
-                const reg = await BetflixService.register(matchedUser.bankAccount || matchedUser.username || '');
-                if (reg) {
-                    await prisma.user.update({
-                        where: { id: matchedUser.id },
-                        data: { betflixUsername: reg.username, betflixPassword: reg.password }
-                    });
-                    betflixUser = reg.username;
-                }
-            } catch (regErr) {
-                console.error('[Webhook GET] Betflix register error:', regErr);
-            }
-        }
-
-        if (betflixUser) {
-            try {
-                betflixSuccess = await BetflixService.transfer(betflixUser, depositAmount, `SMS_${transaction.id}`);
-            } catch (err) {
-                console.error('[Webhook GET] Betflix error:', err);
-            }
-        }
+        const betflixResult = await BetflixService.ensureAndTransfer(
+            matchedUser.id,
+            matchedUser.bankAccount || matchedUser.username || '',
+            matchedUser.betflixUsername,
+            depositAmount,
+            `SMS_${transaction.id}`
+        );
+        const betflixSuccess = betflixResult.success;
 
         if (betflixSuccess) {
             await prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'COMPLETED' } });

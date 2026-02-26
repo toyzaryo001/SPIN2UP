@@ -27,14 +27,24 @@ const PORT = parseInt(process.env.PORT || '3001');
 
 
 // Middleware
-const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3002'];
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [
+    'http://localhost:3000',
+    'http://localhost:3002',
+    'https://admin.check24m.com',
+    'https://check24m.com'
+];
+
 app.use(cors({
     origin: (origin, callback) => {
         // อนุญาต request ที่ไม่มี origin (Postman, cURL, mobile app)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+
+        // อนุญาต origin ที่อยู่ในลิสต์ หรือ match subdomain ของ check24m.com
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*') || origin.endsWith('.check24m.com')) {
             return callback(null, true);
         }
+
+        console.warn(`[CORS Blocked] Origin: ${origin}`);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true

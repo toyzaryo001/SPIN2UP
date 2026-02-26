@@ -242,6 +242,98 @@ const Footer = ({ settings }: any) => (
   </footer>
 );
 
+const LiveFeedBoard = () => {
+  const [feed, setFeed] = useState<any[]>([]);
+
+  useEffect(() => {
+    const pgGames = [
+      { name: "Mahjong Ways 2", img: "https://pgsoft-images.wildboar-studio.com/games/89/icon.png" },
+      { name: "Treasures of Aztec", img: "https://pgsoft-images.wildboar-studio.com/games/87/icon.png" },
+      { name: "Lucky Neko", img: "https://pgsoft-images.wildboar-studio.com/games/83/icon.png" },
+      { name: "Caishen Wins", img: "https://pgsoft-images.wildboar-studio.com/games/71/icon.png" },
+      { name: "Ganesha Fortune", img: "https://pgsoft-images.wildboar-studio.com/games/75/icon.png" },
+      { name: "Wild Bandito", img: "https://pgsoft-images.wildboar-studio.com/games/104/icon.png" },
+      { name: "Fortune Ox", img: "https://pgsoft-images.wildboar-studio.com/games/98/icon.png" },
+      { name: "Ways of the Qilin", img: "https://pgsoft-images.wildboar-studio.com/games/100/icon.png" }
+    ];
+
+    const generateRandomDigits = (length: number) => Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
+
+    const newFeed = Array.from({ length: 15 }, (_, i) => {
+      const game = pgGames[Math.floor(Math.random() * pgGames.length)];
+      const rand = Math.random() * 100;
+      let amount = 0;
+      if (rand < 60) amount = Math.floor(Math.random() * 900) + 100;       // 60% หลักร้อย
+      else if (rand < 95) amount = Math.floor(Math.random() * 9000) + 1000;  // 35% หลักพัน
+      else amount = Math.floor(Math.random() * 90000) + 10000;               // 5% หลักหมื่น
+
+      const timeOffset = Math.floor(Math.random() * 15) + 1;
+
+      return {
+        id: i,
+        user: `CHKK***${generateRandomDigits(3)}`,
+        game: game,
+        amount: amount,
+        time: i === 0 ? 'Just now' : `${timeOffset}m ago`
+      };
+    });
+    setFeed(newFeed);
+  }, []);
+
+  if (feed.length === 0) return null;
+
+  return (
+    <div className="glass-card rounded-2xl p-8 relative overflow-hidden h-full">
+      <style>{`
+        @keyframes marqueeUp {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-50%); }
+        }
+        .animate-marquee-up {
+          animation: marqueeUp 40s linear infinite;
+        }
+        .animate-marquee-up:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+      <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
+        <Trophy className="text-yellow-400" size={32} />
+        ผู้ชนะล่าสุด
+        <span className="text-xs font-bold bg-green-500 text-black px-2 py-1 rounded ml-auto">LIVE FEED</span>
+      </h3>
+      <div className="max-h-[500px] overflow-hidden relative" style={{ maskImage: 'linear-gradient(to bottom, transparent, black 5%, black 95%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 5%, black 95%, transparent)' }}>
+        <div className="absolute top-0 w-full h-10 bg-gradient-to-b from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
+        <div className="absolute bottom-0 w-full h-10 bg-gradient-to-t from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
+        <div className="space-y-4 animate-marquee-up pt-4">
+          {[...feed, ...feed].map((item, idx) => (
+            <div key={`${item.id}-${idx}`} className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-all group hover:bg-white/10">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden flex-shrink-0 relative group-hover:scale-105 transition-transform shadow-lg">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={item.game.img} alt={item.game.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${item.game.name.replace(/ /g, '+')}&background=1e293b&color=eab308` }} />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black border-2 border-[#0f172a] opacity-0 group-hover:opacity-100 transition-opacity">#{idx % feed.length + 1}</div>
+                </div>
+                <div>
+                  <div className="text-white font-bold tracking-wide flex items-center gap-2">
+                    {item.user}
+                    <span className="bg-yellow-500/20 text-yellow-500 text-[9px] px-1.5 py-0.5 rounded font-black border border-yellow-500/30">WIN</span>
+                  </div>
+                  <div className="text-xs text-slate-400 font-medium">{item.game.name}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-gradient-green font-mono font-black text-xl">+฿{item.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div className="text-[10px] text-slate-500 font-medium font-mono text-right w-full block">{item.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- HomeContent (Banners + Featured Games) ---
 const HomeContent = ({ games, banners, providers, apiCategories, onPlay, features }: any) => {
   const router = useRouter();
@@ -523,35 +615,7 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay, feature
         </div>
         <div className="md:col-span-3">
           {features?.ranking_board !== false && (
-            <div className="glass-card rounded-2xl p-8 relative overflow-hidden h-full">
-              <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
-                <Trophy className="text-yellow-400" size={32} />
-                ผู้ชนะล่าสุด
-                <span className="text-xs font-bold bg-green-500 text-black px-2 py-1 rounded ml-auto">LIVE FEED</span>
-              </h3>
-              <div className="space-y-4 max-h-[500px] overflow-hidden relative">
-                <div className="absolute top-0 w-full h-10 bg-gradient-to-b from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
-                <div className="absolute bottom-0 w-full h-10 bg-gradient-to-t from-[#0f172a] to-transparent z-10 pointer-events-none"></div>
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-all group hover:bg-white/10">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center relative">
-                        <User className="text-blue-400 group-hover:text-white transition-colors" />
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black border-2 border-[#0f172a]">#{i}</div>
-                      </div>
-                      <div>
-                        <div className="text-white font-bold tracking-wide">User888***{i}</div>
-                        <div className="text-xs text-slate-400">{i % 2 === 0 ? "Mahjong Ways 2" : "Baccarat"}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-gradient-green font-mono font-black text-xl">+฿{(Math.random() * 50000).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                      <div className="text-[10px] text-slate-500">Just now</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <LiveFeedBoard />
           )}
         </div>
       </div>

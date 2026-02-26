@@ -145,7 +145,9 @@ export default function Dashboard() {
   const getTypeLabel = (type: string) => {
     const labels: Record<string, { label: string; color: string }> = {
       DEPOSIT: { label: "ฝาก", color: "text-emerald-600 bg-emerald-50" },
+      MANUAL_ADD: { label: "เพิ่มเครดิต", color: "text-emerald-600 bg-emerald-50" },
       WITHDRAW: { label: "ถอน", color: "text-red-600 bg-red-50" },
+      MANUAL_DEDUCT: { label: "หักเครดิต", color: "text-red-600 bg-red-50" },
       BONUS: { label: "โบนัส", color: "text-blue-600 bg-blue-50" },
       BET: { label: "เดิมพัน", color: "text-orange-600 bg-orange-50" },
       WIN: { label: "ชนะ", color: "text-purple-600 bg-purple-50" },
@@ -157,8 +159,8 @@ export default function Dashboard() {
     <button
       onClick={() => setDatePreset(preset)}
       className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${datePreset === preset
-          ? 'bg-blue-600 text-white'
-          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        ? 'bg-blue-600 text-white'
+        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
         }`}
     >
       {label}
@@ -437,9 +439,14 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        <span className={tx.type === 'DEPOSIT' || tx.type === 'WIN' || tx.type === 'BONUS' ? 'text-emerald-600' : 'text-red-600'}>
-                          {tx.type === 'DEPOSIT' || tx.type === 'WIN' || tx.type === 'BONUS' ? '+' : '-'}{formatBaht(Number(tx.amount))}
-                        </span>
+                        {(() => {
+                          const isAdd = tx.type === 'DEPOSIT' || tx.type === 'WIN' || tx.type === 'BONUS' || tx.type === 'MANUAL_ADD';
+                          return (
+                            <span className={isAdd ? 'text-emerald-600' : 'text-red-600'}>
+                              {isAdd ? '+' : '-'}{formatBaht(Number(Math.abs(tx.amount)))}
+                            </span>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );

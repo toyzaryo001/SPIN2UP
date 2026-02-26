@@ -58,13 +58,13 @@ router.get('/', async (req, res) => {
             }),
             // Deposit in range
             prisma.transaction.aggregate({
-                where: { type: 'DEPOSIT', status: 'COMPLETED', createdAt: { gte: filterStart, lte: filterEnd } },
+                where: { type: { in: ['DEPOSIT', 'MANUAL_ADD'] }, status: 'COMPLETED', createdAt: { gte: filterStart, lte: filterEnd } },
                 _sum: { amount: true },
                 _count: true
             }),
             // Withdraw in range
             prisma.transaction.aggregate({
-                where: { type: 'WITHDRAW', status: 'COMPLETED', createdAt: { gte: filterStart, lte: filterEnd } },
+                where: { type: { in: ['WITHDRAW', 'MANUAL_DEDUCT'] }, status: 'COMPLETED', createdAt: { gte: filterStart, lte: filterEnd } },
                 _sum: { amount: true },
                 _count: true
             }),
@@ -100,7 +100,7 @@ router.get('/', async (req, res) => {
         if (newUserIdList.length > 0) {
             const firstDeposits = await prisma.transaction.aggregate({
                 where: {
-                    type: 'DEPOSIT',
+                    type: { in: ['DEPOSIT', 'MANUAL_ADD'] },
                     status: 'COMPLETED',
                     userId: { in: newUserIdList },
                     createdAt: { gte: filterStart, lte: filterEnd }
@@ -117,7 +117,7 @@ router.get('/', async (req, res) => {
         // 1. Get users who deposited today
         const depositors = await prisma.transaction.findMany({
             where: {
-                type: 'DEPOSIT',
+                type: { in: ['DEPOSIT', 'MANUAL_ADD'] },
                 status: 'COMPLETED',
                 createdAt: { gte: filterStart, lte: filterEnd }
             },
@@ -149,7 +149,7 @@ router.get('/', async (req, res) => {
         // Returning customers (registered before filter start, deposited in range)
         const returningCustomers = await prisma.transaction.findMany({
             where: {
-                type: 'DEPOSIT',
+                type: { in: ['DEPOSIT', 'MANUAL_ADD'] },
                 status: 'COMPLETED',
                 createdAt: { gte: filterStart, lte: filterEnd },
                 user: {
@@ -164,12 +164,12 @@ router.get('/', async (req, res) => {
         // ============ MONTHLY STATS ============
         const [monthDeposit, monthWithdraw, monthBonus] = await Promise.all([
             prisma.transaction.aggregate({
-                where: { type: 'DEPOSIT', status: 'COMPLETED', createdAt: { gte: monthStart, lte: monthEnd } },
+                where: { type: { in: ['DEPOSIT', 'MANUAL_ADD'] }, status: 'COMPLETED', createdAt: { gte: monthStart, lte: monthEnd } },
                 _sum: { amount: true },
                 _count: true
             }),
             prisma.transaction.aggregate({
-                where: { type: 'WITHDRAW', status: 'COMPLETED', createdAt: { gte: monthStart, lte: monthEnd } },
+                where: { type: { in: ['WITHDRAW', 'MANUAL_DEDUCT'] }, status: 'COMPLETED', createdAt: { gte: monthStart, lte: monthEnd } },
                 _sum: { amount: true },
                 _count: true
             }),
@@ -191,11 +191,11 @@ router.get('/', async (req, res) => {
 
             const [dayDeposit, dayWithdraw, dayNewUsers] = await Promise.all([
                 prisma.transaction.aggregate({
-                    where: { type: 'DEPOSIT', status: 'COMPLETED', createdAt: { gte: date, lte: dateEnd } },
+                    where: { type: { in: ['DEPOSIT', 'MANUAL_ADD'] }, status: 'COMPLETED', createdAt: { gte: date, lte: dateEnd } },
                     _sum: { amount: true }
                 }),
                 prisma.transaction.aggregate({
-                    where: { type: 'WITHDRAW', status: 'COMPLETED', createdAt: { gte: date, lte: dateEnd } },
+                    where: { type: { in: ['WITHDRAW', 'MANUAL_DEDUCT'] }, status: 'COMPLETED', createdAt: { gte: date, lte: dateEnd } },
                     _sum: { amount: true }
                 }),
                 prisma.user.count({

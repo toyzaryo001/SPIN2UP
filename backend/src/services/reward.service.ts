@@ -1,7 +1,7 @@
 import prisma from '../lib/db';
 import { BetflixService } from './betflix.service';
+import { NexusProvider } from './agents/NexusProvider';
 import dayjs from 'dayjs';
-import axios from 'axios';
 
 // Types for Reward Calculation
 interface RewardStats {
@@ -33,9 +33,12 @@ export class RewardService {
      * Get current reward stats for a user (Cashback & Commission)
      */
     static async getRewardStats(userId: number): Promise<RewardStats> {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user || !user.betflixUsername) {
-            throw new Error('User not found or not linked to Betflix');
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { externalAccounts: true }
+        });
+        if (!user) {
+            throw new Error('User not found');
         }
 
         // 1. Get Settings
@@ -71,28 +74,65 @@ export class RewardService {
         const cashbackClaimed = claims.find(c => c.type === 'CASHBACK');
         const commissionClaimed = claims.find(c => c.type === 'COMMISSION');
 
-        // 4. Fetch Betflix Data (Report Summary)
-        // API: /v4/report/summaryNEW
-        // We use yesterday's range
+        // 4. Fetch Report Data from ALL agents (BetFlix + Nexus)
         let turnover = 0;
         let winLoss = 0;
 
-        try {
-            // Need to allow BetflixService to call arbitrary report endpoints or add a helper
-            // We'll assume a helper exists or use direct axios if needed, but keeping it clean:
-            const report = await BetflixService.getReportSummary(user.betflixUsername, yesterday.format('YYYY-MM-DD'), yesterday.format('YYYY-MM-DD'));
+        // Build fetch promises for all agents
+        const fetchPromises: Promise<{ turnover: number; winLoss: number }>[] = [];
 
-            if (report) {
-                turnover = Number(report.turnover || 0); // or valid_amount? Commission usually uses valid_amount
-                const validAmount = Number(report.valid_amount || 0);
-                winLoss = Number(report.winloss || 0); // Negative = Loss
+        // 4a. BetFlix
+        if (user.betflixUsername) {
+            fetchPromises.push(
+                BetflixService.getReportSummary(
+                    user.betflixUsername,
+                    yesterday.format('YYYY-MM-DD'),
+                    yesterday.format('YYYY-MM-DD')
+                ).then(report => ({
+                    turnover: Number(report?.valid_amount || report?.turnover || 0),
+                    winLoss: Number(report?.winloss || 0)
+                })).catch(err => {
+                    console.error('[Reward] BetFlix report error:', err.message);
+                    return { turnover: 0, winLoss: 0 };
+                })
+            );
+        }
 
-                // Use valid_amount for commission if standard
-                turnover = validAmount;
+        // 4b. Nexus — ดึงจาก UserExternalAccount
+        const nexusAccount = user.externalAccounts?.find(
+            (acc: any) => acc.externalUsername
+        );
+        if (nexusAccount) {
+            fetchPromises.push(
+                (async () => {
+                    try {
+                        const nexus = new NexusProvider();
+                        const log = await nexus.getGameLog(
+                            nexusAccount.externalUsername,
+                            periodStart,
+                            periodEnd
+                        );
+                        if (log) {
+                            return {
+                                turnover: log.totalBet,
+                                winLoss: log.totalWin - log.totalBet // Positive = win, Negative = loss
+                            };
+                        }
+                    } catch (err: any) {
+                        console.error('[Reward] Nexus report error:', err.message);
+                    }
+                    return { turnover: 0, winLoss: 0 };
+                })()
+            );
+        }
+
+        // Fetch all agents in parallel — one agent down won't affect the other
+        const results = await Promise.allSettled(fetchPromises);
+        for (const r of results) {
+            if (r.status === 'fulfilled') {
+                turnover += r.value.turnover;
+                winLoss += r.value.winLoss;
             }
-        } catch (error) {
-            console.error('Error fetching betflix report for reward:', error);
-            // On error, better to return 0 claimable than crash
         }
 
         // 5. Calculate Cashback

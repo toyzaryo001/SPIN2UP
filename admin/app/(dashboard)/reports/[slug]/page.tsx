@@ -190,15 +190,25 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                 // e.g. use "/admin/transactions" NOT "/api/admin/transactions"
                 // ======================================================
 
-                if (['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
+                if (['withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
                     // Transaction-based reports → /admin/transactions
                     const typeMap: Record<string, string> = {
-                        "deposit": "DEPOSIT",
                         "withdraw": "WITHDRAW",
                         "bonus": "BONUS",
                         "new-users-deposit": "DEPOSIT",
                     };
                     const url = `/admin/transactions${query}&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}`;
+                    const res = await api.get(url);
+                    const result = res.data;
+                    if (result.success) {
+                        setData(result.data.transactions || []);
+                        setSummary(result.data.summary || null);
+                        setTotalPages(result.data.pagination?.totalPages || 1);
+                    }
+
+                } else if (slug === 'deposit') {
+                    // All deposits (inclusive of MANUAL_ADD, BONUS, CASHBACK)
+                    const url = `/admin/reports/all-deposits${query}&startDate=${startISO}&endDate=${endISO}`;
                     const res = await api.get(url);
                     const result = res.data;
                     if (result.success) {
@@ -283,11 +293,11 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
             return (
                 <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
-                    <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                    <td className="px-6 py-4">{formatDate(item.createdAt || item.date)}</td>
                     <td className="px-6 py-4">
                         <div>
-                            <p className="font-bold text-slate-700">{item.user?.username || '-'}</p>
-                            {item.user?.fullName && <p className="text-xs text-slate-400">{item.user.fullName}</p>}
+                            <p className="font-bold text-slate-700">{item.user?.username || item.username || '-'}</p>
+                            {(item.user?.fullName || item.fullName) && <p className="text-xs text-slate-400">{item.user?.fullName || item.fullName}</p>}
                         </div>
                     </td>
                     {slug === 'new-users-deposit' ? (
@@ -300,10 +310,10 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     )}
                     {slug === 'deposit' && (
                         <td className="px-6 py-4">
-                            <span className={`text-xs px-2 py-1 rounded ${item.subType?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
+                            <span className={`text-xs px-2 py-1 rounded ${item.channel?.includes('Auto') || item.subType?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
                                 item.type === 'MANUAL_ADD' ? 'bg-blue-100 text-blue-700' :
                                     'bg-slate-100 text-slate-600'}`}>
-                                {item.subType || item.type}
+                                {item.channel || item.subType || item.type}
                             </span>
                         </td>
                     )}
@@ -315,7 +325,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                         </span>
                     </td>
                     {slug === 'deposit' && (
-                        <td className="px-6 py-4 text-slate-400 text-xs">{item.adminId ? `Admin #${item.adminId}` : 'System'}</td>
+                        <td className="px-6 py-4 text-slate-400 text-xs">{item.admin || (item.adminId ? `Admin #${item.adminId}` : 'System')}</td>
                     )}
                 </tr>
             );
@@ -474,8 +484,13 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                 const startISO = start.toISOString();
                                 const endISO = end.toISOString();
 
-                                if (['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
-                                    const typeMap: Record<string, string> = { "deposit": "DEPOSIT", "withdraw": "WITHDRAW", "bonus": "BONUS", "new-users-deposit": "DEPOSIT" };
+                                if (slug === 'deposit') {
+                                    const res = await api.get(`/admin/reports/all-deposits?page=1&limit=10000&startDate=${startISO}&endDate=${endISO}${search ? `&search=${search}` : ''}`);
+                                    const txs = res.data?.data?.transactions || [];
+                                    exportToCsv(config.title, ['วันที่', 'Username', 'ชื่อ', 'จำนวนเงิน', 'ช่องทาง', 'สถานะ', 'ผู้ทำรายการ'],
+                                        txs.map((t: any) => [formatDate(t.date || t.createdAt), t.username || t.user?.username, t.fullName || t.user?.fullName, t.amount, t.channel || t.subType || t.type, t.status, t.admin || (t.adminId ? `Admin #${t.adminId}` : 'System')]));
+                                } else {
+                                    const typeMap: Record<string, string> = { "withdraw": "WITHDRAW", "bonus": "BONUS", "new-users-deposit": "DEPOSIT" };
                                     const res = await api.get(`/admin/transactions?page=1&limit=10000&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}${search ? `&search=${search}` : ''}`);
                                     const txs = res.data?.data?.transactions || [];
                                     if (slug === 'withdraw') {
@@ -485,434 +500,453 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                         exportToCsv(config.title, ['วันที่', 'Username', 'ชื่อ', 'จำนวนเงิน', 'ช่องทาง', 'สถานะ', 'ผู้ทำรายการ'],
                                             txs.map((t: any) => [formatDate(t.createdAt), t.user?.username, t.user?.fullName, t.amount, t.subType || t.type, t.status, t.adminId ? `Admin #${t.adminId}` : 'System']));
                                     }
-                                } else if (['new-users', 'inactive-users'].includes(slug)) {
+                                }
+                            } else if (['new-users', 'inactive-users'].includes(slug)) {
                                     const res = await api.get(`/admin/users?page=1&limit=10000${slug === 'new-users' ? `&startDate=${startISO}&endDate=${endISO}&sort=createdAt&order=desc` : '&sort=lastLoginAt&order=asc'}${search ? `&search=${search}` : ''}`);
-                                    const users = res.data?.data?.users || res.data?.data || [];
-                                    if (slug === 'new-users') {
-                                        exportToCsv(config.title, ['วันที่สมัคร', 'Username', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'ธนาคาร', 'ยอดเงิน'],
-                                            users.map((u: any) => [formatDate(u.createdAt), u.username || u.phone, u.fullName, u.phone, u.bankName, u.balance || 0]));
+                    const users = res.data?.data?.users || res.data?.data || [];
+                    if (slug === 'new-users') {
+                        exportToCsv(config.title, ['วันที่สมัคร', 'Username', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'ธนาคาร', 'ยอดเงิน'],
+                            users.map((u: any) => [formatDate(u.createdAt), u.username || u.phone, u.fullName, u.phone, u.bankName, u.balance || 0]));
                                     } else {
-                                        exportToCsv(config.title, ['Username', 'ชื่อ-นามสกุล', 'เข้าใช้ล่าสุด', 'ยอดคงเหลือ', 'สถานะ'],
-                                            users.map((u: any) => [u.username || u.phone, u.fullName, u.lastLoginAt ? formatDate(u.lastLoginAt) : 'ไม่เคยเข้าใช้', u.balance || 0, u.isActive !== false ? 'Active' : 'Inactive']));
+                        exportToCsv(config.title, ['Username', 'ชื่อ-นามสกุล', 'เข้าใช้ล่าสุด', 'ยอดคงเหลือ', 'สถานะ'],
+                            users.map((u: any) => [u.username || u.phone, u.fullName, u.lastLoginAt ? formatDate(u.lastLoginAt) : 'ไม่เคยเข้าใช้', u.balance || 0, u.isActive !== false ? 'Active' : 'Inactive']));
                                     }
                                 } else if (slug === 'profit-loss' && summary) {
-                                    exportToCsv(config.title, ['ยอดฝากรวม', 'ยอดถอนรวม', 'โบนัสรวม', 'กำไรสุทธิ'],
-                                        [[summary.deposit, summary.withdraw, summary.bonus, summary.profit]]);
+                        exportToCsv(config.title, ['ยอดฝากรวม', 'ยอดถอนรวม', 'โบนัสรวม', 'กำไรสุทธิ'],
+                            [[summary.deposit, summary.withdraw, summary.bonus, summary.profit]]);
                                 }
-                                toast.success('Export สำเร็จ');
+                    toast.success('Export สำเร็จ');
                             } catch (err) {
-                                toast.error('Export ไม่สำเร็จ');
+                        toast.error('Export ไม่สำเร็จ');
                             } finally {
-                                setExporting(false);
+                        setExporting(false);
                             }
                         }}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50"
                     >
-                        <Download size={18} />
-                        {exporting ? 'กำลัง Export...' : 'Export Excel'}
-                    </button>
-                </div>
+                    <Download size={18} />
+                    {exporting ? 'กำลัง Export...' : 'Export Excel'}
+                </button>
             </div>
+        </div>
 
 
-            {/* Tabs for Deposit Report */}
-            {slug === 'deposit' && (
-                <div className="flex gap-2 bg-slate-100 p-1 rounded-lg w-fit mb-4">
-                    <button
-                        onClick={() => setActiveTab('transactions')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'transactions' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        รายการฝากเงิน
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('unmatched')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'unmatched' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        รายการรอตรวจสอบ
-                        {unmatchedLogs.length > 0 && <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">{unmatchedLogs.length}</span>}
-                    </button>
+            {/* Tabs for Deposit Report */ }
+    {
+        slug === 'deposit' && (
+            <div className="flex gap-2 bg-slate-100 p-1 rounded-lg w-fit mb-4">
+                <button
+                    onClick={() => setActiveTab('transactions')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'transactions' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    รายการฝากเงิน
+                </button>
+                <button
+                    onClick={() => setActiveTab('unmatched')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'unmatched' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    รายการรอตรวจสอบ
+                    {unmatchedLogs.length > 0 && <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">{unmatchedLogs.length}</span>}
+                </button>
+            </div>
+        )
+    }
+
+    {/* Filter Section (Hidden in unmatched tab to verify confusion? No, filters might be useful but sticking to simple view first) */ }
+    {
+        activeTab === 'transactions' && (
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center">
+                <div className="flex bg-slate-100 p-1 rounded-lg flex-wrap">
+                    {['today', 'yesterday', 'week', 'month', 'custom'].map((range) => (
+                        <button
+                            key={range}
+                            onClick={() => { setDateRange(range); setPage(1); }}
+                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${dateRange === range
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            {range === 'today' && 'วันนี้'}
+                            {range === 'yesterday' && 'เมื่อวาน'}
+                            {range === 'week' && 'สัปดาห์นี้'}
+                            {range === 'month' && 'เดือนนี้'}
+                            {range === 'custom' && 'กำหนดเอง'}
+                        </button>
+                    ))}
                 </div>
-            )}
 
-            {/* Filter Section (Hidden in unmatched tab to verify confusion? No, filters might be useful but sticking to simple view first) */}
-            {activeTab === 'transactions' && (
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center">
-                    <div className="flex bg-slate-100 p-1 rounded-lg flex-wrap">
-                        {['today', 'yesterday', 'week', 'month', 'custom'].map((range) => (
-                            <button
-                                key={range}
-                                onClick={() => { setDateRange(range); setPage(1); }}
-                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${dateRange === range
-                                    ? 'bg-white text-slate-900 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                                    }`}
-                            >
-                                {range === 'today' && 'วันนี้'}
-                                {range === 'yesterday' && 'เมื่อวาน'}
-                                {range === 'week' && 'สัปดาห์นี้'}
-                                {range === 'month' && 'เดือนนี้'}
-                                {range === 'custom' && 'กำหนดเอง'}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Custom Date Range Picker */}
-                    {dateRange === 'custom' && (
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="date"
-                                value={customStart}
-                                onChange={(e) => { setCustomStart(e.target.value); setPage(1); }}
-                                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            />
-                            <span className="text-slate-400">ถึง</span>
-                            <input
-                                type="date"
-                                value={customEnd}
-                                onChange={(e) => { setCustomEnd(e.target.value); setPage(1); }}
-                                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            />
-                        </div>
-                    )}
-
-                    <div className="flex-1 min-w-[200px] relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                {/* Custom Date Range Picker */}
+                {dateRange === 'custom' && (
+                    <div className="flex items-center gap-2">
                         <input
-                            type="text"
-                            placeholder="ค้นหา..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
+                            type="date"
+                            value={customStart}
+                            onChange={(e) => { setCustomStart(e.target.value); setPage(1); }}
+                            className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        />
+                        <span className="text-slate-400">ถึง</span>
+                        <input
+                            type="date"
+                            value={customEnd}
+                            onChange={(e) => { setCustomEnd(e.target.value); setPage(1); }}
+                            className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                         />
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Summary Cards */}
-            {summary && ['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug) && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                        <p className="text-slate-500 text-sm">จำนวนรายการ</p>
-                        <p className="text-2xl font-bold text-slate-800">{summary.count}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                        <p className="text-slate-500 text-sm">ยอดรวม</p>
-                        <p className={`text-2xl font-bold ${slug === 'withdraw' ? 'text-red-600' : slug === 'bonus' ? 'text-purple-600' : 'text-emerald-600'}`}>{formatBaht(summary.totalAmount)}</p>
-                    </div>
+                <div className="flex-1 min-w-[200px] relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="ค้นหา..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
+                    />
                 </div>
-            )}
+            </div>
+        )
+    }
 
-            {/* Profit-Loss Summary Cards */}
-            {summary && slug === 'profit-loss' && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-200">
-                        <p className="text-slate-500 text-sm">💰 ยอดฝากรวม</p>
-                        <p className="text-2xl font-bold text-emerald-600">{formatBaht(summary.deposit)}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-red-200">
-                        <p className="text-slate-500 text-sm">💸 ยอดถอนรวม</p>
-                        <p className="text-2xl font-bold text-red-600">{formatBaht(summary.withdraw)}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-purple-200">
-                        <p className="text-slate-500 text-sm">🎁 โบนัสรวม</p>
-                        <p className="text-2xl font-bold text-purple-600">{formatBaht(summary.bonus)}</p>
-                    </div>
-                    <div className={`bg-white p-4 rounded-xl shadow-sm border ${summary.profit >= 0 ? 'border-emerald-200' : 'border-red-200'}`}>
-                        <p className="text-slate-500 text-sm">📊 กำไรสุทธิ</p>
-                        <p className={`text-2xl font-bold ${summary.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.profit)}</p>
-                    </div>
+    {/* Summary Cards */ }
+    {
+        summary && ['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug) && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <p className="text-slate-500 text-sm">จำนวนรายการ</p>
+                    <p className="text-2xl font-bold text-slate-800">{summary.count}</p>
                 </div>
-            )}
-
-            {/* Win-Lose Summary Cards */}
-            {summary && slug === 'win-lose' && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                        <p className="text-slate-500 text-sm">👤 สมาชิกที่เล่น</p>
-                        <p className="text-2xl font-bold text-slate-800">{summary.totalUsers} คน</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-200">
-                        <p className="text-slate-500 text-sm">🎰 ยอดเล่นรวม</p>
-                        <p className="text-2xl font-bold text-blue-600">{formatBaht(summary.totalTurnover)}</p>
-                    </div>
-                    <div className={`bg-white p-4 rounded-xl shadow-sm border ${summary.totalWinloss >= 0 ? 'border-emerald-200' : 'border-red-200'}`}>
-                        <p className="text-slate-500 text-sm">📊 แพ้-ชนะสุทธิ</p>
-                        <p className={`text-2xl font-bold ${summary.totalWinloss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.totalWinloss)}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-amber-200">
-                        <p className="text-slate-500 text-sm">📈 RTP เฉลี่ย</p>
-                        <p className="text-2xl font-bold text-amber-600">{summary.avgRtp}%</p>
-                    </div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <p className="text-slate-500 text-sm">ยอดรวม</p>
+                    <p className={`text-2xl font-bold ${slug === 'withdraw' ? 'text-red-600' : slug === 'bonus' ? 'text-purple-600' : 'text-emerald-600'}`}>{formatBaht(summary.totalAmount)}</p>
                 </div>
-            )}
+            </div>
+        )
+    }
 
-            {/* Error Message */}
-            {errorMsg && (
-                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-center">
-                    {errorMsg}
+    {/* Profit-Loss Summary Cards */ }
+    {
+        summary && slug === 'profit-loss' && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-200">
+                    <p className="text-slate-500 text-sm">💰 ยอดฝากรวม</p>
+                    <p className="text-2xl font-bold text-emerald-600">{formatBaht(summary.deposit)}</p>
                 </div>
-            )}
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-red-200">
+                    <p className="text-slate-500 text-sm">💸 ยอดถอนรวม</p>
+                    <p className="text-2xl font-bold text-red-600">{formatBaht(summary.withdraw)}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-purple-200">
+                    <p className="text-slate-500 text-sm">🎁 โบนัสรวม</p>
+                    <p className="text-2xl font-bold text-purple-600">{formatBaht(summary.bonus)}</p>
+                </div>
+                <div className={`bg-white p-4 rounded-xl shadow-sm border ${summary.profit >= 0 ? 'border-emerald-200' : 'border-red-200'}`}>
+                    <p className="text-slate-500 text-sm">📊 กำไรสุทธิ</p>
+                    <p className={`text-2xl font-bold ${summary.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.profit)}</p>
+                </div>
+            </div>
+        )
+    }
 
-            {/* Table Area */}
-            {activeTab === 'transactions' ? (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
+    {/* Win-Lose Summary Cards */ }
+    {
+        summary && slug === 'win-lose' && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <p className="text-slate-500 text-sm">👤 สมาชิกที่เล่น</p>
+                    <p className="text-2xl font-bold text-slate-800">{summary.totalUsers} คน</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-200">
+                    <p className="text-slate-500 text-sm">🎰 ยอดเล่นรวม</p>
+                    <p className="text-2xl font-bold text-blue-600">{formatBaht(summary.totalTurnover)}</p>
+                </div>
+                <div className={`bg-white p-4 rounded-xl shadow-sm border ${summary.totalWinloss >= 0 ? 'border-emerald-200' : 'border-red-200'}`}>
+                    <p className="text-slate-500 text-sm">📊 แพ้-ชนะสุทธิ</p>
+                    <p className={`text-2xl font-bold ${summary.totalWinloss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatBaht(summary.totalWinloss)}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-amber-200">
+                    <p className="text-slate-500 text-sm">📈 RTP เฉลี่ย</p>
+                    <p className="text-2xl font-bold text-amber-600">{summary.avgRtp}%</p>
+                </div>
+            </div>
+        )
+    }
+
+    {/* Error Message */ }
+    {
+        errorMsg && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-center">
+                {errorMsg}
+            </div>
+        )
+    }
+
+    {/* Table Area */ }
+    {
+        activeTab === 'transactions' ? (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
+                            <tr>
+                                <th className="px-6 py-4 w-16 text-center">#</th>
+                                {config.columns.map((col, i) => (
+                                    <th key={i} className="px-6 py-4">{col}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {loading ? (
                                 <tr>
-                                    <th className="px-6 py-4 w-16 text-center">#</th>
-                                    {config.columns.map((col, i) => (
-                                        <th key={i} className="px-6 py-4">{col}</th>
-                                    ))}
+                                    <td colSpan={config.columns.length + 1} className="px-6 py-12 text-center text-slate-400">
+                                        <div className="flex justify-center items-center gap-2"><Loader2 className="animate-spin" /> กำลังโหลดข้อมูล...</div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={config.columns.length + 1} className="px-6 py-12 text-center text-slate-400">
-                                            <div className="flex justify-center items-center gap-2"><Loader2 className="animate-spin" /> กำลังโหลดข้อมูล...</div>
-                                        </td>
-                                    </tr>
-                                ) : data.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={config.columns.length + 1} className="px-6 py-12 text-center text-slate-400">
-                                            <div className="flex flex-col items-center justify-center gap-2">
-                                                <FileText className="opacity-20" size={48} />
-                                                <p>ไม่พบข้อมูลในช่วงเวลานี้</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    data.map((item: any, index: number) => renderRow(item, index))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination */}
-                    <div className="p-4 border-t border-slate-100 flex justify-between items-center text-sm text-slate-500">
-                        <div>หน้า {page} จาก {totalPages}</div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setPage(Math.max(1, page - 1))}
-                                disabled={page === 1}
-                                className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
-                            >
-                                ก่อนหน้า
-                            </button>
-                            <button
-                                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                                disabled={page === totalPages}
-                                className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
-                            >
-                                ถัดไป
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-            ) : (
-                /* Unmatched Table */
-                <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
+                            ) : data.length === 0 ? (
                                 <tr>
-                                    <th className="px-6 py-4">วันที่</th>
-                                    <th className="px-6 py-4">ข้อความ SMS</th>
-                                    <th className="px-6 py-4">ธนาคาร/บัญชี</th>
-                                    <th className="px-6 py-4">จำนวนเงิน</th>
-                                    <th className="px-6 py-4">สถานะ</th>
-                                    <th className="px-6 py-4">จัดการ</th>
+                                    <td colSpan={config.columns.length + 1} className="px-6 py-12 text-center text-slate-400">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <FileText className="opacity-20" size={48} />
+                                            <p>ไม่พบข้อมูลในช่วงเวลานี้</p>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {unmatchedLogs.length === 0 ? (
-                                    <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">ไม่พบรายการค้างตรวจสอบ</td></tr>
-                                ) : (
-                                    unmatchedLogs.slice((unmatchedPage - 1) * unmatchedPerPage, unmatchedPage * unmatchedPerPage).map((log) => (
-                                        <tr key={log.id} className="hover:bg-slate-50">
-                                            <td className="px-6 py-4 text-slate-500">{formatDate(log.createdAt)}</td>
-                                            <td className="px-6 py-4 text-xs text-slate-600 max-w-md truncate" title={log.rawMessage}>{log.rawMessage}</td>
-                                            <td className="px-6 py-4">
-                                                <div>
-                                                    <p className="font-bold text-slate-700">{log.sourceBank}</p>
-                                                    <p className="text-xs text-slate-400">{log.sourceAccount || log.sourceAccountLast4}</p>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(log.amount)}</td>
-                                            <td className="px-6 py-4"><span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs">รอตรวจสอบ</span></td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => setResolveModal({ log, userQuery: '', usersList: [], selectedUser: null })} className="p-2 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200" title="อนุมัติ"><Check size={16} /></button>
-                                                    <button onClick={() => {
-                                                        setConfirmModal({
-                                                            isOpen: true,
-                                                            title: "ยืนยันการปฏิเสธ",
-                                                            message: `คุณต้องการปฏิเสธรายการ ${formatBaht(log.amount)} จาก ${log.sourceBank} ใช่หรือไม่?`,
-                                                            isDestructive: true,
-                                                            onConfirm: async () => {
-                                                                setResolving(true);
-                                                                try {
-                                                                    const res = await api.post('/admin/transactions/resolve-sms', {
-                                                                        logId: log.id,
-                                                                        action: 'REJECT',
-                                                                    });
-                                                                    if (res.data.success) {
-                                                                        setConfirmModal(null);
-                                                                        fetchUnmatchedLogs();
-                                                                        toast.success("ปฏิเสธรายการสำเร็จ");
-                                                                    }
-                                                                } catch (error: any) {
-                                                                    toast.error(error.response?.data?.message || "เกิดข้อผิดพลาด");
-                                                                } finally {
-                                                                    setResolving(false);
-                                                                }
-                                                            }
-                                                        });
-                                                    }} className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200" title="ปฏิเสธ"><X size={16} /></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {/* Unmatched Pagination */}
-                    {unmatchedLogs.length > unmatchedPerPage && (
-                        <div className="p-4 border-t border-slate-100 flex justify-between items-center text-sm text-slate-500">
-                            <div>หน้า {unmatchedPage} จาก {Math.ceil(unmatchedLogs.length / unmatchedPerPage)} ({unmatchedLogs.length} รายการ)</div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setUnmatchedPage(p => Math.max(1, p - 1))}
-                                    disabled={unmatchedPage === 1}
-                                    className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
-                                >
-                                    ก่อนหน้า
-                                </button>
-                                <button
-                                    onClick={() => setUnmatchedPage(p => Math.min(Math.ceil(unmatchedLogs.length / unmatchedPerPage), p + 1))}
-                                    disabled={unmatchedPage === Math.ceil(unmatchedLogs.length / unmatchedPerPage)}
-                                    className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
-                                >
-                                    ถัดไป
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-            {/* Resolve Modal - Moved to Root Level */}
-            {resolveModal && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <h3 className="font-bold text-slate-800">จัดการรายการฝากเงิน</h3>
-                            <button onClick={() => setResolveModal(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            <div className="bg-slate-50 p-3 rounded-lg text-sm space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">ธนาคาร/เบอร์:</span>
-                                    <span className="font-semibold">{resolveModal.log.sourceBank} {resolveModal.log.sourceAccount}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">ยอดเงิน:</span>
-                                    <span className="font-bold text-emerald-600">{formatBaht(resolveModal.log.amount)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">ข้อความ:</span>
-                                    <span className="text-xs text-slate-600">{resolveModal.log.rawMessage}</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">ค้นหาผู้ใช้เพื่อเติมเงิน</label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Username หรือ เบอร์โทร..."
-                                        className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                                        value={resolveModal.userQuery}
-                                        onChange={(e) => handleSearchUser(e.target.value)}
-                                    />
-                                </div>
-                                {resolveModal.usersList.length > 0 && !resolveModal.selectedUser && (
-                                    <div className="border border-slate-100 rounded-lg max-h-40 overflow-y-auto divide-y divide-slate-100">
-                                        {resolveModal.usersList.map(u => (
-                                            <div
-                                                key={u.id}
-                                                onClick={() => setResolveModal({ ...resolveModal, selectedUser: u, usersList: [] })}
-                                                className="p-2 hover:bg-slate-50 cursor-pointer flex justify-between items-center"
-                                            >
-                                                <div>
-                                                    <div className="font-bold text-sm text-slate-700">{u.username}</div>
-                                                    <div className="text-xs text-slate-500">{u.fullName || '-'}</div>
-                                                </div>
-                                                <div className="text-xs text-slate-400">{u.phone}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {resolveModal.selectedUser && (
-                                <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-lg flex justify-between items-center">
-                                    <div>
-                                        <div className="text-xs text-emerald-600 font-medium">ผู้ใช้ที่เลือก:</div>
-                                        <div className="font-bold text-emerald-800">{resolveModal.selectedUser.username}</div>
-                                    </div>
-                                    <button onClick={() => setResolveModal({ ...resolveModal, selectedUser: null })} className="text-emerald-400 hover:text-emerald-600"><X size={16} /></button>
-                                </div>
+                            ) : (
+                                data.map((item: any, index: number) => renderRow(item, index))
                             )}
+                        </tbody>
+                    </table>
+                </div>
 
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={() => handleResolve('APPROVE')}
-                                    disabled={resolving}
-                                    className={`flex-1 py-2 rounded-lg font-bold flex justify-center items-center gap-2 ${!resolveModal.selectedUser ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                                >
-                                    {resolving ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
-                                    ยืนยันเติมเงิน
-                                </button>
-                            </div>
-                        </div>
+                {/* Pagination */}
+                <div className="p-4 border-t border-slate-100 flex justify-between items-center text-sm text-slate-500">
+                    <div>หน้า {page} จาก {totalPages}</div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setPage(Math.max(1, page - 1))}
+                            disabled={page === 1}
+                            className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
+                        >
+                            ก่อนหน้า
+                        </button>
+                        <button
+                            onClick={() => setPage(Math.min(totalPages, page + 1))}
+                            disabled={page === totalPages}
+                            className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
+                        >
+                            ถัดไป
+                        </button>
                     </div>
                 </div>
-            )}
-            {/* Confirm Modal */}
-            {confirmModal && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-6 text-center">
-                            <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${confirmModal.isDestructive ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                {confirmModal.isDestructive ? <AlertCircle size={24} /> : <Check size={24} />}
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">{confirmModal.title}</h3>
-                            <p className="text-slate-500 mb-6">{confirmModal.message}</p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setConfirmModal(null)}
-                                    className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium"
-                                >
-                                    ยกเลิก
-                                </button>
-                                <button
-                                    onClick={confirmModal.onConfirm}
-                                    disabled={resolving}
-                                    className={`flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 font-medium flex justify-center items-center gap-2 ${confirmModal.isDestructive ? 'bg-red-600' : 'bg-emerald-600'} ${resolving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    {resolving && <Loader2 className="animate-spin" size={16} />}
-                                    ยืนยัน
-                                </button>
-                            </div>
-                        </div>
+
+            </div>
+        ) : (
+        /* Unmatched Table */
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
+                        <tr>
+                            <th className="px-6 py-4">วันที่</th>
+                            <th className="px-6 py-4">ข้อความ SMS</th>
+                            <th className="px-6 py-4">ธนาคาร/บัญชี</th>
+                            <th className="px-6 py-4">จำนวนเงิน</th>
+                            <th className="px-6 py-4">สถานะ</th>
+                            <th className="px-6 py-4">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {unmatchedLogs.length === 0 ? (
+                            <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">ไม่พบรายการค้างตรวจสอบ</td></tr>
+                        ) : (
+                            unmatchedLogs.slice((unmatchedPage - 1) * unmatchedPerPage, unmatchedPage * unmatchedPerPage).map((log) => (
+                                <tr key={log.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4 text-slate-500">{formatDate(log.createdAt)}</td>
+                                    <td className="px-6 py-4 text-xs text-slate-600 max-w-md truncate" title={log.rawMessage}>{log.rawMessage}</td>
+                                    <td className="px-6 py-4">
+                                        <div>
+                                            <p className="font-bold text-slate-700">{log.sourceBank}</p>
+                                            <p className="text-xs text-slate-400">{log.sourceAccount || log.sourceAccountLast4}</p>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(log.amount)}</td>
+                                    <td className="px-6 py-4"><span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs">รอตรวจสอบ</span></td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setResolveModal({ log, userQuery: '', usersList: [], selectedUser: null })} className="p-2 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200" title="อนุมัติ"><Check size={16} /></button>
+                                            <button onClick={() => {
+                                                setConfirmModal({
+                                                    isOpen: true,
+                                                    title: "ยืนยันการปฏิเสธ",
+                                                    message: `คุณต้องการปฏิเสธรายการ ${formatBaht(log.amount)} จาก ${log.sourceBank} ใช่หรือไม่?`,
+                                                    isDestructive: true,
+                                                    onConfirm: async () => {
+                                                        setResolving(true);
+                                                        try {
+                                                            const res = await api.post('/admin/transactions/resolve-sms', {
+                                                                logId: log.id,
+                                                                action: 'REJECT',
+                                                            });
+                                                            if (res.data.success) {
+                                                                setConfirmModal(null);
+                                                                fetchUnmatchedLogs();
+                                                                toast.success("ปฏิเสธรายการสำเร็จ");
+                                                            }
+                                                        } catch (error: any) {
+                                                            toast.error(error.response?.data?.message || "เกิดข้อผิดพลาด");
+                                                        } finally {
+                                                            setResolving(false);
+                                                        }
+                                                    }
+                                                });
+                                            }} className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200" title="ปฏิเสธ"><X size={16} /></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+            {/* Unmatched Pagination */}
+            {unmatchedLogs.length > unmatchedPerPage && (
+                <div className="p-4 border-t border-slate-100 flex justify-between items-center text-sm text-slate-500">
+                    <div>หน้า {unmatchedPage} จาก {Math.ceil(unmatchedLogs.length / unmatchedPerPage)} ({unmatchedLogs.length} รายการ)</div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setUnmatchedPage(p => Math.max(1, p - 1))}
+                            disabled={unmatchedPage === 1}
+                            className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
+                        >
+                            ก่อนหน้า
+                        </button>
+                        <button
+                            onClick={() => setUnmatchedPage(p => Math.min(Math.ceil(unmatchedLogs.length / unmatchedPerPage), p + 1))}
+                            disabled={unmatchedPage === Math.ceil(unmatchedLogs.length / unmatchedPerPage)}
+                            className="px-3 py-1 border border-slate-200 rounded-lg disabled:opacity-50"
+                        >
+                            ถัดไป
+                        </button>
                     </div>
                 </div>
             )}
         </div>
+    )
+    }
+    {/* Resolve Modal - Moved to Root Level */ }
+    {
+        resolveModal && (
+            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <h3 className="font-bold text-slate-800">จัดการรายการฝากเงิน</h3>
+                        <button onClick={() => setResolveModal(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        <div className="bg-slate-50 p-3 rounded-lg text-sm space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">ธนาคาร/เบอร์:</span>
+                                <span className="font-semibold">{resolveModal.log.sourceBank} {resolveModal.log.sourceAccount}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">ยอดเงิน:</span>
+                                <span className="font-bold text-emerald-600">{formatBaht(resolveModal.log.amount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">ข้อความ:</span>
+                                <span className="text-xs text-slate-600">{resolveModal.log.rawMessage}</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">ค้นหาผู้ใช้เพื่อเติมเงิน</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Username หรือ เบอร์โทร..."
+                                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    value={resolveModal.userQuery}
+                                    onChange={(e) => handleSearchUser(e.target.value)}
+                                />
+                            </div>
+                            {resolveModal.usersList.length > 0 && !resolveModal.selectedUser && (
+                                <div className="border border-slate-100 rounded-lg max-h-40 overflow-y-auto divide-y divide-slate-100">
+                                    {resolveModal.usersList.map(u => (
+                                        <div
+                                            key={u.id}
+                                            onClick={() => setResolveModal({ ...resolveModal, selectedUser: u, usersList: [] })}
+                                            className="p-2 hover:bg-slate-50 cursor-pointer flex justify-between items-center"
+                                        >
+                                            <div>
+                                                <div className="font-bold text-sm text-slate-700">{u.username}</div>
+                                                <div className="text-xs text-slate-500">{u.fullName || '-'}</div>
+                                            </div>
+                                            <div className="text-xs text-slate-400">{u.phone}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {resolveModal.selectedUser && (
+                            <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-lg flex justify-between items-center">
+                                <div>
+                                    <div className="text-xs text-emerald-600 font-medium">ผู้ใช้ที่เลือก:</div>
+                                    <div className="font-bold text-emerald-800">{resolveModal.selectedUser.username}</div>
+                                </div>
+                                <button onClick={() => setResolveModal({ ...resolveModal, selectedUser: null })} className="text-emerald-400 hover:text-emerald-600"><X size={16} /></button>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => handleResolve('APPROVE')}
+                                disabled={resolving}
+                                className={`flex-1 py-2 rounded-lg font-bold flex justify-center items-center gap-2 ${!resolveModal.selectedUser ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                            >
+                                {resolving ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
+                                ยืนยันเติมเงิน
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+    {/* Confirm Modal */ }
+    {
+        confirmModal && (
+            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                    <div className="p-6 text-center">
+                        <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${confirmModal.isDestructive ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                            {confirmModal.isDestructive ? <AlertCircle size={24} /> : <Check size={24} />}
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">{confirmModal.title}</h3>
+                        <p className="text-slate-500 mb-6">{confirmModal.message}</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmModal(null)}
+                                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={confirmModal.onConfirm}
+                                disabled={resolving}
+                                className={`flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 font-medium flex justify-center items-center gap-2 ${confirmModal.isDestructive ? 'bg-red-600' : 'bg-emerald-600'} ${resolving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {resolving && <Loader2 className="animate-spin" size={16} />}
+                                ยืนยัน
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+        </div >
     );
 }

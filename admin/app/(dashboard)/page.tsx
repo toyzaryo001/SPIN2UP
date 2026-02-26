@@ -74,7 +74,7 @@ export default function Dashboard() {
         break;
       case 'thisWeek':
         start = new Date();
-        start.setDate(start.getDate() - start.getDay());
+        start.setDate(start.getDate() - start.getDay() + (start.getDay() === 0 ? -6 : 1)); // start of week (Monday)
         start.setHours(0, 0, 0, 0);
         break;
       case 'thisMonth':
@@ -97,17 +97,23 @@ export default function Dashboard() {
         start.setHours(0, 0, 0, 0);
     }
 
-    return { start, end };
+    // Format safely to local timezone to prevent UTC timezone shift
+    const formatLocalISO = (d: Date) => {
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
+
+    return { start, end, startISO: formatLocalISO(start), endISO: formatLocalISO(end) };
   };
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const { start, end } = getDateRange();
+      const { startISO, endISO } = getDateRange();
       const res = await api.get('/admin/dashboard', {
         params: {
-          startDate: start.toISOString(),
-          endDate: end.toISOString()
+          startDate: startISO,
+          endDate: endISO
         }
       });
       if (res.data.success) {

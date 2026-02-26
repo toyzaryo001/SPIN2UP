@@ -408,6 +408,10 @@ router.get('/all-deposits', requirePermission('reports', 'view_deposits'), async
         const { preset = 'today', startDate, endDate } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
 
+        // Ensure accurate filtering matching Start/End Date Range exactly by timezone
+        // The default dayjs object parses startDate/End into properly adjusted UTC boundary
+
+
         // 1. Fetch Valid Transactions
         const transactions = await prisma.transaction.findMany({
             where: {

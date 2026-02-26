@@ -3,6 +3,11 @@ import prisma from '../../lib/db.js';
 import { requirePermission } from '../../middlewares/auth.middleware.js';
 import { BetflixService } from '../../services/betflix.service.js';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const router = Router();
 
@@ -16,29 +21,20 @@ router.get('/', async (req, res) => {
         let filterEnd: Date;
 
         if (startDate && endDate) {
-            filterStart = new Date(startDate as string);
-            filterStart.setHours(0, 0, 0, 0);
-            filterEnd = new Date(endDate as string);
-            filterEnd.setHours(23, 59, 59, 999);
+            filterStart = dayjs(startDate as string).utcOffset(7).startOf('day').toDate();
+            filterEnd = dayjs(endDate as string).utcOffset(7).endOf('day').toDate();
         } else {
-            // Default to today
-            filterStart = new Date();
-            filterStart.setHours(0, 0, 0, 0);
-            filterEnd = new Date();
-            filterEnd.setHours(23, 59, 59, 999);
+            // Default to today in UTC+7
+            filterStart = dayjs().utcOffset(7).startOf('day').toDate();
+            filterEnd = dayjs().utcOffset(7).endOf('day').toDate();
         }
 
-        // Month range (current month)
-        const monthStart = new Date();
-        monthStart.setDate(1);
-        monthStart.setHours(0, 0, 0, 0);
-        const monthEnd = new Date();
-        monthEnd.setHours(23, 59, 59, 999);
+        // Month range (current month) in UTC+7
+        const monthStart = dayjs().utcOffset(7).startOf('month').toDate();
+        const monthEnd = dayjs().utcOffset(7).endOf('month').toDate();
 
-        // Get last 7 days range for chart
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        sevenDaysAgo.setHours(0, 0, 0, 0);
+        // Get last 7 days range for chart in UTC+7
+        const sevenDaysAgo = dayjs().utcOffset(7).subtract(6, 'day').startOf('day').toDate();
 
         // ============ DAILY STATS (Based on filter) ============
         const [
@@ -127,8 +123,8 @@ router.get('/', async (req, res) => {
 
         // 2. Check betting activity for these depositors via API (Concurrency: 5)
         let activeUserCount = 0;
-        const apiStart = dayjs(filterStart).format('YYYY-MM-DD');
-        const apiEnd = dayjs(filterEnd).format('YYYY-MM-DD');
+        const apiStart = dayjs(filterStart).utcOffset(7).format('YYYY-MM-DD');
+        const apiEnd = dayjs(filterEnd).utcOffset(7).format('YYYY-MM-DD');
         const batchSize = 5;
 
         for (let i = 0; i < depositors.length; i += batchSize) {
@@ -183,11 +179,9 @@ router.get('/', async (req, res) => {
         // ============ CHART DATA (7 days) ============
         const chartData = [];
         for (let i = 6; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            date.setHours(0, 0, 0, 0);
-            const dateEnd = new Date(date);
-            dateEnd.setHours(23, 59, 59, 999);
+            const currentDayObj = dayjs().utcOffset(7).subtract(i, 'day');
+            const date = currentDayObj.startOf('day').toDate();
+            const dateEnd = currentDayObj.endOf('day').toDate();
 
             const [dayDeposit, dayWithdraw, dayNewUsers] = await Promise.all([
                 prisma.transaction.aggregate({
@@ -204,7 +198,7 @@ router.get('/', async (req, res) => {
             ]);
 
             chartData.push({
-                date: date.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' }),
+                date: currentDayObj.locale('th').format('DD/MM'), // Format example for th-TH
                 deposit: Number(dayDeposit._sum.amount || 0),
                 withdraw: Number(dayWithdraw._sum.amount || 0),
                 newUsers: dayNewUsers

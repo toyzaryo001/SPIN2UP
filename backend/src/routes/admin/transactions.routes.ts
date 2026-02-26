@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { BetflixService } from '../../services/betflix.service';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const router = Router();
 
@@ -53,11 +59,13 @@ router.get('/', async (req, res) => {
 
         if (startDate || endDate) {
             where.createdAt = {};
-            if (startDate) where.createdAt.gte = new Date(startDate as string);
+            if (startDate) {
+                // Ensure the start date is parsed correctly in UTC+7
+                where.createdAt.gte = dayjs(startDate as string).utcOffset(7).startOf('day').toDate();
+            }
             if (endDate) {
-                // Frontend already sends endDate with correct time (23:59:59 in local TZ, converted to ISO)
-                // Do NOT call setHours again — that would shift UTC time and include next-day records
-                where.createdAt.lte = new Date(endDate as string);
+                // Parse correctly in UTC+7 and shift to end of day
+                where.createdAt.lte = dayjs(endDate as string).utcOffset(7).endOf('day').toDate();
             }
         }
 

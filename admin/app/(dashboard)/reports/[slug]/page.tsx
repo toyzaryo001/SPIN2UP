@@ -19,7 +19,7 @@ const reportConfig: Record<string, { title: string; columns: string[] }> = {
 };
 
 // Calculate date range from preset
-function getDateRange(preset: string, customStart: string, customEnd: string): { start: Date; end: Date } {
+function getDateRange(preset: string, customStart: string, customEnd: string): { start: Date; end: Date; startISO: string; endISO: string } {
     let start = new Date();
     let end = new Date();
     end.setHours(23, 59, 59, 999);
@@ -36,7 +36,7 @@ function getDateRange(preset: string, customStart: string, customEnd: string): {
             end.setHours(23, 59, 59, 999);
             break;
         case 'week':
-            start.setDate(start.getDate() - start.getDay());
+            start.setDate(start.getDate() - start.getDay() + (start.getDay() === 0 ? -6 : 1)); // start of week (Monday)
             start.setHours(0, 0, 0, 0);
             break;
         case 'month':
@@ -45,9 +45,12 @@ function getDateRange(preset: string, customStart: string, customEnd: string): {
             break;
         case 'custom':
             if (customStart && customEnd) {
-                start = new Date(customStart);
-                end = new Date(customEnd);
-                end.setHours(23, 59, 59, 999);
+                // Keep local timezone, only change time portion
+                const tStart = new Date(customStart);
+                start = new Date(tStart.getFullYear(), tStart.getMonth(), tStart.getDate(), 0, 0, 0, 0);
+
+                const tEnd = new Date(customEnd);
+                end = new Date(tEnd.getFullYear(), tEnd.getMonth(), tEnd.getDate(), 23, 59, 59, 999);
             } else {
                 start.setHours(0, 0, 0, 0);
             }
@@ -55,7 +58,14 @@ function getDateRange(preset: string, customStart: string, customEnd: string): {
         default:
             start.setHours(0, 0, 0, 0);
     }
-    return { start, end };
+
+    // Format safely to local timezone to prevent UTC timezone shift
+    const formatLocalISO = (d: Date) => {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
+
+    return { start, end, startISO: formatLocalISO(start), endISO: formatLocalISO(end) };
 }
 
 // Export CSV utility
@@ -178,9 +188,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
             setLoading(true);
             setErrorMsg("");
             try {
-                const { start, end } = getDateRange(dateRange, customStart, customEnd);
-                const startISO = start.toISOString();
-                const endISO = end.toISOString();
+                const { startISO, endISO } = getDateRange(dateRange, customStart, customEnd);
                 let query = `?page=${page}&limit=20`;
                 if (search) query += `&search=${search}`;
 
@@ -480,9 +488,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                             setExporting(true);
                             try {
                                 // Fetch all data for export (up to 10000 rows)
-                                const { start, end } = getDateRange(dateRange, customStart, customEnd);
-                                const startISO = start.toISOString();
-                                const endISO = end.toISOString();
+                                const { startISO, endISO } = getDateRange(dateRange, customStart, customEnd);
 
                                 if (['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
                                     if (slug === 'deposit') {

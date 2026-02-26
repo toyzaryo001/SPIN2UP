@@ -219,7 +219,14 @@ router.put('/agent/:id', requirePermission('agents', 'settings', 'manage'), asyn
 router.get('/truemoney', requirePermission('settings', 'truemoney', 'view'), async (req, res) => {
     try {
         const wallets = await prisma.trueMoneyWallet.findMany({ orderBy: { createdAt: 'desc' } });
-        res.json({ success: true, data: wallets });
+        // Mask jwtSecret สำหรับ display (แสดง 6 ตัวแรก + ***)
+        const masked = wallets.map(w => ({
+            ...w,
+            jwtSecret: w.jwtSecret ? w.jwtSecret.slice(0, 6) + '***' : null,
+            hasSecret: !!w.jwtSecret,
+            webhookUrl: `${req.protocol}://${req.get('host')}/api/webhook/truewallet`,
+        }));
+        res.json({ success: true, data: masked });
     } catch (error) {
         console.error('Get truemoney error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
@@ -229,10 +236,10 @@ router.get('/truemoney', requirePermission('settings', 'truemoney', 'view'), asy
 // POST /api/admin/settings/truemoney (ต้องมีสิทธิ์ settings.truemoney)
 router.post('/truemoney', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
-        const { phoneNumber, accountName, isActive } = req.body;
+        const { phoneNumber, accountName, jwtSecret, isActive } = req.body;
 
         const wallet = await prisma.trueMoneyWallet.create({
-            data: { phoneNumber, accountName, isActive: isActive ?? true },
+            data: { phoneNumber, accountName, jwtSecret: jwtSecret || null, isActive: isActive ?? true },
         });
 
         res.status(201).json({ success: true, data: wallet });
@@ -245,9 +252,16 @@ router.post('/truemoney', requirePermission('settings', 'truemoney', 'manage'), 
 // PUT /api/admin/settings/truemoney/:id (ต้องมีสิทธิ์ settings.truemoney)
 router.put('/truemoney/:id', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
+        const { phoneNumber, accountName, jwtSecret, isActive } = req.body;
+        const updateData: any = {};
+        if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+        if (accountName !== undefined) updateData.accountName = accountName;
+        if (jwtSecret !== undefined) updateData.jwtSecret = jwtSecret || null;
+        if (isActive !== undefined) updateData.isActive = isActive;
+
         const wallet = await prisma.trueMoneyWallet.update({
             where: { id: Number(req.params.id) },
-            data: req.body,
+            data: updateData,
         });
 
         res.json({ success: true, data: wallet });

@@ -42,6 +42,7 @@ model User {
   rewards       RewardClaim[]
   // Removed: editLogs relation (FK was removed from EditLog model)
   promotionLogs PromotionLog[]
+  trueWalletLogs TrueWalletLog[]
 
   @@index([phone])
   @@index([referrerCode])
@@ -285,9 +286,34 @@ model TrueMoneyWallet {
   id           Int      @id @default(autoincrement())
   phoneNumber  String
   accountName  String
+  jwtSecret    String?            // JWT Secret จาก TrueWallet Webhook
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// TrueWallet Webhook Log — สำหรับ dedup + tracking
+model TrueWalletLog {
+  id              Int      @id @default(autoincrement())
+  transactionId   String   @unique          // เลขอ้างอิง จาก JWT payload (ป้องกันซ้ำ)
+  senderMobile    String                    // เบอร์ผู้โอน
+  senderName      String?                   // ชื่อผู้โอน
+  amount          Decimal                   // จำนวนเงิน (บาท)
+  message         String?                   // ข้อความจากผู้โอน
+  receivedTime    DateTime                  // เวลาที่โอน
+  walletId        Int?                      // wallet ปลายทางที่แมทช์ได้
+  userId          Int?                      // user ที่แมทช์ได้
+  user            User?    @relation(fields: [userId], references: [id])
+  transactionDbId Int?                      // FK ไป Transaction (ถ้าฝากสำเร็จ)
+  matchLevel      Int      @default(0)      // 0=ไม่ match, 1=เบอร์, 2=เบอร์+ชื่อ
+  status          String   @default("PENDING") // PENDING, COMPLETED, NO_MATCH, FAILED
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+
+  @@index([senderMobile])
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 // ตั้งค่าระบบ

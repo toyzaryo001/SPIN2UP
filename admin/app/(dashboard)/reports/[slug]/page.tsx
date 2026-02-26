@@ -216,7 +216,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
 
                 } else if (slug === 'deposit') {
                     // All deposits (inclusive of MANUAL_ADD, BONUS, CASHBACK)
-                    const url = `/admin/reports/all-deposits${query}&startDate=${startISO}&endDate=${endISO}`;
+                    const url = `/admin/reports/all-deposits${query}&preset=custom&startDate=${startISO}&endDate=${endISO}`;
                     const res = await api.get(url);
                     const result = res.data;
                     if (result.success) {
@@ -492,7 +492,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
 
                                 if (['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
                                     if (slug === 'deposit') {
-                                        const res = await api.get(`/admin/reports/all-deposits?page=1&limit=10000&startDate=${startISO}&endDate=${endISO}${search ? `&search=${search}` : ''}`);
+                                        const res = await api.get(`/admin/reports/all-deposits?page=1&limit=10000&preset=custom&startDate=${startISO}&endDate=${endISO}${search ? `&search=${search}` : ''}`);
                                         const txs = res.data?.data?.transactions || [];
                                         exportToCsv(config.title, ['วันที่', 'Username', 'ชื่อ', 'จำนวนเงิน', 'ช่องทาง', 'สถานะ', 'ผู้ทำรายการ'],
                                             txs.map((t: any) => [formatDate(t.date || t.createdAt), t.username || t.user?.username, t.fullName || t.user?.fullName, t.amount, t.channel || t.subType || t.type, t.status, t.admin || (t.adminId ? `Admin #${t.adminId}` : 'System')]));

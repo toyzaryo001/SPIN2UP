@@ -661,9 +661,20 @@ function HomePageLogic() {
     if (userData && userData !== "undefined") {
       try { setUser(JSON.parse(userData)); } catch (e) { localStorage.removeItem("user"); }
     }
+
     fetchUser();
     const interval = setInterval(fetchUser, 10000);
-    return () => clearInterval(interval);
+
+    // Listen for auto-logout from api.ts
+    const handleLogoutEvent = () => {
+      setUser(null);
+    };
+    window.addEventListener('user-logout', handleLogoutEvent);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('user-logout', handleLogoutEvent);
+    };
   }, []);
 
   // Handle URL Actions

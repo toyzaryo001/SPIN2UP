@@ -2,12 +2,32 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
 import prisma from '../lib/db.js';
 import { signToken } from '../utils/jwt.js';
 import { BetflixService } from '../services/betflix.service.js';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 
 const router = Router();
+
+// Cache PrismaClient instances เพื่อป้องกัน connection leak
+const prismaCache = new Map<string, PrismaClient>();
+
+function getSuperPrisma(url: string): PrismaClient {
+    const key = `super:${url}`;
+    if (!prismaCache.has(key)) {
+        prismaCache.set(key, new PrismaClient({ datasources: { db: { url } } }));
+    }
+    return prismaCache.get(key)!;
+}
+
+function getTenantPrisma(url: string): PrismaClient {
+    const key = `tenant:${url}`;
+    if (!prismaCache.has(key)) {
+        prismaCache.set(key, new PrismaClient({ datasources: { db: { url } } }));
+    }
+    return prismaCache.get(key)!;
+}
 
 // Validation schemas
 const registerSchema = z.object({
@@ -96,7 +116,7 @@ router.post('/register', async (req, res) => {
                 bankAccount,
                 password: hashedPassword,
                 lineId: lineId || null,
-                referrerCode: `REF${Date.now().toString().slice(-8)}`,
+                referrerCode: `REF${crypto.randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase()}`,
                 referredBy,
             },
         });
@@ -178,19 +198,10 @@ router.post('/login', async (req, res) => {
         }
 
         // === DUPLICATE LOGIN CHECK ===
-        // If user already has an active sessionToken, someone is already logged in
+        // ถ้ามี session เก่า → เตะ session เก่าออก → ให้ login ใหม่ผ่านได้เลย
         if (user.sessionToken) {
-            // Clear the old session (kick the existing user)
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { sessionToken: null },
-            });
-            // Refuse the new login too — both parties must re-login
-            return res.status(409).json({
-                success: false,
-                code: 'DUPLICATE_LOGIN',
-                message: 'ตรวจพบการเข้าสู่ระบบซ้ำ บัญชีนี้มีการใช้งานอยู่ ทั้งสองเซสชั่นถูกบังคับออก กรุณาเข้าสู่ระบบใหม่',
-            });
+            console.log(`[Auth] Duplicate login detected for user ${user.id}, kicking old session`);
+            // Session เก่าจะถูก kick ผ่าน auth middleware (sessionToken ไม่ตรง)
         }
 
         // Generate unique session token
@@ -305,8 +316,8 @@ router.get('/config', async (req, res) => {
         const superDbUrl = process.env.SUPER_DATABASE_URL;
         if (!superDbUrl) return res.status(500).json({ success: false, message: 'System Config Error' });
 
-        const { PrismaClient } = await import('@prisma/client');
-        const superPrisma = new PrismaClient({ datasources: { db: { url: superDbUrl } } });
+        // Cache PrismaClient สำหรับ Super DB (ป้องกัน connection leak)
+        const superPrisma = getSuperPrisma(superDbUrl);
 
         let prefixData: any = null;
 
@@ -327,8 +338,6 @@ router.get('/config', async (req, res) => {
             }
         } catch (dbErr) {
             console.error("SuperDB Query Error:", dbErr);
-        } finally {
-            await superPrisma.$disconnect();
         }
 
         if (prefixData) {
@@ -336,7 +345,7 @@ router.get('/config', async (req, res) => {
             let tenantSettings: any = {};
 
             try {
-                const tenantPrisma = new PrismaClient({ datasources: { db: { url: prefixData.databaseUrl } } });
+                const tenantPrisma = getTenantPrisma(prefixData.databaseUrl);
                 try {
                     const settings = await tenantPrisma.setting.findMany();
                     settings.forEach((s: { key: string; value: string }) => {
@@ -349,8 +358,8 @@ router.get('/config', async (req, res) => {
                     feats.forEach(f => featMap[f.key] = f.isEnabled);
                     tenantSettings.features = featMap;
 
-                } finally {
-                    await tenantPrisma.$disconnect();
+                } catch (fetchErr) {
+                    console.error("Tenant settings fetch error", fetchErr);
                 }
             } catch (err) {
                 console.error("Tenant settings fetch error (could be schema mismatch or connection)", err);
@@ -405,8 +414,7 @@ router.post('/admin/login', async (req, res) => {
             return res.status(500).json({ success: false, message: 'System Config Error' });
         }
 
-        const { PrismaClient } = await import('@prisma/client');
-        const superPrisma = new PrismaClient({ datasources: { db: { url: superDbUrl } } });
+        const superPrisma = getSuperPrisma(superDbUrl);
 
         let targetPrefix;
         try {
@@ -418,15 +426,13 @@ router.post('/admin/login', async (req, res) => {
         } catch (err) {
             console.error('Super DB Error:', err);
             return res.status(500).json({ success: false, message: 'DB Error' });
-        } finally {
-            await superPrisma.$disconnect();
         }
 
         if (!targetPrefix) return res.status(401).json({ success: false, message: 'Prefix ไม่ถูกต้อง' });
         if (!targetPrefix.isActive) return res.status(403).json({ success: false, message: 'Prefix Inactive' });
 
         // 2. Connect to Tenant DB
-        const tenantPrisma = new PrismaClient({ datasources: { db: { url: targetPrefix.databaseUrl } } });
+        const tenantPrisma = getTenantPrisma(targetPrefix.databaseUrl);
 
         try {
             const admin = await tenantPrisma.admin.findUnique({

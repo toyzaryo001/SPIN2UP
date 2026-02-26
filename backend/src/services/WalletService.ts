@@ -78,8 +78,16 @@ export class WalletService {
                         // B. Deposit to Target
                         const success = await targetAgentService.deposit(targetAccount.externalUsername, withdrawnAmount);
                         if (!success) {
-                            console.error('[CRITICAL] Deposit failed during swap! Money is stranded!');
-                            // TODO: Implement refund or manual check log
+                            console.error('[CRITICAL] Deposit failed during swap! Attempting refund...');
+                            // พยายาม refund กลับเข้า source agent
+                            try {
+                                await sourceAgentService.deposit(sourceAccount.externalUsername, withdrawnAmount);
+                                console.log(`[WalletSwap] ✅ Refund ${withdrawnAmount} back to Source Agent succeeded`);
+                            } catch (refundErr) {
+                                console.error(`[CRITICAL] ❌ Refund ALSO failed! ${withdrawnAmount} THB stranded for User ${userId}!`, refundErr);
+                                // TODO: สร้าง alert/log ให้ admin ตรวจสอบด้วยมือ
+                            }
+                            throw new Error(`Swap failed: ไม่สามารถฝากเงินเข้า Agent ปลายทางได้`);
                         } else {
                             console.log(`[WalletSwap] Deposited ${withdrawnAmount} to Target`);
                         }

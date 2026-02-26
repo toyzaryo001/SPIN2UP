@@ -27,7 +27,18 @@ const PORT = parseInt(process.env.PORT || '3001');
 
 
 // Middleware
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3002'];
+app.use(cors({
+    origin: (origin, callback) => {
+        // อนุญาต request ที่ไม่มี origin (Postman, cURL, mobile app)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -61,8 +72,6 @@ app.get('/api/db-check', async (req, res) => {
             status: 'connected',
             database: 'OK',
             userCount,
-            dbUrl: process.env.DATABASE_URL ? `${process.env.DATABASE_URL.substring(0, 30)}...` : 'NOT SET',
-            superDbUrl: process.env.SUPER_DATABASE_URL ? `${process.env.SUPER_DATABASE_URL.substring(0, 30)}...` : 'NOT SET',
             timestamp: new Date().toISOString()
         });
     } catch (error: any) {
@@ -71,8 +80,6 @@ app.get('/api/db-check', async (req, res) => {
             database: 'ERROR',
             error: error.message,
             code: error.code,
-            dbUrl: process.env.DATABASE_URL ? `${process.env.DATABASE_URL.substring(0, 30)}...` : 'NOT SET',
-            superDbUrl: process.env.SUPER_DATABASE_URL ? `${process.env.SUPER_DATABASE_URL.substring(0, 30)}...` : 'NOT SET',
             timestamp: new Date().toISOString()
         });
     }
@@ -102,17 +109,15 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`Health check available at http://0.0.0.0:${PORT}/api/health`);
-
-    // Start Bet Log Sync (Disabled: API requires valid lastId which is unavailable)
-    // console.log('🚀 Starting Bet Log Sync Service...');
-    // setInterval(() => {
-    //     BetLogSyncService.syncLogs().catch(err => console.error('Sync Error:', err));
-    // }, 60 * 1000);
-    // Run all immediately on start
-    // BetLogSyncService.syncLogs().catch(err => console.error('Initial Sync Error:', err));
+// Initialize JWT Secret แล้วค่อย start server
+initJwtSecret().then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`Health check available at http://0.0.0.0:${PORT}/api/health`);
+    });
+}).catch(err => {
+    console.error('❌ Failed to initialize JWT secret:', err);
+    process.exit(1);
 });
 
 export default app;

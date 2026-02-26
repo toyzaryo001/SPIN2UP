@@ -83,7 +83,7 @@ export class PaymentService {
             await prisma.transaction.update({
                 where: { id: transaction.id },
                 data: {
-                    status: 'failed',
+                    status: 'FAILED',
                     note: result.message || 'Provider Error',
                     rawResponse: JSON.stringify(result.rawResponse)
                 }
@@ -128,25 +128,16 @@ export class PaymentService {
         }
 
         // ============================================
-        // BETFLIX SYNC: Deduct from Game Wallet First
+        // STEP A: หัก balance ใน DB ก่อน (Atomic) — ป้องกัน double-spend
         // ============================================
-        if (user.betflixUsername) {
-            const success = await BetflixService.transfer(user.betflixUsername, -amount, `WDING_${Date.now()}`);
-            if (!success) {
-                throw new Error('ไม่สามารถถอนเงินออกจากเกมได้ (Game Wallet Error)');
-            }
-        } else {
-            // Check if system allows withdrawing without game wallet? 
-            // Usually no, but for safety in dev we might allow. 
-            // In Production "Single Wallet" implies user MUST have betflix wallet.
-            // We will proceed but log warning.
-            console.warn(`User ${user.username} has no betflix wallet, withdrawing local balance only.`);
-        }
-
-        // 4. Create Transaction (PENDING) & Deduct Local Balance
-        // We deduct balance immediately to prevent double spend
         const transaction = await prisma.$transaction(async (tx) => {
-            // Deduct User Balance (Sync with Game)
+            // เช็ค balance อีกครั้งใน transaction (pessimistic)
+            const freshUser = await tx.user.findUnique({ where: { id: userId } });
+            if (!freshUser || Number(freshUser.balance) < amount) {
+                throw new Error('ยอดเงินไม่เพียงพอ');
+            }
+
+            // หัก balance ทันที
             await tx.user.update({
                 where: { id: userId },
                 data: { balance: { decrement: amount } }
@@ -157,14 +148,29 @@ export class PaymentService {
                     userId,
                     type: 'WITHDRAW',
                     amount: new Decimal(amount),
-                    balanceBefore: user.balance,
-                    balanceAfter: new Decimal(Number(user.balance) - amount),
+                    balanceBefore: freshUser.balance,
+                    balanceAfter: new Decimal(Number(freshUser.balance) - amount),
                     status: 'PENDING',
                     note: 'Withdraw Request',
-                    paymentGatewayId: null // Pending assignment
+                    paymentGatewayId: null
                 }
             });
         });
+
+        // ============================================
+        // STEP B: ถอนจาก Game Wallet (Betflix) — หลัง DB หักแล้ว
+        // ถ้าล้มเหลว → refund คืน DB
+        // ============================================
+        if (user.betflixUsername) {
+            const success = await BetflixService.transfer(user.betflixUsername, -amount, `WDING_${transaction.id}`);
+            if (!success) {
+                // Betflix ล้มเหลว → คืนเงินใน DB
+                await this.refundTransaction(transaction.id, userId, amount, 'ถอนจาก Game Wallet ล้มเหลว — คืนเงินอัตโนมัติ');
+                throw new Error('ไม่สามารถถอนเงินออกจากเกมได้ (Game Wallet Error) — เงินถูกคืนแล้ว');
+            }
+        } else {
+            console.warn(`User ${user.username} has no betflix wallet, withdrawing local balance only.`);
+        }
 
         // Notify Admins via LINE
         LineNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[LineNotify] Error:', err));
@@ -332,7 +338,7 @@ export class PaymentService {
             return { success: false, message: 'Transaction not found' };
         }
 
-        if (transaction.status === 'success' || transaction.status === 'approved') {
+        if (transaction.status === 'COMPLETED' || transaction.status === 'APPROVED') {
             return { success: true, message: 'Already processed' };
         }
 

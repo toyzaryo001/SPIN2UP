@@ -98,10 +98,13 @@ export class RewardService {
             );
         }
 
-        // 4b. Nexus — ดึงจาก UserExternalAccount
-        const nexusAccount = user.externalAccounts?.find(
-            (acc: any) => acc.externalUsername
-        );
+        // 4b. Nexus — ดึงจาก UserExternalAccount (กรองด้วย agent code)
+        const nexusAgentConfig = await prisma.agentConfig.findUnique({ where: { code: 'NEXUS' } });
+        const nexusAccount = nexusAgentConfig
+            ? user.externalAccounts?.find(
+                (acc: any) => acc.agentId === nexusAgentConfig.id && acc.externalUsername
+            )
+            : null;
         if (nexusAccount) {
             fetchPromises.push(
                 (async () => {

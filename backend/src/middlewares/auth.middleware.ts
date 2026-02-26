@@ -7,7 +7,7 @@ export interface AuthRequest extends Request {
     userPermissions?: string[];
 }
 
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -22,11 +22,12 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
         // === SESSION TOKEN VALIDATION (for players only) ===
         if (payload.sessionToken && payload.role === 'USER') {
-            // Async check — validate sessionToken against DB
-            prisma.user.findUnique({
-                where: { id: payload.userId },
-                select: { sessionToken: true }
-            }).then(user => {
+            try {
+                const user = await prisma.user.findUnique({
+                    where: { id: payload.userId },
+                    select: { sessionToken: true }
+                });
+
                 if (!user || user.sessionToken !== payload.sessionToken) {
                     return res.status(403).json({
                         success: false,
@@ -34,12 +35,9 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
                         message: 'มีการพยายามเข้าสู่ระบบบัญชีนี้จากที่อื่น เซสชั่นถูกบังคับออก กรุณาเข้าสู่ระบบใหม่',
                     });
                 }
-                next();
-            }).catch(() => {
+            } catch {
                 // DB error — allow through to avoid false kicks
-                next();
-            });
-            return; // Don't call next() here, wait for async
+            }
         }
 
         next();

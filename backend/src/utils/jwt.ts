@@ -46,7 +46,10 @@ async function getJwtSecret(): Promise<string> {
     }
 
     // Fallback to environment variable
-    const envSecret = process.env.JWT_SECRET || 'fallback-secret-key';
+    const envSecret = process.env.JWT_SECRET;
+    if (!envSecret) {
+        throw new Error('[JWT] CRITICAL: ไม่พบ JWT_SECRET ทั้งใน Database และ Environment Variable — กรุณาตั้งค่าก่อนรันเซิร์ฟเวอร์');
+    }
     cachedSecret = envSecret;
     cacheExpiry = now + CACHE_TTL;
     console.log('[JWT] Using environment variable for secret');
@@ -62,7 +65,11 @@ function getJwtSecretSync(): string {
         return cachedSecret;
     }
     // Fallback to env if cache not populated yet
-    return process.env.JWT_SECRET || 'fallback-secret-key';
+    const envSecret = process.env.JWT_SECRET;
+    if (!envSecret) {
+        throw new Error('[JWT] CRITICAL: ไม่พบ JWT_SECRET — กรุณา call initJwtSecret() ตอน startup ก่อน');
+    }
+    return envSecret;
 }
 
 /**

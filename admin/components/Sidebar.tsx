@@ -177,17 +177,19 @@ export default function Sidebar() {
       try {
         // 1. Fetch Permissions
         const permRes = await api.get('/admin/me');
-        if (permRes.data.success) {
-          setPermissions(permRes.data.data.permissions || {});
-          setIsSuperAdmin(permRes.data.data.isSuperAdmin || false);
+        if (permRes.data.success && permRes.data.data) {
+          const adminData = permRes.data.data;
+          setPermissions(adminData.permissions || {});
+          setIsSuperAdmin(adminData.isSuperAdmin === true || adminData.role?.name === 'SUPER_ADMIN');
+          console.log('[Sidebar] Admin Access:', { isSuperAdmin: adminData.isSuperAdmin, permissions: adminData.permissions });
         }
 
         // 2. Fetch Branding (from public config)
         const hostname = window.location.hostname;
         const configRes = await api.get(`/auth/config?domain=${hostname}`);
-        if (configRes.data.success) {
+        if (configRes.data.success && configRes.data.data) {
           setBrandName(`${configRes.data.data.name} ADMIN`);
-          setLogoUrl(configRes.data.data.logo);
+          setLogoUrl(configRes.data.data.logo || null);
         } else {
           // Fallback: try to guess from hostname if API fails
           const parts = hostname.split('.');
@@ -201,6 +203,7 @@ export default function Sidebar() {
       } catch (error) {
         console.error('Failed to fetch sidebar data:', error);
         setPermissions({});
+        setIsSuperAdmin(false);
       } finally {
         setLoading(false);
       }
@@ -249,10 +252,16 @@ export default function Sidebar() {
 
   // Helper to check if user has any permission in a category
   const hasAnyPermissionIn = (key: string) => {
+    if (isSuperAdmin) return true; // Super admin always has access
     if (!permissions || !permissions[key]) return false;
+
+    // Check if any action in this category is true (view, manage, edit, etc.)
     return Object.values(permissions[key]).some(v => {
       if (typeof v === 'boolean') return v === true;
-      if (typeof v === 'object' && v !== null) return v.view || v.manage;
+      if (typeof v === 'object' && v !== null) {
+        // Handle object permissions just in case
+        return (v as any).view || (v as any).manage || (v as any).true;
+      }
       return false;
     });
   };

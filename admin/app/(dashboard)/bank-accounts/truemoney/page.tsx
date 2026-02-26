@@ -179,31 +179,43 @@ export default function TrueMoneyPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อบัญชี *</label>
                                 <input type="text" value={formData.accountName} onChange={(e) => setFormData({ ...formData, accountName: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
                             </div>
-                            <div>
-                                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
-                                    Webhook Authorization Key
-                                    {!editingWallet && <span className="text-xs text-orange-500 font-normal">(กรอกตัวนี้ด้วย)</span>}
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type={showSecret ? "text" : "password"}
-                                        value={formData.jwtSecret}
-                                        onChange={(e) => setFormData({ ...formData, jwtSecret: e.target.value })}
-                                        placeholder={editingWallet ? "เว้นว่างถ้าไม่ต้องการเปลี่ยนคีย์" : "วาง Authorization Key ที่ได้จาก TrueWallet"}
-                                        className="w-full px-4 py-2 pr-28 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowSecret(!showSecret)}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded"
-                                    >
-                                        {showSecret ? 'ซ่อน' : 'แสดง'}
-                                    </button>
+                            {editingWallet ? (
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                                        Webhook Authorization Key
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type={showSecret ? "text" : "password"}
+                                            value={formData.jwtSecret}
+                                            onChange={(e) => setFormData({ ...formData, jwtSecret: e.target.value })}
+                                            placeholder="วาง Authorization Key ที่ได้จาก TrueWallet"
+                                            className="w-full px-4 py-2 pr-28 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowSecret(!showSecret)}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded"
+                                        >
+                                            {showSecret ? 'ซ่อน' : 'แสดง'}
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-2">
+                                        * นำ Authorization Key ล่าสุดที่ได้จาก TrueWallet มาใส่ในช่องนี้
+                                    </p>
                                 </div>
-                                <p className="text-xs text-slate-500 mt-2">
-                                    * หลังจากเพิ่ม Wallet แล้ว ให้นำ Webhook URL ไปผูก และนำ Authorization Key มาใส่ที่ช่องนี้ เพื่อให้ระบบซิงค์ยอดเงินอัตโนมัติ
-                                </p>
-                            </div>
+                            ) : (
+                                <div className="bg-orange-50 border border-orange-100 p-3 rounded-lg">
+                                    <p className="text-xs text-orange-700 font-medium">
+                                        💡 วิธีการตั้งค่า Webhook (หลังกดบันทึก)
+                                    </p>
+                                    <ol className="text-xs text-orange-600 mt-1 list-decimal list-inside space-y-1">
+                                        <li>กดบันทึกเพื่อเพิ่ม Wallet ใหม่ก่อน</li>
+                                        <li>นำ Webhook URL ของ Wallet ที่ได้ไปตั้งค่าในแอป TrueWallet</li>
+                                        <li>ได้ Authorization Key มาแล้ว ให้กลับมากด "แก้ไข" เพื่อใส่ Key</li>
+                                    </ol>
+                                </div>
+                            )}
                             <div className="flex items-center pt-2">
                                 <input type="checkbox" id="walletActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded text-orange-500 focus:ring-orange-500" />
                                 <label htmlFor="walletActive" className="ml-2 text-sm font-medium text-slate-700 cursor-pointer">เปิดใช้งาน Wallet นี้</label>

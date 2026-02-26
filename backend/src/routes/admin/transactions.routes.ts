@@ -36,7 +36,13 @@ router.get('/', async (req, res) => {
         const skip = (Number(page) - 1) * Number(limit);
 
         const where: any = {};
-        if (type && type !== 'all') where.type = type;
+        if (type && type !== 'all') {
+            if (typeof type === 'string' && type.includes(',')) {
+                where.type = { in: type.split(',') };
+            } else {
+                where.type = type;
+            }
+        }
         if (status && status !== 'all') where.status = status;
         if (userId) where.userId = Number(userId);
 

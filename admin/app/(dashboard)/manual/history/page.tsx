@@ -30,7 +30,7 @@ export default function ManualHistoryPage() {
 
     const fetchHistory = async () => {
         try {
-            const res = await api.get("/admin/transactions?adminId=true&limit=100");
+            const res = await api.get("/admin/transactions?type=MANUAL_ADD,MANUAL_DEDUCT&limit=100");
             if (res.data.success) {
                 setTransactions(res.data.data.transactions);
             }
@@ -50,14 +50,14 @@ export default function ManualHistoryPage() {
     const getTypeLabel = (type: string, subType: string | null) => {
         if (type === 'DEPOSIT') return subType === 'โบนัส' ? 'เติมโบนัส' : 'เติมเครดิต';
         if (type === 'WITHDRAW') return 'ถอนเงิน';
+        if (type === 'MANUAL_ADD') return 'เพิ่มเครดิต';
         if (type === 'MANUAL_DEDUCT') return 'หักเครดิต';
         return type;
     };
 
     const getTypeColor = (type: string) => {
-        if (type === 'DEPOSIT') return 'bg-emerald-100 text-emerald-700';
-        if (type === 'WITHDRAW') return 'bg-red-100 text-red-700';
-        if (type === 'MANUAL_DEDUCT') return 'bg-orange-100 text-orange-700';
+        if (type === 'DEPOSIT' || type === 'MANUAL_ADD') return 'bg-emerald-100 text-emerald-700';
+        if (type === 'WITHDRAW' || type === 'MANUAL_DEDUCT') return 'bg-red-100 text-red-700';
         return 'bg-slate-100 text-slate-700';
     };
 
@@ -87,8 +87,7 @@ export default function ManualHistoryPage() {
                     className="px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                 >
                     <option value="all">ทุกประเภท</option>
-                    <option value="DEPOSIT">เติมเครดิต</option>
-                    <option value="WITHDRAW">ถอน</option>
+                    <option value="MANUAL_ADD">เพิ่มเครดิต</option>
                     <option value="MANUAL_DEDUCT">หักเครดิต</option>
                 </select>
             </div>
@@ -121,9 +120,14 @@ export default function ManualHistoryPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right font-bold">
-                                        <span className={t.type === 'DEPOSIT' ? 'text-emerald-600' : 'text-red-600'}>
-                                            {t.type === 'DEPOSIT' ? '+' : '-'}{formatBaht(t.amount)}
-                                        </span>
+                                        {(() => {
+                                            const isAdd = t.type === 'DEPOSIT' || t.type === 'MANUAL_ADD';
+                                            return (
+                                                <span className={isAdd ? 'text-emerald-600' : 'text-red-600'}>
+                                                    {isAdd ? '+' : '-'}{formatBaht(Math.abs(t.amount))}
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="px-6 py-4 text-slate-500">{t.note || '-'}</td>
                                     <td className="px-6 py-4 text-center">

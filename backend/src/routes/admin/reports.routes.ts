@@ -177,7 +177,7 @@ router.get('/deposits', requirePermission('reports', 'deposits', 'view'), async 
             dayEnd.setHours(23, 59, 59, 999);
 
             const result = await prisma.transaction.aggregate({
-                where: { type: 'DEPOSIT', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                where: { type: { in: ['DEPOSIT', 'MANUAL_ADD'] }, status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
                 _sum: { amount: true },
                 _count: true,
             });
@@ -206,7 +206,7 @@ router.get('/withdrawals', requirePermission('reports', 'withdrawals', 'view'), 
             dayEnd.setHours(23, 59, 59, 999);
 
             const result = await prisma.transaction.aggregate({
-                where: { type: 'WITHDRAW', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                where: { type: { in: ['WITHDRAW', 'MANUAL_DEDUCT'] }, status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
                 _sum: { amount: true },
                 _count: true,
             });
@@ -265,11 +265,11 @@ router.get('/profit-loss', requirePermission('reports', 'profit', 'view'), async
 
             const [deposits, withdrawals, bonus, bets, wins] = await Promise.all([
                 prisma.transaction.aggregate({
-                    where: { type: 'DEPOSIT', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                    where: { type: { in: ['DEPOSIT', 'MANUAL_ADD'] }, status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
                     _sum: { amount: true },
                 }),
                 prisma.transaction.aggregate({
-                    where: { type: 'WITHDRAW', status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
+                    where: { type: { in: ['WITHDRAW', 'MANUAL_DEDUCT'] }, status: 'COMPLETED', createdAt: { gte: date, lte: dayEnd } },
                     _sum: { amount: true },
                 }),
                 prisma.transaction.aggregate({

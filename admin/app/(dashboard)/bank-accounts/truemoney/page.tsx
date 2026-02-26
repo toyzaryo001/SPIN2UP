@@ -10,6 +10,9 @@ interface TrueMoneyWallet {
     phoneNumber: string;
     accountName: string;
     isActive: boolean;
+    jwtSecret?: string | null;
+    hasSecret?: boolean;
+    webhookUrl?: string;
 }
 
 export default function TrueMoneyPage() {
@@ -20,8 +23,9 @@ export default function TrueMoneyPage() {
     const [editingWallet, setEditingWallet] = useState<TrueMoneyWallet | null>(null);
     const [deletingWallet, setDeletingWallet] = useState<TrueMoneyWallet | null>(null);
 
-    const [formData, setFormData] = useState({ phoneNumber: "", accountName: "", isActive: true });
+    const [formData, setFormData] = useState({ phoneNumber: "", accountName: "", isActive: true, jwtSecret: "" });
     const [isSaving, setIsSaving] = useState(false);
+    const [showSecret, setShowSecret] = useState(false);
 
     useEffect(() => {
         fetchWallets();
@@ -41,11 +45,12 @@ export default function TrueMoneyPage() {
     const openModal = (wallet?: TrueMoneyWallet) => {
         if (wallet) {
             setEditingWallet(wallet);
-            setFormData({ phoneNumber: wallet.phoneNumber, accountName: wallet.accountName, isActive: wallet.isActive });
+            setFormData({ phoneNumber: wallet.phoneNumber, accountName: wallet.accountName, isActive: wallet.isActive, jwtSecret: "" });
         } else {
             setEditingWallet(null);
-            setFormData({ phoneNumber: "", accountName: "", isActive: true });
+            setFormData({ phoneNumber: "", accountName: "", isActive: true, jwtSecret: "" });
         }
+        setShowSecret(false);
         setIsModalOpen(true);
     };
 
@@ -82,6 +87,12 @@ export default function TrueMoneyPage() {
         }
     };
 
+    const copyWebhookUrl = (url?: string) => {
+        if (!url) return;
+        navigator.clipboard.writeText(url);
+        toast.success("คัดลอก Webhook URL แล้ว");
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -106,17 +117,42 @@ export default function TrueMoneyPage() {
                     </div>
                 ) : (
                     wallets.map(wallet => (
-                        <div key={wallet.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                        <div key={wallet.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
                                     <Smartphone size={24} className="text-orange-600" />
                                 </div>
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${wallet.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                                    {wallet.isActive ? 'ใช้งาน' : 'ปิด'}
-                                </span>
+                                <div className="flex flex-col items-end gap-2">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${wallet.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                        {wallet.isActive ? 'ใช้งาน' : 'ปิด'}
+                                    </span>
+                                    {wallet.hasSecret ? (
+                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-600 border border-green-200">
+                                            ✓ มี Authorization Key
+                                        </span>
+                                    ) : (
+                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-500 border border-red-200">
+                                            ⚠️ ขาด Authorization Key
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             <h3 className="text-xl font-bold text-slate-800">{wallet.phoneNumber}</h3>
                             <p className="text-slate-500 mt-1">{wallet.accountName}</p>
+
+                            {/* Webhook URL Display */}
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                <p className="text-xs text-slate-500 mb-1 font-medium">Webhook URL สำหร้บผูกระบบ</p>
+                                <div className="flex items-center gap-2">
+                                    <code className="text-xs text-blue-600 bg-blue-50 px-2 py-1.5 rounded flex-1 overflow-hidden text-ellipsis border border-blue-100">
+                                        {wallet.webhookUrl || '-'}
+                                    </code>
+                                    <button onClick={() => copyWebhookUrl(wallet.webhookUrl)} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded font-medium transition-colors">
+                                        คัดลอก
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
                                 <button onClick={() => openModal(wallet)} className="p-2 hover:bg-slate-100 rounded text-slate-500"><Edit size={16} /></button>
                                 <button onClick={() => { setDeletingWallet(wallet); setIsDeleteModalOpen(true); }} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
@@ -137,15 +173,40 @@ export default function TrueMoneyPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">เบอร์โทร *</label>
-                                <input type="text" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="0812345678" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
+                                <input type="text" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="0812345678" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อบัญชี *</label>
-                                <input type="text" value={formData.accountName} onChange={(e) => setFormData({ ...formData, accountName: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900" />
+                                <input type="text" value={formData.accountName} onChange={(e) => setFormData({ ...formData, accountName: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
                             </div>
-                            <div className="flex items-center">
-                                <input type="checkbox" id="walletActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded" />
-                                <label htmlFor="walletActive" className="ml-2 text-sm font-medium text-slate-700">เปิดใช้งาน</label>
+                            <div>
+                                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                                    Webhook Authorization Key
+                                    {!editingWallet && <span className="text-xs text-orange-500 font-normal">(กรอกตัวนี้ด้วย)</span>}
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showSecret ? "text" : "password"}
+                                        value={formData.jwtSecret}
+                                        onChange={(e) => setFormData({ ...formData, jwtSecret: e.target.value })}
+                                        placeholder={editingWallet ? "เว้นว่างถ้าไม่ต้องการเปลี่ยนคีย์" : "วาง Authorization Key ที่ได้จาก TrueWallet"}
+                                        className="w-full px-4 py-2 pr-28 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSecret(!showSecret)}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded"
+                                    >
+                                        {showSecret ? 'ซ่อน' : 'แสดง'}
+                                    </button>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2">
+                                    * หลังจากเพิ่ม Wallet แล้ว ให้นำ Webhook URL ไปผูก และนำ Authorization Key มาใส่ที่ช่องนี้ เพื่อให้ระบบซิงค์ยอดเงินอัตโนมัติ
+                                </p>
+                            </div>
+                            <div className="flex items-center pt-2">
+                                <input type="checkbox" id="walletActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded text-orange-500 focus:ring-orange-500" />
+                                <label htmlFor="walletActive" className="ml-2 text-sm font-medium text-slate-700 cursor-pointer">เปิดใช้งาน Wallet นี้</label>
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">

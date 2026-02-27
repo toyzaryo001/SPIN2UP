@@ -22,7 +22,7 @@ export class PaymentController {
             return res.json({ success: true, data: result });
         } catch (error: any) {
             console.error('Create Deposit Error:', error);
-            return res.status(400).json({ success: false, message: error.message });
+            return res.status(200).json({ success: false, message: error.message });
         }
     }
 

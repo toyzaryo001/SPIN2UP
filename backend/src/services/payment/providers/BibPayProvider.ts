@@ -86,10 +86,11 @@ export class BibPayProvider implements IPaymentProvider {
 
         } catch (error: any) {
             console.error('BibPay CreatePayin Error:', error.response?.data || error.message);
+            const errData = error.response?.data;
             return {
                 success: false,
-                message: error.response?.data?.message || error.message,
-                rawResponse: error.response?.data
+                message: errData?.msg || errData?.message || error.message,
+                rawResponse: errData
             };
         }
     }
@@ -146,10 +147,11 @@ export class BibPayProvider implements IPaymentProvider {
 
         } catch (error: any) {
             console.error('BibPay CreatePayout Error:', error.response?.data || error.message);
+            const errData = error.response?.data;
             return {
                 success: false,
-                message: error.response?.data?.message || error.message || 'Payout Error',
-                rawResponse: error.response?.data
+                message: errData?.msg || errData?.message || error.message || 'Payout Error',
+                rawResponse: errData
             };
         }
     }

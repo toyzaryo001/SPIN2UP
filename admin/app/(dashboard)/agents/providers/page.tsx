@@ -73,6 +73,7 @@ interface Provider {
     isLobbyMode?: boolean;
     sortOrder: number;
     _count: { games: number };
+    sourceAgent?: string;
 }
 
 export default function ProvidersPage() {
@@ -320,6 +321,7 @@ export default function ProvidersPage() {
                                 <th className="px-6 py-4 text-left w-12"></th>
                                 <th className="px-6 py-4 text-left">ค่ายเกม</th>
                                 <th className="px-6 py-4 text-left">หมวดหมู่</th>
+                                <th className="px-6 py-4 text-center">ต้นสังกัด</th>
                                 <th className="px-6 py-4 text-center">เกม</th>
                                 <th className="px-6 py-4 text-center">Lobby</th>
                                 <th className="px-6 py-4 text-center">สถานะ</th>
@@ -343,6 +345,11 @@ export default function ProvidersPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="px-2 py-1 bg-violet-100 text-violet-700 rounded text-xs">{prov.category.name}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="px-2 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded text-[11px] font-medium whitespace-nowrap">
+                                                    {prov.sourceAgent || '-'}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className="px-2 py-1 bg-slate-100 rounded text-xs">{prov._count.games} เกม</span>

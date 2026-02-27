@@ -43,12 +43,36 @@ router.get('/', requirePermission('agents', 'providers', 'view'), async (req, re
             where,
             include: {
                 category: { select: { name: true } },
-                _count: { select: { games: true } } // This count might need adjustment if we want count-per-agent, but standard count is fine for now
+                _count: { select: { games: true } },
+                games: {
+                    select: {
+                        agent: { select: { name: true } }
+                    },
+                    take: 1
+                }
             },
             orderBy: { sortOrder: 'asc' },
         });
 
-        res.json({ success: true, data: providers });
+        const enrichedProviders = providers.map(p => {
+            let sourceAgent = 'NEXUS'; // Default for games without agentId
+            if (p.games && p.games.length > 0) {
+                if (p.games[0].agent && p.games[0].agent.name) {
+                    sourceAgent = p.games[0].agent.name;
+                }
+            }
+            if (p._count.games === 0) {
+                sourceAgent = '-'; // Empty provider
+            }
+
+            const { games, ...rest } = p;
+            return {
+                ...rest,
+                sourceAgent
+            };
+        });
+
+        res.json({ success: true, data: enrichedProviders });
     } catch (error) {
         console.error('Get providers error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });

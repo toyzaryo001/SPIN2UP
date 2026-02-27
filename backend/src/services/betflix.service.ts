@@ -203,7 +203,8 @@ export class BetflixService {
                             password: password
                         };
                     }
-                } catch (e) {
+                } catch (e: any) {
+                    console.log(`❌ [Betflix API Error variant ${username}]:`, e?.response?.data || e.message);
                     // Continue to next variant on error
                     continue;
                 }
@@ -212,8 +213,8 @@ export class BetflixService {
             console.error('All Betflix register variants failed');
             return null;
 
-        } catch (error) {
-            console.error('Betflix Register Exception:', error);
+        } catch (error: any) {
+            console.error('Betflix Register Exception:', error?.response?.data || error.message);
             return null;
         }
     }

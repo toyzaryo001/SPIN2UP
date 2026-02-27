@@ -659,18 +659,20 @@ export default function MembersPage() {
                                                     <tr key={tx.id} className="hover:bg-slate-50">
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center gap-2">
-                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${tx.type === 'DEPOSIT' ? 'bg-emerald-100' : 'bg-red-100'}`}>
-                                                                    {tx.type === 'DEPOSIT' ? (
+                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${['DEPOSIT', 'MANUAL_ADD'].includes(tx.type) ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                                                                    {['DEPOSIT', 'MANUAL_ADD'].includes(tx.type) ? (
                                                                         <ArrowDownCircle size={14} className="text-emerald-500" />
                                                                     ) : (
                                                                         <ArrowUpCircle size={14} className="text-red-500" />
                                                                     )}
                                                                 </div>
-                                                                <span className="font-medium text-slate-700">{tx.type === 'DEPOSIT' ? 'ฝาก' : 'ถอน'}</span>
+                                                                <span className="font-medium text-slate-700">
+                                                                    {tx.type === 'DEPOSIT' ? 'ฝาก' : tx.type === 'MANUAL_ADD' ? 'เพิ่มเครดิต' : tx.type === 'MANUAL_DEDUCT' ? 'ลดเครดิต' : 'ถอน'}
+                                                                </span>
                                                             </div>
                                                         </td>
-                                                        <td className={`px-4 py-3 text-right font-bold ${tx.type === 'DEPOSIT' ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                            {tx.type === 'DEPOSIT' ? '+' : '-'}{formatBaht(tx.amount)}
+                                                        <td className={`px-4 py-3 text-right font-bold ${['DEPOSIT', 'MANUAL_ADD'].includes(tx.type) ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                            {['DEPOSIT', 'MANUAL_ADD'].includes(tx.type) ? '+' : '-'}{formatBaht(tx.amount)}
                                                         </td>
                                                         <td className="px-4 py-3 text-center">
                                                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${tx.status === 'COMPLETED' || tx.status === 'APPROVED'

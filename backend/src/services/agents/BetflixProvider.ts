@@ -63,13 +63,13 @@ export class BetflixProvider implements IAgentService {
 
         if (/^CK\d{6,8}$/i.test(raw)) return raw;
 
-        const fullPrefix = (config.prefix + config.sitePrefix).toLowerCase();
+        const fullPrefix = (config.sitePrefix).toLowerCase();
         if (raw.toLowerCase().startsWith(fullPrefix)) return raw;
 
         const phoneMatch = raw.replace(/\D/g, '').match(/(\d{6})$/);
         if (phoneMatch) raw = phoneMatch[1];
 
-        return config.prefix + config.sitePrefix + raw;
+        return config.sitePrefix + raw;
     }
 
     async register(userId: number, phone: string): Promise<{ username: string; password?: string; } | null> {
@@ -80,12 +80,14 @@ export class BetflixProvider implements IAgentService {
             const variants: string[] = [];
 
             // Logic from original service
+            // Note: Betflix will automatically prepend the upline (config.prefix), 
+            // so we ONLY need to send the sitePrefix + phoneDigits
             if (phoneDigits.length >= 6) {
-                variants.push(config.prefix + config.sitePrefix + phoneDigits.slice(-6));
+                variants.push(config.sitePrefix + phoneDigits.slice(-6));
             }
-            variants.push(config.prefix + config.sitePrefix + phoneDigits);
+            variants.push(config.sitePrefix + phoneDigits);
             if (phoneDigits.length >= 6) {
-                variants.push(config.prefix + phoneDigits.slice(-6));
+                variants.push(phoneDigits.slice(-6));
             }
 
             const password = phoneDigits;
@@ -103,14 +105,17 @@ export class BetflixProvider implements IAgentService {
                         return { username: res.data.data?.username || username, password };
                     }
 
+                    console.log(`[Betflix Register API] Res data for ${username}:`, JSON.stringify(res.data));
                     const msg = (res.data.msg || res.data.message || '').toLowerCase();
                     if (msg.includes('exist') || msg.includes('duplicate') || msg.includes('already')) {
                         return { username, password };
                     }
-                } catch (e) {
+                } catch (e: any) {
+                    console.log(`[Betflix Register API Catch] Variant ${username} error:`, e?.response?.data || e.message);
                     continue;
                 }
             }
+            console.log("[Betflix Register Finished] No variants succeeded. Returning null.");
             return null;
         } catch (e) {
             console.error('Betflix Register Error:', e);

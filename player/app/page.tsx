@@ -369,10 +369,18 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay, feature
   // Fallback for general featured games
   const featuredGames = (games || []).slice(0, 10);
 
+  const getGameImage = (g: any) => {
+    let img = g.thumbnail || g.image || "";
+    if (img && img.includes('ui-avatars.com') && (g.provider?.logo || g.provider?.image)) {
+      img = g.provider.logo || g.provider.image;
+    }
+    return img;
+  };
+
   const formatGameData = (g: any) => ({
     title: g.name,
     provider: g.provider?.name || "Game",
-    image: g.thumbnail || g.image || "",
+    image: getGameImage(g),
     hot: g.isHot,
     isNew: g.isNew,
     slug: g.slug,
@@ -474,8 +482,8 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay, feature
                 {popularSlots.map((game: any, i: number) => (
                   <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
                     <div className="aspect-[4/5] w-full relative bg-slate-800">
-                      {(game.thumbnail || game.image) ? (
-                        <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
+                      {getGameImage(game) ? (
+                        <img src={getGameImage(game)} alt={game.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
                           <Gamepad2 size={20} className="text-slate-600" />
@@ -515,8 +523,8 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay, feature
                 {popularCasino.map((game: any, i: number) => (
                   <div key={i} onClick={() => onPlay && onPlay(game)} className="group relative rounded-lg overflow-hidden cursor-pointer shadow-md">
                     <div className="aspect-[4/5] w-full relative bg-slate-800">
-                      {(game.thumbnail || game.image) ? (
-                        <img src={game.thumbnail || game.image} alt={game.name} className="w-full h-full object-cover" />
+                      {getGameImage(game) ? (
+                        <img src={getGameImage(game)} alt={game.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 to-slate-800">
                           <Dices size={20} className="text-green-600" />

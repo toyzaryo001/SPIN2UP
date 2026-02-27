@@ -208,8 +208,9 @@ export class BibPayProvider implements IPaymentProvider {
 
     async getBalance(): Promise<number> {
         try {
-            const response = await axios.post(`${this.baseUrl}/balance`, {}, {
+            const response = await axios.post(`${this.baseUrl}/balance`, { signatrure: this.config.apiKey }, {
                 headers: {
+                    'Content-Type': 'application/json',
                     'x-api-key': this.config.apiKey
                 }
             });
@@ -248,7 +249,7 @@ export class BibPayProvider implements IPaymentProvider {
             // Implementing: GET /transaction/:referenceId
             // Note: baseUrl ends with /api/v1/mc
 
-            const response = await axios.post(`${this.baseUrl}/transaction/check`, { referenceId }, {
+            const response = await axios.post(`${this.baseUrl}/transaction/check`, { referenceId, signatrure: this.config.apiKey }, {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-api-key': this.config.apiKey
@@ -268,8 +269,7 @@ export class BibPayProvider implements IPaymentProvider {
 
     async getBankList(): Promise<any> {
         try {
-            // User said "POST Get bank"
-            const response = await axios.post(`${this.baseUrl}/bank`, {}, {
+            const response = await axios.post(`${this.baseUrl}/bank`, { signatrure: this.config.apiKey }, {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-api-key': this.config.apiKey

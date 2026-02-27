@@ -1,0 +1,33 @@
+[33mcommit 259b90e34ce174f5e14c75474b0615f2607449b9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: toyzaryo001 <toyzaryo001@gmail.com>
+Date:   Fri Feb 27 22:35:49 2026 +0700
+
+    fix: resolve bibpay 400 error, deposit report counts, and date filters
+
+[1mdiff --git a/backend/src/services/payment/providers/BibPayProvider.ts b/backend/src/services/payment/providers/BibPayProvider.ts[m
+[1mindex cc4271d..48e8ae5 100644[m
+[1m--- a/backend/src/services/payment/providers/BibPayProvider.ts[m
+[1m+++ b/backend/src/services/payment/providers/BibPayProvider.ts[m
+[36m@@ -41,7 +41,7 @@[m [mexport class BibPayProvider implements IPaymentProvider {[m
+                 bankName: user.fullName || 'Customer',[m
+                 bankNumber: user.bankAccount || '0000000000',[m
+                 bankCode: bankCode,[m
+[31m-                amount: amount.toFixed(2),[m
+[32m+[m[32m                amount: Number(amount.toFixed(2)),[m
+                 refferend: referenceId, // Note: API typo 'refferend' preserved from PHP ref[m
+                 signatrure: this.config.apiKey, // Note: API typo 'signatrure' preserved[m
+                 callbackUrl: this.config.callbackUrl || `${process.env.API_BASE_URL}/webhooks/payment/bibpay`[m
+[36m@@ -102,10 +102,10 @@[m [mexport class BibPayProvider implements IPaymentProvider {[m
+ [m
+             // 2. Prepare Payload[m
+             const payload = {[m
+[31m-                bankName: user.fullName,[m
+[31m-                bankNumber: user.bankAccount,[m
+[32m+[m[32m                bankName: user.fullName || 'Customer',[m
+[32m+[m[32m                bankNumber: user.bankAccount || '0000000000',[m
+                 bankCode: bankCode,[m
+[31m-                amount: amount.toFixed(2),[m
+[32m+[m[32m                amount: Number(amount.toFixed(2)),[m
+                 refferend: referenceId,[m
+                 signatrure: this.config.apiKey,[m
+                 // Removed accountName as it's not in the API[m

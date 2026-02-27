@@ -5,40 +5,32 @@ const prisma = new PrismaClient();
 
 async function run() {
     const gateway = await prisma.paymentGateway.findFirst({ where: { code: 'bibpay' } });
-    if (!gateway) {
-        console.log('BibPay gateway not found');
-        return;
-    }
-
     const config = JSON.parse(gateway.config);
-    console.log('BibPay Config:', { ...config, apiKey: '***' });
+    const baseUrl = config.apiEndpoint.replace(/\/$/, '');
+    const finalUrl = baseUrl.endsWith('/api/v1/mc') ? baseUrl : baseUrl + '/api/v1/mc';
 
     const payload = {
         bankName: 'Test Customer',
         bankNumber: '1234567890',
         bankCode: '014',
-        amount: '10.00',
-        refferend: 'TEST_PAYIN_' + Date.now().toString().slice(-6),
+        amount: 10,
+        refferend: 'TEST_PAYIN_' + Date.now(),
         signatrure: config.apiKey,
-        callbackUrl: config.callbackUrl || 'http://localhost/callback'
+        callbackUrl: config.callbackUrl || 'http://localhost'
     };
 
-    console.log('\nSending Payload:', { ...payload, signatrure: '***' });
-
     try {
-        const response = await axios.post(`${config.apiEndpoint}/api/v1/mc/payin`, payload, {
+        console.log('Sending payload...', { ...payload, signatrure: '***' });
+        const response = await axios.post(`${finalUrl}/payin`, payload, {
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': config.apiKey
             }
         });
-        console.log('\nSuccess Response:', response.data);
+        console.log('Success:', response.data);
     } catch (error: any) {
-        console.log('\nError Response:', error.response?.status, error.response?.statusText);
-        console.log('Data:', JSON.stringify(error.response?.data, null, 2));
+        console.log('Error Status:', error.response?.status);
+        console.log('Error Data:', error.response?.data);
     }
 }
-
-run()
-    .catch(console.error)
-    .finally(() => prisma.$disconnect());
+run().finally(() => prisma.$disconnect());

@@ -144,7 +144,7 @@ export class BetflixService {
             raw = phoneMatch[1]; // Use last 6 digits
         }
 
-        return config.prefix + config.sitePrefix + raw;
+        return config.sitePrefix + raw;
     }
 
     /**
@@ -162,17 +162,17 @@ export class BetflixService {
             const phoneDigits = phone.replace(/\D/g, '');
             const variants: string[] = [];
 
-            // 1. Upline + SitePrefix + Last 6 (CORRECT Standard format)
+            // 1. SitePrefix + Last 6 (CORRECT Standard format - Betflix auto prepends upline)
             if (phoneDigits.length >= 6) {
-                variants.push(config.prefix + config.sitePrefix + phoneDigits.slice(-6));
+                variants.push(config.sitePrefix + phoneDigits.slice(-6));
             }
 
-            // 2. Upline + SitePrefix + Full Phone (fallback)
-            variants.push(config.prefix + config.sitePrefix + phoneDigits);
+            // 2. SitePrefix + Full Phone (fallback)
+            variants.push(config.sitePrefix + phoneDigits);
 
-            // 3. Upline + Last 6 (legacy, without sitePrefix)
+            // 3. Last 6 (legacy)
             if (phoneDigits.length >= 6) {
-                variants.push(config.prefix + phoneDigits.slice(-6));
+                variants.push(phoneDigits.slice(-6));
             }
 
             const password = phoneDigits; // Use phone as password

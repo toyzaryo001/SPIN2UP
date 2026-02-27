@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Smartphone, Plus, Edit, Trash2, X, Save, AlertTriangle } from "lucide-react";
+import { Smartphone, Plus, Edit2, Trash2, X, Save, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface TrueMoneyWallet {
@@ -87,6 +87,19 @@ export default function TrueMoneyPage() {
         }
     };
 
+    const handleToggleStatus = async (wallet: TrueMoneyWallet) => {
+        try {
+            const newStatus = !wallet.isActive;
+            await api.put(`/admin/settings/truemoney/${wallet.id}`, { ...wallet, isActive: newStatus });
+            setWallets(wallets.map(w => w.id === wallet.id ? { ...w, isActive: newStatus } : w));
+            toast.success(`เปลี่ยนสถานะเป็น ${newStatus ? 'ใช้งาน' : 'ปิด'}`);
+        } catch (error) {
+            console.error("Toggle error:", error);
+            toast.error("เปลี่ยนสถานะไม่สำเร็จ");
+            fetchWallets();
+        }
+    };
+
     const copyWebhookUrl = (url?: string) => {
         if (!url) return;
         navigator.clipboard.writeText(url);
@@ -107,59 +120,107 @@ export default function TrueMoneyPage() {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {isLoading ? (
-                    <div className="col-span-full text-center py-12 text-slate-400">กำลังโหลด...</div>
-                ) : wallets.length === 0 ? (
-                    <div className="col-span-full bg-white p-12 rounded-xl border border-slate-100 text-center text-slate-400">
-                        <Smartphone size={48} className="mx-auto mb-4 opacity-20" />
-                        <p>ยังไม่มี TrueMoney Wallet</p>
-                    </div>
-                ) : (
-                    wallets.map(wallet => (
-                        <div key={wallet.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
-                                    <Smartphone size={24} className="text-orange-600" />
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${wallet.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                                        {wallet.isActive ? 'ใช้งาน' : 'ปิด'}
-                                    </span>
-                                    {wallet.hasSecret ? (
-                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-600 border border-green-200">
-                                            ✓ มี Authorization Key
-                                        </span>
-                                    ) : (
-                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-500 border border-red-200">
-                                            ⚠️ ขาด Authorization Key
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-800">{wallet.phoneNumber}</h3>
-                            <p className="text-slate-500 mt-1">{wallet.accountName}</p>
-
-                            {/* Webhook URL Display */}
-                            <div className="mt-4 pt-4 border-t border-slate-100">
-                                <p className="text-xs text-slate-500 mb-1 font-medium">Webhook URL สำหร้บผูกระบบ</p>
-                                <div className="flex items-center gap-2">
-                                    <code className="text-xs text-blue-600 bg-blue-50 px-2 py-1.5 rounded flex-1 overflow-hidden text-ellipsis border border-blue-100">
-                                        {wallet.webhookUrl || '-'}
-                                    </code>
-                                    <button onClick={() => copyWebhookUrl(wallet.webhookUrl)} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded font-medium transition-colors">
-                                        คัดลอก
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
-                                <button onClick={() => openModal(wallet)} className="p-2 hover:bg-slate-100 rounded text-slate-500"><Edit size={16} /></button>
-                                <button onClick={() => { setDeletingWallet(wallet); setIsDeleteModalOpen(true); }} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
-                            </div>
-                        </div>
-                    ))
-                )}
+            {/* Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                                <th className="px-6 py-4">บัญชีรับเงิน</th>
+                                <th className="px-6 py-4">เบอร์โทร / ชื่อบัญชี</th>
+                                <th className="px-6 py-4">Webhook URL</th>
+                                <th className="px-6 py-4">การเชื่อมต่อ</th>
+                                <th className="px-6 py-4 text-center">สถานะ</th>
+                                <th className="px-6 py-4 text-right">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                        กำลังโหลด...
+                                    </td>
+                                </tr>
+                            ) : wallets.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                        ยังไม่มี TrueMoney Wallet
+                                    </td>
+                                </tr>
+                            ) : (
+                                wallets.map((wallet) => (
+                                    <tr key={wallet.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-orange-50 rounded-lg p-1.5 border border-slate-100 flex-shrink-0 flex items-center justify-center">
+                                                    <Smartphone size={24} className="text-orange-600" />
+                                                </div>
+                                                <span className="font-semibold text-slate-800">TrueMoney</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="font-mono text-slate-900 font-medium text-base">{wallet.phoneNumber}</span>
+                                                <span className="text-slate-500 text-xs">{wallet.accountName}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2 max-w-[200px]">
+                                                <code className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded truncate border border-blue-100 flex-1">
+                                                    {wallet.webhookUrl || '-'}
+                                                </code>
+                                                {wallet.webhookUrl && (
+                                                    <button onClick={() => copyWebhookUrl(wallet.webhookUrl)} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded font-medium transition-colors whitespace-nowrap">
+                                                        คัดลอก
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {wallet.hasSecret ? (
+                                                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                    ✓ มี Auth Key
+                                                </span>
+                                            ) : (
+                                                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                                                    ⚠️ ขาด Auth Key
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button
+                                                onClick={() => handleToggleStatus(wallet)}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 ${wallet.isActive ? 'bg-emerald-500' : 'bg-slate-200'
+                                                    }`}
+                                            >
+                                                <span className={`${wallet.isActive ? 'translate-x-6' : 'translate-x-1'
+                                                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => openModal(wallet)}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="แก้ไข"
+                                                >
+                                                    <Edit2 size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => { setDeletingWallet(wallet); setIsDeleteModalOpen(true); }}
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="ลบ"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Modal */}

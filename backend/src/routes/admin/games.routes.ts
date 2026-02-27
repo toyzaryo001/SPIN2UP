@@ -10,12 +10,31 @@ router.get('/', requirePermission('games', 'view'), async (req, res) => {
         const { providerId, isActive, isHot, isNew, agentId, search, page, limit } = req.query;
         const where: any = {};
 
-        // Search Logic
+        // Search Logic - Enhanced for smarter matching (Spacing issues & wrong memory)
         if (search) {
+            const searchStr = String(search).trim();
+            const words = searchStr.split(/[\\s-]+/).filter(w => w.length > 2);
+
             where.OR = [
-                { name: { contains: String(search), mode: "insensitive" } },
-                { slug: { contains: String(search), mode: "insensitive" } }
+                { name: { contains: searchStr, mode: "insensitive" } },
+                { slug: { contains: searchStr, mode: "insensitive" } }
             ];
+
+            if (words.length > 1) {
+                // 1. All words must match (solves "Wild Bandito" vs "WildBandito")
+                where.OR.push({
+                    AND: words.map(w => ({
+                        name: { contains: w, mode: "insensitive" }
+                    }))
+                });
+
+                // 2. Any significant word matches (solves "Museum Mystery" = "Museum Wonders")
+                words.forEach(w => {
+                    if (w.length >= 4) { // Only do this for long enough words to avoid spam ('the', 'of')
+                        where.OR.push({ name: { contains: w, mode: "insensitive" } });
+                    }
+                });
+            }
         }
 
         if (providerId) where.providerId = Number(providerId);

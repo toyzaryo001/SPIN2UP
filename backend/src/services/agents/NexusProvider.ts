@@ -147,6 +147,16 @@ export class NexusProvider implements IAgentService {
         // 3. Specific Mappings
         if (finalProviderCode === 'PG') {
             finalProviderCode = 'PGSOFT';
+        } else if (['PRAGMATICLIVE', 'PP_LIVE_PRO', 'PRAGMATIC'].includes(finalProviderCode)) {
+            finalProviderCode = 'PP'; // Both Betflix and Nexus actually use 'PP' for Pragmatic
+        } else if (['SA', 'SAGAMING'].includes(finalProviderCode)) {
+            finalProviderCode = 'SA'; // SA Gaming
+        } else if (['SEXY', 'SEXYGAMING', 'AE', 'AEGAMING'].includes(finalProviderCode)) {
+            finalProviderCode = 'SEXY'; // Sexy Baccarat
+        } else if (['WM', 'WMCASINO'].includes(finalProviderCode)) {
+            finalProviderCode = 'WM'; // WM Casino
+        } else if (['DG', 'DREAMGAMING'].includes(finalProviderCode)) {
+            finalProviderCode = 'DG'; // Dream Gaming
         }
 
         // 4. Clean Game Code (Strip provider prefix if present)

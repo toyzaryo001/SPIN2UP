@@ -130,7 +130,7 @@ export default function MixBoardPage() {
     const fetchSourceGames = async () => {
         setLoadingSource(true);
         try {
-            let url = `/admin/games?isActive=true`; // Only active games?
+            let url = `/admin/games?isActive=true&limit=5000`; // Force high limit for Mix Board
             if (sourceAgentId !== "all") url += `&agentId=${sourceAgentId}`;
             if (sourceProviderId !== "all") url += `&providerId=${sourceProviderId}`;
 
@@ -149,7 +149,7 @@ export default function MixBoardPage() {
     const fetchTargetGames = async (provId: number) => {
         setLoadingTarget(true);
         try {
-            const res = await api.get(`/admin/games?providerId=${provId}`);
+            const res = await api.get(`/admin/games?providerId=${provId}&limit=5000`);
             if (res.data.success) {
                 setTargetGames(res.data.data);
             }

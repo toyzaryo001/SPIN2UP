@@ -230,21 +230,25 @@ export default function MixBoardPage() {
             return;
         }
 
-        // DUPLICATE DETECTION
-        const targetNames = new Set(targetGames.map(g => g.name.toLowerCase().trim()));
+        // --- ENHANCED DUPLICATE DETECTION (Fuzzy-like Match) ---
+        // Helper to normalize strings: remove all spaces, dashes, and make lowercase
+        const normalizeStr = (str: string) => str.toLowerCase().replace(/[\s\-_]/g, '');
+
+        // Map target names for fast lookup
+        const targetNames = new Set(targetGames.map(g => normalizeStr(g.name)));
+
         const gamesToMove = sourceGames.filter(g => selectedSourceGameIds.includes(g.id));
 
-        const duplicates = gamesToMove.filter(g => targetNames.has(g.name.toLowerCase().trim()));
-        const uniqueGames = gamesToMove.filter(g => !targetNames.has(g.name.toLowerCase().trim()));
+        const duplicates = gamesToMove.filter(g => targetNames.has(normalizeStr(g.name)));
+        const uniqueGames = gamesToMove.filter(g => !targetNames.has(normalizeStr(g.name)));
 
         if (duplicates.length > 0) {
-            const confirmMsg = `พบเกมซ้ำชื่อเดียวกัน ${duplicates.length} เกม ในค่ายปลายทาง! (เช่น ${duplicates[0].name})\n\nระบบจะ "ยกเลิก" เกมที่ซ้ำ และย้ายเฉพาะ ${uniqueGames.length} เกมที่ไม่ซ้ำ\nยืนยันหรือไม่?`;
+            const confirmMsg = `พบเกม "ซ้ำ" หรือคล้ายกันจำนวน ${duplicates.length} เกม ในค่ายปลายทาง! (เช่น ${duplicates[0].name})\n\nระบบจะ "ข้าม" เกมที่ซ้ำ และย้ายเฉพาะ ${uniqueGames.length} เกมที่ยังไม่มี\nยืนยันหรือไม่?`;
 
-            // Custom confirmation logic or standard confirm
             if (!confirm(confirmMsg)) return;
 
             if (uniqueGames.length === 0) {
-                toast.error("ไม่มีเกมให้ย้าย (ซ้ำทั้งหมด)");
+                toast.error("ไม่มีเกมให้ย้าย (ในปลายทางมีครบทุกเกมแล้ว)");
                 return;
             }
 

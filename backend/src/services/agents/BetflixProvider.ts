@@ -69,7 +69,7 @@ export class BetflixProvider implements IAgentService {
         const phoneMatch = raw.replace(/\D/g, '').match(/(\d{6})$/);
         if (phoneMatch) raw = phoneMatch[1];
 
-        return config.sitePrefix + raw;
+        return config.prefix + config.sitePrefix + raw;
     }
 
     async register(userId: number, phone: string): Promise<{ username: string; password?: string; } | null> {

@@ -41,7 +41,7 @@ export class BibPayProvider implements IPaymentProvider {
                 bankName: user.fullName || 'Customer',
                 bankNumber: user.bankAccount || '0000000000',
                 bankCode: bankCode,
-                amount: amount.toFixed(2),
+                amount: Number(amount.toFixed(2)),
                 refferend: referenceId, // Note: API typo 'refferend' preserved from PHP ref
                 signatrure: this.config.apiKey, // Note: API typo 'signatrure' preserved
                 callbackUrl: this.config.callbackUrl || `${process.env.API_BASE_URL}/webhooks/payment/bibpay`
@@ -102,10 +102,10 @@ export class BibPayProvider implements IPaymentProvider {
 
             // 2. Prepare Payload
             const payload = {
-                bankName: user.fullName,
-                bankNumber: user.bankAccount,
+                bankName: user.fullName || 'Customer',
+                bankNumber: user.bankAccount || '0000000000',
                 bankCode: bankCode,
-                amount: amount.toFixed(2),
+                amount: Number(amount.toFixed(2)),
                 refferend: referenceId,
                 signatrure: this.config.apiKey,
                 // Removed accountName as it's not in the API

@@ -60,12 +60,12 @@ router.get('/', async (req, res) => {
         if (startDate || endDate) {
             where.createdAt = {};
             if (startDate) {
-                // Ensure the start date is parsed correctly in UTC+7
-                where.createdAt.gte = dayjs(startDate as string).utcOffset(7).startOf('day').toDate();
+                // Ensure the start date is parsed correctly in UTC+7 without shifting
+                where.createdAt.gte = dayjs(startDate as string).utcOffset(7, true).startOf('day').toDate();
             }
             if (endDate) {
-                // Parse correctly in UTC+7 and shift to end of day
-                where.createdAt.lte = dayjs(endDate as string).utcOffset(7).endOf('day').toDate();
+                // Parse correctly in UTC+7 without shifting and shift to end of day
+                where.createdAt.lte = dayjs(endDate as string).utcOffset(7, true).endOf('day').toDate();
             }
         }
 

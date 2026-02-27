@@ -9,7 +9,7 @@ import AlertModal from "@/components/AlertModal";
 import { API_URL } from "@/lib/api";
 
 const channels = [
-    { id: "bank", label: "ธนาคาร", icon: Building2, bankCode: "KBANK", customImage: "/banks-group.png" }, // Custom image for all banks
+    { id: "bank", label: "ธนาคาร", icon: Building2, bankCode: "KBANK" },
     { id: "truemoney", label: "TrueMoney", icon: Smartphone, bankCode: "TRUEMONEY" },
     { id: "promptpay", label: "PromptPay", icon: QrCode, bankCode: "PROMPTPAY" },
 ];
@@ -475,8 +475,8 @@ export default function DepositPage() {
                                             boxShadow: selectedChannel === ch.id ? "0 4px 15px rgba(255,215,0,0.2)" : "none"
                                         }}
                                     >
-                                        {ch.customImage ? (
-                                            <img src={ch.customImage} alt={ch.label} style={{ width: "42px", height: "42px", objectFit: "contain" }} />
+                                        {'customImage' in ch && ch.customImage ? (
+                                            <img src={ch.customImage as string} alt={ch.label} style={{ width: "42px", height: "42px", objectFit: "contain" }} />
                                         ) : (
                                             <BankLogo bankCode={ch.bankCode} width={36} height={36} />
                                         )}

@@ -621,7 +621,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <p className="text-slate-500 text-sm">จำนวนรายการ</p>
-                            <p className="text-2xl font-bold text-slate-800">{summary.count}</p>
+                            <p className="text-2xl font-bold text-slate-800">{summary.count || summary.totalCount || 0}</p>
                         </div>
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <p className="text-slate-500 text-sm">ยอดรวม</p>

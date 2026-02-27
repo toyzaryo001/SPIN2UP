@@ -43,9 +43,9 @@ function getDateRange(preset: string, startDate?: string, endDate?: string) {
             end = now.endOf('day');
             break;
         case 'custom':
-            if (startDate) start = dayjs(startDate).utcOffset(7).startOf('day');
+            if (startDate) start = dayjs(startDate as string).utcOffset(7, true).startOf('day');
             if (endDate) {
-                end = dayjs(endDate).utcOffset(7).endOf('day');
+                end = dayjs(endDate as string).utcOffset(7, true).endOf('day');
             }
             break;
         default:

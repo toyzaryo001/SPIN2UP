@@ -230,17 +230,38 @@ export default function MixBoardPage() {
             return;
         }
 
-        // --- ENHANCED DUPLICATE DETECTION (Fuzzy-like Match) ---
+        // --- ENHANCED DUPLICATE DETECTION (Fuzzy-like Match & Aliases) ---
         // Helper to normalize strings: remove all spaces, dashes, and make lowercase
-        const normalizeStr = (str: string) => str.toLowerCase().replace(/[\s\-_]/g, '');
+        const normalizeStr = (str: string) => {
+            let s = str.toLowerCase().replace(/[\s\-_]/g, '');
+            return s;
+        };
 
-        // Map target names for fast lookup
-        const targetNames = new Set(targetGames.map(g => normalizeStr(g.name)));
+        // Known Aliases mapping (Normalized Alias -> Normalized Original)
+        // Example: 'medusa' -> 'medusa1thecurseofathena'
+        const aliases: Record<string, string> = {
+            'medusa': 'medusa1thecurseofathena',
+            'vampirescharm': 'vampirescharm', // already same when normalized, but keeping as example
+            'guardiansoficefire': 'guardiansoficeandfire',
+            'sharkhunter': 'sharkbounty',
+            'museumwonders': 'museummystery',
+            'mrtreasuresfortune': 'mrtreasuresfortune', // already same when normalized, but keeping as example
+        };
+
+        const getBaseName = (name: string) => {
+            let norm = normalizeStr(name);
+            // Replace with & to 'and' logic as well if needed
+            norm = norm.replace(/&/g, 'and');
+            return aliases[norm] || norm;
+        };
+
+        // Map target names for fast lookup using aliases
+        const targetNames = new Set(targetGames.map(g => getBaseName(g.name)));
 
         const gamesToMove = sourceGames.filter(g => selectedSourceGameIds.includes(g.id));
 
-        const duplicates = gamesToMove.filter(g => targetNames.has(normalizeStr(g.name)));
-        const uniqueGames = gamesToMove.filter(g => !targetNames.has(normalizeStr(g.name)));
+        const duplicates = gamesToMove.filter(g => targetNames.has(getBaseName(g.name)));
+        const uniqueGames = gamesToMove.filter(g => !targetNames.has(getBaseName(g.name)));
 
         if (duplicates.length > 0) {
             const confirmMsg = `พบเกม "ซ้ำ" หรือคล้ายกันจำนวน ${duplicates.length} เกม ในค่ายปลายทาง! (เช่น ${duplicates[0].name})\n\nระบบจะ "ข้าม" เกมที่ซ้ำ และย้ายเฉพาะ ${uniqueGames.length} เกมที่ยังไม่มี\nยืนยันหรือไม่?`;

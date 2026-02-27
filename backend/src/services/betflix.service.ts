@@ -459,6 +459,10 @@ export class BetflixService {
                 'hogaming': 'hg',
                 'ag': 'ag',
                 'asiagaming': 'ag',
+                'sportsbook': 'sn',
+                'sbo': 'sn',
+                'sbobet': 'sn',
+                'sn': 'sn',
                 // QTech Sub-providers (aggregated games)
                 'qtech': 'qtech',
                 'nlc': 'qtech', 'hab': 'qtech', 'ygg': 'qtech', 'png': 'qtech',

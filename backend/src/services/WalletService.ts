@@ -1,5 +1,6 @@
 import prisma from '../lib/db';
 import { AgentFactory } from './agents/AgentFactory';
+import { AlertService } from './alert.service';
 
 export class WalletService {
 
@@ -85,7 +86,29 @@ export class WalletService {
                                 console.log(`[WalletSwap] ✅ Refund ${withdrawnAmount} back to Source Agent succeeded`);
                             } catch (refundErr) {
                                 console.error(`[CRITICAL] ❌ Refund ALSO failed! ${withdrawnAmount} THB stranded for User ${userId}!`, refundErr);
-                                // TODO: สร้าง alert/log ให้ admin ตรวจสอบด้วยมือ
+
+                                // Create critical alert for admin to review
+                                await AlertService.createAlert({
+                                    type: 'CRITICAL',
+                                    title: '⚠️ WALLET SWAP REFUND FAILED',
+                                    message: `User ${userId} has ${withdrawnAmount} THB stranded in agent ${currentAgentId}. ` +
+                                            `Initial deposit to target agent (${targetAgentConfig.id}) failed, ` +
+                                            `and refund attempt back to source agent also failed. ` +
+                                            `Error: ${refundErr instanceof Error ? refundErr.message : String(refundErr)}`,
+                                    userId: userId,
+                                    agentId: currentAgentId,
+                                    actionUrl: `/admin/users/${userId}`,
+                                    actionRequired: true,
+                                    metadata: {
+                                        sourceAgentId: currentAgentId,
+                                        targetAgentId: targetAgentConfig.id,
+                                        strandedAmount: withdrawnAmount,
+                                        refundError: refundErr instanceof Error ? refundErr.message : String(refundErr),
+                                        timestamp: new Date().toISOString()
+                                    }
+                                });
+
+                                console.log(`[Alert] Critical alert created for user ${userId} wallet swap refund failure`);
                             }
                             throw new Error(`Swap failed: ไม่สามารถฝากเงินเข้า Agent ปลายทางได้`);
                         } else {

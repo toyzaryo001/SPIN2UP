@@ -6,10 +6,10 @@ async function test() {
     // create a dummy user logic to test
     const phone = '0987654321';
     console.log(`Testing with phone: ${phone}`);
-
+    
     // manual init for test
     const provider = new BetflixProvider();
-
+    
     try {
         console.log("Calling BetflixProvider.register()...");
         const result = await provider.register(9999, phone);

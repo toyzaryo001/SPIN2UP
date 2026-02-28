@@ -29,7 +29,17 @@ async function main() {
         {
             code: 'bibpay',
             name: 'BIBPAY QR',
-            config: '{}',
+            config: JSON.stringify({
+                apiKey: process.env.BIBPAY_API_KEY || 'CONFIGURE_ME',
+                apiEndpoint: process.env.BIBPAY_API_ENDPOINT || 'https://api.bibbyx.com/api/v1/mc',
+                callbackUrl: process.env.API_BASE_URL ? `${process.env.API_BASE_URL}/api/webhooks/payment/bibpay` : 'https://api.check24m.com/api/webhooks/payment/bibpay',
+                ipWhitelist: process.env.BIBPAY_IP_WHITELIST
+                    ? process.env.BIBPAY_IP_WHITELIST.split(',').map((ip: string) => ip.trim())
+                    : [],  // Empty by default - MUST be configured via admin or env vars
+                canDeposit: true,
+                canWithdraw: true,
+                isAutoWithdraw: true
+            }),
             isActive: true,
             logo: '/images/payments/bibpay.png',
             sortOrder: 1

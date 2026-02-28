@@ -602,3 +602,38 @@ model SmsWebhookLog {
   @@index([status])
   @@index([createdAt])
 }
+
+// Critical Alerts Tracking - For operational issues that require admin attention
+model AlertLog {
+  id                Int       @id @default(autoincrement())
+  type              String    // CRITICAL, WARNING, INFO
+  title             String    // e.g., "Wallet Swap Refund Failed", "Balance Transfer Failed"
+  message           String    @db.Text // Detailed error message
+
+  // Context - Link to related entities
+  userId            Int?      // User affected by the alert
+  agentId           Int?      // Agent/Provider related to alert
+  transactionId     Int?      // Transaction that triggered the alert
+
+  // Status tracking
+  status            String    @default("PENDING_REVIEW")  // PENDING_REVIEW, ACKNOWLEDGED, RESOLVED
+  assignedTo        Int?      // Admin ID who is handling it
+
+  // Action tracking
+  actionUrl         String?   // Link to relevant page in admin panel (e.g., /admin/transactions/123)
+  actionRequired    Boolean   @default(true) // Whether this alert demands immediate action
+
+  // Additional data
+  metadata          String?   @db.Text // JSON: additional context data
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  resolvedAt        DateTime? // When the alert was resolved
+
+  @@index([type])
+  @@index([status])
+  @@index([actionRequired])
+  @@index([userId])
+  @@index([createdAt])
+}

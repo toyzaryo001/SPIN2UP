@@ -49,9 +49,9 @@ export interface IPaymentProvider {
     /**
      * Verify the webhook signature
      * @param payload Request body
-     * @param headers Request headers
+     * @param clientIpOrHeaders Request client IP (string) or headers object (for backward compatibility)
      */
-    verifyWebhook(payload: any, headers: any): boolean;
+    verifyWebhook(payload: any, clientIpOrHeaders?: string | any): boolean;
 
     /**
      * Process the webhook payload and normalize the status

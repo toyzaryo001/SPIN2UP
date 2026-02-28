@@ -6,6 +6,7 @@ interface BibPayConfig {
     secretKey?: string; // Added secretKey
     apiEndpoint?: string;
     callbackUrl?: string; // Optional override
+    ipWhitelist?: string[]; // IP addresses allowed to send webhooks from BibPay
 }
 
 export class BibPayProvider implements IPaymentProvider {
@@ -149,6 +150,30 @@ export class BibPayProvider implements IPaymentProvider {
             };
 
         } catch (error: any) {
+            // Handle specific HTTP status codes
+            if (error.response?.status === 404) {
+                console.error('[BibPay] Payout endpoint not found (404). The /payout endpoint may not be available.');
+                return {
+                    success: false,
+                    message: 'BibPay payout endpoint is not available. Please contact support.',
+                    rawResponse: {
+                        status: false,
+                        error: 'ENDPOINT_NOT_FOUND',
+                        httpStatus: 404
+                    }
+                };
+            }
+
+            if (error.response?.status === 401) {
+                console.error('[BibPay] Payout unauthorized (401). Check API key.');
+                return {
+                    success: false,
+                    message: 'BibPay authentication failed. Please verify API key.',
+                    rawResponse: error.response?.data
+                };
+            }
+
+            // Generic error handling for other cases
             console.error('BibPay CreatePayout Error:', error.response?.data || error.message);
             const errData = error.response?.data;
             return {
@@ -159,10 +184,40 @@ export class BibPayProvider implements IPaymentProvider {
         }
     }
 
-    verifyWebhook(payload: any, headers: any): boolean {
-        // BIBPAY might not have a strong signature verification in v1/mc based on PHP code
-        // PHP code just checked if transaction exists.
-        // We can check if the payload structure matches what we expect.
+    verifyWebhook(payload: any, clientIp?: string): boolean {
+        // Security: Verify webhook comes from BibPay IP whitelist
+        // BibPay v1/mc doesn't support HMAC signatures, so we use IP whitelist for validation
+
+        // Validate payload structure first
+        if (!payload?.data?.transactionId) {
+            console.error('[BibPay] Webhook rejected: Missing transactionId in payload');
+            return false;
+        }
+
+        // If no IP provided, REJECT (don't accept unsigned webhooks)
+        if (!clientIp || clientIp === 'unknown') {
+            console.error('[BibPay] Webhook rejected: No valid client IP found. Cannot verify webhook.');
+            return false;
+        }
+
+        // CRITICAL: ipWhitelist MUST be configured for security
+        // Fail secure - don't accept if whitelist not configured
+        if (!this.config.ipWhitelist || this.config.ipWhitelist.length === 0) {
+            console.error('[BibPay] ❌ SECURITY: IP whitelist not configured! Rejecting webhook.');
+            console.error('[BibPay] Please configure ipWhitelist in PaymentGateway config before accepting webhooks.');
+            return false;  // ← FAIL SECURE (don't accept)
+        }
+
+        // Check if client IP is in whitelist
+        const isAllowed = this.config.ipWhitelist.includes(clientIp);
+
+        if (!isAllowed) {
+            console.error(`[BibPay] Webhook rejected: IP ${clientIp} not in whitelist [${this.config.ipWhitelist.join(', ')}]`);
+            return false;
+        }
+
+        // All checks passed
+        console.log(`[BibPay] ✅ Webhook verified: IP ${clientIp} is whitelisted`);
         return true;
     }
 

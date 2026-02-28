@@ -28,19 +28,66 @@ export class PaymentGatewayController {
     static async updateGateway(req: AuthRequest, res: Response) {
         try {
             const id = parseInt(req.params.id);
-            const { name, config, isActive } = req.body;
+            const { name, config, isActive, code } = req.body;
+
+            // Get current gateway to check code
+            const currentGateway = await prisma.paymentGateway.findUnique({ where: { id } });
+            if (!currentGateway) {
+                return res.status(404).json({ success: false, message: 'Gateway not found' });
+            }
 
             // Validate JSON config
+            let configObj: any = config;
             let configString = config;
+
             if (typeof config === 'object') {
+                configObj = config;
                 configString = JSON.stringify(config);
-            } else {
+            } else if (typeof config === 'string') {
                 // Try parse to check validity
                 try {
-                    JSON.parse(config);
+                    configObj = JSON.parse(config);
                 } catch (e) {
                     return res.status(400).json({ success: false, message: 'Invalid JSON config' });
                 }
+                configString = config;
+            }
+
+            // Validate BibPay specific config requirements
+            if (currentGateway.code === 'bibpay' || code === 'bibpay') {
+                // Ensure ipWhitelist is configured for security
+                if (!configObj.ipWhitelist || !Array.isArray(configObj.ipWhitelist) || configObj.ipWhitelist.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'BibPay requires ipWhitelist configuration. Provide array of BibPay IP addresses.',
+                        example: { ipWhitelist: ['1.2.3.4', '5.6.7.8'] }
+                    });
+                }
+
+                // Ensure apiKey is configured
+                if (!configObj.apiKey || configObj.apiKey === 'CONFIGURE_ME') {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'BibPay requires apiKey configuration. Contact BibPay to get your API key.',
+                        example: { apiKey: 'your_bibpay_api_key' }
+                    });
+                }
+
+                // Validate IP addresses format (basic validation)
+                const invalidIps = configObj.ipWhitelist.filter((ip: any) => {
+                    if (typeof ip !== 'string') return true;
+                    // Basic IP regex check (IPv4)
+                    return !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
+                });
+
+                if (invalidIps.length > 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Invalid IP addresses: ${invalidIps.join(', ')}. Use format: xxx.xxx.xxx.xxx`,
+                    });
+                }
+
+                console.log(`[Admin] Configuring BibPay with IPs: ${configObj.ipWhitelist.join(', ')}`);
             }
 
             const gateway = await prisma.paymentGateway.update({
@@ -52,7 +99,11 @@ export class PaymentGatewayController {
                 }
             });
 
-            return res.json({ success: true, data: gateway });
+            return res.json({
+                success: true,
+                message: 'Gateway updated successfully',
+                data: gateway
+            });
         } catch (error: any) {
             console.error('Update Gateway Error:', error);
             return res.status(500).json({ success: false, message: error.message });

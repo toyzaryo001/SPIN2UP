@@ -16,7 +16,7 @@ async function run() {
         amount: 10,
         refferend: 'TEST_PAYIN_' + Date.now(),
         signatrure: config.apiKey,
-        callbackUrl: config.callbackUrl || 'http://localhost'
+        callbackUrl: config.callbackUrl || 'https://api.check24m.com/api/webhooks/payment/bibpay'
     };
 
     try {

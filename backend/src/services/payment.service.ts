@@ -308,15 +308,15 @@ export class PaymentService {
     /**
      * Process Webhook from Provider
      */
-    static async processWebhook(gatewayCode: string, payload: any, headers: any) {
+    static async processWebhook(gatewayCode: string, payload: any, headers: any, clientIp?: string) {
         // ... (Existing code) ...
         // 1. Get Provider
         const provider = await PaymentFactory.getProvider(gatewayCode);
         if (!provider) throw new Error(`Provider ${gatewayCode} not found`);
 
-        // 2. Verify Signature
-        if (!provider.verifyWebhook(payload, headers)) {
-            throw new Error('Invalid Webhook Signature');
+        // 2. Verify Webhook (pass client IP for provider-specific verification)
+        if (!provider.verifyWebhook(payload, clientIp)) {
+            throw new Error(`Invalid Webhook from [${gatewayCode}] IP: ${clientIp || 'unknown'}`);
         }
 
         // 3. Process Payload

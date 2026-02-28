@@ -169,31 +169,45 @@ export class PaymentGatewayController {
 
             // Validate BibPay specific config requirements (same as updateGateway)
             if (code === 'bibpay') {
-                if (!configObj.ipWhitelist || !Array.isArray(configObj.ipWhitelist) || configObj.ipWhitelist.length === 0) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'BibPay requires ipWhitelist configuration. Provide array of BibPay IP addresses.',
-                        example: { ipWhitelist: ['1.2.3.4', '5.6.7.8'] }
+                const errors = [];
+
+                // Check ipWhitelist
+                if (!configObj.ipWhitelist) {
+                    errors.push('ipWhitelist is missing');
+                } else if (!Array.isArray(configObj.ipWhitelist)) {
+                    errors.push('ipWhitelist must be an array, e.g. ["162.220.232.99"]');
+                } else if (configObj.ipWhitelist.length === 0) {
+                    errors.push('ipWhitelist cannot be empty. Add at least one IP address');
+                } else {
+                    // Validate IP format
+                    const invalidIps = configObj.ipWhitelist.filter((ip: any) => {
+                        if (typeof ip !== 'string') return true;
+                        return !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
                     });
+                    if (invalidIps.length > 0) {
+                        errors.push(`Invalid IP format: ${invalidIps.join(', ')}. Use xxx.xxx.xxx.xxx`);
+                    }
                 }
 
-                if (!configObj.apiKey || configObj.apiKey === 'CONFIGURE_ME') {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'BibPay requires apiKey configuration. Contact BibPay to get your API key.',
-                        example: { apiKey: 'your_bibpay_api_key' }
-                    });
+                // Check apiKey
+                if (!configObj.apiKey) {
+                    errors.push('apiKey is missing. Get it from BibPay');
+                } else if (configObj.apiKey === 'CONFIGURE_ME') {
+                    errors.push('apiKey cannot be "CONFIGURE_ME". Get real key from BibPay');
                 }
 
-                const invalidIps = configObj.ipWhitelist.filter((ip: any) => {
-                    if (typeof ip !== 'string') return true;
-                    return !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
-                });
-
-                if (invalidIps.length > 0) {
+                // Return all errors together
+                if (errors.length > 0) {
                     return res.status(400).json({
                         success: false,
-                        message: `Invalid IP addresses: ${invalidIps.join(', ')}. Use format: xxx.xxx.xxx.xxx`,
+                        message: 'BibPay configuration validation failed',
+                        errors: errors,
+                        exampleConfig: {
+                            apiKey: 'your_real_api_key_from_bibpay',
+                            ipWhitelist: ['162.220.232.99'],
+                            canDeposit: true,
+                            canWithdraw: true
+                        }
                     });
                 }
 

@@ -482,10 +482,11 @@ model CashbackSetting {
 // ตั้งค่าฝากสะสม (Streak)
 model StreakSetting {
   id          Int      @id @default(autoincrement())
-  day         Int      @unique          // วันที่ (1-7)
-  minDeposit  Decimal  @default(100)    // ฝากขั้นต่ำต่อวัน
-  bonusAmount Decimal                   // โบนัสที่ได้รับ
-  isActive    Boolean  @default(true)
+  day                Int      @unique          // วันที่ (1-7)
+  minDeposit         Decimal  @default(100)    // ฝากขั้นต่ำต่อวัน
+  bonusAmount        Decimal                   // โบนัสที่ได้รับ
+  turnoverMultiplier Int      @default(1)      // ยอดเทิร์นที่ต้องทำ (เท่า)
+  isActive           Boolean  @default(true)
   updatedAt   DateTime @updatedAt
 }
 

@@ -20,6 +20,8 @@ export default function CommissionPage() {
     const [settings, setSettings] = useState<CommissionLevel[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"income" | "info">("income");
+    const [commissionStats, setCommissionStats] = useState<any>(null);
+    const [claiming, setClaiming] = useState(false);
 
     useEffect(() => {
         const userData = localStorage.getItem("user");
@@ -33,20 +35,53 @@ export default function CommissionPage() {
     }, []);
 
     useEffect(() => {
-        const fetchSettings = async () => {
+        const fetchData = async () => {
             try {
-                const res = await axios.get(`${API_URL}/public/commission`);
-                if (Array.isArray(res.data)) {
-                    setSettings(res.data);
+                const [settingsRes, statsRes] = await Promise.all([
+                    axios.get(`${API_URL}/public/commission`),
+                    user ? axios.get(`${API_URL}/users/rewards/stats`, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                    }) : Promise.resolve({ data: { success: false } })
+                ]);
+
+                if (Array.isArray(settingsRes.data)) {
+                    setSettings(settingsRes.data);
+                }
+                if (statsRes.data.success) {
+                    setCommissionStats(statsRes.data.data.commission);
                 }
             } catch (error) {
-                console.error("Failed to fetch commission settings", error);
+                console.error("Failed to fetch commission data", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchSettings();
-    }, []);
+        fetchData();
+    }, [user]);
+
+    const handleClaim = async () => {
+        if (claiming || !commissionStats) return;
+        setClaiming(true);
+        try {
+            const res = await axios.post(`${API_URL}/users/rewards/claim`, { type: 'COMMISSION' }, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (res.data.success) {
+                alert(res.data.message);
+                // Refresh stats
+                const newStatsRes = await axios.get(`${API_URL}/users/rewards/stats`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (newStatsRes.data.success) {
+                    setCommissionStats(newStatsRes.data.data.commission);
+                }
+            }
+        } catch (error: any) {
+            alert(error.response?.data?.message || 'ไม่สามารถรับค่าคอมได้');
+        } finally {
+            setClaiming(false);
+        }
+    };
 
     // Commission tiers from API or defaults
     const tiers = settings.length > 0
@@ -61,6 +96,9 @@ export default function CommissionPage() {
             { level: 3, rate: "0.2%", desc: "ชั้นที่ 3" },
             { level: 4, rate: "0.1%", desc: "ชั้นที่ 4" },
         ];
+
+    const claimableAmount = commissionStats?.claimable || 0;
+    const isClaimed = commissionStats?.isClaimed || false;
 
     const categories = [
         { name: "สล็อต", icon: "🎰", commission: "0.00" },
@@ -169,23 +207,24 @@ export default function CommissionPage() {
                             textShadow: "0 0 20px rgba(255,215,0,0.5)",
                             margin: "0 0 16px"
                         }}>
-                            ฿ 0.00
+                            ฿ {claimableAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                         </p>
                         <button
-                            onClick={() => router.push("/")}
+                            onClick={handleClaim}
+                            disabled={claiming || claimableAmount <= 0 || isClaimed}
                             style={{
-                                background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                                color: "#1a1a2e",
+                                background: (claiming || claimableAmount <= 0 || isClaimed) ? "#30363D" : "linear-gradient(135deg, #FFD700, #FFA500)",
+                                color: (claiming || claimableAmount <= 0 || isClaimed) ? "#8B949E" : "#1a1a2e",
                                 border: "none",
                                 padding: "14px 28px",
                                 borderRadius: "12px",
                                 fontWeight: 700,
                                 fontSize: "16px",
-                                cursor: "pointer",
-                                boxShadow: "0 4px 15px rgba(255,215,0,0.4)"
+                                cursor: (claiming || claimableAmount <= 0 || isClaimed) ? "not-allowed" : "pointer",
+                                boxShadow: (claiming || claimableAmount <= 0 || isClaimed) ? "none" : "0 4px 15px rgba(255,215,0,0.4)"
                             }}
                         >
-                            เล่นเกมเพิ่ม
+                            {claiming ? 'กำลังดำเนินการ...' : isClaimed ? 'รับสิทธิ์ไปแล้วสัปดาห์นี้' : claimableAmount > 0 ? 'กดรับรายได้' : 'รายได้ยังไม่ถึงยอดขั้นต่ำ'}
                         </button>
                     </div>
                 </div>
@@ -293,10 +332,10 @@ export default function CommissionPage() {
                             marginTop: "8px"
                         }}>
                             <span style={{ fontSize: "16px", fontWeight: 700, color: "#0D1117" }}>
-                                รวมค่าคอมทั้งหมด
+                                รวมค่าคอมที่กดรับได้
                             </span>
                             <span style={{ fontSize: "20px", fontWeight: 800, color: "#0D1117" }}>
-                                ฿ 0.00
+                                ฿ {claimableAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </span>
                         </div>
                     </div>

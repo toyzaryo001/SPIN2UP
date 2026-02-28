@@ -72,13 +72,13 @@ router.get('/streak', async (req, res) => {
         // Create default if empty
         if (settings.length === 0) {
             const defaults = [
-                { day: 1, minDeposit: 100, bonusAmount: 10 },
-                { day: 2, minDeposit: 100, bonusAmount: 20 },
-                { day: 3, minDeposit: 100, bonusAmount: 30 },
-                { day: 4, minDeposit: 100, bonusAmount: 50 },
-                { day: 5, minDeposit: 100, bonusAmount: 100 },
-                { day: 6, minDeposit: 100, bonusAmount: 150 },
-                { day: 7, minDeposit: 100, bonusAmount: 300 },
+                { day: 1, minDeposit: 100, bonusAmount: 10, turnoverMultiplier: 1 },
+                { day: 2, minDeposit: 100, bonusAmount: 20, turnoverMultiplier: 1 },
+                { day: 3, minDeposit: 100, bonusAmount: 30, turnoverMultiplier: 1 },
+                { day: 4, minDeposit: 100, bonusAmount: 50, turnoverMultiplier: 1 },
+                { day: 5, minDeposit: 100, bonusAmount: 100, turnoverMultiplier: 1 },
+                { day: 6, minDeposit: 100, bonusAmount: 150, turnoverMultiplier: 1 },
+                { day: 7, minDeposit: 100, bonusAmount: 300, turnoverMultiplier: 1 },
             ];
 
             for (const d of defaults) {
@@ -101,12 +101,12 @@ router.get('/streak', async (req, res) => {
 router.put('/streak/:day', async (req, res) => {
     try {
         const day = parseInt(req.params.day);
-        const { minDeposit, bonusAmount, isActive } = req.body;
+        const { minDeposit, bonusAmount, turnoverMultiplier, isActive } = req.body;
 
         const settings = await prisma.streakSetting.upsert({
             where: { day },
-            update: { minDeposit, bonusAmount, isActive },
-            create: { day, minDeposit, bonusAmount, isActive: isActive ?? true }
+            update: { minDeposit, bonusAmount, turnoverMultiplier, isActive },
+            create: { day, minDeposit, bonusAmount, turnoverMultiplier: turnoverMultiplier ?? 1, isActive: isActive ?? true }
         });
 
         res.json({ success: true, data: settings });

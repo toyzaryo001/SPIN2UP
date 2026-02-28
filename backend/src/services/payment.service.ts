@@ -448,6 +448,11 @@ export class PaymentService {
                         amount,
                         transaction.subType || 'Automatic'
                     ).catch(err => console.error('[LineNotify] Error:', err));
+
+                    // ============================================
+                    // TRIGGER STREAK BONUS CHECK
+                    // ============================================
+                    PaymentService.processStreakBonus(transaction.userId).catch(err => console.error('[Streak Bonus Error]:', err));
                 } else {
                     // Betflix Failed: Mark Transaction as FAILED (UserBalance NOT incremented)
                     await prisma.transaction.update({
@@ -493,5 +498,134 @@ export class PaymentService {
         }
 
         return { success: true };
+    }
+
+    /**
+     * Process Streak Bonus
+     * Checks if the user's recent deposits qualify for a daily streak bonus.
+     */
+    static async processStreakBonus(userId: number) {
+        try {
+            // 1. Get Settings ordered by day
+            const settings = await prisma.streakSetting.findMany({
+                where: { isActive: true },
+                orderBy: { day: 'asc' }
+            });
+
+            if (settings.length === 0) return;
+
+            const minDeposit = Number(settings[0].minDeposit) || 100;
+            const maxDay = settings[settings.length - 1].day;
+
+            // 2. Fetch deposits for the last X days + 1 (to be safe)
+            const daysToLookBack = maxDay + 2;
+            const LookBackDate = new Date();
+            LookBackDate.setDate(LookBackDate.getDate() - daysToLookBack);
+
+            const transactions = await prisma.transaction.findMany({
+                where: {
+                    userId,
+                    type: 'DEPOSIT',
+                    status: 'COMPLETED',
+                    createdAt: { gte: LookBackDate }
+                },
+                select: {
+                    amount: true,
+                    createdAt: true
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            // 3. Group by Date
+            const dailyDeposits: Record<string, number> = {};
+            transactions.forEach(tx => {
+                const dateStr = tx.createdAt.toISOString().split('T')[0];
+                dailyDeposits[dateStr] = (dailyDeposits[dateStr] || 0) + Number(tx.amount);
+            });
+
+            // 4. Calculate Current Streak ending TODAY
+            let currentStreak = 0;
+            const today = new Date().toISOString().split('T')[0];
+
+            // If they haven't met the minimum today, they can't get today's bonus yet.
+            if ((dailyDeposits[today] || 0) < minDeposit) {
+                return;
+            }
+
+            currentStreak = 1;
+            let checkDate = new Date();
+            checkDate.setDate(checkDate.getDate() - 1);
+
+            for (let i = 1; i < maxDay; i++) {
+                const dateStr = checkDate.toISOString().split('T')[0];
+                if ((dailyDeposits[dateStr] || 0) >= minDeposit) {
+                    currentStreak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+
+            // Cap at max day config
+            if (currentStreak > maxDay) currentStreak = maxDay;
+
+            // 5. Does this day have a bonus config?
+            const matchedSetting = settings.find(s => s.day === currentStreak);
+            if (!matchedSetting || Number(matchedSetting.bonusAmount) <= 0) return;
+
+            const bonusAmount = Number(matchedSetting.bonusAmount);
+
+            // 6. Prevent Double Claim (Check if already received bonus for TODAY)
+            // We use transaction note or a specific type, but best is to check a BONUS transaction today
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
+            const existingBonus = await prisma.transaction.findFirst({
+                where: {
+                    userId,
+                    type: 'BONUS',
+                    note: {
+                        contains: `Streak Day ${currentStreak}`
+                    },
+                    createdAt: {
+                        gte: startOfToday
+                    }
+                }
+            });
+
+            if (existingBonus) return; // Already claimed
+
+            // 7. Award the Bonus -> MUST go to BonusBalance and apply Turnover!
+            const turnoverMultiplier = matchedSetting.turnoverMultiplier || 1;
+            const requiredTurnover = bonusAmount * turnoverMultiplier;
+
+            await prisma.$transaction(async (tx) => {
+                const updatedUser = await tx.user.update({
+                    where: { id: userId },
+                    data: {
+                        bonusBalance: { increment: bonusAmount }
+                        // If you have a totalTurnover requirement field on the user in your actual setup, append it here.
+                        // e.g. requiredTurnover: { increment: requiredTurnover }
+                    }
+                });
+
+                await tx.transaction.create({
+                    data: {
+                        userId,
+                        type: 'BONUS',
+                        amount: new Decimal(bonusAmount),
+                        balanceBefore: new Decimal(Number(updatedUser.bonusBalance) - bonusAmount), // This is BonusBalance technically now
+                        balanceAfter: updatedUser.bonusBalance,
+                        status: 'COMPLETED',
+                        note: `Streak Day ${currentStreak} Bonus (Turnover x${turnoverMultiplier})`,
+                    }
+                });
+            });
+
+            console.log(`[Streak] Awarded day ${currentStreak} bonus of ${bonusAmount} to user ${userId}`);
+
+        } catch (error) {
+            console.error('[Streak Calculation Error]', error);
+        }
     }
 }

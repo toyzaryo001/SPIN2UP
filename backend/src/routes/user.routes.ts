@@ -3,6 +3,7 @@ import prisma from '../lib/db.js';
 import bcrypt from 'bcryptjs';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 import { BetflixService } from '../services/betflix.service.js';
+import { RewardService } from '../services/reward.service.js';
 
 const router = Router();
 
@@ -293,6 +294,49 @@ router.get('/streak-stats', authMiddleware, async (req: AuthRequest, res) => {
     } catch (error) {
         console.error('Get streak stats error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// ==========================================
+// REWARD & ACTIVITY ENDPOINTS
+// ==========================================
+
+// GET /api/users/rewards/stats - ดึงสถิติยอดเสียและค่าคอม
+router.get('/rewards/stats', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const userId = req.user!.userId;
+        const stats = await RewardService.getRewardStats(userId);
+
+        res.json({
+            success: true,
+            data: stats
+        });
+    } catch (error: any) {
+        console.error('Get reward stats error:', error);
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการดึงข้อมูลรางวัล' });
+    }
+});
+
+// POST /api/users/rewards/claim - กดรับยอดเสียหรือค่าคอม
+router.post('/rewards/claim', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const userId = req.user!.userId;
+        const { type } = req.body; // 'CASHBACK' | 'COMMISSION'
+
+        if (!type || !['CASHBACK', 'COMMISSION'].includes(type)) {
+            return res.status(400).json({ success: false, message: 'ระบุประเภทรางวัลไม่ถูกต้อง' });
+        }
+
+        const result = await RewardService.claimReward(userId, type);
+
+        res.json({
+            success: true,
+            message: `รับ${type === 'CASHBACK' ? 'ยอดเสีย' : 'ค่าคอม'}สำเร็จ ฿${result.amount}`,
+            data: result
+        });
+    } catch (error: any) {
+        console.error('Claim reward error:', error);
+        res.status(400).json({ success: false, message: error.message || 'ไม่สามารถรับรางวัลได้' });
     }
 });
 

@@ -11,6 +11,7 @@ interface StreakDay {
     day: number;
     minDeposit: number;
     bonusAmount: number;
+    turnoverMultiplier?: number;
     isActive: boolean;
 }
 
@@ -46,6 +47,7 @@ export default function StreakSettingsPage() {
                 await api.put(`/admin/activities/streak/${item.day}`, {
                     minDeposit: item.minDeposit,
                     bonusAmount: item.bonusAmount,
+                    turnoverMultiplier: item.turnoverMultiplier,
                     isActive: item.isActive
                 });
             }
@@ -87,6 +89,7 @@ export default function StreakSettingsPage() {
                             <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">วันที่</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">ฝากขั้นต่ำ (บาท)</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">โบนัส (บาท)</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">เทิร์น (เท่า)</th>
                             <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">เปิดใช้งาน</th>
                         </tr>
                     </thead>
@@ -113,9 +116,17 @@ export default function StreakSettingsPage() {
                                 <td className="px-6 py-4">
                                     <input
                                         type="number"
-                                        value={item.bonusAmount}
+                                        value={item.bonusAmount ?? 0}
                                         onChange={(e) => handleUpdate(item.day, 'bonusAmount', parseFloat(e.target.value) || 0)}
                                         className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                                    />
+                                </td>
+                                <td className="px-6 py-4">
+                                    <input
+                                        type="number"
+                                        value={item.turnoverMultiplier ?? 1}
+                                        onChange={(e) => handleUpdate(item.day, 'turnoverMultiplier', parseFloat(e.target.value) || 0)}
+                                        className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
                                     />
                                 </td>
                                 <td className="px-6 py-4 text-center">

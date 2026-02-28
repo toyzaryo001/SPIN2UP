@@ -21,21 +21,54 @@ export default function CashbackPage() {
     const { user, loading: authLoading } = useAuth(true);
     const [settings, setSettings] = useState<CashbackSettings | null>(null);
     const [loading, setLoading] = useState(true);
-    const [cashbackAmount] = useState(0); // TODO: Fetch from user wallet
+    const [cashbackStats, setCashbackStats] = useState<any>(null);
+    const [claiming, setClaiming] = useState(false);
 
     useEffect(() => {
-        const fetchSettings = async () => {
+        const fetchData = async () => {
             try {
-                const res = await axios.get(`${API_URL}/public/cashback`);
-                setSettings(res.data);
+                const [settingsRes, statsRes] = await Promise.all([
+                    axios.get(`${API_URL}/public/cashback`),
+                    user ? axios.get(`${API_URL}/users/rewards/stats`, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                    }) : Promise.resolve({ data: { success: false } })
+                ]);
+                setSettings(settingsRes.data);
+                if (statsRes.data.success) {
+                    setCashbackStats(statsRes.data.data.cashback);
+                }
             } catch (error) {
-                console.error("Failed to fetch cashback settings", error);
+                console.error("Failed to fetch cashback data", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchSettings();
-    }, []);
+        fetchData();
+    }, [user]);
+
+    const handleClaim = async () => {
+        if (claiming || !cashbackStats) return;
+        setClaiming(true);
+        try {
+            const res = await axios.post(`${API_URL}/users/rewards/claim`, { type: 'CASHBACK' }, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (res.data.success) {
+                alert(res.data.message);
+                // Refresh stats
+                const newStatsRes = await axios.get(`${API_URL}/users/rewards/stats`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (newStatsRes.data.success) {
+                    setCashbackStats(newStatsRes.data.data.cashback);
+                }
+            }
+        } catch (error: any) {
+            alert(error.response?.data?.message || 'ไม่สามารถรับยอดเสียได้');
+        } finally {
+            setClaiming(false);
+        }
+    };
 
     if (authLoading || loading) {
         return <PlayerLayout><div style={{ padding: "40px", textAlign: "center" }}>กำลังโหลด...</div></PlayerLayout>;
@@ -52,10 +85,12 @@ export default function CashbackPage() {
         );
     }
 
-    const cashbackRate = Number(settings.rate) || 5;
-    const minLoss = Number(settings.minLoss) || 100;
-    const maxCashback = Number(settings.maxCashback) || 10000;
+    const cashbackRate = cashbackStats?.rate || Number(settings.rate) || 5;
+    const minLoss = cashbackStats?.minLoss || Number(settings.minLoss) || 100;
+    const maxCashback = cashbackStats?.maxReward || Number(settings.maxCashback) || 10000;
     const claimDay = DAYS[settings.dayOfWeek] || "จันทร์";
+    const claimableAmount = cashbackStats?.claimable || 0;
+    const isClaimed = cashbackStats?.isClaimed || false;
 
     return (
         <PlayerLayout>
@@ -93,29 +128,33 @@ export default function CashbackPage() {
                         margin: "8px 0 24px",
                         textShadow: "1px 1px 2px rgba(0,0,0,0.1)"
                     }}>
-                        ฿{cashbackAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                        ฿{claimableAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                     </p>
-                    <button style={{
-                        width: "100%",
-                        background: "linear-gradient(135deg, #FFD700, #FFC000)",
-                        color: "#0D1117",
-                        border: "none",
-                        padding: "16px",
-                        borderRadius: "14px",
-                        fontSize: "18px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        boxShadow: "0 6px 20px rgba(255,215,0,0.4)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px"
-                    }}>
+                    <button
+                        onClick={handleClaim}
+                        disabled={claiming || claimableAmount <= 0 || isClaimed}
+                        style={{
+                            width: "100%",
+                            background: (claiming || claimableAmount <= 0 || isClaimed) ? "#30363D" : "linear-gradient(135deg, #FFD700, #FFC000)",
+                            color: (claiming || claimableAmount <= 0 || isClaimed) ? "#8B949E" : "#0D1117",
+                            border: "none",
+                            padding: "16px",
+                            borderRadius: "14px",
+                            fontSize: "18px",
+                            fontWeight: 700,
+                            cursor: (claiming || claimableAmount <= 0 || isClaimed) ? "not-allowed" : "pointer",
+                            boxShadow: (claiming || claimableAmount <= 0 || isClaimed) ? "none" : "0 6px 20px rgba(255,215,0,0.4)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px"
+                        }}>
                         <Wallet size={22} />
-                        รับเงินคืนทันที
+                        {claiming ? 'กำลังดำเนินการ...' : isClaimed ? 'รับสิทธิ์ไปแล้วสัปดาห์นี้' : claimableAmount > 0 ? 'รับเงินคืนทันที' : 'ยังไม่มียอดให้รับ'}
                     </button>
                     <p style={{ fontSize: "12px", color: "#8B949E", marginTop: "12px" }}>
                         *รับได้ทุกวัน{claimDay} หลัง 00:00 น.
+                        {cashbackStats && ` (คำนวณจากยอดเสีย ${new Date(cashbackStats.periodStart).toLocaleDateString()} ถึง ${new Date(cashbackStats.periodEnd).toLocaleDateString()})`}
                     </p>
                 </div>
 

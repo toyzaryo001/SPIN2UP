@@ -19,17 +19,30 @@ export default function RankPage() {
     const { user, loading: authLoading } = useAuth(true);
     const [totalDeposit, setTotalDeposit] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [cashbackRate, setCashbackRate] = useState(5); // Default to 5%
+
+    // Calculate Ranks dynamically
+    const dynamicRanks = ranks.map(rank => ({
+        ...rank,
+        benefit: `Cashback ${cashbackRate}%`
+    }));
 
     useEffect(() => {
         const fetchUserData = async () => {
             const token = localStorage.getItem("token");
-            if (!token) return;
             try {
-                const res = await axios.get(`${API_URL}/users/me`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (res.data.success) {
-                    setTotalDeposit(Number(res.data.data.totalDeposit || 0));
+                const [userRes, cbRes] = await Promise.all([
+                    token ? axios.get(`${API_URL}/users/me`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }) : Promise.resolve({ data: { success: false } }),
+                    axios.get(`${API_URL}/public/cashback`)
+                ]);
+
+                if (userRes.data.success) {
+                    setTotalDeposit(Number(userRes.data.data.totalDeposit || 0));
+                }
+                if (cbRes.data) {
+                    setCashbackRate(Number(cbRes.data.rate || 5));
                 }
             } catch (error) {
                 console.error("Failed to fetch user data for rank", error);
@@ -48,21 +61,21 @@ export default function RankPage() {
 
     // Calculate Rank Logic
     let currentRank = 0;
-    for (let i = ranks.length - 1; i >= 0; i--) {
-        if (totalDeposit >= ranks[i].minDeposit) {
+    for (let i = dynamicRanks.length - 1; i >= 0; i--) {
+        if (totalDeposit >= dynamicRanks[i].minDeposit) {
             currentRank = i;
             break;
         }
     }
 
     const nextRankIndex = currentRank + 1;
-    const nextRank = ranks[nextRankIndex];
-    const nextRankDeposit = nextRank ? nextRank.minDeposit : ranks[currentRank].minDeposit; // Maxed out?
+    const nextRank = dynamicRanks[nextRankIndex];
+    const nextRankDeposit = nextRank ? nextRank.minDeposit : dynamicRanks[currentRank].minDeposit; // Maxed out?
 
     // Progress Calculation
     let progress = 0;
     if (nextRank) {
-        const currentLevelBase = ranks[currentRank].minDeposit;
+        const currentLevelBase = dynamicRanks[currentRank].minDeposit;
         const gap = nextRankDeposit - currentLevelBase;
         const achieved = totalDeposit - currentLevelBase;
         // Basic progress within the level
@@ -95,7 +108,7 @@ export default function RankPage() {
 
                 {/* Current Rank Card */}
                 <div style={{
-                    background: ranks[currentRank].gradient,
+                    background: dynamicRanks[currentRank].gradient,
                     borderRadius: "16px",
                     padding: "28px",
                     textAlign: "center",
@@ -107,10 +120,10 @@ export default function RankPage() {
                     <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.1)" }} />
                     <div style={{ position: "relative", zIndex: 1 }}>
                         <span style={{ fontSize: "64px", display: "block", marginBottom: "12px", filter: "drop-shadow(2px 2px 4px rgba(0,0,0,0.3))" }}>
-                            {ranks[currentRank].icon}
+                            {dynamicRanks[currentRank].icon}
                         </span>
                         <h2 style={{ fontSize: "32px", fontWeight: 900, margin: "0 0 4px", textShadow: "2px 2px 4px rgba(0,0,0,0.3)" }}>
-                            {ranks[currentRank].name}
+                            {dynamicRanks[currentRank].name}
                         </h2>
                         <p style={{ opacity: 0.9, fontWeight: 600 }}>ระดับปัจจุบันของคุณ</p>
                         <p style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>ยอดฝากสะสม: ฿{totalDeposit.toLocaleString()}</p>
@@ -169,7 +182,7 @@ export default function RankPage() {
                         สิทธิพิเศษแต่ละระดับ
                     </h3>
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                        {ranks.map((rank, index) => (
+                        {dynamicRanks.map((rank, index) => (
                             <div
                                 key={rank.name}
                                 style={{

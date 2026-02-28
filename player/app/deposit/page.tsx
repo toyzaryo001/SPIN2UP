@@ -460,7 +460,7 @@ export default function DepositPage() {
                             border: "1px solid rgba(255,255,255,0.1)"
                         }}>
                             <p style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>เลือกช่องทางฝาก</p>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                            <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
                                 {channels.filter(ch => {
                                     if (ch.id === 'bank' && features.deposit_bank === false) return false;
                                     if (ch.id === 'truemoney' && features.deposit_truemoney === false) return false;
@@ -472,6 +472,7 @@ export default function DepositPage() {
                                         onClick={() => { setSelectedChannel(ch.id); setQrData(null); }}
                                         style={{
                                             padding: "14px 10px",
+                                            minWidth: "100px",
                                             borderRadius: "14px",
                                             border: selectedChannel === ch.id ? "2px solid #FFD700" : "2px solid rgba(255,255,255,0.1)",
                                             background: selectedChannel === ch.id ? "rgba(255,215,0,0.1)" : "rgba(255,255,255,0.05)",

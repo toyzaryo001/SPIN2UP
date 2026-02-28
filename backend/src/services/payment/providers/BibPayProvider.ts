@@ -37,6 +37,9 @@ export class BibPayProvider implements IPaymentProvider {
             // For now assuming we rely on what's configured or let the controller handle it?
             // The interface creates the payload.
 
+            const baseUrlEnv = process.env.API_BASE_URL || process.env.BASE_URL || 'https://api.check24m.com';
+            const callbackUrl = this.config.callbackUrl || `${baseUrlEnv}/api/webhooks/payment/bibpay`;
+
             const payload = {
                 bankName: user.fullName || 'Customer',
                 bankNumber: user.bankAccount || '0000000000',
@@ -44,7 +47,7 @@ export class BibPayProvider implements IPaymentProvider {
                 amount: Number(amount.toFixed(2)),
                 refferend: referenceId, // Note: API typo 'refferend' preserved from PHP ref
                 signatrure: this.config.apiKey, // Note: API typo 'signatrure' preserved
-                callbackUrl: this.config.callbackUrl || `${process.env.API_BASE_URL}/webhooks/payment/bibpay`
+                callbackUrl: callbackUrl
             };
 
             const response = await axios.post(`${this.baseUrl}/payin`, payload, {

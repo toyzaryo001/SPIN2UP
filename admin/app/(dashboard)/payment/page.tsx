@@ -185,7 +185,7 @@ export default function PaymentPage() {
 
         try {
             const provider = SUPPORTED_PROVIDERS.find(p => p.code === selectedProvider);
-            const config = {
+            const config: any = {
                 apiKey: addForm.apiKey,
                 secretKey: addForm.secretKey,
                 apiEndpoint: addForm.apiEndpoint,
@@ -193,6 +193,11 @@ export default function PaymentPage() {
                 canWithdraw: true,
                 isAutoWithdraw: false
             };
+
+            // Include ipWhitelist for BibPay
+            if (selectedProvider === 'bibpay' && (addForm as any).ipWhitelist) {
+                config.ipWhitelist = (addForm as any).ipWhitelist;
+            }
 
             const res = await api.payment.createGateway({
                 code: selectedProvider,
@@ -435,6 +440,21 @@ export default function PaymentPage() {
                                                 onChange={e => setAddForm({ ...addForm, name: e.target.value })}
                                             />
                                         </div>
+                                        {selectedProvider === 'bibpay' && (
+                                            <div>
+                                                <label className="text-sm font-medium text-slate-700">IP Whitelist (comma-separated)</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                                                    placeholder="162.220.232.99, 1.2.3.4"
+                                                    onChange={e => {
+                                                        const ips = e.target.value.split(',').map(ip => ip.trim()).filter(ip => ip);
+                                                        setAddForm({ ...addForm, ipWhitelist: ips });
+                                                    }}
+                                                />
+                                                <p className="text-xs text-slate-400 mt-1">ใส่ IP addresses ของ BibPay คั่นด้วยเครื่องหมายจุลภาค</p>
+                                            </div>
+                                        )}
                                         <div>
                                             <label className="text-sm font-medium text-slate-700">API Endpoint</label>
                                             <input
@@ -502,6 +522,19 @@ export default function PaymentPage() {
                             <div className="space-y-4">
                                 {editingGateway.code === 'bibpay' ? (
                                     <>
+                                        <div className="space-y-1">
+                                            <label className="text-sm font-medium text-slate-700">IP Whitelist</label>
+                                            <textarea
+                                                className="w-full h-20 p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                                                value={(configForm.ipWhitelist || []).join('\n')}
+                                                onChange={e => {
+                                                    const ips = e.target.value.split('\n').map(ip => ip.trim()).filter(ip => ip);
+                                                    setConfigForm({ ...configForm, ipWhitelist: ips });
+                                                }}
+                                                placeholder="162.220.232.99&#10;1.2.3.4"
+                                            />
+                                            <p className="text-xs text-slate-400">IP addresses ขั้นละบรรทัด</p>
+                                        </div>
                                         <div className="space-y-1">
                                             <label className="text-sm font-medium text-slate-700">API Endpoint</label>
                                             <input

@@ -462,6 +462,9 @@ export default function DepositPage() {
                             <p style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>เลือกช่องทางฝาก</p>
                             <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
                                 {channels.filter(ch => {
+                                    // Protect against initial empty state before fetchConfig completes
+                                    if (Object.keys(features).length === 0) return false;
+
                                     if (ch.id === 'bank' && features.deposit_bank === false) return false;
                                     if (ch.id === 'truemoney' && features.deposit_truemoney === false) return false;
                                     if (ch.id === 'promptpay' && features.deposit_promptpay === false) return false;

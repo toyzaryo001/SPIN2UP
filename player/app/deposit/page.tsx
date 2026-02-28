@@ -199,6 +199,16 @@ export default function DepositPage() {
                     msg = "ช่องทางชำระเงินปิดปรับปรุงชั่วคราว";
                 } else if (msg.includes("Deposit is temporarily disabled")) {
                     msg = "ระบบฝากเงินปิดปรับปรุงชั่วคราว";
+                } else if (msg.includes("Auto deposit is disabled")) {
+                    msg = "ระบบฝากเงินอัตโนมัติปิดปรับปรุงชั่วคราว";
+                } else if (msg.includes("maintenance") || msg.includes("Maintenance")) {
+                    msg = "ระบบชำระเงินอยู่ระหว่างปรับปรุง กรุณาลองใหม่ภายหลัง";
+                } else if (msg.includes("Failed to create payment")) {
+                    msg = "ไม่สามารถสร้างรายการฝากเงินได้ กรุณาลองใหม่อีกครั้ง";
+                } else if (/^[a-zA-Z\s.,!?:;()\-]+$/.test(msg)) {
+                    // Catch-all: If message is entirely English, show generic Thai error
+                    console.error("[Deposit] Untranslated error:", msg);
+                    msg = "ไม่สามารถทำรายการได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง หรือติดต่อแอดมิน";
                 }
 
                 showAlert(msg, "error");

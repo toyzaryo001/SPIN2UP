@@ -10,8 +10,8 @@ export class PaymentFactory {
      * @param code Provider code (e.g., 'bibpay')
      */
     static async getProvider(code: string): Promise<IPaymentProvider | null> {
-        // Fetch config from DB
-        const gateway = await prisma.paymentGateway.findUnique({
+        // Note: Using findFirst because isActive is not part of the unique constraint
+        const gateway = await prisma.paymentGateway.findFirst({
             where: { code, isActive: true }
         });
 

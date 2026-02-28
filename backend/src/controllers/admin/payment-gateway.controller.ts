@@ -153,8 +153,51 @@ export class PaymentGatewayController {
             }
 
             let configString = config;
+            let configObj: any = config;
+
             if (typeof config === 'object') {
+                configObj = config;
                 configString = JSON.stringify(config);
+            } else if (typeof config === 'string') {
+                try {
+                    configObj = JSON.parse(config);
+                    configString = config;
+                } catch (e) {
+                    return res.status(400).json({ success: false, message: 'Invalid JSON config' });
+                }
+            }
+
+            // Validate BibPay specific config requirements (same as updateGateway)
+            if (code === 'bibpay') {
+                if (!configObj.ipWhitelist || !Array.isArray(configObj.ipWhitelist) || configObj.ipWhitelist.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'BibPay requires ipWhitelist configuration. Provide array of BibPay IP addresses.',
+                        example: { ipWhitelist: ['1.2.3.4', '5.6.7.8'] }
+                    });
+                }
+
+                if (!configObj.apiKey || configObj.apiKey === 'CONFIGURE_ME') {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'BibPay requires apiKey configuration. Contact BibPay to get your API key.',
+                        example: { apiKey: 'your_bibpay_api_key' }
+                    });
+                }
+
+                const invalidIps = configObj.ipWhitelist.filter((ip: any) => {
+                    if (typeof ip !== 'string') return true;
+                    return !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
+                });
+
+                if (invalidIps.length > 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Invalid IP addresses: ${invalidIps.join(', ')}. Use format: xxx.xxx.xxx.xxx`,
+                    });
+                }
+
+                console.log(`[Admin] Creating BibPay gateway with IPs: ${configObj.ipWhitelist.join(', ')}`);
             }
 
             const gateway = await prisma.paymentGateway.create({

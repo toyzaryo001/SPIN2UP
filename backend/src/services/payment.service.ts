@@ -3,6 +3,7 @@ import { PaymentFactory } from './payment/PaymentFactory';
 import { BetflixService } from './betflix.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { LineNotifyService } from './line-notify.service';
+import { AlertService } from './alert.service';
 
 export class PaymentService {
 
@@ -316,7 +317,26 @@ export class PaymentService {
 
         // 2. Verify Webhook (pass client IP for provider-specific verification)
         if (!provider.verifyWebhook(payload, clientIp)) {
-            throw new Error(`Invalid Webhook from [${gatewayCode}] IP: ${clientIp || 'unknown'}`);
+            const errorMsg = `Invalid Webhook from [${gatewayCode}] IP: ${clientIp || 'unknown'}`;
+            console.error(errorMsg);
+
+            // Create security alert for invalid webhook
+            await AlertService.createAlert({
+                type: 'WARNING',
+                title: '⚠️ INVALID WEBHOOK RECEIVED',
+                message: `Webhook verification failed for gateway [${gatewayCode}]. Client IP: ${clientIp}. ` +
+                         `This may indicate a security issue or misconfiguration.`,
+                actionUrl: `/admin/transactions`,
+                actionRequired: false,  // Warning only, doesn't need immediate action
+                metadata: {
+                    gateway: gatewayCode,
+                    clientIp: clientIp,
+                    timestamp: new Date().toISOString(),
+                    payload: payload  // Store payload for investigation
+                }
+            });
+
+            throw new Error(errorMsg);
         }
 
         // 3. Process Payload
@@ -335,6 +355,23 @@ export class PaymentService {
 
         if (!transaction) {
             console.error(`Transaction not found for webhook: ${JSON.stringify(result)}`);
+
+            // Create alert - transaction not found could indicate orphaned webhook
+            await AlertService.createAlert({
+                type: 'CRITICAL',
+                title: '⚠️ WEBHOOK TRANSACTION NOT FOUND',
+                message: `Webhook received from [${gatewayCode}] but matching transaction not found. ` +
+                         `Reference ID: ${result.transactionId}. This may indicate a missing or stale transaction.`,
+                actionUrl: `/admin/transactions`,
+                actionRequired: false,
+                metadata: {
+                    gateway: gatewayCode,
+                    referenceId: result.transactionId,
+                    externalId: result.externalId,
+                    timestamp: new Date().toISOString()
+                }
+            });
+
             return { success: false, message: 'Transaction not found' };
         }
 

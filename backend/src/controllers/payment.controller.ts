@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PaymentService } from '../services/payment.service';
+import { AlertService } from '../services/alert.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
 export class PaymentController {
@@ -21,7 +22,33 @@ export class PaymentController {
 
             return res.json({ success: true, data: result });
         } catch (error: any) {
+            // Re-extract variables in catch block for alert logging
+            const userId = req.user?.userId;
+            const { amount, gateway } = req.body;
+
             console.error('Create Deposit Error:', error);
+
+            // Create alert for critical deposit failures
+            if (error.message?.includes('gateway') || error.message?.includes('provider')) {
+                try {
+                    await AlertService.createAlert({
+                        type: 'WARNING',
+                        title: '⚠️ DEPOSIT REQUEST FAILED',
+                        message: `User ${userId} deposit request failed: ${error.message}`,
+                        userId: userId,
+                        actionUrl: `/admin/users/${userId}`,
+                        actionRequired: false,
+                        metadata: {
+                            amount: Number(amount),
+                            gateway: gateway || 'default',
+                            error: error.message,
+                            timestamp: new Date().toISOString()
+                        }
+                    });
+                } catch (alertErr) {
+                    console.error('[Alert] Failed to create deposit error alert:', alertErr);
+                }
+            }
 
             // ⚠️ INTENTIONAL: Returning HTTP 200 on deposit failures
             // Reason: Prevent duplicate/retry attempts from payment gateway

@@ -38,7 +38,7 @@ export default function PaymentPage() {
 
     // Forms
     const [configForm, setConfigForm] = useState<any>({});
-    const [addForm, setAddForm] = useState({ name: '', apiKey: '', secretKey: '', apiEndpoint: '' });
+    const [addForm, setAddForm] = useState({ name: '', apiKey: '', secretKey: '', apiEndpoint: '', ipWhitelist: [] as string[] });
 
     const fetchBalance = async (id: number) => {
         setLoadingBalances(prev => ({ ...prev, [id]: true }));
@@ -209,7 +209,7 @@ export default function PaymentPage() {
                 toast.success('เพิ่ม Payment Gateway เรียบร้อย');
                 setShowAddModal(false);
                 setSelectedProvider(null);
-                setAddForm({ name: '', apiKey: '', secretKey: '', apiEndpoint: '' });
+                setAddForm({ name: '', apiKey: '', secretKey: '', apiEndpoint: '', ipWhitelist: [] });
                 fetchGateways();
             }
         } catch (error: any) {

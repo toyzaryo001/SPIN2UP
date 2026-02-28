@@ -492,7 +492,15 @@ export default function DepositPage() {
                                         {'customImage' in ch && ch.customImage ? (
                                             <img src={ch.customImage as string} alt={ch.label} style={{ width: "42px", height: "42px", objectFit: "contain" }} />
                                         ) : (
-                                            <BankLogo bankCode={ch.bankCode} width={36} height={36} />
+                                            <BankLogo
+                                                bankCode={
+                                                    ch.id === 'bank'
+                                                        ? (bankAccounts.find(b => b.type !== 'truemoney' && b.bankName !== 'TrueMoney' && b.bankName !== 'PromptPay')?.bankName || ch.bankCode)
+                                                        : ch.bankCode
+                                                }
+                                                width={36}
+                                                height={36}
+                                            />
                                         )}
                                         <span style={{ fontSize: "11px", fontWeight: 700, color: selectedChannel === ch.id ? "#FFD700" : "#8B949E" }}>
                                             {ch.label}

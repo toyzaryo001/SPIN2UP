@@ -37,8 +37,9 @@ export default function ReferralPage() {
                 });
                 if (res.data.success) {
                     const data = res.data.data;
+                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
                     setReferralCode(data.referralCode);
-                    setReferralLink(`https://check24m.com/r/${data.referralCode}`);
+                    setReferralLink(`${origin}/r/${data.referralCode}`);
                     setTotalReferrals(data.totalReferrals);
                     setTotalCommission(data.totalCommission);
                     setReferrals(data.referrals);
@@ -47,8 +48,9 @@ export default function ReferralPage() {
                 console.error("Failed to fetch referral stats", error);
                 // Fallback to user data
                 if (user) {
+                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
                     setReferralCode(user.username);
-                    setReferralLink(`https://check24m.com/r/${user.username}`);
+                    setReferralLink(`${origin}/r/${user.username}`);
                 }
             } finally {
                 setLoading(false);

@@ -27,20 +27,15 @@ const PORT = parseInt(process.env.PORT || '3001');
 
 
 // Middleware
-const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [
-    'http://localhost:3000',
-    'http://localhost:3002',
-    'https://admin.check24m.com',
-    'https://check24m.com'
-];
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];
 
 app.use(cors({
     origin: (origin, callback) => {
         // อนุญาต request ที่ไม่มี origin (Postman, cURL, mobile app)
         if (!origin) return callback(null, true);
 
-        // อนุญาต origin ที่อยู่ในลิสต์ หรือ match subdomain ของ check24m.com
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*') || origin.endsWith('.check24m.com')) {
+        // อนุญาต origin ที่กำหนดใน environment variables
+        if (allowedOrigins.length === 0 || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
             return callback(null, true);
         }
 

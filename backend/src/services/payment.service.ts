@@ -325,7 +325,7 @@ export class PaymentService {
                 type: 'WARNING',
                 title: '⚠️ INVALID WEBHOOK RECEIVED',
                 message: `Webhook verification failed for gateway [${gatewayCode}]. Client IP: ${clientIp}. ` +
-                         `This may indicate a security issue or misconfiguration.`,
+                    `This may indicate a security issue or misconfiguration.`,
                 actionUrl: `/admin/transactions`,
                 actionRequired: false,  // Warning only, doesn't need immediate action
                 metadata: {
@@ -361,7 +361,7 @@ export class PaymentService {
                 type: 'CRITICAL',
                 title: '⚠️ WEBHOOK TRANSACTION NOT FOUND',
                 message: `Webhook received from [${gatewayCode}] but matching transaction not found. ` +
-                         `Reference ID: ${result.transactionId}. This may indicate a missing or stale transaction.`,
+                    `Reference ID: ${result.transactionId}. This may indicate a missing or stale transaction.`,
                 actionUrl: `/admin/transactions`,
                 actionRequired: false,
                 metadata: {
@@ -375,8 +375,28 @@ export class PaymentService {
             return { success: false, message: 'Transaction not found' };
         }
 
-        if (transaction.status === 'COMPLETED' || transaction.status === 'APPROVED') {
-            return { success: true, message: 'Already processed' };
+        if (transaction.status === 'COMPLETED' || transaction.status === 'APPROVED' || transaction.status === 'PROCESSING') {
+            return { success: true, message: 'Already processed or currently processing' };
+        }
+
+        // ============================================
+        // PREVENT DOUBLE CREDIT: Atomic Optimistic Lock
+        // ============================================
+        // We update status from PENDING -> PROCESSING
+        // If count === 0, another request already locked it.
+        const lockUpdate = await prisma.transaction.updateMany({
+            where: {
+                id: transaction.id,
+                status: 'PENDING'
+            },
+            data: {
+                status: 'PROCESSING'
+            }
+        });
+
+        if (lockUpdate.count === 0) {
+            console.warn(`[Webhook] Duplicate concurrent request ignored for tx ${transaction.id}`);
+            return { success: true, message: 'Already being processed by another request' };
         }
 
         // 5. Handle Status Change

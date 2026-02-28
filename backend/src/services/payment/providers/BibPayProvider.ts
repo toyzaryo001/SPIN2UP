@@ -38,7 +38,7 @@ export class BibPayProvider implements IPaymentProvider {
             // For now assuming we rely on what's configured or let the controller handle it?
             // The interface creates the payload.
 
-            const baseUrlEnv = process.env.API_BASE_URL || process.env.BASE_URL || 'https://api.check24m.com';
+            const baseUrlEnv = process.env.API_BASE_URL || process.env.BASE_URL || 'http://localhost:3001';
             const callbackUrl = this.config.callbackUrl || `${baseUrlEnv}/api/webhooks/payment/bibpay`;
 
             const payload = {

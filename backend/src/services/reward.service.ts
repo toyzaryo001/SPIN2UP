@@ -196,25 +196,29 @@ export class RewardService {
         }
 
         const amount = target.claimable;
-
-        // ============================================
-        // BETFLIX SYNC: Deposit to Game Wallet FIRST
-        // หักจากกระดานหลัก (Agent) → เติมเข้า User game wallet
-        // ============================================
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new Error('User not found');
 
-        const betflixResult = await BetflixService.ensureAndTransfer(
-            userId, user.phone, user.betflixUsername, amount, `REWARD_${type}_${Date.now()}`
-        );
-        if (!betflixResult.success) {
-            throw new Error(betflixResult.error || 'ไม่สามารถเติมเงินเข้ากระเป๋าเกมได้');
-        }
+        // ============================================
+        // PREPARE SAGA: 1. Create PRE-CLAIM Record
+        // ============================================
+        // Check again and create in a rapid transaction to prevent race conditions
+        const claimRecord = await prisma.$transaction(async (tx) => {
+            // Check claims specifically for this period start to ensure atomic check
+            const existingClaim = await tx.rewardClaim.findFirst({
+                where: {
+                    userId,
+                    type,
+                    periodStart: new Date(target.periodStart)
+                }
+            });
 
-        // DB Transaction — only after game wallet deposit succeeded
-        return await prisma.$transaction(async (tx) => {
-            // 1. Create Claim Record
-            await tx.rewardClaim.create({
+            if (existingClaim) {
+                throw new Error('Already claimed or currently processing');
+            }
+
+            // Create placeholder claim
+            return await tx.rewardClaim.create({
                 data: {
                     userId,
                     type,
@@ -223,29 +227,51 @@ export class RewardService {
                     periodEnd: new Date(target.periodEnd),
                 }
             });
-
-            // 2. Update local balance (synced with game wallet)
-            const updatedUser = await tx.user.update({
-                where: { id: userId },
-                data: {
-                    balance: { increment: amount }
-                }
-            });
-
-            // 3. Create Transaction Log
-            await tx.transaction.create({
-                data: {
-                    userId,
-                    type: type === 'CASHBACK' ? 'REWARD_CASHBACK' : 'REWARD_COMMISSION',
-                    amount: amount,
-                    balanceBefore: Number(updatedUser.balance) - amount,
-                    balanceAfter: Number(updatedUser.balance),
-                    status: 'COMPLETED',
-                    note: `${type} for period ${target.periodStart.split(' ')[0]}`
-                }
-            });
-
-            return { success: true, amount, balance: updatedUser.balance };
         });
+
+        // ============================================
+        // BETFLIX SYNC: Deposit to Game Wallet MUST Happen AFTER DB lock
+        // ============================================
+        try {
+            const betflixResult = await BetflixService.ensureAndTransfer(
+                userId, user.phone, user.betflixUsername, amount, `REWARD_${type}_${claimRecord.id}`
+            );
+
+            if (!betflixResult.success) {
+                throw new Error(betflixResult.error || 'ไม่สามารถเติมเงินเข้ากระเป๋าเกมได้');
+            }
+
+            // ============================================
+            // COMPLETE SAGA: 2. Confirm Claim & Update Balance
+            // ============================================
+            return await prisma.$transaction(async (tx) => {
+                const updatedUser = await tx.user.update({
+                    where: { id: userId },
+                    data: { balance: { increment: amount } }
+                });
+
+                await tx.transaction.create({
+                    data: {
+                        userId,
+                        type: type === 'CASHBACK' ? 'REWARD_CASHBACK' : 'REWARD_COMMISSION',
+                        amount: amount,
+                        balanceBefore: Number(updatedUser.balance) - amount,
+                        balanceAfter: Number(updatedUser.balance),
+                        status: 'COMPLETED',
+                        note: `${type} for period ${target.periodStart.split(' ')[0]}`
+                    }
+                });
+
+                return { success: true, amount, balance: updatedUser.balance };
+            });
+
+        } catch (error: any) {
+            // ============================================
+            // ROLLBACK SAGA: Remove claim record so they can try again
+            // ============================================
+            console.error('[Reward] Claim failed, rolling back claim record', error);
+            await prisma.rewardClaim.delete({ where: { id: claimRecord.id } }).catch(() => { });
+            throw error;
+        }
     }
 }

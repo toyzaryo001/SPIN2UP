@@ -191,7 +191,7 @@ router.delete('/:id', requirePermission('agents', 'providers', 'manage'), async 
 });
 
 // PUT /api/admin/providers/reorder - จัดลำดับ
-router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
+router.put('/reorder', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
     try {
         const { items } = req.body; // [{ id, sortOrder }, ...]
 

@@ -2,6 +2,15 @@
 import { NexusProvider } from '../src/services/agents/NexusProvider';
 import prisma from '../src/lib/db';
 
+// Injected for Debug Scripts
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../backend/.env') });
+
+
 async function main() {
     console.log('--- Testing Nexus Provider ---');
     try {

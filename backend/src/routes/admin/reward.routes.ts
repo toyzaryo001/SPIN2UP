@@ -9,7 +9,7 @@ const router = Router();
 // =======================
 
 // GET /api/admin/rewards/settings/cashback
-router.get('/settings/cashback', requirePermission('setting', 'view'), async (req, res) => {
+router.get('/settings/cashback', requirePermission('activities', 'cashback', 'view'), async (req, res) => {
     try {
         let setting = await prisma.cashbackSetting.findFirst();
         if (!setting) {
@@ -26,7 +26,7 @@ router.get('/settings/cashback', requirePermission('setting', 'view'), async (re
 });
 
 // POST /api/admin/rewards/settings/cashback
-router.post('/settings/cashback', requirePermission('setting', 'manage'), async (req, res) => {
+router.post('/settings/cashback', requirePermission('activities', 'cashback', 'manage'), async (req, res) => {
     try {
         const { rate, minLoss, maxCashback, dayOfWeek, claimStartHour, claimEndHour, isActive } = req.body;
 
@@ -73,7 +73,7 @@ router.post('/settings/cashback', requirePermission('setting', 'manage'), async 
 // =======================
 
 // GET /api/admin/rewards/settings/turnover
-router.get('/settings/turnover', requirePermission('setting', 'view'), async (req, res) => {
+router.get('/settings/turnover', requirePermission('activities', 'commission', 'view'), async (req, res) => {
     try {
         let setting = await prisma.turnoverSetting.findFirst();
         if (!setting) {
@@ -89,7 +89,7 @@ router.get('/settings/turnover', requirePermission('setting', 'view'), async (re
 });
 
 // POST /api/admin/rewards/settings/turnover
-router.post('/settings/turnover', requirePermission('setting', 'manage'), async (req, res) => {
+router.post('/settings/turnover', requirePermission('activities', 'commission', 'manage'), async (req, res) => {
     try {
         const { rate, minTurnover, maxReward, isActive } = req.body;
 
@@ -129,7 +129,7 @@ router.post('/settings/turnover', requirePermission('setting', 'manage'), async 
 // =======================
 
 // GET /api/admin/rewards/summaries
-router.get('/summaries', requirePermission('report', 'view'), async (req, res) => {
+router.get('/summaries', requirePermission('reports', 'bonus', 'view'), async (req, res) => {
     try {
         const { type } = req.query;
 
@@ -165,7 +165,7 @@ router.get('/summaries', requirePermission('report', 'view'), async (req, res) =
 // =======================
 
 // GET /api/admin/rewards/history
-router.get('/history', requirePermission('report', 'view'), async (req, res) => {
+router.get('/history', requirePermission('activities', 'history', 'view'), async (req, res) => {
     try {
         const { page = 1, limit = 50, search, type, startDate, endDate } = req.query;
         const skip = (Number(page) - 1) * Number(limit);

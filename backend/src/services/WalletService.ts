@@ -85,16 +85,28 @@ export class WalletService {
                                 await sourceAgentService.deposit(sourceAccount.externalUsername, withdrawnAmount);
                                 console.log(`[WalletSwap] ✅ Refund ${withdrawnAmount} back to Source Agent succeeded`);
                             } catch (refundErr) {
-                                console.error(`[CRITICAL] ❌ Refund ALSO failed! ${withdrawnAmount} THB stranded for User ${userId}!`, refundErr);
+                                console.error(`[CRITICAL] ❌ Refund ALSO failed! ${withdrawnAmount} THB stranded for User ${userId}! Recovery to Local DB...`, refundErr);
+
+                                // [SAFE FALLBACK] Recovery to local database balance
+                                try {
+                                    await prisma.user.update({
+                                        where: { id: user.id },
+                                        data: { balance: { increment: withdrawnAmount } }
+                                    });
+                                    console.log(`[WalletSwap] ✅ Safely recovered ${withdrawnAmount} THB to local DB balance for User ${userId}`);
+                                } catch (dbErr) {
+                                    console.error(`[FATAL] ⛔ Failed to recover funds to local DB for User ${userId}! Amount lost: ${withdrawnAmount}`, dbErr);
+                                }
 
                                 // Create critical alert for admin to review
                                 await AlertService.createAlert({
                                     type: 'CRITICAL',
-                                    title: '⚠️ WALLET SWAP REFUND FAILED',
-                                    message: `User ${userId} has ${withdrawnAmount} THB stranded in agent ${currentAgentId}. ` +
-                                            `Initial deposit to target agent (${targetAgentConfig.id}) failed, ` +
-                                            `and refund attempt back to source agent also failed. ` +
-                                            `Error: ${refundErr instanceof Error ? refundErr.message : String(refundErr)}`,
+                                    title: '⚠️ WALLET SWAP REFUND FAILED (Recovered to Local)',
+                                    message: `User ${userId} had ${withdrawnAmount} THB fail during agent swap. ` +
+                                        `Deposit to target agent (${targetAgentConfig.id}) failed, ` +
+                                        `and refund attempt to source agent also failed. ` +
+                                        `The amount has been automatically credited back to their local Web Web balance. ` +
+                                        `Error: ${refundErr instanceof Error ? refundErr.message : String(refundErr)}`,
                                     userId: userId,
                                     agentId: currentAgentId,
                                     actionUrl: `/admin/users/${userId}`,
@@ -103,14 +115,15 @@ export class WalletService {
                                         sourceAgentId: currentAgentId,
                                         targetAgentId: targetAgentConfig.id,
                                         strandedAmount: withdrawnAmount,
+                                        recoveredToLocal: true,
                                         refundError: refundErr instanceof Error ? refundErr.message : String(refundErr),
                                         timestamp: new Date().toISOString()
                                     }
                                 });
 
-                                console.log(`[Alert] Critical alert created for user ${userId} wallet swap refund failure`);
+                                console.log(`[Alert] Critical alert created for user ${userId} wallet swap refund failure (funds recovered to local balance)`);
                             }
-                            throw new Error(`Swap failed: ไม่สามารถฝากเงินเข้า Agent ปลายทางได้`);
+                            throw new Error(`Swap failed: ไม่สามารถฝากเงินเข้า Agent ปลายทางได้ (เงินอาจถูกคืนเข้ากระเป๋าหลักแล้ว)`);
                         } else {
                             console.log(`[WalletSwap] Deposited ${withdrawnAmount} to Target`);
                         }

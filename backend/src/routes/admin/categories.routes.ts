@@ -5,7 +5,7 @@ import { requirePermission } from '../../middlewares/auth.middleware.js';
 const router = Router();
 
 // GET /api/admin/categories - รายการหมวดหมู่
-router.get('/', requirePermission('games', 'view'), async (req, res) => {
+router.get('/', requirePermission('agents', 'categories', 'view'), async (req, res) => {
     try {
         const categories = await prisma.gameCategory.findMany({
             include: { _count: { select: { providers: true } } },
@@ -20,7 +20,7 @@ router.get('/', requirePermission('games', 'view'), async (req, res) => {
 });
 
 // POST /api/admin/categories - สร้างหมวดหมู่
-router.post('/', requirePermission('games', 'edit'), async (req, res) => {
+router.post('/', requirePermission('agents', 'categories', 'manage'), async (req, res) => {
     try {
         const { name, slug, icon, description, isActive, sortOrder } = req.body;
 
@@ -43,7 +43,7 @@ router.post('/', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PUT /api/admin/categories/reorder - จัดลำดับ (ต้องอยู่ก่อน /:id)
-router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
+router.put('/reorder', requirePermission('agents', 'categories', 'manage'), async (req, res) => {
     try {
         const { items } = req.body; // [{ id, sortOrder }, ...]
 
@@ -62,7 +62,7 @@ router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PUT /api/admin/categories/:id - แก้ไขหมวดหมู่
-router.put('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.put('/:id', requirePermission('agents', 'categories', 'manage'), async (req, res) => {
     try {
         const category = await prisma.gameCategory.update({
             where: { id: Number(req.params.id) },
@@ -77,7 +77,7 @@ router.put('/:id', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PATCH /api/admin/categories/:id - Toggle/Partial update
-router.patch('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.patch('/:id', requirePermission('agents', 'categories', 'manage'), async (req, res) => {
     try {
         const category = await prisma.gameCategory.update({
             where: { id: Number(req.params.id) },
@@ -92,7 +92,7 @@ router.patch('/:id', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // DELETE /api/admin/categories/:id - ลบหมวดหมู่
-router.delete('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.delete('/:id', requirePermission('agents', 'categories', 'manage'), async (req, res) => {
     try {
         // Check if has providers
         const count = await prisma.gameProvider.count({

@@ -5,7 +5,7 @@ import { requirePermission } from '../../middlewares/auth.middleware.js';
 const router = Router();
 
 // GET /api/admin/games - รายการเกม
-router.get('/', requirePermission('games', 'view'), async (req, res) => {
+router.get('/', requirePermission('agents', 'games', 'view'), async (req, res) => {
     try {
         const { providerId, isActive, isHot, isNew, agentId, search, page, limit } = req.query;
         const where: any = {};
@@ -116,7 +116,7 @@ router.get('/', requirePermission('games', 'view'), async (req, res) => {
 });
 
 // POST /api/admin/games - สร้างเกม
-router.post('/', requirePermission('games', 'edit'), async (req, res) => {
+router.post('/', requirePermission('agents', 'games', 'manage'), async (req, res) => {
     try {
         const { name, slug, providerId, thumbnail, minBet, maxBet, rtp, isActive, isHot, isNew, sortOrder } = req.body;
 
@@ -144,7 +144,7 @@ router.post('/', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PUT /api/admin/games/reorder - จัดลำดับ
-router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
+router.put('/reorder', requirePermission('agents', 'games', 'manage'), async (req, res) => {
     try {
         const { items } = req.body;
 
@@ -163,7 +163,7 @@ router.put('/reorder', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PATCH /api/admin/games/bulk-update-images - อัปเดตรูปภาพเกมหลายรายการ (JSON)
-router.patch('/bulk-update-images', requirePermission('games', 'edit'), async (req, res) => {
+router.patch('/bulk-update-images', requirePermission('agents', 'games', 'manage'), async (req, res) => {
     try {
         const { items, providerId } = req.body; // [{ name: "Game Name", image_url: "url" }], providerId (optional)
 
@@ -221,7 +221,7 @@ router.patch('/bulk-update-images', requirePermission('games', 'edit'), async (r
 });
 
 // PATCH /api/admin/games/bulk-update-agent - กำหนด Agent ให้กับเกมหลายรายการ
-router.patch('/bulk-update-agent', requirePermission('games', 'edit'), async (req, res) => {
+router.patch('/bulk-update-agent', requirePermission('agents', 'games', 'manage'), async (req, res) => {
     try {
         const { gameIds, agentId } = req.body;
 
@@ -250,7 +250,7 @@ router.patch('/bulk-update-agent', requirePermission('games', 'edit'), async (re
 });
 
 // PUT /api/admin/games/:id - แก้ไขเกม
-router.put('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.put('/:id', requirePermission('agents', 'games', 'manage'), async (req, res) => {
     try {
         const game = await prisma.game.update({
             where: { id: Number(req.params.id) },
@@ -265,7 +265,7 @@ router.put('/:id', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // PATCH /api/admin/games/:id - Toggle (isActive, isHot, isNew)
-router.patch('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.patch('/:id', requirePermission('agents', 'games', 'manage'), async (req, res) => {
     try {
         const game = await prisma.game.update({
             where: { id: Number(req.params.id) },
@@ -280,7 +280,7 @@ router.patch('/:id', requirePermission('games', 'edit'), async (req, res) => {
 });
 
 // DELETE /api/admin/games/:id - ลบเกม (Cascade: Delete Sessions -> Delete Game)
-router.delete('/:id', requirePermission('games', 'edit'), async (req, res) => {
+router.delete('/:id', requirePermission('agents', 'games', 'manage'), async (req, res) => {
     try {
         const id = Number(req.params.id);
 

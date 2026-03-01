@@ -5,7 +5,7 @@ import { requirePermission } from '../../middlewares/auth.middleware.js';
 const router = Router();
 
 // GET /api/admin/promotions (ต้องมีสิทธิ์ดู)
-router.get('/', requirePermission('promotions', 'view'), async (req, res) => {
+router.get('/', requirePermission('promotions', 'list', 'view'), async (req, res) => {
     try {
         const promotions = await prisma.promotion.findMany({
             orderBy: { createdAt: 'desc' },
@@ -19,7 +19,7 @@ router.get('/', requirePermission('promotions', 'view'), async (req, res) => {
 });
 
 // POST /api/admin/promotions (ต้องมีสิทธิ์แก้ไข)
-router.post('/', requirePermission('promotions', 'edit'), async (req, res) => {
+router.post('/', requirePermission('promotions', 'list', 'manage'), async (req, res) => {
     try {
         const { name, description, type, value, minDeposit, maxBonus, turnover, image, isActive, startAt, endAt } = req.body;
 
@@ -47,7 +47,7 @@ router.post('/', requirePermission('promotions', 'edit'), async (req, res) => {
 });
 
 // PUT /api/admin/promotions/:id (ต้องมีสิทธิ์แก้ไข)
-router.put('/:id', requirePermission('promotions', 'edit'), async (req, res) => {
+router.put('/:id', requirePermission('promotions', 'list', 'manage'), async (req, res) => {
     try {
         const promotion = await prisma.promotion.update({
             where: { id: Number(req.params.id) },
@@ -62,7 +62,7 @@ router.put('/:id', requirePermission('promotions', 'edit'), async (req, res) => 
 });
 
 // DELETE /api/admin/promotions/:id (ต้องมีสิทธิ์ลบ)
-router.delete('/:id', requirePermission('promotions', 'delete'), async (req, res) => {
+router.delete('/:id', requirePermission('promotions', 'list', 'manage'), async (req, res) => {
     try {
         await prisma.promotion.delete({ where: { id: Number(req.params.id) } });
         res.json({ success: true, message: 'ลบโปรโมชั่นสำเร็จ' });
@@ -73,7 +73,7 @@ router.delete('/:id', requirePermission('promotions', 'delete'), async (req, res
 });
 
 // PATCH /api/admin/promotions/:id/toggle (ต้องมีสิทธิ์แก้ไข)
-router.patch('/:id/toggle', requirePermission('promotions', 'edit'), async (req, res) => {
+router.patch('/:id/toggle', requirePermission('promotions', 'list', 'manage'), async (req, res) => {
     try {
         const promo = await prisma.promotion.findUnique({ where: { id: Number(req.params.id) } });
         if (!promo) {
@@ -93,7 +93,7 @@ router.patch('/:id/toggle', requirePermission('promotions', 'edit'), async (req,
 });
 
 // GET /api/admin/promotions/logs - ประวัติรับโปร (ต้องมีสิทธิ์ดู)
-router.get('/logs', requirePermission('promotions', 'view'), async (req, res) => {
+router.get('/logs', requirePermission('promotions', 'list', 'view'), async (req, res) => {
     try {
         const { page = 1, limit = 20, promotionId, userId, startDate, endDate } = req.query;
         const skip = (Number(page) - 1) * Number(limit);

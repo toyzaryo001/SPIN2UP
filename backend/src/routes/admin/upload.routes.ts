@@ -42,7 +42,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/admin/upload/:publicId - Delete image from Cloudinary
-router.delete('/:publicId', requirePermission('settings', 'edit'), async (req: Request, res: Response) => {
+router.delete('/:publicId', requirePermission('settings', 'general', 'manage'), async (req: Request, res: Response) => {
     try {
         const { publicId } = req.params;
         await cloudinary.uploader.destroy(publicId);

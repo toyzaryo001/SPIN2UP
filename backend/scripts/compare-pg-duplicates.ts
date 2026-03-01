@@ -1,5 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 
+// Injected for Debug Scripts
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../backend/.env') });
+
+
 const prisma = new PrismaClient();
 
 const normalizeStr = (str: string) => str.toLowerCase().replace(/[\s\-_]/g, '');

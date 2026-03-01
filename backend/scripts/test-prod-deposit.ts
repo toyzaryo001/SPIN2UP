@@ -1,5 +1,14 @@
 import axios from 'axios';
 
+// Injected for Debug Scripts
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../backend/.env') });
+
+
 async function run() {
     try {
         console.log('Sending request to https://api.check24m.com/api/payment/deposit...');

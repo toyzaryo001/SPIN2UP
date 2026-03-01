@@ -3,6 +3,15 @@ import prisma from '../src/lib/db';
 import axios from 'axios';
 import fs from 'fs';
 
+// Injected for Debug Scripts
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../backend/.env') });
+
+
 async function main() {
     const config = await prisma.agentConfig.findUnique({
         where: { code: 'NEXUS' }

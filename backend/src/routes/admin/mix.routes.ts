@@ -5,7 +5,7 @@ import { requirePermission } from '../../middlewares/auth.middleware.js';
 const router = Router();
 
 // POST /api/admin/mix/providers - Create Custom Provider (e.g. "PG MIX")
-router.post('/providers', requirePermission('games', 'edit'), async (req, res) => {
+router.post('/providers', requirePermission('agents', 'mix_board', 'manage'), async (req, res) => {
     try {
         const { name, slug, categoryId } = req.body;
 
@@ -34,7 +34,7 @@ router.post('/providers', requirePermission('games', 'edit'), async (req, res) =
 });
 
 // POST /api/admin/mix/move-games - Move Games to another Provider
-router.post('/move-games', requirePermission('games', 'edit'), async (req, res) => {
+router.post('/move-games', requirePermission('agents', 'mix_board', 'manage'), async (req, res) => {
     try {
         const { gameIds, targetProviderId } = req.body;
 

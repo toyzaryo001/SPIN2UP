@@ -7,7 +7,7 @@ const router = Router();
 // === Banners ===
 
 // GET /api/admin/banners (ต้องมีสิทธิ์ banners.view)
-router.get('/', requirePermission('banners', 'view'), async (req, res) => {
+router.get('/', requirePermission('banners', 'banners', 'view'), async (req, res) => {
     try {
         const banners = await prisma.banner.findMany({ orderBy: { sortOrder: 'asc' } });
         res.json({ success: true, data: banners });
@@ -18,7 +18,7 @@ router.get('/', requirePermission('banners', 'view'), async (req, res) => {
 });
 
 // POST /api/admin/banners (ต้องมีสิทธิ์ banners.create)
-router.post('/', requirePermission('banners', 'create'), async (req, res) => {
+router.post('/', requirePermission('banners', 'banners', 'manage'), async (req, res) => {
     try {
         const { title, image, link, sortOrder, isActive, position } = req.body;
 
@@ -34,7 +34,7 @@ router.post('/', requirePermission('banners', 'create'), async (req, res) => {
 });
 
 // PUT /api/admin/banners/:id (ต้องมีสิทธิ์ banners.edit)
-router.put('/:id', requirePermission('banners', 'edit'), async (req, res) => {
+router.put('/:id', requirePermission('banners', 'banners', 'manage'), async (req, res) => {
     try {
         const banner = await prisma.banner.update({
             where: { id: Number(req.params.id) },
@@ -49,7 +49,7 @@ router.put('/:id', requirePermission('banners', 'edit'), async (req, res) => {
 });
 
 // DELETE /api/admin/banners/:id (ต้องมีสิทธิ์ banners.delete)
-router.delete('/:id', requirePermission('banners', 'delete'), async (req, res) => {
+router.delete('/:id', requirePermission('banners', 'banners', 'manage'), async (req, res) => {
     try {
         await prisma.banner.delete({ where: { id: Number(req.params.id) } });
         res.json({ success: true, message: 'ลบสำเร็จ' });
@@ -62,7 +62,7 @@ router.delete('/:id', requirePermission('banners', 'delete'), async (req, res) =
 // === Announcements (Popup/Marquee) ===
 
 // GET /api/admin/banners/announcements (ต้องมีสิทธิ์ announcements.view)
-router.get('/announcements', requirePermission('announcements', 'view'), async (req, res) => {
+router.get('/announcements', requirePermission('banners', 'announcements', 'view'), async (req, res) => {
     try {
         const announcements = await prisma.announcement.findMany({ orderBy: { createdAt: 'desc' } });
         res.json({ success: true, data: announcements });
@@ -73,7 +73,7 @@ router.get('/announcements', requirePermission('announcements', 'view'), async (
 });
 
 // POST /api/admin/banners/announcements (ต้องมีสิทธิ์ announcements.create)
-router.post('/announcements', requirePermission('announcements', 'create'), async (req, res) => {
+router.post('/announcements', requirePermission('banners', 'announcements', 'manage'), async (req, res) => {
     try {
         const { type, title, content, image, isActive } = req.body;
 
@@ -89,7 +89,7 @@ router.post('/announcements', requirePermission('announcements', 'create'), asyn
 });
 
 // PUT /api/admin/banners/announcements/:id (ต้องมีสิทธิ์ announcements.edit)
-router.put('/announcements/:id', requirePermission('announcements', 'edit'), async (req, res) => {
+router.put('/announcements/:id', requirePermission('banners', 'announcements', 'manage'), async (req, res) => {
     try {
         const announcement = await prisma.announcement.update({
             where: { id: Number(req.params.id) },
@@ -104,7 +104,7 @@ router.put('/announcements/:id', requirePermission('announcements', 'edit'), asy
 });
 
 // DELETE /api/admin/banners/announcements/:id (ต้องมีสิทธิ์ announcements.delete)
-router.delete('/announcements/:id', requirePermission('announcements', 'delete'), async (req, res) => {
+router.delete('/announcements/:id', requirePermission('banners', 'announcements', 'manage'), async (req, res) => {
     try {
         await prisma.announcement.delete({ where: { id: Number(req.params.id) } });
         res.json({ success: true, message: 'ลบสำเร็จ' });

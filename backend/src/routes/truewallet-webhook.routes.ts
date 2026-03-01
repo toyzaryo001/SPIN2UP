@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/db.js';
 import { BetflixService } from '../services/betflix.service.js';
+import { LineNotifyService } from '../services/line-notify.service.js';
+import { PaymentService } from '../services/payment.service.js';
 
 const router = Router();
 
@@ -176,23 +178,26 @@ router.post('/', async (req: Request, res: Response) => {
         }
 
         // 9. สร้าง Transaction + เพิ่ม balance ให้ user
-        const [transaction] = await prisma.$transaction([
-            prisma.transaction.create({
+        const transaction = await prisma.$transaction(async (tx) => {
+            // A. Update User Balance First to prevent race conditions showing old data
+            const updatedUser = await tx.user.update({
+                where: { id: matchedUser.id },
+                data: { balance: { increment: amountBaht } }
+            });
+
+            // B. Create Transaction Log using the FRESH balance data
+            return await tx.transaction.create({
                 data: {
                     userId: matchedUser.id,
                     type: 'DEPOSIT',
                     amount: amountBaht,
                     status: 'COMPLETED',
-                    balanceBefore: matchedUser.balance,
-                    balanceAfter: Number(matchedUser.balance) + amountBaht,
+                    balanceBefore: Number(updatedUser.balance) - amountBaht,
+                    balanceAfter: Number(updatedUser.balance),
                     note: `TrueWallet ฝากอัตโนมัติ จาก ${normalizePhone(senderMobile)}${senderName ? ` (${senderName})` : ''}`,
                 }
-            }),
-            prisma.user.update({
-                where: { id: matchedUser.id },
-                data: { balance: { increment: amountBaht } }
-            }),
-        ]);
+            });
+        });
 
         // 10. อัปเดต log เป็น COMPLETED
         await prisma.trueWalletLog.update({
@@ -205,6 +210,16 @@ router.post('/', async (req: Request, res: Response) => {
         });
 
         console.log(`[TrueWallet Webhook] ✅ Deposit ${amountBaht} THB to user ${matchedUser.id} (${matchedUser.fullName})`);
+
+        // 11. [FIXED] แจ้งเตือนแอดมินทาง LINE
+        LineNotifyService.notifyDeposit(
+            matchedUser.username || matchedUser.fullName || 'Unknown',
+            amountBaht,
+            'TrueWallet'
+        ).catch(err => console.error('[TrueWallet LineNotify] Error:', err));
+
+        // 12. [FIXED] คำนวณแจกโบนัสฝากสะสม (Streak Bonus)
+        PaymentService.processStreakBonus(matchedUser.id).catch(err => console.error('[TrueWallet Streak Bonus Error]:', err));
 
         return res.status(200).json({
             success: true,

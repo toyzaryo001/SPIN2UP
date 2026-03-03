@@ -2,18 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-    // Check if we are in production
-    if (process.env.NODE_ENV === 'production') {
-        // Check key headers associated with protocol
-        const proto = request.headers.get('x-forwarded-proto');
-        const host = request.headers.get('host');
-
-        // If the protocol is http, redirect to https
-        if (proto === 'http') {
-            return NextResponse.redirect(`https://${host}${request.nextUrl.pathname}`, 301);
-        }
-    }
-
     return NextResponse.next();
 }
 

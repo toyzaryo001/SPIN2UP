@@ -98,7 +98,7 @@ router.post('/', async (req: Request, res: Response) => {
 
         if (!decoded || !matchedWallet) {
             console.warn('[TrueWallet Webhook] JWT verify failed for all wallets');
-            return res.status(401).json({ success: false, error: 'Invalid JWT' });
+            return res.status(200).json({ success: false, message: 'JWT verification skipped (test or invalid token)' });
         }
 
         console.log('[TrueWallet Webhook] Decoded:', JSON.stringify(decoded));

@@ -144,7 +144,16 @@ export class RewardService {
         const netLoss = winLoss < 0 ? Math.abs(winLoss) : 0;
         let claimableCashback = 0;
 
-        if (cashbackSetting?.isActive && netLoss >= cbMinLoss) {
+        const currentDay = dayjs().day(); // 0(Sun) - 6(Sat)
+        const currentHour = dayjs().hour(); // 0-23
+        const cbDay = Number(cashbackSetting?.dayOfWeek ?? 1);
+        const cbStart = Number(cashbackSetting?.claimStartHour ?? 0);
+        const cbEnd = Number(cashbackSetting?.claimEndHour ?? 23);
+
+        const isDayValid = cbDay === 7 || cbDay === currentDay;
+        const isTimeValid = currentHour >= cbStart && currentHour <= cbEnd;
+
+        if (cashbackSetting?.isActive && netLoss >= cbMinLoss && isDayValid && isTimeValid) {
             claimableCashback = Math.floor(netLoss * (cbRate / 100));
             if (claimableCashback > cbMax) claimableCashback = cbMax;
         }

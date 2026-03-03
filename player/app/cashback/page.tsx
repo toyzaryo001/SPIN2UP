@@ -7,13 +7,15 @@ import { useAuth } from "@/hooks/useAuth";
 import axios from "axios";
 import { API_URL } from "@/lib/api";
 
-const DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+const DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "ทุกวัน"];
 
 interface CashbackSettings {
     rate: number;
     minLoss: number;
     maxCashback: number;
     dayOfWeek: number;
+    claimStartHour: number;
+    claimEndHour: number;
     isActive: boolean;
 }
 
@@ -88,7 +90,7 @@ export default function CashbackPage() {
     const cashbackRate = cashbackStats?.rate || Number(settings.rate) || 5;
     const minLoss = cashbackStats?.minLoss || Number(settings.minLoss) || 100;
     const maxCashback = cashbackStats?.maxReward || Number(settings.maxCashback) || 10000;
-    const claimDay = DAYS[settings.dayOfWeek] || "จันทร์";
+    const claimDay = settings.dayOfWeek === 7 ? "ทุกวัน" : (DAYS[settings.dayOfWeek] || "จันทร์");
     const claimableAmount = cashbackStats?.claimable || 0;
     const isClaimed = cashbackStats?.isClaimed || false;
 
@@ -153,7 +155,7 @@ export default function CashbackPage() {
                         {claiming ? 'กำลังดำเนินการ...' : isClaimed ? 'รับสิทธิ์ไปแล้วสัปดาห์นี้' : claimableAmount > 0 ? 'รับเงินคืนทันที' : 'ยังไม่มียอดให้รับ'}
                     </button>
                     <p style={{ fontSize: "12px", color: "#8B949E", marginTop: "12px" }}>
-                        *รับได้ทุกวัน{claimDay} หลัง 00:00 น.
+                        *รับได้{settings.dayOfWeek === 7 ? "ทุกวัน" : `ทุกวัน${claimDay}`} เวลา {String(settings.claimStartHour ?? 0).padStart(2, '0')}:00 น. - {String(settings.claimEndHour ?? 23).padStart(2, '0')}:59 น.
                         {cashbackStats && ` (คำนวณจากยอดเสีย ${new Date(cashbackStats.periodStart).toLocaleDateString()} ถึง ${new Date(cashbackStats.periodEnd).toLocaleDateString()})`}
                     </p>
                 </div>
@@ -200,8 +202,8 @@ export default function CashbackPage() {
                     <ul style={{ fontSize: "13px", color: "#8B949E", lineHeight: 1.8, paddingLeft: "20px", margin: 0 }}>
                         <li>ยอดเสียขั้นต่ำ ฿{minLoss.toLocaleString()} ขึ้นไป</li>
                         <li>คืนยอดเสียสูงสุด ฿{maxCashback.toLocaleString()}</li>
-                        <li>รับได้ทุกวัน{claimDay} หลังเที่ยงคืน</li>
-                        <li>ยอดเสียคำนวณจากสัปดาห์ที่แล้ว</li>
+                        <li>รับได้{settings.dayOfWeek === 7 ? "ทุกวัน" : `ทุกวัน${claimDay}`} เวลา {String(settings.claimStartHour ?? 0).padStart(2, '0')}:00 น. - {String(settings.claimEndHour ?? 23).padStart(2, '0')}:59 น.</li>
+                        <li>ยอดเสียคำนวณจากรอบบิลก่อนหน้า</li>
                     </ul>
                 </div>
             </div>

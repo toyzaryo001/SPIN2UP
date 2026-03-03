@@ -224,7 +224,7 @@ router.get('/truemoney', requirePermission('settings', 'truemoney', 'view'), asy
             ...w,
             jwtSecret: w.jwtSecret ? w.jwtSecret.slice(0, 6) + '***' : null,
             hasSecret: !!w.jwtSecret,
-            webhookUrl: `${req.protocol}://${req.get('host')}/api/webhook/truewallet`,
+            webhookUrl: `${req.protocol}://${req.get('host')}/api/webhooks/truewallet`,
         }));
         res.json({ success: true, data: masked });
     } catch (error) {

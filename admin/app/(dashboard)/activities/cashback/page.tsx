@@ -14,6 +14,7 @@ const DAYS = [
     { value: 4, label: "พฤหัสบดี" },
     { value: 5, label: "ศุกร์" },
     { value: 6, label: "เสาร์" },
+    { value: 7, label: "ทุกวัน" },
 ];
 
 const HOURS = Array.from({ length: 24 }, (_, i) => ({

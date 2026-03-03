@@ -24,7 +24,6 @@ const ALL_BANKS = [
     { code: "ICBC", name: "ธนาคารไอซีบีซี" },
     { code: "HSBC", name: "ธนาคารเอชเอสบีซี" },
     { code: "CITI", name: "ธนาคารซิตี้แบงก์" },
-    { code: "PROMPTPAY", name: "พร้อมเพย์" },
     { code: "TRUEMONEY", name: "ทรูมันนี่" },
 ];
 

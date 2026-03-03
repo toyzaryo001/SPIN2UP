@@ -11,7 +11,6 @@ import { API_URL } from "@/lib/api";
 const channels = [
     { id: "bank", label: "ธนาคาร", icon: Building2, bankCode: "KBANK" },
     { id: "truemoney", label: "TrueMoney", icon: Smartphone, bankCode: "TRUEMONEY" },
-    { id: "promptpay", label: "PromptPay", icon: QrCode, bankCode: "PROMPTPAY" },
 ];
 
 // ... (Keep existing BankColors interface & consts)
@@ -34,7 +33,12 @@ export default function DepositPage() {
             try {
                 const saved = localStorage.getItem("user");
                 if (saved && saved !== "undefined") {
-                    setUser(JSON.parse(saved));
+                    const parsedUser = JSON.parse(saved);
+                    setUser(parsedUser);
+                    // Auto-select TrueMoney channel for wallet-registered users
+                    if ((parsedUser?.bankName || '').toUpperCase() === 'TRUEMONEY') {
+                        setSelectedChannel('truemoney');
+                    }
                 } else {
                     router.push("/");
                 }
@@ -467,7 +471,10 @@ export default function DepositPage() {
 
                                     if (ch.id === 'bank' && features.deposit_bank === false) return false;
                                     if (ch.id === 'truemoney' && features.deposit_truemoney === false) return false;
-                                    if (ch.id === 'promptpay' && features.deposit_promptpay === false) return false;
+
+                                    // Wallet-registered users only see TrueMoney channel
+                                    const userBankName = (user?.bankName || '').toUpperCase();
+                                    if (userBankName === 'TRUEMONEY' && ch.id === 'bank') return false;
                                     return true;
                                 }).map((ch) => (
                                     <button

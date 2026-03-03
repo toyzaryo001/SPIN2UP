@@ -69,7 +69,7 @@ router.post('/', async (req: Request, res: Response) => {
         const { message } = req.body;
         if (!message) {
             console.warn('[TrueWallet Webhook] No message in body');
-            return res.status(400).json({ success: false, error: 'No message' });
+            return res.status(200).json({ success: true, message: 'Webhook endpoint active (no message)' });
         }
 
         // 1. ดึง Active Wallet ทั้งหมด (เพื่อหา jwtSecret)
@@ -79,7 +79,7 @@ router.post('/', async (req: Request, res: Response) => {
 
         if (wallets.length === 0) {
             console.warn('[TrueWallet Webhook] No active wallets with JWT secret');
-            return res.status(503).json({ success: false, error: 'No active wallet' });
+            return res.status(200).json({ success: false, message: 'No active wallet configured' });
         }
 
         // 2. ลอง verify JWT กับทุก wallet จนกว่าจะเจอ
@@ -115,7 +115,7 @@ router.post('/', async (req: Request, res: Response) => {
 
         if (amountBaht <= 0) {
             console.warn('[TrueWallet Webhook] Amount <= 0:', amountBaht);
-            return res.status(400).json({ success: false, error: 'Invalid amount' });
+            return res.status(200).json({ success: false, message: 'Invalid amount' });
         }
 
         // 4. Dedup — เช็คว่า transactionId นี้เคย process แล้วหรือยัง
@@ -239,7 +239,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     } catch (err: any) {
         console.error('[TrueWallet Webhook] Unhandled error:', err);
-        return res.status(500).json({ success: false, error: 'Internal server error' });
+        return res.status(200).json({ success: false, message: 'Internal error logged' });
     }
 });
 

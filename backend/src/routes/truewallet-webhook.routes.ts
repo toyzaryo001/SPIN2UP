@@ -53,7 +53,15 @@ function matchUser<T extends { id: number; phone: string; fullName: string }>(
 }
 
 // =============================================
-// POST /api/webhook/truewallet
+// GET /api/webhooks/truewallet
+// TrueWallet ส่ง GET มาเช็คว่า endpoint มีตัวตน (verification)
+// =============================================
+router.get('/', (req: Request, res: Response) => {
+    res.status(200).json({ success: true, message: 'TrueWallet webhook endpoint is ready' });
+});
+
+// =============================================
+// POST /api/webhooks/truewallet
 // TrueWallet ส่ง JWT token มาที่ body.message
 // =============================================
 router.post('/', async (req: Request, res: Response) => {

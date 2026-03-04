@@ -20,7 +20,61 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 15000, // 15 วินาที timeout (ป้องกันค้างนาน)
 });
+
+// =============================================
+// Network Retry System — ลองใหม่อัตโนมัติเมื่อเน็ตมีปัญหา
+// รองรับทุก ISP, ทุกเครือข่าย, iOS + Android
+// =============================================
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 วินาที
+
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const config = error.config;
+
+        // ถ้าเป็น network error หรือ timeout → ลองใหม่
+        const isNetworkError = !error.response && (
+            error.code === 'ECONNABORTED' ||
+            error.code === 'ERR_NETWORK' ||
+            error.code === 'ETIMEDOUT' ||
+            error.message?.includes('Network Error') ||
+            error.message?.includes('timeout')
+        );
+
+        // ถ้าเป็น 502/503/504 (server ยังไม่พร้อม) → ลองใหม่
+        const isServerError = error.response?.status >= 502 && error.response?.status <= 504;
+
+        if ((isNetworkError || isServerError) && config && !config._retryCount) {
+            config._retryCount = 0;
+        }
+
+        if ((isNetworkError || isServerError) && config && config._retryCount < MAX_RETRIES) {
+            config._retryCount += 1;
+            console.log(`[API Retry] Attempt ${config._retryCount}/${MAX_RETRIES} for ${config.url}`);
+
+            // รอก่อนลองใหม่ (เพิ่มขึ้นเรื่อยๆ: 1s, 2s, 3s)
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * config._retryCount));
+
+            return api(config);
+        }
+
+        // 401 Unauthorized → auto logout
+        if (error.response?.status === 401 && typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.dispatchEvent(new Event('user-logout'));
+
+            if (window.location.pathname !== '/') {
+                window.location.href = '/?action=login';
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
 
 // Public endpoints (no auth required)
 export const publicApi = {
@@ -68,24 +122,4 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Add response interceptor to handle 401 (auto-logout)
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401 && typeof window !== 'undefined') {
-            // Token expired or invalid - auto logout
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.dispatchEvent(new Event('user-logout'));
-
-            // Redirect to home if not already there
-            if (window.location.pathname !== '/') {
-                window.location.href = '/?action=login';
-            }
-        }
-        return Promise.reject(error);
-    }
-);
-
 export default api;
-

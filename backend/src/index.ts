@@ -40,23 +40,14 @@ app.use('/api/webhooks/truewallet', (req, res, next) => {
     next();
 }, truewalletWebhookRoutes);
 
-// Middleware
-const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];
-
+// Middleware — CORS เปิดรับทุก origin (เว็บ public ใครก็เข้าได้)
 app.use(cors({
-    origin: (origin, callback) => {
-        // อนุญาต request ที่ไม่มี origin (Postman, cURL, mobile app)
-        if (!origin) return callback(null, true);
-
-        // อนุญาต origin ที่กำหนดใน environment variables
-        if (allowedOrigins.length === 0 || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-            return callback(null, true);
-        }
-
-        console.warn(`[CORS Blocked] Origin: ${origin}`);
-        return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true
+    origin: true, // อนุญาตทุก origin
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400 // cache preflight 24 ชม.
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

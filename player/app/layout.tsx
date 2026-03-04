@@ -49,8 +49,17 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <meta name="theme-color" content="#0f0f1a" />
+
+        {/* iOS Compatibility */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="format-detection" content="telephone=no" />
+
+        {/* DNS Prefetch — เร่งการเชื่อมต่อ API สำหรับทุกเครือข่าย */}
+        <link rel="dns-prefetch" href="https://api.check24m.com" />
+        <link rel="preconnect" href="https://api.check24m.com" crossOrigin="" />
       </head>
       <body className="antialiased">
         <ToastProvider>

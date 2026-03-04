@@ -16,6 +16,7 @@ import adminRewardRoutes from './routes/admin/reward.routes.js';
 import smsWebhookRoutes from './routes/sms-webhook.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import truewalletWebhookRoutes from './routes/truewallet-webhook.routes.js';
 import { initJwtSecret } from './utils/jwt.js';
 import { BetLogSyncService } from './services/bet-log-sync.service.js';
 
@@ -25,6 +26,19 @@ dotenv.config();
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
 
+// Trust proxy — จำเป็นสำหรับ Railway/reverse proxy (ตาม reference gateway)
+app.set('trust proxy', true);
+
+
+// =============================================
+// Webhook routes — ต้องอยู่ก่อน CORS middleware
+// เพราะ webhook มาจาก mobile app/server ไม่ใช่ browser
+// =============================================
+app.use('/api/webhooks/truewallet', (req, res, next) => {
+    console.log(`[TrueWallet Webhook Request] ${req.method} ${req.originalUrl} from ${req.ip}`);
+    console.log(`[TrueWallet Webhook Request] Headers:`, JSON.stringify(req.headers));
+    next();
+}, truewalletWebhookRoutes);
 
 // Middleware
 const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];

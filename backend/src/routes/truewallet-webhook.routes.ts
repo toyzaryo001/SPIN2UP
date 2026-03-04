@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/db.js';
 import { BetflixService } from '../services/betflix.service.js';
@@ -6,6 +7,11 @@ import { LineNotifyService } from '../services/line-notify.service.js';
 import { PaymentService } from '../services/payment.service.js';
 
 const router = Router();
+
+// Body parsing middleware สำหรับ webhook route
+// (เพราะ route นี้ mount ก่อน global middleware ใน index.ts)
+router.use(express.urlencoded({ extended: true }));
+router.use(express.json());
 
 // =============================================
 // ฟังก์ชันช่วย: Normalize เบอร์โทรให้เป็น format เดียว
@@ -241,6 +247,15 @@ router.post('/', async (req: Request, res: Response) => {
         console.error('[TrueWallet Webhook] Unhandled error:', err);
         return res.status(200).json({ success: false, message: 'Internal error logged' });
     }
+});
+
+// =============================================
+// Catch-all: รองรับทุก sub-path และ HTTP method
+// กันกรณีแอป TrueWallet ส่งไปที่ /webhook หรือ path อื่น
+// =============================================
+router.all('*', (req: Request, res: Response) => {
+    console.log(`[TrueWallet Webhook] Catch-all: ${req.method} ${req.originalUrl}`);
+    res.status(200).json({ success: true, message: 'TrueWallet webhook endpoint is ready' });
 });
 
 export default router;

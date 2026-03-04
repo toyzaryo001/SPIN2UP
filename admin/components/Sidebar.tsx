@@ -16,7 +16,8 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from 'next-auth/react';
@@ -158,7 +159,7 @@ let sidebarScrollPosition = 0;
 
 type Permissions = Record<string, Record<string, boolean | { view: boolean; manage: boolean }>>
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
 
@@ -297,6 +298,12 @@ export default function Sidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, loading]);
 
+  // Auto-close sidebar on mobile when navigating
+  useEffect(() => {
+    onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   // Fix hydration mismatch
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -304,19 +311,32 @@ export default function Sidebar() {
   }, []);
 
   if (!mounted) {
-    return <div className="w-64 bg-slate-900 border-r border-slate-800" />;
+    return <div className="hidden md:block w-64 bg-slate-900 border-r border-slate-800" />;
   }
 
   return (
-    <div className="w-64 bg-slate-900 text-white h-screen flex flex-col shrink-0 border-r border-slate-800">
-      <div className="p-6 border-b border-slate-800 flex justify-center items-center">
-        {logoUrl ? (
-          <img src={logoUrl} alt={brandName} className="h-20 w-auto object-contain" />
-        ) : (
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-            {brandName}
-          </h1>
-        )}
+    <div className={cn(
+      "bg-slate-900 text-white h-screen flex flex-col shrink-0 border-r border-slate-800 transition-transform duration-300 ease-in-out",
+      // Desktop: แสดงปกติ
+      "md:relative md:translate-x-0 md:w-64",
+      // Mobile: overlay แบบ fixed
+      "fixed inset-y-0 left-0 z-40 w-72",
+      isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+    )}>
+      <div className="p-4 md:p-6 border-b border-slate-800 flex justify-between items-center">
+        <div className="flex-1 flex justify-center">
+          {logoUrl ? (
+            <img src={logoUrl} alt={brandName} className="h-16 md:h-20 w-auto object-contain" />
+          ) : (
+            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+              {brandName}
+            </h1>
+          )}
+        </div>
+        {/* ปุ่มปิด sidebar บนมือถือ */}
+        <button onClick={onClose} className="md:hidden p-1 rounded-lg hover:bg-slate-800 text-slate-400">
+          <X size={22} />
+        </button>
       </div>
 
       <nav

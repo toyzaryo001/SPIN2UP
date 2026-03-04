@@ -185,7 +185,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-slate-800">แดชบอร์ดภาพรวม</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-slate-800">แดชบอร์ดภาพรวม</h2>
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           อัปเดตล่าสุด: {new Date().toLocaleString('th-TH')}
@@ -343,7 +343,7 @@ export default function Dashboard() {
         {/* Deposit/Withdraw Chart */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <h3 className="text-lg font-bold mb-6 text-slate-800">สถิติการฝาก-ถอน (7 วันล่าสุด)</h3>
-          <div className="h-80">
+          <div className="h-56 md:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.chartData || []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -364,7 +364,7 @@ export default function Dashboard() {
         {/* New Users Chart */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <h3 className="text-lg font-bold mb-6 text-slate-800">สมาชิกใหม่ (7 วันล่าสุด)</h3>
-          <div className="h-80">
+          <div className="h-56 md:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data?.chartData || []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />

@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Wallet, RefreshCw } from "lucide-react";
+import { Wallet, RefreshCw, Menu } from "lucide-react";
 import ThaiDateTimeClock from "./ThaiDateTimeClock";
 
-export default function Topbar() {
+export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
     const [balance, setBalance] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
@@ -35,20 +35,28 @@ export default function Topbar() {
     if (!mounted) return null;
 
     return (
-        <div className="bg-white border-b border-slate-200 px-8 py-3 flex justify-between items-center shadow-sm">
-            {/* Left Side: Clock */}
-            <div className="flex items-center">
-                <ThaiDateTimeClock />
+        <div className="bg-white border-b border-slate-200 px-4 md:px-8 py-3 flex justify-between items-center shadow-sm">
+            {/* Left Side: Hamburger (mobile) + Clock */}
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={onToggleSidebar}
+                    className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+                >
+                    <Menu size={22} />
+                </button>
+                <div className="hidden md:block">
+                    <ThaiDateTimeClock />
+                </div>
             </div>
 
             {/* Right Side: Wallet & Profile */}
-            <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
-                <div className="flex items-center gap-2 text-slate-600">
-                    <Wallet size={18} className="text-yellow-500" />
-                    <span className="text-sm font-medium">เครดิต Agent:</span>
+            <div className="flex items-center gap-2 md:gap-4 bg-slate-50 px-3 md:px-4 py-2 rounded-full border border-slate-100">
+                <div className="flex items-center gap-1.5 md:gap-2 text-slate-600">
+                    <Wallet size={16} className="text-yellow-500 md:w-[18px] md:h-[18px]" />
+                    <span className="text-xs md:text-sm font-medium hidden sm:inline">เครดิต Agent:</span>
                 </div>
                 {balance !== null ? (
-                    <span className="text-lg font-bold text-slate-800 font-mono">
+                    <span className="text-sm md:text-lg font-bold text-slate-800 font-mono">
                         {balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                 ) : (

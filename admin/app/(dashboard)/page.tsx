@@ -400,7 +400,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {(data?.recentUsers || []).slice(0, 5).map((user) => (
+                {(data?.recentUsers || []).filter(u => !u.username.startsWith('del_')).slice(0, 5).map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-slate-900">{user.username}</td>
                     <td className="px-4 py-3 text-slate-500">{user.fullName}</td>

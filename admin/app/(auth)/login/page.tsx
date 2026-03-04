@@ -31,26 +31,19 @@ export default function LoginPage() {
             try {
                 const hostname = window.location.hostname;
 
-                // 1. Basic brand name fallback (existing logic)
-                const parts = hostname.split('.');
-                if (parts.length >= 2) {
-                    const mainDomain = parts[parts.length - 2].toUpperCase();
-                    if (mainDomain && mainDomain !== 'LOCALHOST') {
-                        setBrandName(`${mainDomain} ADMIN`);
-                    }
-                }
-
-                // 2. Fetch Config from Backend
+                // Fetch Config from Backend
                 const res = await fetch(`${API_URL}/api/auth/config?domain=${hostname}`);
                 const data = await res.json();
 
                 if (data.success) {
-                    // setPrefix(data.data.code.toUpperCase()); // User wants to type manually
-                    setBrandName(data.data.name);
-                    // setFixedPrefix(true); // User wants to see the field
+                    const siteName = data.data.name;
+                    setBrandName(siteName ? `${siteName} ADMIN` : "ADMIN");
+                } else {
+                    setBrandName("ADMIN");
                 }
             } catch (err) {
                 console.error("Domain config check failed", err);
+                setBrandName("ADMIN");
             } finally {
                 setIsCheckingDomain(false);
             }

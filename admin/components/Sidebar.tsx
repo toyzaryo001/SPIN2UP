@@ -189,17 +189,11 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
         const hostname = window.location.hostname;
         const configRes = await api.get(`/auth/config?domain=${hostname}`);
         if (configRes.data.success && configRes.data.data) {
-          setBrandName(`${configRes.data.data.name} ADMIN`);
+          const siteName = configRes.data.data.name;
+          setBrandName(siteName ? `${siteName} ADMIN` : "ADMIN");
           setLogoUrl(configRes.data.data.logo || null);
         } else {
-          // Fallback: try to guess from hostname if API fails
-          const parts = hostname.split('.');
-          if (parts.length >= 2) {
-            const mainDomain = parts[parts.length - 2].toUpperCase();
-            if (mainDomain && mainDomain !== 'LOCALHOST') {
-              setBrandName(`${mainDomain} ADMIN`);
-            }
-          }
+          setBrandName("ADMIN");
         }
       } catch (error) {
         console.error('Failed to fetch sidebar data:', error);

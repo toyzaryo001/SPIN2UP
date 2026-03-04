@@ -58,8 +58,8 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
 
         {/* DNS Prefetch — เร่งการเชื่อมต่อ API สำหรับทุกเครือข่าย */}
-        <link rel="dns-prefetch" href="https://api.check24m.com" />
-        <link rel="preconnect" href="https://api.check24m.com" crossOrigin="" />
+        <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'} />
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'} crossOrigin="" />
       </head>
       <body className="antialiased">
         <ToastProvider>

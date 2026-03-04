@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+let rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+if (!rawApiUrl.startsWith('http')) {
+  rawApiUrl = `https://${rawApiUrl}`;
+}
 const baseUrl = rawApiUrl.replace(/\/$/, "").replace(/\/api$/, "");
 
 const api = axios.create({

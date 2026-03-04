@@ -10,6 +10,10 @@ const FALLBACK_API_URL = process.env.NEXT_PUBLIC_FALLBACK_API_URL || '';
 function getApiUrl(): string {
     let url = PRIMARY_API_URL;
 
+    if (!url.startsWith('http')) {
+        url = `https://${url}`;
+    }
+
     // Force HTTPS if the page is served over HTTPS
     if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
         url = url.replace('http://', 'https://');
@@ -26,6 +30,11 @@ function getApiUrl(): string {
 function getFallbackApiUrl(): string {
     if (!FALLBACK_API_URL) return '';
     let url = FALLBACK_API_URL;
+
+    if (!url.startsWith('http')) {
+        url = `https://${url}`;
+    }
+
     if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
         url = url.replace('http://', 'https://');
     }

@@ -17,8 +17,11 @@ export default function LoginPage() {
     const [isCheckingDomain, setIsCheckingDomain] = useState(true);
     const [mounted, setMounted] = useState(false);
 
-    // Auto-fix URL to ensure no double /api/api
-    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    // Auto-fix URL to ensure no double /api/api and always has http/https
+    let rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    if (!rawApiUrl.startsWith('http')) {
+        rawApiUrl = `https://${rawApiUrl}`;
+    }
     const API_URL = rawApiUrl.replace(/\/$/, "").replace(/\/api$/, "");
 
     useEffect(() => {

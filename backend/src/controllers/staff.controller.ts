@@ -47,6 +47,14 @@ export const createStaff = async (req: Request, res: Response) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        let actualIsSuperAdmin = isSuperAdmin || false;
+        if (roleId) {
+            const role = await prisma.adminRole.findUnique({ where: { id: parseInt(roleId) } });
+            if (role && role.name === 'Super Admin') {
+                actualIsSuperAdmin = true;
+            }
+        }
+
         const newStaff = await prisma.admin.create({
             data: {
                 username,
@@ -54,7 +62,7 @@ export const createStaff = async (req: Request, res: Response) => {
                 fullName,
                 phone: phone || null,
                 roleId: roleId ? parseInt(roleId) : null,
-                isSuperAdmin: isSuperAdmin || false,
+                isSuperAdmin: actualIsSuperAdmin,
             }
         });
 
@@ -92,9 +100,21 @@ export const updateStaff = async (req: Request, res: Response) => {
         const dataToUpdate: any = {};
         if (fullName !== undefined) dataToUpdate.fullName = fullName;
         if (phone !== undefined) dataToUpdate.phone = phone;
-        if (roleId !== undefined) dataToUpdate.roleId = roleId ? parseInt(roleId) : null;
+
+        // Handle role and superadmin sync
+        let actualIsSuperAdmin = isSuperAdmin;
+        if (roleId !== undefined) {
+            dataToUpdate.roleId = roleId ? parseInt(roleId) : null;
+            if (roleId) {
+                const role = await prisma.adminRole.findUnique({ where: { id: parseInt(roleId) } });
+                if (role && role.name === 'Super Admin') {
+                    actualIsSuperAdmin = true;
+                }
+            }
+        }
+
         if (isActive !== undefined) dataToUpdate.isActive = isActive;
-        if (isSuperAdmin !== undefined) dataToUpdate.isSuperAdmin = isSuperAdmin;
+        if (actualIsSuperAdmin !== undefined) dataToUpdate.isSuperAdmin = actualIsSuperAdmin;
         if (password && password.trim() !== "") {
             dataToUpdate.password = await bcrypt.hash(password, 10);
         }

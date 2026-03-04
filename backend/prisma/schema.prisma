@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl", "linux-musl-openssl-3.0.x"]
 }
 
@@ -8,137 +8,120 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// =====================
-// MODELS
-// =====================
-
-// ผู้ใช้ (ผู้เล่น)
 model User {
-  id            Int           @id @default(autoincrement())
-  username      String        @unique
-  password      String
-  fullName      String
-  phone         String        @unique
-  bankName      String
-  bankAccount   String
-  lineId        String?
-  referrerCode  String?
-  referredBy    Int?
-  status        String        @default("ACTIVE") // UserStatus: ACTIVE, SUSPENDED
-  balance       Decimal       @default(0)
-  bonusBalance  Decimal       @default(0)
-  betflixUsername String?     @unique
-  betflixPassword String?
-  lastLoginAt   DateTime?
-  sessionToken  String?       // UUID for single-session enforcement
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  lastActiveAgentId Int?      // Tracks where the user's money currently resides
+  id                Int                   @id @default(autoincrement())
+  username          String                @unique
+  password          String
+  fullName          String
+  phone             String                @unique
+  bankName          String
+  bankAccount       String
+  lineId            String?
+  referrerCode      String?
+  referredBy        Int?
+  status            String                @default("ACTIVE")
+  balance           Decimal               @default(0)
+  bonusBalance      Decimal               @default(0)
+  betflixUsername   String?               @unique
+  betflixPassword   String?
+  lastLoginAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  lastActiveAgentId Int?
+  sessionToken      String?
+  gameSessions      GameSession[]
+  promotionLogs     PromotionLog[]
+  rewards           RewardClaim[]
+  transactions      Transaction[]
+  trueWalletLogs    TrueWalletLog[]
   externalAccounts  UserExternalAccount[]
-
-  transactions  Transaction[]
-  gameSessions  GameSession[]
-  rewards       RewardClaim[]
-  // Removed: editLogs relation (FK was removed from EditLog model)
-  promotionLogs PromotionLog[]
-  trueWalletLogs TrueWalletLog[]
 
   @@index([phone])
   @@index([referrerCode])
   @@index([createdAt])
 }
 
-// บัญชีภายนอก (สำหรับ Mix Board / Multi-Agent)
 model UserExternalAccount {
-  id              Int         @id @default(autoincrement())
-  userId          Int
-  user            User        @relation(fields: [userId], references: [id])
-  agentId         Int
-  agent           AgentConfig @relation(fields: [agentId], references: [id])
+  id               Int         @id @default(autoincrement())
+  userId           Int
+  agentId          Int
   externalUsername String
   externalPassword String
-  balance         Decimal     @default(0) // Cached balance (optional)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  balance          Decimal     @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  agent            AgentConfig @relation(fields: [agentId], references: [id])
+  user             User        @relation(fields: [userId], references: [id])
 
   @@unique([userId, agentId])
   @@index([externalUsername])
 }
 
-// แอดมิน/พนักงาน (แยกจาก User)
 model Admin {
-  id            Int         @id @default(autoincrement())
-  username      String      @unique
-  password      String
-  fullName      String
-  phone         String?
-  isSuperAdmin  Boolean     @default(false)
-  roleId        Int?
-  role          AdminRole?  @relation(fields: [roleId], references: [id])
-  isActive      Boolean     @default(true)
-  lastLoginAt   DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  adminLogs     AdminLog[]
-  editLogs      EditLog[]   @relation("AdminEditor")
+  id           Int        @id @default(autoincrement())
+  username     String     @unique
+  password     String
+  fullName     String
+  phone        String?
+  isSuperAdmin Boolean    @default(false)
+  roleId       Int?
+  isActive     Boolean    @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  role         AdminRole? @relation(fields: [roleId], references: [id])
+  adminLogs    AdminLog[]
+  editLogs     EditLog[]  @relation("AdminEditor")
 
   @@index([username])
 }
 
-// บทบาทแอดมิน
 model AdminRole {
   id          Int      @id @default(autoincrement())
   name        String   @unique
   description String?
-  permissions String   // JSON string defining access
+  permissions String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   admins      Admin[]
 }
 
-// ประวัติการใช้งานแอดมิน (Log)
 model AdminLog {
   id        Int      @id @default(autoincrement())
   adminId   Int
-  admin     Admin    @relation(fields: [adminId], references: [id])
-  action    String   // LOGIN, CREATE, UPDATE, DELETE
-  resource  String   // MEMBER, PROMOTION, SETTING
-  details   String?  // JSON details of change
+  action    String
+  resource  String
+  details   String?
   ip        String?
   createdAt DateTime @default(now())
+  admin     Admin    @relation(fields: [adminId], references: [id])
 
   @@index([adminId])
   @@index([action])
   @@index([createdAt])
 }
 
-// ธุรกรรม
 model Transaction {
-  id            Int               @id @default(autoincrement())
-  userId        Int
-  user          User              @relation(fields: [userId], references: [id])
-  type          String            // TransactionType: DEPOSIT, WITHDRAW, etc.
-  subType       String?           // เครดิต, โบนัส
-  amount        Decimal
-  balanceBefore Decimal
-  balanceAfter  Decimal
-  status        String            @default("PENDING") // TransactionStatus: PENDING, APPROVED, ...
-  slipImage     String?
-  note          String?
-  adminId       Int?
-  
-  // Payment Gateway fields
+  id               Int             @id @default(autoincrement())
+  userId           Int
+  type             String
+  subType          String?
+  amount           Decimal
+  balanceBefore    Decimal
+  balanceAfter     Decimal
+  status           String          @default("PENDING")
+  slipImage        String?
+  note             String?
+  adminId          Int?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  externalId       String?
   paymentGatewayId Int?
+  qrCode           String?
+  rawResponse      String?
+  referenceId      String?         @unique
   paymentGateway   PaymentGateway? @relation(fields: [paymentGatewayId], references: [id])
-  referenceId      String?         @unique // Unique reference for payment system
-  externalId       String?         // External transaction ID from provider
-  qrCode           String?         // QR Code payload or image URL
-  rawResponse      String?         // Debug data from provider
-  
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  user             User            @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([type])
@@ -147,168 +130,147 @@ model Transaction {
   @@index([referenceId])
 }
 
-// ช่องทางชำระเงิน (Generic Payment Gateway)
 model PaymentGateway {
-  id          Int      @id @default(autoincrement())
-  code        String   @unique // bibpay, gbprime, scb, truemoney
-  name        String
-  config      String   // JSON string: apiKey, secret, merchantId, etc.
-  logo        String?
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id           Int           @id @default(autoincrement())
+  code         String        @unique
+  name         String
+  config       String
+  logo         String?
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   transactions Transaction[]
 }
 
-// Log การแก้ไข
 model EditLog {
   id         Int      @id @default(autoincrement())
   targetType String
   targetId   Int
-  // Removed: targetUser relation (FK to User.id breaks polymorphic pattern)
-  // Use targetType + targetId for queries instead
   field      String
   oldValue   String?
   newValue   String?
   adminId    Int
-  admin      Admin    @relation("AdminEditor", fields: [adminId], references: [id])
   createdAt  DateTime @default(now())
+  admin      Admin    @relation("AdminEditor", fields: [adminId], references: [id])
 
   @@index([targetType, targetId])
   @@index([adminId])
   @@index([createdAt])
 }
 
-// หมวดหมู่เกม (สล็อต, คาสิโน, ยิงปลา, กีฬา)
 model GameCategory {
-  id          Int             @id @default(autoincrement())
-  name        String          @unique
-  slug        String          @unique
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  slug        String         @unique
   icon        String?
   description String?
-  isActive    Boolean         @default(true)
-  sortOrder   Int             @default(0)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  
+  isActive    Boolean        @default(true)
+  sortOrder   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   providers   GameProvider[]
 }
 
-// ค่ายเกม (PG, JOKER, JILI, PP)
 model GameProvider {
-  id          Int           @id @default(autoincrement())
-  name        String        @unique
-  slug        String        @unique
-  logo        String?
-  categoryId  Int
-  category    GameCategory  @relation(fields: [categoryId], references: [id])
-  isActive    Boolean       @default(true)
-  isLobbyMode Boolean       @default(false)  // ค่ายที่เปิดเกมผ่าน Lobby (เช่น FUNKY)
-  sortOrder   Int           @default(0)
-  
+  id             Int          @id @default(autoincrement())
+  name           String       @unique
+  slug           String       @unique
+  logo           String?
+  categoryId     Int
+  isActive       Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  isLobbyMode    Boolean      @default(false)
   defaultAgentId Int?
+  games          Game[]
+  category       GameCategory @relation(fields: [categoryId], references: [id])
   defaultAgent   AgentConfig? @relation(fields: [defaultAgentId], references: [id])
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  games       Game[]
-  
   @@index([categoryId])
 }
 
-// เกม
 model Game {
-  id          Int            @id @default(autoincrement())
-  name        String
-  slug        String         @unique
-  providerId  Int?
-  provider    GameProvider?  @relation(fields: [providerId], references: [id])
-  thumbnail   String?
-  minBet      Decimal        @default(1)
-  maxBet      Decimal        @default(10000)
-  rtp         Float          @default(0.96)
-  isActive    Boolean        @default(true)
-  isHot       Boolean        @default(false)
-  isNew       Boolean        @default(false)
-  sortOrder   Int            @default(0)
-  
-  agentId     Int?           // Override Provider's default agent
-  agent       AgentConfig?   @relation(fields: [agentId], references: [id])
-
-  upstreamProviderCode String?  // For Mix Providers: Stores original provider code (e.g., 'pgsoft')
-
-
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  sessions    GameSession[]
+  id                   Int           @id @default(autoincrement())
+  name                 String
+  slug                 String        @unique
+  providerId           Int?
+  thumbnail            String?
+  minBet               Decimal       @default(1)
+  maxBet               Decimal       @default(10000)
+  rtp                  Float         @default(0.96)
+  isActive             Boolean       @default(true)
+  isHot                Boolean       @default(false)
+  isNew                Boolean       @default(false)
+  sortOrder            Int           @default(0)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  agentId              Int?
+  upstreamProviderCode String?
+  agent                AgentConfig?  @relation(fields: [agentId], references: [id])
+  provider             GameProvider? @relation(fields: [providerId], references: [id])
+  sessions             GameSession[]
 
   @@index([providerId])
   @@index([isActive])
   @@index([agentId])
 }
 
-// Session การเล่น
 model GameSession {
   id        Int      @id @default(autoincrement())
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
   gameId    Int
-  game      Game     @relation(fields: [gameId], references: [id])
   betAmount Decimal
   winAmount Decimal
-  result    String? // JSON string
+  result    String?
   playedAt  DateTime @default(now())
+  game      Game     @relation(fields: [gameId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([gameId])
   @@index([playedAt])
 }
 
-// บัญชีธนาคาร (สำหรับรับเงิน)
 model BankAccount {
   id            Int      @id @default(autoincrement())
   bankName      String
   accountNumber String
   accountName   String
-  type          String   // deposit, withdraw
+  type          String
   balance       Decimal  @default(0)
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
 
-// TrueMoney Wallet
 model TrueMoneyWallet {
-  id           Int      @id @default(autoincrement())
-  phoneNumber  String
-  accountName  String
-  jwtSecret    String?            // JWT Secret จาก TrueWallet Webhook
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  phoneNumber String
+  accountName String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  jwtSecret   String?
 }
 
-// TrueWallet Webhook Log — สำหรับ dedup + tracking
 model TrueWalletLog {
   id              Int      @id @default(autoincrement())
-  transactionId   String   @unique          // เลขอ้างอิง จาก JWT payload (ป้องกันซ้ำ)
-  senderMobile    String                    // เบอร์ผู้โอน
-  senderName      String?                   // ชื่อผู้โอน
-  amount          Decimal                   // จำนวนเงิน (บาท)
-  message         String?                   // ข้อความจากผู้โอน
-  receivedTime    DateTime                  // เวลาที่โอน
-  walletId        Int?                      // wallet ปลายทางที่แมทช์ได้
-  userId          Int?                      // user ที่แมทช์ได้
-  user            User?    @relation(fields: [userId], references: [id])
-  transactionDbId Int?                      // FK ไป Transaction (ถ้าฝากสำเร็จ)
-  matchLevel      Int      @default(0)      // 0=ไม่ match, 1=เบอร์, 2=เบอร์+ชื่อ
-  status          String   @default("PENDING") // PENDING, COMPLETED, NO_MATCH, FAILED
+  transactionId   String   @unique
+  senderMobile    String
+  senderName      String?
+  amount          Decimal
+  message         String?
+  receivedTime    DateTime
+  walletId        Int?
+  userId          Int?
+  transactionDbId Int?
+  matchLevel      Int      @default(0)
+  status          String   @default("PENDING")
   errorMessage    String?
   createdAt       DateTime @default(now())
+  user            User?    @relation(fields: [userId], references: [id])
 
   @@index([senderMobile])
   @@index([status])
@@ -316,7 +278,6 @@ model TrueWalletLog {
   @@index([createdAt])
 }
 
-// ตั้งค่าระบบ
 model Setting {
   id    Int    @id @default(autoincrement())
   key   String @unique
@@ -325,45 +286,41 @@ model Setting {
   @@index([key])
 }
 
-// โปรโมชั่น
 model Promotion {
-  id          Int       @id @default(autoincrement())
+  id          Int            @id @default(autoincrement())
   name        String
   description String?
-  type        String    // deposit_bonus, cashback, etc.
-  value       Decimal   // เปอร์เซ็นต์หรือจำนวนเงิน
+  type        String
+  value       Decimal
   minDeposit  Decimal?
   maxBonus    Decimal?
-  turnover    Decimal?  // เทิร์น
+  turnover    Decimal?
   image       String?
-  isActive    Boolean   @default(true)
+  isActive    Boolean        @default(true)
   startAt     DateTime?
   endAt       DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  logs PromotionLog[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  logs        PromotionLog[]
 }
 
-// ประวัติรับโปรโมชั่น
 model PromotionLog {
   id          Int       @id @default(autoincrement())
   userId      Int
-  user        User      @relation(fields: [userId], references: [id])
   promotionId Int
-  promotion   Promotion @relation(fields: [promotionId], references: [id])
   amount      Decimal
   createdAt   DateTime  @default(now())
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([promotionId])
   @@index([createdAt])
 }
 
-// แบนเนอร์
 model Banner {
   id        Int      @id @default(autoincrement())
-  position  String   @default("TOP") // TOP, SIDE, BOTTOM
+  position  String   @default("TOP")
   title     String?
   image     String
   link      String?
@@ -373,47 +330,40 @@ model Banner {
   updatedAt DateTime @updatedAt
 }
 
-// ประกาศ/Popup/Marquee
 model Announcement {
   id        Int      @id @default(autoincrement())
-  type      String   // popup, marquee
+  type      String
   title     String?
   content   String
-  image     String?  // URL from Cloudinary
+  image     String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// Agent Config
 model AgentConfig {
-  id          Int      @id @default(autoincrement())
-  name        String
-  apiKey      String? // Used as API Endpoint for Betflix
-  apiSecret   String?
-  upline      String? // Replaces 'prefix' conceptually for Betflix
-  xApiKey     String? // For Betflix
-  xApiCat     String? // For Betflix
-  gameEntrance String? // For Betflix
-  callbackUrl String?
-  rtp         Float    @default(0.96)
-  minBet      Decimal  @default(1)
-  maxBet      Decimal  @default(10000)
-  isActive    Boolean  @default(true)
-  
-  // New Fields for Mix Board
-  code        String   @unique @default("BETFLIX") // BETFLIX, NEXUS
-  isMain      Boolean  @default(false)
-  
-  games       Game[]
-  providers   GameProvider[]
+  id           Int                   @id @default(autoincrement())
+  name         String
+  apiKey       String?
+  apiSecret    String?
+  upline       String?
+  xApiKey      String?
+  xApiCat      String?
+  gameEntrance String?
+  callbackUrl  String?
+  rtp          Float                 @default(0.96)
+  minBet       Decimal               @default(1)
+  maxBet       Decimal               @default(10000)
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  code         String                @unique @default("BETFLIX")
+  isMain       Boolean               @default(false)
+  games        Game[]
+  providers    GameProvider[]
   userAccounts UserExternalAccount[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
-// รายงานรายวัน (สร้างทุกวัน)
 model DailyReport {
   id              Int      @id @default(autoincrement())
   date            DateTime @unique
@@ -433,204 +383,171 @@ model DailyReport {
   @@index([date])
 }
 
-// ตั้งค่าฟีเจอร์เว็บ (เปิด/ปิดจากแอดมิน)
 model SiteFeature {
   id          Int      @id @default(autoincrement())
-  key         String   @unique // feature key: registration, deposit, withdraw, etc.
-  name        String   // Display name in Thai
+  key         String   @unique
+  name        String
   description String?
   isEnabled   Boolean  @default(true)
   updatedAt   DateTime @updatedAt
-  updatedBy   Int?     // Admin ID who last updated
+  updatedBy   Int?
 
   @@index([key])
 }
 
-// ช่องทางติดต่อ
 model ContactChannel {
-  id          Int      @id @default(autoincrement())
-  type        String   // LINE, TELEGRAM, FACEBOOK, TIKTOK, INSTAGRAM, etc.
-  name        String   // Display name like "LINE Official"
-  url         String   // Link to the channel
-  icon        String?  // Custom icon URL or emoji
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  type      String
+  name      String
+  url       String
+  icon      String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([type])
   @@index([isActive])
 }
 
-// =====================
-// ACTIVITIES SETTINGS
-// =====================
-
-// ตั้งค่าคืนยอดเสีย (Cashback)
 model CashbackSetting {
-  id              Int      @id @default(autoincrement())
-  rate            Decimal  @default(5)      // % คืนยอดเสีย
-  minLoss         Decimal  @default(100)    // ยอดเสียขั้นต่ำ
-  maxCashback     Decimal  @default(10000)  // คืนสูงสุด
-  dayOfWeek       Int      @default(1)      // วันที่รับได้ (0=อาทิตย์, 1=จันทร์, ...)
-  claimStartHour  Int      @default(0)      // เริ่มกดรับได้ (ชั่วโมง)
-  claimEndHour    Int      @default(23)     // หมดเวลากดรับ (ชั่วโมง)
-  isActive        Boolean  @default(true)
-  updatedAt       DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  rate           Decimal  @default(5)
+  minLoss        Decimal  @default(100)
+  maxCashback    Decimal  @default(10000)
+  dayOfWeek      Int      @default(1)
+  isActive       Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+  claimEndHour   Int      @default(23)
+  claimStartHour Int      @default(0)
 }
 
-// ตั้งค่าฝากสะสม (Streak)
 model StreakSetting {
-  id          Int      @id @default(autoincrement())
-  day                Int      @unique          // วันที่ (1-7)
-  minDeposit         Decimal  @default(100)    // ฝากขั้นต่ำต่อวัน
-  bonusAmount        Decimal                   // โบนัสที่ได้รับ
-  turnoverMultiplier Int      @default(1)      // ยอดเทิร์นที่ต้องทำ (เท่า)
+  id                 Int      @id @default(autoincrement())
+  day                Int      @unique
+  minDeposit         Decimal  @default(100)
+  bonusAmount        Decimal
   isActive           Boolean  @default(true)
-  updatedAt   DateTime @updatedAt
+  updatedAt          DateTime @updatedAt
+  turnoverMultiplier Int      @default(1)
 }
 
-// ตั้งค่าค่าคอมมิชชั่น (Commission 4 Tier)
 model CommissionSetting {
   id          Int      @id @default(autoincrement())
-  level       Int      @unique          // ชั้นที่ (1-4)
-  rate        Decimal                   // % ค่าคอม
-  description String?                   // คำอธิบาย เช่น "แนะนำตรง"
+  level       Int      @unique
+  rate        Decimal
+  description String?
   isActive    Boolean  @default(true)
   updatedAt   DateTime @updatedAt
 }
 
-// ตั้งค่า Commission (Turnover Rebate - Personal)
 model TurnoverSetting {
   id          Int      @id @default(autoincrement())
-  rate        Decimal  @default(0.5)    // % คืนยอดเทิร์น
-  minTurnover Decimal  @default(100)    // ยอดเทิร์นขั้นต่ำ
-  maxReward   Decimal  @default(10000)  // คืนสูงสุด
+  rate        Decimal  @default(0.5)
+  minTurnover Decimal  @default(100)
+  maxReward   Decimal  @default(10000)
   isActive    Boolean  @default(true)
   updatedAt   DateTime @updatedAt
 }
 
-// ประวัติการรับรางวัล (Prevent Double Claim)
 model RewardClaim {
   id          Int      @id @default(autoincrement())
   userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  type        String   // CASHBACK, COMMISSION
+  type        String
   amount      Decimal
-  periodStart DateTime // Start of the calculation period
-  periodEnd   DateTime // End of the calculation period
+  periodStart DateTime
+  periodEnd   DateTime
   claimedAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([type])
   @@index([claimedAt])
 }
 
-
-
-// =====================
-// MULTI-PREFIX SYSTEM
-// =====================
-
-// Prefix Configuration (each prefix = one tenant)
 model Prefix {
-  id              Int      @id @default(autoincrement())
-  code            String   @unique  // e.g., "px89", "abc123"
-  name            String             // Display name e.g., "PLAYNEX89"
-  databaseUrl     String             // Connection string for tenant DB
-  adminDomain     String?            // e.g., "admin.playnex89.com"
-  playerDomain    String?            // e.g., "playnex89.com"
-  logo            String?            // Logo URL
-  primaryColor    String?            // Brand color
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+  name         String
+  databaseUrl  String
+  adminDomain  String?
+  playerDomain String?
+  logo         String?
+  primaryColor String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([code])
   @@index([isActive])
 }
 
-// Super Admin (can manage all prefixes)
 model SuperAdmin {
-  id            Int       @id @default(autoincrement())
-  username      String    @unique
-  password      String
-  email         String?   @unique
-  fullName      String
-  isActive      Boolean   @default(true)
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  logs          SuperAdminLog[]
+  id          Int             @id @default(autoincrement())
+  username    String          @unique
+  password    String
+  email       String?         @unique
+  fullName    String
+  isActive    Boolean         @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  logs        SuperAdminLog[]
 
   @@index([username])
 }
 
-// Super Admin Activity Log
 model SuperAdminLog {
-  id            Int        @id @default(autoincrement())
-  superAdminId  Int
-  superAdmin    SuperAdmin @relation(fields: [superAdminId], references: [id])
-  action        String     // CREATE_PREFIX, UPDATE_PREFIX, DELETE_PREFIX, LOGIN, etc.
-  details       String?    // JSON details
-  ip            String?
-  createdAt     DateTime   @default(now())
+  id           Int        @id @default(autoincrement())
+  superAdminId Int
+  action       String
+  details      String?
+  ip           String?
+  createdAt    DateTime   @default(now())
+  superAdmin   SuperAdmin @relation(fields: [superAdminId], references: [id])
 
   @@index([superAdminId])
   @@index([createdAt])
 }
 
-// SMS Webhook Log (Auto Deposit)
 model SmsWebhookLog {
   id            Int      @id @default(autoincrement())
   rawMessage    String
-  messageHash   String   @unique  // MD5 of message for dedup
-  parsedData    String?  // JSON of parsed data
+  messageHash   String   @unique
+  parsedData    String?
   amount        Decimal?
-  destAccount   String?  // Last 4 digits of destination
-  sourceAccount String?  // Last 4 digits of source  
+  destAccount   String?
+  sourceAccount String?
   sourceBank    String?
   sourceName    String?
-  matchLevel    Int      @default(0)  // 0=none, 1=dest, 2=user, 3=bank
+  matchLevel    Int      @default(0)
   matchedUserId Int?
-  transactionId Int?     // Created transaction ID
-  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED, DUPLICATE, NO_MATCH
+  transactionId Int?
+  status        String   @default("PENDING")
   errorMessage  String?
   createdAt     DateTime @default(now())
-  
+
   @@index([messageHash])
   @@index([status])
   @@index([createdAt])
 }
 
-// Critical Alerts Tracking - For operational issues that require admin attention
 model AlertLog {
-  id                Int       @id @default(autoincrement())
-  type              String    // CRITICAL, WARNING, INFO
-  title             String    // e.g., "Wallet Swap Refund Failed", "Balance Transfer Failed"
-  message           String    @db.Text // Detailed error message
-
-  // Context - Link to related entities
-  userId            Int?      // User affected by the alert
-  agentId           Int?      // Agent/Provider related to alert
-  transactionId     Int?      // Transaction that triggered the alert
-
-  // Status tracking
-  status            String    @default("PENDING_REVIEW")  // PENDING_REVIEW, ACKNOWLEDGED, RESOLVED
-  assignedTo        Int?      // Admin ID who is handling it
-
-  // Action tracking
-  actionUrl         String?   // Link to relevant page in admin panel (e.g., /admin/transactions/123)
-  actionRequired    Boolean   @default(true) // Whether this alert demands immediate action
-
-  // Additional data
-  metadata          String?   @db.Text // JSON: additional context data
-
-  // Timestamps
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  resolvedAt        DateTime? // When the alert was resolved
+  id             Int       @id @default(autoincrement())
+  type           String
+  title          String
+  message        String
+  userId         Int?
+  agentId        Int?
+  transactionId  Int?
+  status         String    @default("PENDING_REVIEW")
+  assignedTo     Int?
+  actionUrl      String?
+  actionRequired Boolean   @default(true)
+  metadata       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  resolvedAt     DateTime?
 
   @@index([type])
   @@index([status])

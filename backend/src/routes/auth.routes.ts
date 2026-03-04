@@ -451,7 +451,8 @@ router.post('/admin/login', async (req, res) => {
                 data: { lastLoginAt: new Date() },
             });
 
-            const role = admin.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN';
+            const isActuallySuperAdmin = admin.isSuperAdmin || admin.role?.name === 'Super Admin';
+            const role = isActuallySuperAdmin ? 'SUPER_ADMIN' : 'ADMIN';
             const token = signToken({ userId: admin.id, role, isAdmin: true, prefix: prefix || '' });
 
             res.json({
@@ -463,7 +464,7 @@ router.post('/admin/login', async (req, res) => {
                         username: admin.username,
                         fullName: admin.fullName,
                         role,
-                        isSuperAdmin: admin.isSuperAdmin,
+                        isSuperAdmin: isActuallySuperAdmin,
                         permissions: admin.role?.permissions || '{}',
                         prefix: prefix || '',
                     },

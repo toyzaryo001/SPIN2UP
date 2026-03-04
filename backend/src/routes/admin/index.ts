@@ -41,7 +41,9 @@ router.get('/me', async (req: AuthRequest, res: Response) => {
 
         // Parse permissions
         let permissions: Record<string, Record<string, boolean>> = {};
-        if (admin.isSuperAdmin || req.user?.role === 'SUPER_ADMIN') {
+        const isActuallySuperAdmin = admin.isSuperAdmin || admin.role?.name === 'Super Admin';
+
+        if (isActuallySuperAdmin || req.user?.role === 'SUPER_ADMIN') {
             // Super admin has all permissions - matching PERMISSION_MATRIX
             permissions = {
                 members: { view: true, view_detail: true, create: true, edit: true, delete: true, view_logs: true },
@@ -69,7 +71,7 @@ router.get('/me', async (req: AuthRequest, res: Response) => {
                 id: admin.id,
                 username: admin.username,
                 fullName: admin.fullName,
-                isSuperAdmin: admin.isSuperAdmin,
+                isSuperAdmin: isActuallySuperAdmin,
                 role: admin.role ? { id: admin.role.id, name: admin.role.name } : null,
                 permissions
             }

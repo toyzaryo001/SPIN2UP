@@ -40,7 +40,10 @@ export default function PrefixesPage() {
         initialAdminPassword: ''
     });
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+    let API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+    if (!API_URL.startsWith('http')) {
+        API_URL = `https://${API_URL}`;
+    }
 
     useEffect(() => {
         const token = localStorage.getItem('superAdminToken');

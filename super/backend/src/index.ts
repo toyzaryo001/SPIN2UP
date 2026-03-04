@@ -11,13 +11,7 @@ const PORT = parseInt(process.env.PORT || '3003', 10);
 
 // Middleware
 app.use(cors({
-    origin: [
-        'http://localhost:3000',
-        'http://localhost:3004',
-        'https://super.check24m.com',
-        /\.railway\.app$/,
-        /\.vercel\.app$/,
-    ],
+    origin: true, // Dynamically allow frontend origins (needed for dynamic custom domains)
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']

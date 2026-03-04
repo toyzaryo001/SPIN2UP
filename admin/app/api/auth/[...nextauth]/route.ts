@@ -15,8 +15,12 @@ export const handler = NextAuth({
                 if (!credentials?.username || !credentials?.password || !credentials?.prefix) return null;
 
                 try {
-                    // Use admin login endpoint (separate from player)
                     let apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+                    if (!apiBase.startsWith('http')) {
+                        apiBase = `https://${apiBase}`;
+                    }
+
                     // Remove trailing slash and /api if present to standardize
                     apiBase = apiBase.replace(/\/$/, "").replace(/\/api$/, "");
 

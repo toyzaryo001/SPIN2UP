@@ -8,7 +8,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
   const host = headersList.get('host') || '';
   const domain = host.split(':')[0]; // Remove port
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+  let API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+  if (!API_URL.startsWith('http')) {
+    API_URL = `https://${API_URL}`;
+  }
 
   try {
     const res = await fetch(`${API_URL}/auth/config?domain=${domain}`, { next: { revalidate: 60 } });

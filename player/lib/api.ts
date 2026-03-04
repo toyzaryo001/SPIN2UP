@@ -1,41 +1,71 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
-let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// =============================================
+// Dual-URL System: Primary + Fallback
+// เมื่อ ISP บล็อก domain หลัก (Wi-Fi) → สลับไปใช้ Railway URL อัตโนมัติ
+// =============================================
+const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const FALLBACK_API_URL = process.env.NEXT_PUBLIC_FALLBACK_API_URL || '';
 
-// Force HTTPS if the page is served over HTTPS (runtime check, works in browser)
-// This prevents Mixed Content warnings regardless of NODE_ENV at build time
-if (typeof window !== 'undefined' && window.location.protocol === 'https:' && apiUrl.startsWith('http://')) {
-    apiUrl = apiUrl.replace('http://', 'https://');
+function getApiUrl(): string {
+    let url = PRIMARY_API_URL;
+
+    // Force HTTPS if the page is served over HTTPS
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
+        url = url.replace('http://', 'https://');
+    }
+
+    // Also force in production build (SSR)
+    if (process.env.NODE_ENV === 'production' && url.startsWith('http://') && !url.includes('localhost')) {
+        url = url.replace('http://', 'https://');
+    }
+
+    return url + '/api';
 }
 
-// Also force in production build (server-side rendering)
-if (process.env.NODE_ENV === 'production' && apiUrl.startsWith('http://') && !apiUrl.includes('localhost')) {
-    apiUrl = apiUrl.replace('http://', 'https://');
+function getFallbackApiUrl(): string {
+    if (!FALLBACK_API_URL) return '';
+    let url = FALLBACK_API_URL;
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
+        url = url.replace('http://', 'https://');
+    }
+    if (process.env.NODE_ENV === 'production' && url.startsWith('http://') && !url.includes('localhost')) {
+        url = url.replace('http://', 'https://');
+    }
+    return url + '/api';
 }
 
-export const API_URL = apiUrl + '/api';
+export const API_URL = getApiUrl();
+const FALLBACK_URL = getFallbackApiUrl();
+
+// เก็บสถานะว่าตอนนี้ใช้ URL ไหน
+let currentApiUrl = API_URL;
+let isUsingFallback = false;
 
 const api = axios.create({
-    baseURL: API_URL,
+    baseURL: currentApiUrl,
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 15000, // 15 วินาที timeout (ป้องกันค้างนาน)
+    timeout: 10000, // 10 วินาที
 });
 
 // =============================================
-// Network Retry System — ลองใหม่อัตโนมัติเมื่อเน็ตมีปัญหา
-// รองรับทุก ISP, ทุกเครือข่าย, iOS + Android
+// Network Retry + Fallback System
+// 1. ลองซ้ำ 2 ครั้งกับ URL หลัก
+// 2. ถ้ายังไม่ได้ → สลับไปใช้ Fallback URL (Railway)
+// 3. ถ้า Fallback ใช้ได้ → จำไว้ใช้ต่อ
 // =============================================
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 วินาที
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 1000;
 
 api.interceptors.response.use(
     (response) => response,
-    async (error) => {
-        const config = error.config;
+    async (error: AxiosError) => {
+        const config = error.config as any;
+        if (!config) return Promise.reject(error);
 
-        // ถ้าเป็น network error หรือ timeout → ลองใหม่
+        // ตรวจว่าเป็น network error (DNS blocked, timeout, connection refused)
         const isNetworkError = !error.response && (
             error.code === 'ECONNABORTED' ||
             error.code === 'ERR_NETWORK' ||
@@ -44,21 +74,49 @@ api.interceptors.response.use(
             error.message?.includes('timeout')
         );
 
-        // ถ้าเป็น 502/503/504 (server ยังไม่พร้อม) → ลองใหม่
-        const isServerError = error.response?.status >= 502 && error.response?.status <= 504;
+        const isServerError = error.response?.status !== undefined &&
+            error.response.status >= 502 && error.response.status <= 504;
 
-        if ((isNetworkError || isServerError) && config && !config._retryCount) {
-            config._retryCount = 0;
+        if (!config._retryCount) config._retryCount = 0;
+        if (!config._triedFallback) config._triedFallback = false;
+
+        // ขั้นตอนที่ 1: ลองซ้ำกับ URL เดิม
+        if ((isNetworkError || isServerError) && config._retryCount < MAX_RETRIES) {
+            config._retryCount += 1;
+            console.log(`[API] Retry ${config._retryCount}/${MAX_RETRIES}: ${config.url}`);
+            await new Promise(r => setTimeout(r, RETRY_DELAY * config._retryCount));
+            return api(config);
         }
 
-        if ((isNetworkError || isServerError) && config && config._retryCount < MAX_RETRIES) {
-            config._retryCount += 1;
-            console.log(`[API Retry] Attempt ${config._retryCount}/${MAX_RETRIES} for ${config.url}`);
+        // ขั้นตอนที่ 2: สลับไป Fallback URL (Railway)
+        if ((isNetworkError || isServerError) && FALLBACK_URL && !config._triedFallback && !isUsingFallback) {
+            console.log(`[API] Primary URL failed → switching to fallback: ${FALLBACK_URL}`);
+            config._triedFallback = true;
+            config._retryCount = 0;
 
-            // รอก่อนลองใหม่ (เพิ่มขึ้นเรื่อยๆ: 1s, 2s, 3s)
-            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * config._retryCount));
+            // เปลี่ยน baseURL เป็น Fallback
+            const originalUrl = config.url || '';
+            config.baseURL = FALLBACK_URL;
+            config.url = originalUrl;
 
-            return api(config);
+            try {
+                const result = await api.request(config);
+
+                // Fallback สำเร็จ → จำไว้ใช้ต่อเลย
+                isUsingFallback = true;
+                currentApiUrl = FALLBACK_URL;
+                api.defaults.baseURL = FALLBACK_URL;
+                console.log(`[API] ✅ Fallback works! Using ${FALLBACK_URL} from now on`);
+
+                // บันทึกลง localStorage เพื่อโหลดหน้าถัดไปใช้เลย
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('api_fallback_active', 'true');
+                }
+
+                return result;
+            } catch {
+                // Fallback ก็ไม่ได้ → ส่ง error กลับไป
+            }
         }
 
         // 401 Unauthorized → auto logout
@@ -66,7 +124,6 @@ api.interceptors.response.use(
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.dispatchEvent(new Event('user-logout'));
-
             if (window.location.pathname !== '/') {
                 window.location.href = '/?action=login';
             }
@@ -76,29 +133,27 @@ api.interceptors.response.use(
     }
 );
 
+// เช็ค localStorage ว่าเคยใช้ Fallback สำเร็จมาก่อนไหม
+if (typeof window !== 'undefined' && FALLBACK_URL) {
+    const wasFallback = localStorage.getItem('api_fallback_active');
+    if (wasFallback === 'true') {
+        console.log(`[API] Restoring fallback URL from previous session`);
+        isUsingFallback = true;
+        currentApiUrl = FALLBACK_URL;
+        api.defaults.baseURL = FALLBACK_URL;
+    }
+}
+
 // Public endpoints (no auth required)
 export const publicApi = {
-    // Get site settings and features
     getSettings: () => api.get('/public/settings'),
-
-    // Get active banners
     getBanners: () => api.get('/public/banners'),
-
-    // Get active promotions
     getPromotions: () => api.get('/public/promotions'),
-
-    // Get games
     getGames: (params?: { type?: string; provider?: string; limit?: number }) =>
         api.get('/public/games', { params }),
-
-    // Get announcements
     getAnnouncements: () => api.get('/public/announcements'),
-
-    // Get bank accounts for deposit
     getBankAccounts: (type?: string) =>
         api.get('/public/bank-accounts', { params: { type } }),
-
-    // Get TrueMoney wallets
     getTrueMoneyWallets: () => api.get('/public/truemoney'),
 };
 
@@ -106,12 +161,11 @@ export const publicApi = {
 export const authApi = {
     login: (phone: string, password: string) =>
         api.post('/auth/login', { phone, password }),
-
     register: (data: { phone: string; password: string; fullName: string; bankName: string; bankAccount: string }) =>
         api.post('/auth/register', data),
 };
 
-// Add token to requests if available
+// Add token to requests
 api.interceptors.request.use((config) => {
     if (typeof window !== 'undefined') {
         const token = localStorage.getItem('token');

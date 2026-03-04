@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Plus, Trash2, Edit2, Check, X, Search, Filter } from "lucide-react";
+import { Plus, Trash2, Edit2, Check, X, Search, Filter, Copy } from "lucide-react";
 import { formatBaht } from "@/lib/utils";
 import toast from "react-hot-toast";
 import BankLogo from "@/components/BankLogo";
@@ -104,6 +104,16 @@ export default function BankAccountsPage() {
             balance: bank.balance || 0,
         });
         setIsModalOpen(true);
+    };
+
+    const copyWebhookUrl = (bankName: string) => {
+        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.play-check24m.com';
+        let baseUrl = rawApiUrl.replace(/\/$/, "").replace(/\/api$/, "");
+        if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`;
+
+        const webhookUrl = `${baseUrl}/api/webhooks/payment/bibpay`;
+        navigator.clipboard.writeText(webhookUrl);
+        toast.success(`คัดลอก Webhook URL แล้ว`);
     };
 
     // Filter banks
@@ -211,8 +221,8 @@ export default function BankAccountsPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${bank.type === 'deposit'
-                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                : 'bg-amber-100 text-amber-800 border border-amber-200'
                                                 }`}>
                                                 {bank.type === 'deposit' ? 'บัญชีฝาก' : 'บัญชีถอน'}
                                             </span>
@@ -234,6 +244,13 @@ export default function BankAccountsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => copyWebhookUrl(bank.bankName)}
+                                                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                    title="คัดลอก Webhook (กดเพื่อนำไปใส่ในระบบหลังบ้าน)"
+                                                >
+                                                    <Copy size={18} />
+                                                </button>
                                                 <button
                                                     onClick={() => openEdit(bank)}
                                                     className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

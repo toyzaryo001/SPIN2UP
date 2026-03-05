@@ -111,7 +111,7 @@ export default function BankAccountsPage() {
         let baseUrl = rawApiUrl.replace(/\/$/, "").replace(/\/api$/, "");
         if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`;
 
-        const webhookUrl = `${baseUrl}/api/webhooks/payment/bibpay`;
+        const webhookUrl = `${baseUrl}/api/notify`;
         navigator.clipboard.writeText(webhookUrl);
         toast.success(`คัดลอก Webhook URL แล้ว`);
     };

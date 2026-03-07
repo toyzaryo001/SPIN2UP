@@ -30,6 +30,12 @@ export default function ManualPage() {
     const [note, setNote] = useState("");
     const [loading, setLoading] = useState(false);
 
+    // Modal State
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<() => Promise<void>>();
+    const [confirmTitle, setConfirmTitle] = useState("");
+    const [confirmMessage, setConfirmMessage] = useState<React.ReactNode>("");
+
     const searchUser = async () => {
         if (!userSearch) return;
         setLoading(true);
@@ -56,56 +62,76 @@ export default function ManualPage() {
 
         // If it's a withdraw, redirect to pending withdrawals
         if (reason === "withdraw") {
-            if (!confirm(`ยืนยันสร้างรายการถอนเงิน ฿${amount}?\nรายการจะไปแสดงในหน้ารายการรอถอน`)) return;
+            setConfirmTitle("ยืนยันสร้างรายการถอนเงิน");
+            setConfirmMessage(
+                <div className="space-y-2">
+                    <p>สร้างรายการถอน: <span className="font-bold text-amber-600 text-lg">฿{formatBaht(Number(amount))}</span></p>
+                    <p className="text-sm text-slate-500">รายการจะไปแสดงในหน้ารายการรอถอน</p>
+                </div>
+            );
+            setConfirmAction(() => async () => {
+                setLoading(true);
+                try {
+                    const res = await api.post('/admin/manual/withdraw', {
+                        userId: foundUser.id,
+                        amount: Number(amount),
+                        note
+                    });
 
-            setLoading(true);
-            try {
-                const res = await api.post('/admin/manual/withdraw', {
-                    userId: foundUser.id,
-                    amount: Number(amount),
-                    note
-                });
-
-                if (res.data.success) {
-                    toast.success("สร้างรายการถอนสำเร็จ");
-                    router.push('/manual/withdrawals');
+                    if (res.data.success) {
+                        toast.success("สร้างรายการถอนสำเร็จ");
+                        router.push('/manual/withdrawals');
+                    }
+                } catch (error) {
+                    console.error("Withdraw error:", error);
+                    toast.error("เกิดข้อผิดพลาด");
+                } finally {
+                    setLoading(false);
+                    setIsConfirmOpen(false);
                 }
-            } catch (error) {
-                console.error("Withdraw error:", error);
-                toast.error("เกิดข้อผิดพลาด");
-            } finally {
-                setLoading(false);
-            }
+            });
+            setIsConfirmOpen(true);
             return;
         }
 
         const label = activeTab === 'deposit' ? 'เพิ่มเครดิต' : 'ลดเครดิต';
         const reasonLabel = (activeTab === 'deposit' ? depositReasons : deductReasons).find(r => r.value === reason)?.label;
-        if (!confirm(`ยืนยันการ${label} ฿${amount}?\nสาเหตุ: ${reasonLabel}`)) return;
 
-        setLoading(true);
-        try {
-            const endpoint = activeTab === 'deposit' ? '/admin/manual/deposit' : '/admin/manual/deduct';
-            const res = await api.post(endpoint, {
-                userId: foundUser.id,
-                amount: Number(amount),
-                subType: reason,
-                note
-            });
+        setConfirmTitle(`ยืนยันการ${label}`);
+        setConfirmMessage(
+            <div className="space-y-2">
+                <p>จำนวนเงิน: <span className={`font-bold text-lg ${activeTab === 'deposit' ? 'text-emerald-600' : 'text-red-600'}`}>฿{formatBaht(Number(amount))}</span></p>
+                <p>สาเหตุ: <span className="font-medium text-slate-700">{reasonLabel}</span></p>
+            </div>
+        );
 
-            if (res.data.success) {
-                toast.success("ทำรายการสำเร็จ");
-                setAmount("");
-                setReason("");
-                setNote("");
-                searchUser();
+        setConfirmAction(() => async () => {
+            setLoading(true);
+            try {
+                const endpoint = activeTab === 'deposit' ? '/admin/manual/deposit' : '/admin/manual/deduct';
+                const res = await api.post(endpoint, {
+                    userId: foundUser.id,
+                    amount: Number(amount),
+                    subType: reason,
+                    note
+                });
+
+                if (res.data.success) {
+                    toast.success("ทำรายการสำเร็จ");
+                    setAmount("");
+                    setReason("");
+                    setNote("");
+                    searchUser();
+                }
+            } catch (error) {
+                console.error("Transaction error:", error);
+                toast.error("เกิดข้อผิดพลาด");
+            } finally {
+                setLoading(false);
+                setIsConfirmOpen(false);
             }
-        } catch (error) {
-            console.error("Transaction error:", error);
-            toast.error("เกิดข้อผิดพลาด");
-        } finally {
-            setLoading(false);
-        }
+        });
+        setIsConfirmOpen(true);
     };
 
     // Reset reason when switching tabs
@@ -260,6 +286,46 @@ export default function ManualPage() {
                     </div>
                 </div>
             </div>
+            {/* Confirmation Modal */}
+            {isConfirmOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                            <h3 className="text-lg font-bold text-slate-800">{confirmTitle}</h3>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 text-slate-600">
+                            {confirmMessage}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                            <button
+                                onClick={() => setIsConfirmOpen(false)}
+                                disabled={loading}
+                                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-200 bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={() => confirmAction && confirmAction()}
+                                disabled={loading}
+                                className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center justify-center gap-2 min-w-[100px] ${reason === "withdraw" ? "bg-amber-500 hover:bg-amber-600" :
+                                        activeTab === 'deposit' ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"
+                                    } disabled:opacity-50`}
+                            >
+                                {loading ? (
+                                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    'ยืนยันทำรายการ'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

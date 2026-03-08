@@ -114,9 +114,14 @@ router.post('/', async (req: Request, res: Response) => {
         const senderName = decoded.sender_name || decoded.personal_message || '';
         const amountSatang = Number(decoded.amount || 0);
         const amountBaht = amountSatang / 100; // TrueWallet ส่งเป็นสตางค์
-        const receivedTime = decoded.received_time
-            ? new Date(Number(decoded.received_time))
-            : new Date();
+        let parsedDate = new Date();
+        if (decoded.received_time) {
+            const timeStr = String(decoded.received_time);
+            const isNumeric = /^\d+$/.test(timeStr);
+            parsedDate = isNumeric ? new Date(Number(timeStr)) : new Date(timeStr);
+            if (isNaN(parsedDate.getTime())) parsedDate = new Date();
+        }
+        const receivedTime = parsedDate;
         const transactionId = decoded.transaction_id || decoded.report_id || `TW_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
         if (amountBaht <= 0) {

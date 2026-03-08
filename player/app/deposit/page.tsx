@@ -56,6 +56,7 @@ export default function DepositPage() {
     const [qrData, setQrData] = useState<any>(null);
     const [generatingQr, setGeneratingQr] = useState(false);
     const [features, setFeatures] = useState<any>({});
+    const [config, setConfig] = useState<any>({});
     const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
     const [withdrawAmount, setWithdrawAmount] = useState<string>("");
     const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
@@ -97,6 +98,9 @@ export default function DepositPage() {
         try {
             const res = await fetch(`${API_URL}/public/settings`);
             const data = await res.json();
+            if (data.settings) {
+                setConfig(data.settings);
+            }
             if (data.features) {
                 setFeatures(data.features);
                 if (data.features.deposit === false && activeTab === 'deposit') {
@@ -368,20 +372,23 @@ export default function DepositPage() {
                             {selectedBank.bankName}
                         </h3>
 
-                        {Number(selectedBank.minDeposit) > 0 && (
-                            <div style={{
-                                background: "rgba(239, 68, 68, 0.1)",
-                                border: "1px solid rgba(239, 68, 68, 0.2)",
-                                borderRadius: "10px",
-                                padding: "10px",
-                                marginBottom: "16px",
-                                color: "#EF4444",
-                                fontSize: "14px",
-                                fontWeight: 700
-                            }}>
-                                ⚠️ ฝากขั้นต่ำ {selectedBank.minDeposit} บาท
-                            </div>
-                        )}
+                        <div style={{
+                            background: "rgba(34, 197, 94, 0.1)",
+                            border: "1px solid rgba(34, 197, 94, 0.2)",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            marginBottom: "16px",
+                            textAlign: "center"
+                        }}>
+                            <p style={{ color: "#22C55E", fontSize: "14px", fontWeight: 700, marginBottom: "4px" }}>
+                                ⚡ เข้าอัตโนมัติ 1-3 นาที
+                            </p>
+                            {Number(selectedBank.minDeposit) > 0 && (
+                                <p style={{ color: "#EF4444", fontSize: "13px", fontWeight: 600 }}>
+                                    ⚠️ ฝากขั้นต่ำ {selectedBank.minDeposit} บาท
+                                </p>
+                            )}
+                        </div>
 
                         <div style={{
                             background: "rgba(255,255,255,0.05)",
@@ -546,6 +553,16 @@ export default function DepositPage() {
                             }}>
                                 {!qrData ? (
                                     <>
+                                        <div style={{ marginBottom: "16px" }}>
+                                            <p style={{ color: "#22C55E", fontSize: "14px", fontWeight: 700, marginBottom: "4px" }}>
+                                                ⚡ เข้าอัตโนมัติ 1-3 นาที
+                                            </p>
+                                            {selectedBank && Number(selectedBank.minDeposit) > 0 && (
+                                                <p style={{ color: "#EF4444", fontSize: "13px", fontWeight: 600 }}>
+                                                    ⚠️ ฝากขั้นต่ำ {selectedBank.minDeposit} บาท
+                                                </p>
+                                            )}
+                                        </div>
                                         <p style={{ fontSize: "14px", color: "#8B949E", marginBottom: "12px" }}>ระบุจำนวนเงินที่ต้องการฝาก</p>
                                         <input
                                             type="number"
@@ -664,7 +681,12 @@ export default function DepositPage() {
                         </div>
 
                         <div style={{ marginBottom: "16px" }}>
-                            <label style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "10px" }}>จำนวนเงิน</label>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                                <label style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>จำนวนเงิน</label>
+                                {Number(config?.minWithdraw) > 0 && (
+                                    <span style={{ fontSize: "12px", color: "#EF4444", fontWeight: 700 }}>ถอนขั้นต่ำ {config.minWithdraw} บาท</span>
+                                )}
+                            </div>
                             <input
                                 type="number"
                                 placeholder="0.00"

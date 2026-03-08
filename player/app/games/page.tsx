@@ -65,9 +65,9 @@ const Sidebar = ({ title, items, active, setActive }: any) => (
 const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: any) => {
     const displayProviders = (category?.providers && category.providers.length > 0)
         ? category.providers
-        : (globalProviders || []);
+        : (globalProviders || []).filter((p: any) => p.categoryId === category?.id);
 
-    const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "PG Soft";
+    const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "";
     const [activeProvider, setActiveProvider] = useState(firstProviderName);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -136,7 +136,7 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
                     <div className="min-w-0 flex-1">
                         <h2 className="text-sm md:text-xl font-bold text-white flex items-center gap-1 md:gap-2 font-sans">
                             <Gamepad2 className="text-yellow-400 w-4 h-4 md:w-6 md:h-6 flex-shrink-0" />
-                            <span className="truncate">{activeProvider}</span>
+                            <span className="truncate">{activeProvider || 'ไม่มีค่ายเกม'}</span>
                             {isLobbyProvider && <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-[10px] md:text-xs flex-shrink-0">LOBBY</span>}
                         </h2>
                         <p className="text-[10px] md:text-xs text-slate-400 mt-0.5 md:mt-1 font-sans">
@@ -202,8 +202,8 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
 const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: any) => {
     const displayProviders = (category?.providers && category.providers.length > 0)
         ? category.providers
-        : (globalProviders || []);
-    const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "SA Gaming";
+        : (globalProviders || []).filter((p: any) => p.categoryId === category?.id);
+    const firstProviderName = displayProviders.length > 0 ? displayProviders[0].name : "";
     const [activeProvider, setActiveProvider] = useState(firstProviderName);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -255,7 +255,7 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
                     <div>
                         <h2 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
                             <Dices className="text-yellow-400" />
-                            เกม: <span className="text-green-400">{activeProvider}</span>
+                            เกม: <span className="text-green-400">{activeProvider || 'ไม่มีค่ายเกม'}</span>
                             {isLobbyProvider && <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-[10px] md:text-xs flex-shrink-0">LOBBY</span>}
                         </h2>
                         <p className="text-xs text-slate-400 mt-1 font-sans">
@@ -265,15 +265,17 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
                 </div>
 
                 {/* Casino Hero Banner */}
-                <div className="bg-gradient-to-r from-blue-900 via-blue-950 to-slate-900 rounded-xl p-6 mb-6 border border-blue-800/50 relative overflow-hidden shadow-xl">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-20 rounded-full blur-3xl translate-x-10 -translate-y-10"></div>
-                    <div className="relative z-10">
-                        <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2 font-sans">
-                            {activeProvider} Live <span className="px-2 py-0.5 bg-red-600 text-[10px] rounded text-white animate-pulse shadow-lg shadow-red-600/40 font-sans">LIVE</span>
-                        </h2>
-                        <p className="text-blue-200 text-sm max-w-lg font-light font-sans">สัมผัสประสบการณ์คาสิโนสดจาก {activeProvider} ส่งตรงจากต่างประเทศ</p>
+                {activeProvider && (
+                    <div className="bg-gradient-to-r from-blue-900 via-blue-950 to-slate-900 rounded-xl p-6 mb-6 border border-blue-800/50 relative overflow-hidden shadow-xl">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-20 rounded-full blur-3xl translate-x-10 -translate-y-10"></div>
+                        <div className="relative z-10">
+                            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2 font-sans">
+                                {activeProvider} Live <span className="px-2 py-0.5 bg-red-600 text-[10px] rounded text-white animate-pulse shadow-lg shadow-red-600/40 font-sans">LIVE</span>
+                            </h2>
+                            <p className="text-blue-200 text-sm max-w-lg font-light font-sans">สัมผัสประสบการณ์คาสิโนสดจาก {activeProvider} ส่งตรงจากต่างประเทศ</p>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {isLobbyProvider ? (
                     <div className="flex justify-center items-center min-h-[300px]">

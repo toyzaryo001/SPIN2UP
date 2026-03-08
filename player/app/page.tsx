@@ -148,9 +148,8 @@ const TopBanner = ({ banners }: { banners: any[] }) => {
               <img
                 src={banner.image || "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&h=400&auto=format&fit=crop"}
                 alt={banner.title || "Main Banner"}
-                className="w-full h-full object-fill md:object-cover"
+                className="w-full h-full object-fill"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
             </div>
           ))}
         </div>

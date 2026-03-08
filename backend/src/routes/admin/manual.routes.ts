@@ -16,9 +16,8 @@ router.post('/deposit', async (req: AuthRequest, res) => {
             return res.status(400).json({ success: false, message: 'ข้อมูลไม่ถูกต้อง' });
         }
 
-        // Dynamic permission check based on subType
         const isBonus = subType === 'bonus';
-        const requiredPermission = isBonus ? 'add_bonus' : 'add_credit';
+        const requiredPermission = 'deposit'; // Both credit and bonus fall under manual deposit on frontend
 
         // Check permission manually
         const admin = await prisma.admin.findUnique({
@@ -171,8 +170,8 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
     }
 });
 
-// POST /api/admin/manual/approve-withdrawal - อนุมัติถอน (ต้องมีสิทธิ์ approve_withdraw)
-router.post('/approve-withdrawal', requirePermission('manual', 'withdraw', 'manage'), async (req: AuthRequest, res) => {
+// POST /api/admin/manual/approve-withdrawal - อนุมัติถอน (ต้องมีสิทธิ์ withdrawals.manage)
+router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { transactionId, mode, gatewayCode } = req.body;
         // mode: 'manual' (default) | 'auto'
@@ -255,8 +254,8 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdraw', 'mana
     }
 });
 
-// POST /api/admin/manual/reject-withdrawal - ปฏิเสธถอน (ต้องมีสิทธิ์ reject_withdraw)
-router.post('/reject-withdrawal', requirePermission('manual', 'withdraw', 'manage'), async (req: AuthRequest, res) => {
+// POST /api/admin/manual/reject-withdrawal - ปฏิเสธถอน (ต้องมีสิทธิ์ withdrawals.manage)
+router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { transactionId, note, refund } = req.body;
         // refund: boolean (default true usually, but frontend should send explicit)

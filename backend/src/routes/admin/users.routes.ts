@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import prisma from '../../lib/db.js';
-import { AuthRequest, requirePermission } from '../../middlewares/auth.middleware.js';
+import { AuthRequest, requirePermission, adminMiddleware } from '../../middlewares/auth.middleware.js';
 import { BetflixService } from '../../services/betflix.service.js';
 
 const router = Router();
@@ -232,9 +232,9 @@ router.post('/', requirePermission('members', 'register', 'manage'), async (req:
 });
 
 // PUT /api/admin/users/:id
-router.put('/:id', requirePermission('members', 'list', 'manage'), async (req: AuthRequest, res) => {
+router.put('/:id', adminMiddleware, async (req: AuthRequest, res) => {
     try {
-        const { fullName, phone, bankName, bankAccount, status, lineId } = req.body;
+        const { fullName, phone, bankName, bankAccount, status, lineId, password } = req.body;
         const userId = Number(req.params.id);
 
         const oldUser = await prisma.user.findUnique({ where: { id: userId } });
@@ -242,33 +242,67 @@ router.put('/:id', requirePermission('members', 'list', 'manage'), async (req: A
             return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
         }
 
+        // --- Permission Checking ---
+        const admin = await prisma.admin.findUnique({ where: { id: req.user!.userId }, include: { role: true } });
+        let permissions: any = {};
+        if (admin?.role?.permissions) {
+            try { permissions = JSON.parse(admin.role.permissions); } catch (e) { }
+        }
+        const hasPerm = (action: string) => {
+            if (admin?.isSuperAdmin || req.user!.role === 'SUPER_ADMIN') return true;
+            return !!permissions?.members?.[action]?.manage;
+        };
+        // ---------------------------
+
         const updateData: any = {};
         const changes: any[] = [];
 
         // Track changes for all editable fields
         if (fullName !== undefined && fullName !== oldUser.fullName) {
+            if (!hasPerm('edit_general')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขข้อมูลทั่วไป' });
             updateData.fullName = fullName;
             changes.push({ field: 'fullName', oldValue: oldUser.fullName, newValue: fullName });
         }
         if (phone !== undefined && phone !== oldUser.phone) {
+            if (!hasPerm('edit_general')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขข้อมูลทั่วไป' });
             updateData.phone = phone;
             changes.push({ field: 'phone', oldValue: oldUser.phone, newValue: phone });
         }
+        if (lineId !== undefined && lineId !== oldUser.lineId) {
+            if (!hasPerm('edit_general')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขข้อมูลทั่วไป' });
+            updateData.lineId = lineId;
+            changes.push({ field: 'lineId', oldValue: oldUser.lineId, newValue: lineId });
+        }
         if (bankName !== undefined && bankName !== oldUser.bankName) {
+            if (!hasPerm('edit_bank')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขข้อมูลธนาคาร' });
             updateData.bankName = bankName;
             changes.push({ field: 'bankName', oldValue: oldUser.bankName, newValue: bankName });
         }
         if (bankAccount !== undefined && bankAccount !== oldUser.bankAccount) {
+            if (!hasPerm('edit_bank')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขข้อมูลธนาคาร' });
             updateData.bankAccount = bankAccount;
             changes.push({ field: 'bankAccount', oldValue: oldUser.bankAccount, newValue: bankAccount });
         }
-        if (lineId !== undefined && lineId !== oldUser.lineId) {
-            updateData.lineId = lineId;
-            changes.push({ field: 'lineId', oldValue: oldUser.lineId, newValue: lineId });
-        }
         if (status !== undefined && status !== oldUser.status) {
+            if (!hasPerm('change_status')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แบนหรือเปิดใช้งานบัญชี' });
             updateData.status = status;
             changes.push({ field: 'status', oldValue: oldUser.status, newValue: status });
+        }
+        if (password && password.trim() !== '') {
+            if (!hasPerm('edit_password')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์เปลี่ยนรหัสผ่าน' });
+            const hashedPassword = await bcrypt.hash(password, 10);
+            updateData.password = hashedPassword;
+            changes.push({ field: 'password', oldValue: '***', newValue: '***' });
+
+            // Sync password to Betflix (if external board exists)
+            if (oldUser.betflixUsername) {
+                try {
+                    await BetflixService.changePassword(oldUser.betflixUsername, password);
+                    updateData.betflixPassword = password;
+                } catch (err) {
+                    console.error('Failed to sync password to Betflix:', err);
+                }
+            }
         }
 
         // If no changes, still return success
@@ -350,7 +384,20 @@ router.get('/:id/debug-delete', requirePermission('members', 'list', 'manage'), 
 });
 
 // DELETE /api/admin/users/:id - ลบสมาชิก (ต้องมีสิทธิ์ลบ)
-router.delete('/:id', requirePermission('members', 'list', 'manage'), async (req: AuthRequest, res) => {
+router.delete('/:id', adminMiddleware, async (req: AuthRequest, res) => {
+    // Check permission
+    const admin = await prisma.admin.findUnique({ where: { id: req.user!.userId }, include: { role: true } });
+    let permissions: any = {};
+    if (admin?.role?.permissions) {
+        try { permissions = JSON.parse(admin.role.permissions); } catch (e) { }
+    }
+    const hasPerm = (action: string) => {
+        if (admin?.isSuperAdmin || req.user!.role === 'SUPER_ADMIN') return true;
+        return !!permissions?.members?.[action]?.manage;
+    };
+
+    if (!hasPerm('delete')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์ลบสมาชิก' });
+
     const userId = Number(req.params.id);
 
     try {

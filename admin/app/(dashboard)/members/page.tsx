@@ -120,6 +120,17 @@ export default function MembersPage() {
     });
     const [isSaving, setIsSaving] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['members']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     const fetchUsers = async () => {
         try {
             setLoading(true);
@@ -134,6 +145,19 @@ export default function MembersPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -402,7 +426,7 @@ export default function MembersPage() {
                                                 <button onClick={() => openHistoryModal(user)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="ประวัติ">
                                                     <History size={18} />
                                                 </button>
-                                                <button onClick={() => openDeleteModal(user)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="ลบสมาชิก">
+                                                <button onClick={() => openDeleteModal(user)} disabled={!hasPerm('delete')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed" title="ลบสมาชิก">
                                                     <Trash2 size={18} />
                                                 </button>
                                             </div>
@@ -463,7 +487,8 @@ export default function MembersPage() {
                                     type="text"
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    disabled={editingUser ? !hasPerm('edit_general') : false}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     placeholder="0812345678"
                                 />
                                 {!editingUser && (
@@ -476,7 +501,8 @@ export default function MembersPage() {
                                     type="text"
                                     value={formData.fullName}
                                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    disabled={editingUser ? !hasPerm('edit_general') : false}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                 />
                             </div>
                             <div>
@@ -487,7 +513,8 @@ export default function MembersPage() {
                                     type="password"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    disabled={editingUser ? !hasPerm('edit_password') : false}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -496,7 +523,8 @@ export default function MembersPage() {
                                     <select
                                         value={formData.bankName}
                                         onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                        disabled={editingUser ? !hasPerm('edit_bank') : false}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     >
                                         <option value="">-- เลือกธนาคาร --</option>
                                         <option value="KBANK">กสิกรไทย</option>
@@ -525,7 +553,8 @@ export default function MembersPage() {
                                         type="text"
                                         value={formData.bankAccount}
                                         onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                        disabled={editingUser ? !hasPerm('edit_bank') : false}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     />
                                 </div>
                             </div>
@@ -535,7 +564,8 @@ export default function MembersPage() {
                                     type="text"
                                     value={formData.lineId}
                                     onChange={(e) => setFormData({ ...formData, lineId: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    disabled={editingUser ? !hasPerm('edit_general') : false}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                 />
                             </div>
 
@@ -561,9 +591,10 @@ export default function MembersPage() {
                                         </div>
                                         <button
                                             onClick={handleToggleStatus}
+                                            disabled={!hasPerm('change_status')}
                                             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${editingUser.status === 'ACTIVE'
-                                                ? 'bg-red-500 hover:bg-red-600 text-white'
-                                                : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                                ? 'bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                                                : 'bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-50 disabled:cursor-not-allowed'
                                                 }`}
                                         >
                                             {editingUser.status === 'ACTIVE' ? 'ระงับบัญชี' : 'เปิดใช้งาน'}

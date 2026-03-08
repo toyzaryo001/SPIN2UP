@@ -20,6 +20,11 @@ const PERMISSION_MATRIX = [
         features: [
             { key: 'list', label: 'รายการสมาชิก' },
             { key: 'register', label: 'สมัครสมาชิก' },
+            { key: 'edit_general', label: 'แก้ไขข้อมูลทั่วไป' },
+            { key: 'edit_bank', label: 'แก้ไขข้อมูลธนาคาร' },
+            { key: 'edit_password', label: 'แก้ไขรหัสผ่าน' },
+            { key: 'change_status', label: 'แบนกระเป๋า/เปิดบัญชี' },
+            { key: 'delete', label: 'ลบสมาชิก' },
             { key: 'history', label: 'ประวัติแก้ไข' },
         ]
     },

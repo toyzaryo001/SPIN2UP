@@ -14,15 +14,23 @@ router.post('/', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: 'ไม่พบรูปภาพ' });
         }
 
+        // Determine transformation based on folder
+        let transformation: any[] = [
+            { quality: 'auto:good' },
+            { fetch_format: 'auto' }
+        ];
+
+        // If it's a profile/logo that needs to be square, keep the 200x200 crop.
+        // Banners & Announcements should keep their original aspect ratio.
+        if (!['banners', 'announcements'].includes(folder)) {
+            transformation.unshift({ width: 200, height: 200, crop: 'fill' });
+        }
+
         // Upload to Cloudinary
         const result = await cloudinary.uploader.upload(image, {
             folder: folder,
             resource_type: 'image',
-            transformation: [
-                { width: 200, height: 200, crop: 'fill' },
-                { quality: 'auto:good' },
-                { fetch_format: 'auto' }
-            ]
+            transformation: transformation
         });
 
         res.json({

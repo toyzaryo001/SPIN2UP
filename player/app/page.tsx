@@ -144,11 +144,11 @@ const TopBanner = ({ banners }: { banners: any[] }) => {
       <div className="aspect-[3/1] w-full relative">
         <div className="flex transition-transform duration-700 ease-out h-full" style={{ transform: `translateX(-${current * 100}%)` }}>
           {displayBanners.map((banner, idx) => (
-            <div key={idx} className="min-w-full h-full relative">
+            <div key={idx} className="min-w-full h-full relative cursor-pointer" onClick={() => banner.link && window.open(banner.link, '_blank')}>
               <img
                 src={banner.image || "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&h=400&auto=format&fit=crop"}
                 alt={banner.title || "Main Banner"}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-fill md:object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
             </div>

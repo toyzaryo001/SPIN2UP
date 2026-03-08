@@ -13,6 +13,7 @@ interface TrueMoneyWallet {
     jwtSecret?: string | null;
     hasSecret?: boolean;
     webhookUrl?: string;
+    minDeposit?: number;
 }
 
 export default function TrueMoneyPage() {
@@ -23,7 +24,7 @@ export default function TrueMoneyPage() {
     const [editingWallet, setEditingWallet] = useState<TrueMoneyWallet | null>(null);
     const [deletingWallet, setDeletingWallet] = useState<TrueMoneyWallet | null>(null);
 
-    const [formData, setFormData] = useState({ phoneNumber: "", accountName: "", isActive: true, jwtSecret: "" });
+    const [formData, setFormData] = useState({ phoneNumber: "", accountName: "", isActive: true, jwtSecret: "", minDeposit: 0 });
     const [isSaving, setIsSaving] = useState(false);
     const [showSecret, setShowSecret] = useState(false);
 
@@ -45,10 +46,10 @@ export default function TrueMoneyPage() {
     const openModal = (wallet?: TrueMoneyWallet) => {
         if (wallet) {
             setEditingWallet(wallet);
-            setFormData({ phoneNumber: wallet.phoneNumber, accountName: wallet.accountName, isActive: wallet.isActive, jwtSecret: "" });
+            setFormData({ phoneNumber: wallet.phoneNumber, accountName: wallet.accountName, isActive: wallet.isActive, jwtSecret: "", minDeposit: wallet.minDeposit || 0 });
         } else {
             setEditingWallet(null);
-            setFormData({ phoneNumber: "", accountName: "", isActive: true, jwtSecret: "" });
+            setFormData({ phoneNumber: "", accountName: "", isActive: true, jwtSecret: "", minDeposit: 0 });
         }
         setShowSecret(false);
         setIsModalOpen(true);
@@ -239,6 +240,10 @@ export default function TrueMoneyPage() {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อบัญชี *</label>
                                 <input type="text" value={formData.accountName} onChange={(e) => setFormData({ ...formData, accountName: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">ฝากขั้นต่ำ</label>
+                                <input type="number" min="0" step="0.01" value={formData.minDeposit} onChange={(e) => setFormData({ ...formData, minDeposit: Number(e.target.value) })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
                             </div>
                             {editingWallet ? (
                                 <div>

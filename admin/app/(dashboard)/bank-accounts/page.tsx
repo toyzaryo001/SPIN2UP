@@ -21,7 +21,7 @@ export default function BankAccountsPage() {
         accountName: "",
         accountNumber: "",
         type: "deposit", // deposit, withdraw
-        balance: 0,
+        minDeposit: 0,
     });
 
     useEffect(() => {
@@ -45,10 +45,9 @@ export default function BankAccountsPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            // Ensure balance is a number
             const submissionData = {
                 ...formData,
-                balance: Number(formData.balance)
+                minDeposit: Number(formData.minDeposit)
             };
 
             if (editingBank) {
@@ -58,7 +57,7 @@ export default function BankAccountsPage() {
             }
             setIsModalOpen(false);
             setEditingBank(null);
-            setFormData({ bankName: "", accountName: "", accountNumber: "", type: "deposit", balance: 0 });
+            setFormData({ bankName: "", accountName: "", accountNumber: "", type: "deposit", minDeposit: 0 });
             fetchBanks();
             toast.success(editingBank ? "แก้ไขข้อมูลสำเร็จ" : "เพิ่มบัญชีสำเร็จ");
         } catch (error) {
@@ -101,7 +100,7 @@ export default function BankAccountsPage() {
             accountName: bank.accountName,
             accountNumber: bank.accountNumber,
             type: bank.type,
-            balance: bank.balance || 0,
+            minDeposit: bank.minDeposit || 0,
         });
         setIsModalOpen(true);
     };
@@ -136,7 +135,7 @@ export default function BankAccountsPage() {
                 <button
                     onClick={() => {
                         setEditingBank(null);
-                        setFormData({ bankName: "", accountName: "", accountNumber: "", type: "deposit", balance: 0 });
+                        setFormData({ bankName: "", accountName: "", accountNumber: "", type: "deposit", minDeposit: 0 });
                         setIsModalOpen(true);
                     }}
                     className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
@@ -329,14 +328,14 @@ export default function BankAccountsPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">ยอดเงินเริ่มต้น</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">ฝากขั้นต่ำ</label>
                                     <input
                                         type="number"
                                         min="0"
                                         step="0.01"
                                         className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900"
-                                        value={formData.balance}
-                                        onChange={(e) => setFormData({ ...formData, balance: Number(e.target.value) })}
+                                        value={formData.minDeposit}
+                                        onChange={(e) => setFormData({ ...formData, minDeposit: Number(e.target.value) })}
                                     />
                                 </div>
                             </div>

@@ -63,7 +63,7 @@ router.get('/banks', requirePermission('settings', 'banks', 'view'), async (req,
 // POST /api/admin/settings/banks (ต้องมีสิทธิ์แก้ไข)
 router.post('/banks', requirePermission('settings', 'banks', 'manage'), async (req, res) => {
     try {
-        const { bankName, accountNumber, accountName, type, balance } = req.body;
+        const { bankName, accountNumber, accountName, type, minDeposit } = req.body;
 
         const bank = await prisma.bankAccount.create({
             data: {
@@ -71,7 +71,7 @@ router.post('/banks', requirePermission('settings', 'banks', 'manage'), async (r
                 accountNumber,
                 accountName,
                 type: type || 'deposit',
-                balance: balance || 0
+                minDeposit: minDeposit || 0
             },
         });
 
@@ -85,11 +85,11 @@ router.post('/banks', requirePermission('settings', 'banks', 'manage'), async (r
 // PUT /api/admin/settings/banks/:id (ต้องมีสิทธิ์ settings.banks)
 router.put('/banks/:id', requirePermission('settings', 'banks', 'manage'), async (req, res) => {
     try {
-        const { bankName, accountNumber, accountName, type, isActive, balance } = req.body;
+        const { bankName, accountNumber, accountName, type, isActive, minDeposit } = req.body;
 
         const bank = await prisma.bankAccount.update({
             where: { id: Number(req.params.id) },
-            data: { bankName, accountNumber, accountName, type, isActive, balance },
+            data: { bankName, accountNumber, accountName, type, isActive, minDeposit: minDeposit !== undefined ? minDeposit : 0 },
         });
 
         res.json({ success: true, data: bank });
@@ -236,10 +236,10 @@ router.get('/truemoney', requirePermission('settings', 'truemoney', 'view'), asy
 // POST /api/admin/settings/truemoney (ต้องมีสิทธิ์ settings.truemoney)
 router.post('/truemoney', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
-        const { phoneNumber, accountName, jwtSecret, isActive } = req.body;
+        const { phoneNumber, accountName, jwtSecret, isActive, minDeposit } = req.body;
 
         const wallet = await prisma.trueMoneyWallet.create({
-            data: { phoneNumber, accountName, jwtSecret: jwtSecret || null, isActive: isActive ?? true },
+            data: { phoneNumber, accountName, jwtSecret: jwtSecret || null, isActive: isActive ?? true, minDeposit: minDeposit || 0 },
         });
 
         res.status(201).json({ success: true, data: wallet });
@@ -252,12 +252,13 @@ router.post('/truemoney', requirePermission('settings', 'truemoney', 'manage'), 
 // PUT /api/admin/settings/truemoney/:id (ต้องมีสิทธิ์ settings.truemoney)
 router.put('/truemoney/:id', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
-        const { phoneNumber, accountName, jwtSecret, isActive } = req.body;
+        const { phoneNumber, accountName, jwtSecret, isActive, minDeposit } = req.body;
         const updateData: any = {};
         if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
         if (accountName !== undefined) updateData.accountName = accountName;
         if (jwtSecret !== undefined) updateData.jwtSecret = jwtSecret || null;
         if (isActive !== undefined) updateData.isActive = isActive;
+        if (minDeposit !== undefined) updateData.minDeposit = minDeposit;
 
         const wallet = await prisma.trueMoneyWallet.update({
             where: { id: Number(req.params.id) },

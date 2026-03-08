@@ -22,6 +22,7 @@ interface BankAccount {
     accountName: string;
     type: string;
     isActive: boolean;
+    minDeposit?: number;
 }
 
 export default function DepositPage() {
@@ -131,7 +132,8 @@ export default function DepositPage() {
                     accountNumber: tm.phoneNumber || tm.phone,
                     accountName: tm.accountName || tm.name,
                     type: 'truemoney', // Distinct type
-                    isActive: tm.isActive
+                    isActive: tm.isActive,
+                    minDeposit: tm.minDeposit || 0
                 }));
                 allAccounts = [...allAccounts, ...mappedTm];
             }
@@ -365,6 +367,21 @@ export default function DepositPage() {
                         <h3 style={{ fontWeight: 700, fontSize: "18px", color: "#FFD700", marginBottom: "16px" }}>
                             {selectedBank.bankName}
                         </h3>
+
+                        {Number(selectedBank.minDeposit) > 0 && (
+                            <div style={{
+                                background: "rgba(239, 68, 68, 0.1)",
+                                border: "1px solid rgba(239, 68, 68, 0.2)",
+                                borderRadius: "10px",
+                                padding: "10px",
+                                marginBottom: "16px",
+                                color: "#EF4444",
+                                fontSize: "14px",
+                                fontWeight: 700
+                            }}>
+                                ⚠️ ฝากขั้นต่ำ {selectedBank.minDeposit} บาท
+                            </div>
+                        )}
 
                         <div style={{
                             background: "rgba(255,255,255,0.05)",

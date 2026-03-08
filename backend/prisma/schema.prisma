@@ -240,6 +240,7 @@ model BankAccount {
   accountName   String
   type          String
   balance       Decimal  @default(0)
+  minDeposit    Decimal  @default(0)
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -249,6 +250,7 @@ model TrueMoneyWallet {
   id          Int      @id @default(autoincrement())
   phoneNumber String
   accountName String
+  minDeposit  Decimal  @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

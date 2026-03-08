@@ -58,13 +58,13 @@ function SortableRow({ cat, toggle, openModal, confirmDelete, isImageIcon }: {
                 <span className="px-2 py-1 bg-slate-100 rounded text-xs">{cat._count.providers} ค่าย</span>
             </td>
             <td className="px-6 py-4 text-center">
-                <button onClick={() => toggle(cat.id, cat.isActive)}>
+                <button onClick={() => toggle(cat.id, cat.isActive)} disabled={!cat.id} className="disabled:opacity-50">
                     {cat.isActive ? <ToggleRight size={24} className="text-emerald-500" /> : <ToggleLeft size={24} className="text-slate-300" />}
                 </button>
             </td>
             <td className="px-6 py-4 text-center">
-                <button onClick={() => openModal(cat)} className="p-2 hover:bg-slate-100 rounded"><Edit size={16} /></button>
-                <button onClick={() => confirmDelete(cat)} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
+                <button onClick={() => openModal(cat)} className="p-2 hover:bg-slate-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"><Edit size={16} /></button>
+                <button onClick={() => confirmDelete(cat)} className="p-2 hover:bg-red-50 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
             </td>
         </tr>
     );
@@ -85,7 +85,30 @@ export default function CategoriesPage() {
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    useEffect(() => { fetchData(); }, []);
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['agents'];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
+        fetchData();
+    }, []);
 
     const fetchData = async () => {
         try {
@@ -240,7 +263,7 @@ export default function CategoriesPage() {
                         <p className="text-sm text-slate-500">ลากเพื่อจัดลำดับ</p>
                     </div>
                 </div>
-                <button onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800">
+                <button disabled={!hasPerm('agents')} onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus size={18} /> เพิ่มหมวดหมู่
                 </button>
             </div>
@@ -269,9 +292,9 @@ export default function CategoriesPage() {
                                         <SortableRow
                                             key={cat.id}
                                             cat={cat}
-                                            toggle={toggle}
-                                            openModal={openModal}
-                                            confirmDelete={confirmDelete}
+                                            toggle={hasPerm('agents') ? toggle : () => { }}
+                                            openModal={hasPerm('agents') ? openModal : () => { }}
+                                            confirmDelete={hasPerm('agents') ? confirmDelete : () => { }}
                                             isImageIcon={isImageIcon}
                                         />
                                     ))

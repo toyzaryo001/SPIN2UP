@@ -33,7 +33,28 @@ export default function PendingWithdrawalsPage() {
     const [rejectReason, setRejectReason] = useState("");
     const [rejectRefund, setRejectRefund] = useState(true);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['manual']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchWithdrawals();
     }, []);
 
@@ -197,13 +218,15 @@ export default function PendingWithdrawalsPage() {
                                         <div className="flex items-center justify-center gap-2">
                                             <button
                                                 onClick={() => openApproveModal(w)}
-                                                className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 flex items-center gap-1"
+                                                disabled={!hasPerm('withdrawals')}
+                                                className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <Check size={14} /> อนุมัติ
                                             </button>
                                             <button
                                                 onClick={() => openRejectModal(w)}
-                                                className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 flex items-center gap-1"
+                                                disabled={!hasPerm('withdrawals')}
+                                                className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <X size={14} /> ปฏิเสธ
                                             </button>

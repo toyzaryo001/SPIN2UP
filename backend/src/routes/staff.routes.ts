@@ -8,20 +8,20 @@ import {
 
 const router = Router();
 
-// Staff (ต้องมีสิทธิ์ staff)
-router.get('/users', authMiddleware, adminMiddleware, requirePermission('staff', 'view'), getStaffList);
-router.post('/users', authMiddleware, adminMiddleware, requirePermission('staff', 'edit'), createStaff);
-router.put('/users/:id', authMiddleware, adminMiddleware, requirePermission('staff', 'edit'), updateStaff);
-router.delete('/users/:id', authMiddleware, adminMiddleware, requirePermission('staff', 'delete'), deleteStaff);
+// Staff (ต้องมีสิทธิ์ staff.admins)
+router.get('/users', authMiddleware, adminMiddleware, requirePermission('staff', 'admins', 'view'), getStaffList);
+router.post('/users', authMiddleware, adminMiddleware, requirePermission('staff', 'admins', 'manage'), createStaff);
+router.put('/users/:id', authMiddleware, adminMiddleware, requirePermission('staff', 'admins', 'manage'), updateStaff);
+router.delete('/users/:id', authMiddleware, adminMiddleware, requirePermission('staff', 'admins', 'manage'), deleteStaff);
 
-// Roles (ต้องมีสิทธิ์ staff.manage_roles)
-router.get('/roles', authMiddleware, adminMiddleware, requirePermission('staff', 'view'), getRoles);
-router.post('/roles', authMiddleware, adminMiddleware, requirePermission('staff', 'manage_roles'), createRole);
-router.put('/roles/:id', authMiddleware, adminMiddleware, requirePermission('staff', 'manage_roles'), updateRole);
-router.delete('/roles/:id', authMiddleware, adminMiddleware, requirePermission('staff', 'manage_roles'), deleteRole);
+// Roles (ต้องมีสิทธิ์ staff.roles)
+router.get('/roles', authMiddleware, adminMiddleware, requirePermission('staff', 'roles', 'view'), getRoles);
+router.post('/roles', authMiddleware, adminMiddleware, requirePermission('staff', 'roles', 'manage'), createRole);
+router.put('/roles/:id', authMiddleware, adminMiddleware, requirePermission('staff', 'roles', 'manage'), updateRole);
+router.delete('/roles/:id', authMiddleware, adminMiddleware, requirePermission('staff', 'roles', 'manage'), deleteRole);
 
 // Logs (ต้องมีสิทธิ์ staff ดู)
-router.get('/logs', authMiddleware, adminMiddleware, requirePermission('staff', 'view'), getAdminLogs);
+router.get('/logs', authMiddleware, adminMiddleware, requirePermission('staff', 'logs', 'view'), getAdminLogs);
 
 export default router;
 

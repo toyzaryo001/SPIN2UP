@@ -90,6 +90,17 @@ export default function FeaturesPage() {
     const [updating, setUpdating] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['settings']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     const fetchFeatures = async () => {
         try {
             setLoading(true);
@@ -138,6 +149,16 @@ export default function FeaturesPage() {
     };
 
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchFeatures();
     }, []);
 
@@ -180,7 +201,8 @@ export default function FeaturesPage() {
                     </button>
                     <button
                         onClick={initFeatures}
-                        className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 rounded-lg text-black font-bold text-sm transition-colors"
+                        disabled={!hasPerm('features')}
+                        className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 rounded-lg text-black font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         ซิงค์ Features
                     </button>
@@ -242,8 +264,8 @@ export default function FeaturesPage() {
                                             </div>
                                             <button
                                                 onClick={() => toggleFeature(feature.key, feature.isEnabled)}
-                                                disabled={updating === feature.key}
-                                                className={`ml-4 p-1.5 rounded-lg transition-all flex-shrink-0 ${feature.isEnabled
+                                                disabled={updating === feature.key || !hasPerm('features')}
+                                                className={`ml-4 p-1.5 rounded-lg transition-all flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${feature.isEnabled
                                                     ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                                                     : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                                                     }`}
@@ -290,8 +312,8 @@ export default function FeaturesPage() {
                                         </div>
                                         <button
                                             onClick={() => toggleFeature(feature.key, feature.isEnabled)}
-                                            disabled={updating === feature.key}
-                                            className={`ml-4 p-1.5 rounded-lg transition-all flex-shrink-0 ${feature.isEnabled
+                                            disabled={updating === feature.key || !hasPerm('features')}
+                                            className={`ml-4 p-1.5 rounded-lg transition-all flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${feature.isEnabled
                                                 ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                                                 : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                                                 }`}

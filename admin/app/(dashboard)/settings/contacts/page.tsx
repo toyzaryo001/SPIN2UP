@@ -39,7 +39,28 @@ export default function ContactsPage() {
         url: "",
     });
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['settings']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchContacts();
     }, []);
 
@@ -148,7 +169,8 @@ export default function ContactsPage() {
                         setFormData({ type: "LINE", name: "", url: "" });
                         setIsModalOpen(true);
                     }}
-                    className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 transition-colors"
+                    disabled={!hasPerm('contacts')}
+                    className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Plus size={20} />
                     เพิ่มช่องทาง
@@ -181,7 +203,8 @@ export default function ContactsPage() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => toggleActive(contact)}
-                                            className={`p-2 rounded-lg transition-colors ${contact.isActive
+                                            disabled={!hasPerm('contacts')}
+                                            className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${contact.isActive
                                                 ? "bg-emerald-100 text-emerald-600"
                                                 : "bg-slate-100 text-slate-400"
                                                 }`}
@@ -197,7 +220,8 @@ export default function ContactsPage() {
                                         </button>
                                         <button
                                             onClick={() => handleDelete(contact.id)}
-                                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                                            disabled={!hasPerm('contacts')}
+                                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -232,9 +256,10 @@ export default function ContactsPage() {
                                 </label>
                                 <select
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                    disabled={!hasPerm('contacts')}
                                 >
                                     {CHANNEL_TYPES.map((ch) => (
                                         <option key={ch.value} value={ch.value}>
@@ -249,9 +274,10 @@ export default function ContactsPage() {
                                 </label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    disabled={!hasPerm('contacts')}
                                     placeholder="เช่น LINE Official, Support Team"
                                 />
                             </div>
@@ -262,9 +288,10 @@ export default function ContactsPage() {
                                 <input
                                     type="url"
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={formData.url}
                                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                                    disabled={!hasPerm('contacts')}
                                     placeholder="https://..."
                                 />
                             </div>
@@ -278,7 +305,8 @@ export default function ContactsPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                                    disabled={!hasPerm('contacts')}
+                                    className="flex-1 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     บันทึก
                                 </button>

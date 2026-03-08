@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Search, Plus, Minus, ArrowRight } from "lucide-react";
@@ -30,11 +30,35 @@ export default function ManualPage() {
     const [note, setNote] = useState("");
     const [loading, setLoading] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['manual']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState<() => Promise<void>>();
     const [confirmTitle, setConfirmTitle] = useState("");
     const [confirmMessage, setConfirmMessage] = useState<React.ReactNode>("");
+
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
+    }, []);
 
     const searchUser = async () => {
         if (!userSearch) return;
@@ -224,7 +248,8 @@ export default function ManualPage() {
                             <select
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
-                                className={`w-full px-4 py-2 border border-slate-200 rounded-lg ${!reason ? 'text-slate-400' : 'text-slate-900'}`}
+                                disabled={activeTab === 'deposit' ? !hasPerm('deposit') : !hasPerm('withdraw')}
+                                className={`w-full px-4 py-2 border border-slate-200 rounded-lg disabled:bg-slate-50 disabled:text-slate-500 ${!reason ? 'text-slate-400' : 'text-slate-900'}`}
                             >
                                 <option value="">-- เลือกสาเหตุ --</option>
                                 {currentReasons.map(r => (
@@ -238,8 +263,9 @@ export default function ManualPage() {
                                 type="number"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
+                                disabled={activeTab === 'deposit' ? !hasPerm('deposit') : !hasPerm('withdraw')}
                                 placeholder="0.00"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-lg text-slate-900"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-lg text-slate-900 disabled:bg-slate-50"
                             />
                         </div>
                         <div>
@@ -248,8 +274,9 @@ export default function ManualPage() {
                                 type="text"
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
+                                disabled={activeTab === 'deposit' ? !hasPerm('deposit') : !hasPerm('withdraw')}
                                 placeholder="รายละเอียดเพิ่มเติม..."
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50"
                             />
                         </div>
 
@@ -266,12 +293,12 @@ export default function ManualPage() {
                         <div className="pt-4">
                             <button
                                 onClick={handleTransaction}
-                                disabled={!foundUser || !amount || !reason || loading}
+                                disabled={!foundUser || !amount || !reason || loading || (activeTab === 'deposit' ? !hasPerm('deposit') : !hasPerm('withdraw'))}
                                 className={`w-full py-3 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2 ${reason === "withdraw"
-                                    ? "bg-amber-500 hover:bg-amber-600"
+                                    ? "bg-amber-500 hover:bg-amber-600 cursor-pointer disabled:cursor-not-allowed"
                                     : activeTab === "deposit"
-                                        ? "bg-emerald-500 hover:bg-emerald-600"
-                                        : "bg-red-500 hover:bg-red-600"
+                                        ? "bg-emerald-500 hover:bg-emerald-600 cursor-pointer disabled:cursor-not-allowed"
+                                        : "bg-red-500 hover:bg-red-600 cursor-pointer disabled:cursor-not-allowed"
                                     }`}
                             >
                                 {reason === "withdraw" ? (
@@ -313,7 +340,7 @@ export default function ManualPage() {
                                 onClick={() => confirmAction && confirmAction()}
                                 disabled={loading}
                                 className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center justify-center gap-2 min-w-[100px] ${reason === "withdraw" ? "bg-amber-500 hover:bg-amber-600" :
-                                        activeTab === 'deposit' ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"
+                                    activeTab === 'deposit' ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"
                                     } disabled:opacity-50`}
                             >
                                 {loading ? (

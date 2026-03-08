@@ -26,7 +26,28 @@ export default function AnnouncementsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchAnnouncements();
     }, []);
 
@@ -127,7 +148,7 @@ export default function AnnouncementsPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800">จัดการประกาศ (Popup/Marquee)</h2>
                 </div>
-                <button onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800">
+                <button onClick={() => openModal()} disabled={!hasPerm('banners')} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus size={18} /> เพิ่มประกาศ
                 </button>
             </div>
@@ -175,8 +196,8 @@ export default function AnnouncementsPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <button onClick={() => openModal(ann)} className="p-2 hover:bg-slate-100 rounded text-slate-500"><Edit size={16} /></button>
-                                        <button onClick={() => { setDeletingAnn(ann); setIsDeleteModalOpen(true); }} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
+                                        <button onClick={() => openModal(ann)} disabled={!hasPerm('banners')} className="p-2 hover:bg-slate-100 rounded text-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"><Edit size={16} /></button>
+                                        <button onClick={() => { setDeletingAnn(ann); setIsDeleteModalOpen(true); }} disabled={!hasPerm('banners')} className="p-2 hover:bg-red-50 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
                                     </td>
                                 </tr>
                             ))}

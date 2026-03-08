@@ -24,6 +24,17 @@ export default function CommissionSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     const fetchSettings = async () => {
         try {
             setLoading(true);
@@ -54,6 +65,16 @@ export default function CommissionSettingsPage() {
     };
 
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchSettings();
     }, []);
 
@@ -83,8 +104,9 @@ export default function CommissionSettingsPage() {
                             type="number"
                             step="0.01"
                             value={settings.rate}
+                            disabled={!hasPerm('activities')}
                             onChange={(e) => setSettings({ ...settings, rate: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                         />
                         <p className="text-xs text-slate-400 mt-1">เช่น 0.5% ของยอดเทิร์น</p>
                     </div>
@@ -96,8 +118,9 @@ export default function CommissionSettingsPage() {
                         <input
                             type="number"
                             value={settings.minTurnover}
+                            disabled={!hasPerm('activities')}
                             onChange={(e) => setSettings({ ...settings, minTurnover: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                         />
                     </div>
 
@@ -108,8 +131,9 @@ export default function CommissionSettingsPage() {
                         <input
                             type="number"
                             value={settings.maxReward}
+                            disabled={!hasPerm('activities')}
                             onChange={(e) => setSettings({ ...settings, maxReward: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                         />
                     </div>
                 </div>
@@ -119,8 +143,9 @@ export default function CommissionSettingsPage() {
                         <input
                             type="checkbox"
                             checked={settings.isActive}
+                            disabled={!hasPerm('activities')}
                             onChange={(e) => setSettings({ ...settings, isActive: e.target.checked })}
-                            className="w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400"
+                            className="w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 disabled:opacity-50"
                         />
                         <span className="text-sm font-medium text-slate-700">เปิดใช้งาน</span>
                     </label>
@@ -136,8 +161,8 @@ export default function CommissionSettingsPage() {
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={saving}
-                        className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
+                        disabled={saving || !hasPerm('activities')}
+                        className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Save size={18} />
                         {saving ? "กำลังบันทึก..." : "บันทึก"}

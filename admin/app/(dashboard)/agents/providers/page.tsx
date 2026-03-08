@@ -152,7 +152,31 @@ export default function ProvidersPage() {
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    useEffect(() => { fetchData(); fetchCategories(); }, []);
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['agents'];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
+        fetchData();
+        fetchCategories();
+    }, []);
 
     const fetchCategories = async () => {
         try {
@@ -281,7 +305,7 @@ export default function ProvidersPage() {
     // If 'filtered' is used on UI but 'providers' is used for logic, dragging a filtered item might be weird.
     // FIX: Only allow dragging when NOT filtered, or handle filtered reorder carefully.
     // For simplicity: Disable SortableContext when filtered.
-    const isDragEnabled = filterCat === "all";
+    const isDragEnabled = filterCat === "all" && hasPerm('agents');
 
     return (
         <div className="space-y-6">
@@ -297,7 +321,7 @@ export default function ProvidersPage() {
                         </p>
                     </div>
                 </div>
-                <button onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800">
+                <button disabled={!hasPerm('agents')} onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus size={18} /> เพิ่มค่ายเกม
                 </button>
             </div>
@@ -355,7 +379,7 @@ export default function ProvidersPage() {
                                                 <span className="px-2 py-1 bg-slate-100 rounded text-xs">{prov._count.games} เกม</span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <button onClick={() => toggleLobbyMode(prov.id, prov.isLobbyMode || false)} title={prov.isLobbyMode ? "ปิด Lobby Mode" : "เปิด Lobby Mode"}>
+                                                <button disabled={!hasPerm('agents')} onClick={() => toggleLobbyMode(prov.id, prov.isLobbyMode || false)} title={prov.isLobbyMode ? "ปิด Lobby Mode" : "เปิด Lobby Mode"} className="disabled:opacity-50 disabled:cursor-not-allowed">
                                                     {prov.isLobbyMode ? (
                                                         <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs flex items-center gap-1">
                                                             <Gamepad2 size={12} /> LOBBY
@@ -366,13 +390,13 @@ export default function ProvidersPage() {
                                                 </button>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <button onClick={() => toggle(prov.id, prov.isActive)}>
+                                                <button disabled={!hasPerm('agents')} onClick={() => toggle(prov.id, prov.isActive)} className="disabled:opacity-50 disabled:cursor-not-allowed">
                                                     {prov.isActive ? <ToggleRight size={24} className="text-emerald-500" /> : <ToggleLeft size={24} className="text-slate-300" />}
                                                 </button>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <button onClick={() => openModal(prov)} className="p-2 hover:bg-slate-100 rounded"><Edit size={16} /></button>
-                                                <button onClick={() => confirmDelete(prov)} className="p-2 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
+                                                <button disabled={!hasPerm('agents')} onClick={() => openModal(prov)} className="p-2 hover:bg-slate-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"><Edit size={16} /></button>
+                                                <button disabled={!hasPerm('agents')} onClick={() => confirmDelete(prov)} className="p-2 hover:bg-red-50 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
                                             </td>
                                         </SortableRow>
                                     ))

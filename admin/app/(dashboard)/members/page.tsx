@@ -125,10 +125,13 @@ export default function MembersPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.['members']?.[action];
-        if (!p) return false;
-        if (typeof p === 'boolean') return p;
-        return !!p.manage;
+        const membersPerm = adminPermissions?.['members'];
+        if (!membersPerm) return false;
+        if (typeof membersPerm === 'boolean') return membersPerm;
+
+        if (action === 'members') return !!membersPerm.manage;
+        if (membersPerm[action] !== undefined) return !!membersPerm[action];
+        return !!membersPerm.manage;
     };
 
     const fetchUsers = async () => {

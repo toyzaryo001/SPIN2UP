@@ -91,6 +91,17 @@ export default function LogoBankPage() {
     const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState("");
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['settings']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     const fetchSettings = async () => {
         try {
             setLoading(true);
@@ -130,6 +141,16 @@ export default function LogoBankPage() {
     };
 
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchSettings();
     }, []);
 
@@ -151,8 +172,8 @@ export default function LogoBankPage() {
                 </div>
                 <button
                     onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
+                    disabled={saving || !hasPerm('banks')}
+                    className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Save size={18} />
                     {saving ? "กำลังบันทึก..." : "บันทึก"}

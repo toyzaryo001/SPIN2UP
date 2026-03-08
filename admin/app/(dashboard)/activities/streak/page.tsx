@@ -20,6 +20,17 @@ export default function StreakSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     const fetchSettings = async () => {
         try {
             setLoading(true);
@@ -60,6 +71,16 @@ export default function StreakSettingsPage() {
     };
 
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchSettings();
     }, []);
 
@@ -109,24 +130,27 @@ export default function StreakSettingsPage() {
                                     <input
                                         type="number"
                                         value={item.minDeposit}
+                                        disabled={!hasPerm('activities')}
                                         onChange={(e) => handleUpdate(item.day, 'minDeposit', parseFloat(e.target.value) || 0)}
-                                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                                     />
                                 </td>
                                 <td className="px-6 py-4">
                                     <input
                                         type="number"
                                         value={item.bonusAmount ?? 0}
+                                        disabled={!hasPerm('activities')}
                                         onChange={(e) => handleUpdate(item.day, 'bonusAmount', parseFloat(e.target.value) || 0)}
-                                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                                     />
                                 </td>
                                 <td className="px-6 py-4">
                                     <input
                                         type="number"
                                         value={item.turnoverMultiplier ?? 1}
+                                        disabled={!hasPerm('activities')}
                                         onChange={(e) => handleUpdate(item.day, 'turnoverMultiplier', parseFloat(e.target.value) || 0)}
-                                        className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900"
+                                        className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                                     />
                                 </td>
                                 <td className="px-6 py-4 text-center">
@@ -134,6 +158,7 @@ export default function StreakSettingsPage() {
                                         <input
                                             type="checkbox"
                                             checked={item.isActive}
+                                            disabled={!hasPerm('activities')}
                                             onChange={(e) => handleUpdate(item.day, 'isActive', e.target.checked)}
                                             className="sr-only peer"
                                         />
@@ -156,8 +181,8 @@ export default function StreakSettingsPage() {
                 </button>
                 <button
                     onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
+                    disabled={saving || !hasPerm('activities')}
+                    className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Save size={18} />
                     {saving ? "กำลังบันทึก..." : "บันทึกทั้งหมด"}

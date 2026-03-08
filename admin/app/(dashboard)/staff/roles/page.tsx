@@ -133,7 +133,28 @@ export default function StaffRolesPage() {
     });
     const [isSaving, setIsSaving] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['staff']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchRoles();
     }, []);
 
@@ -213,6 +234,7 @@ export default function StaffRolesPage() {
     };
 
     const togglePermission = (catKey: string, featKey: string, type: 'view' | 'manage') => {
+        if (!hasPerm('roles')) return;
         setFormData(prev => ({
             ...prev,
             permissions: {
@@ -229,6 +251,7 @@ export default function StaffRolesPage() {
     };
 
     const selectAllCategory = (catKey: string, select: boolean) => {
+        if (!hasPerm('roles')) return;
         const cat = PERMISSION_MATRIX.find(c => c.key === catKey);
         if (!cat) return;
 
@@ -325,7 +348,8 @@ export default function StaffRolesPage() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2"
+                    disabled={!hasPerm('roles')}
+                    className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Plus size={18} />
                     เพิ่มบทบาท
@@ -347,8 +371,8 @@ export default function StaffRolesPage() {
                                     <p className="text-slate-500 text-sm">{role.description || 'ไม่มีคำอธิบาย'}</p>
                                 </div>
                                 <div className="flex gap-1">
-                                    <button onClick={() => openEditModal(role)} className="p-1.5 hover:bg-slate-100 rounded text-slate-500"><Edit size={16} /></button>
-                                    <button onClick={() => openDeleteModal(role)} className="p-1.5 hover:bg-red-50 rounded text-red-500"><Trash2 size={16} /></button>
+                                    <button onClick={() => openEditModal(role)} disabled={!hasPerm('roles')} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent"><Edit size={16} /></button>
+                                    <button onClick={() => openDeleteModal(role)} disabled={!hasPerm('roles')} className="p-1.5 hover:bg-red-50 rounded text-red-500 disabled:opacity-30 disabled:hover:bg-transparent"><Trash2 size={16} /></button>
                                 </div>
                             </div>
 
@@ -388,8 +412,9 @@ export default function StaffRolesPage() {
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    disabled={!hasPerm('roles')}
                                     placeholder="เช่น Support, Accountant, Manager"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-50 text-slate-900"
                                 />
                             </div>
                             <div>
@@ -398,8 +423,9 @@ export default function StaffRolesPage() {
                                     type="text"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    disabled={!hasPerm('roles')}
                                     placeholder="อธิบายหน้าที่ของบทบาทนี้"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-50 text-slate-900"
                                 />
                             </div>
                         </div>
@@ -412,13 +438,15 @@ export default function StaffRolesPage() {
                                         {/* Category Header */}
                                         <div className="bg-slate-50 px-4 py-3 flex items-center justify-between border-b border-slate-200">
                                             <span className="font-semibold text-slate-700">{cat.label}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => selectAllCategory(cat.key, !isCategoryAllSelected(cat.key))}
-                                                className="text-xs text-yellow-600 hover:underline"
-                                            >
-                                                {isCategoryAllSelected(cat.key) ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
-                                            </button>
+                                            {hasPerm('roles') && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => selectAllCategory(cat.key, !isCategoryAllSelected(cat.key))}
+                                                    className="text-xs text-yellow-600 hover:underline"
+                                                >
+                                                    {isCategoryAllSelected(cat.key) ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                                                </button>
+                                            )}
                                         </div>
 
                                         {/* Table */}
@@ -439,7 +467,8 @@ export default function StaffRolesPage() {
                                                                 type="checkbox"
                                                                 checked={formData.permissions[cat.key]?.[feat.key]?.view || false}
                                                                 onChange={() => togglePermission(cat.key, feat.key, 'view')}
-                                                                className="w-4 h-4 rounded border-slate-300 text-yellow-500 focus:ring-yellow-500"
+                                                                disabled={!hasPerm('roles')}
+                                                                className="w-4 h-4 rounded border-slate-300 text-yellow-500 focus:ring-yellow-500 disabled:opacity-50"
                                                             />
                                                         </td>
                                                         <td className="px-2 py-2 text-center">
@@ -447,7 +476,8 @@ export default function StaffRolesPage() {
                                                                 type="checkbox"
                                                                 checked={formData.permissions[cat.key]?.[feat.key]?.manage || false}
                                                                 onChange={() => togglePermission(cat.key, feat.key, 'manage')}
-                                                                className="w-4 h-4 rounded border-slate-300 text-yellow-500 focus:ring-yellow-500"
+                                                                disabled={!hasPerm('roles')}
+                                                                className="w-4 h-4 rounded border-slate-300 text-yellow-500 focus:ring-yellow-500 disabled:opacity-50"
                                                             />
                                                         </td>
                                                     </tr>
@@ -468,7 +498,7 @@ export default function StaffRolesPage() {
                             </button>
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving}
+                                disabled={isSaving || !hasPerm('roles')}
                                 className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 <Save size={18} />

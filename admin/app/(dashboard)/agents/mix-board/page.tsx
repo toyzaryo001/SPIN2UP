@@ -60,7 +60,28 @@ export default function MixBoardPage() {
     const [newProviderName, setNewProviderName] = useState("");
     const [newProviderSlug, setNewProviderSlug] = useState("");
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['agents'];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchInitialData();
     }, []);
 
@@ -319,7 +340,8 @@ export default function MixBoardPage() {
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-2"
+                    disabled={!hasPerm('agents')}
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Plus size={16} /> สร้างค่ายใหม่ (Custom)
                 </button>
@@ -338,8 +360,8 @@ export default function MixBoardPage() {
                             {selectedSourceGameIds.length > 0 && (
                                 <button
                                     onClick={handleMoveGames}
-                                    disabled={!targetProviderId}
-                                    className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg shadow hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-400 flex items-center gap-1 transition-all"
+                                    disabled={!targetProviderId || !hasPerm('agents')}
+                                    className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg shadow hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-400 flex items-center gap-1 transition-all disabled:cursor-not-allowed"
                                 >
                                     <span>ย้าย {selectedSourceGameIds.length} เกม</span>
                                     <ArrowRight size={12} />
@@ -426,8 +448,8 @@ export default function MixBoardPage() {
                     </div>
                     <button
                         onClick={handleMoveGames}
-                        disabled={selectedSourceGameIds.length === 0 || !targetProviderId}
-                        className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all flex flex-col items-center min-w-[140px]"
+                        disabled={selectedSourceGameIds.length === 0 || !targetProviderId || !hasPerm('agents')}
+                        className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all flex flex-col items-center min-w-[140px] disabled:cursor-not-allowed"
                     >
                         {!targetProviderId ? (
                             <span>เลือกปลายทาง</span>
@@ -452,10 +474,10 @@ export default function MixBoardPage() {
                             </div>
                             {targetProviderId && (
                                 <div className="flex gap-1">
-                                    <button onClick={openEditModal} className="p-1 hover:bg-emerald-100 rounded text-emerald-600" title="แก้ไขชื่อ">
+                                    <button disabled={!hasPerm('agents')} onClick={openEditModal} className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed" title="แก้ไขชื่อ">
                                         <Edit2 size={16} />
                                     </button>
-                                    <button onClick={() => handleDeleteProvider(targetProviderId!)} className="p-1 hover:bg-red-100 rounded text-red-500" title="ลบค่ายนี้">
+                                    <button disabled={!hasPerm('agents')} onClick={() => handleDeleteProvider(targetProviderId!)} className="p-1 hover:bg-red-100 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="ลบค่ายนี้">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>

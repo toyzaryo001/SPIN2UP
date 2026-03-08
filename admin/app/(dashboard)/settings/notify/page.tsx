@@ -9,7 +9,28 @@ export default function NotifySettingsPage() {
     const [settings, setSettings] = useState<any>({});
     const [loading, setLoading] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['settings']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchSettings();
     }, []);
 
@@ -69,9 +90,10 @@ export default function NotifySettingsPage() {
                             <label className="block text-sm font-medium text-slate-700 mb-1">LINE Notify Token</label>
                             <input
                                 type="text"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                 value={settings.lineNotifyToken || ""}
                                 onChange={(e) => handleChange("lineNotifyToken", e.target.value)}
+                                disabled={!hasPerm('notify')}
                                 placeholder="ใส่ LINE Notify Token"
                             />
                         </div>
@@ -81,7 +103,8 @@ export default function NotifySettingsPage() {
                                 id="lineNotifyDeposit"
                                 checked={settings.lineNotifyDeposit === 'true' || settings.lineNotifyDeposit === true}
                                 onChange={(e) => handleChange("lineNotifyDeposit", e.target.checked.toString())}
-                                className="w-5 h-5 rounded"
+                                disabled={!hasPerm('notify')}
+                                className="w-5 h-5 rounded disabled:opacity-50"
                             />
                             <label htmlFor="lineNotifyDeposit" className="text-sm text-slate-700">แจ้งเตือนเมื่อมีฝากเงิน</label>
                         </div>
@@ -91,7 +114,8 @@ export default function NotifySettingsPage() {
                                 id="lineNotifyWithdraw"
                                 checked={settings.lineNotifyWithdraw === 'true' || settings.lineNotifyWithdraw === true}
                                 onChange={(e) => handleChange("lineNotifyWithdraw", e.target.checked.toString())}
-                                className="w-5 h-5 rounded"
+                                disabled={!hasPerm('notify')}
+                                className="w-5 h-5 rounded disabled:opacity-50"
                             />
                             <label htmlFor="lineNotifyWithdraw" className="text-sm text-slate-700">แจ้งเตือนเมื่อมีถอนเงิน</label>
                         </div>
@@ -104,18 +128,20 @@ export default function NotifySettingsPage() {
                             <label className="block text-sm font-medium text-slate-700 mb-1">Bot Token</label>
                             <input
                                 type="text"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                 value={settings.telegramBotToken || ""}
                                 onChange={(e) => handleChange("telegramBotToken", e.target.value)}
+                                disabled={!hasPerm('notify')}
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Chat ID</label>
                             <input
                                 type="text"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                 value={settings.telegramChatId || ""}
                                 onChange={(e) => handleChange("telegramChatId", e.target.value)}
+                                disabled={!hasPerm('notify')}
                             />
                         </div>
                         <div className="flex items-center gap-3">
@@ -124,7 +150,8 @@ export default function NotifySettingsPage() {
                                 id="telegramNotifyDeposit"
                                 checked={settings.telegramNotifyDeposit === 'true' || settings.telegramNotifyDeposit === true}
                                 onChange={(e) => handleChange("telegramNotifyDeposit", e.target.checked.toString())}
-                                className="w-5 h-5 rounded"
+                                disabled={!hasPerm('notify')}
+                                className="w-5 h-5 rounded disabled:opacity-50"
                             />
                             <label htmlFor="telegramNotifyDeposit" className="text-sm text-slate-700">แจ้งเตือนเมื่อมีฝากเงิน</label>
                         </div>
@@ -134,14 +161,16 @@ export default function NotifySettingsPage() {
                                 id="telegramNotifyWithdraw"
                                 checked={settings.telegramNotifyWithdraw === 'true' || settings.telegramNotifyWithdraw === true}
                                 onChange={(e) => handleChange("telegramNotifyWithdraw", e.target.checked.toString())}
-                                className="w-5 h-5 rounded"
+                                disabled={!hasPerm('notify')}
+                                className="w-5 h-5 rounded disabled:opacity-50"
                             />
                             <label htmlFor="telegramNotifyWithdraw" className="text-sm text-slate-700">แจ้งเตือนเมื่อมีถอนเงิน</label>
                         </div>
                         <button
                             type="button"
                             onClick={testTelegram}
-                            className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm hover:bg-blue-50"
+                            disabled={!hasPerm('notify')}
+                            className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             ทดสอบส่ง Telegram
                         </button>
@@ -150,8 +179,8 @@ export default function NotifySettingsPage() {
                     <div className="pt-6">
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="bg-slate-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50"
+                            disabled={loading || !hasPerm('notify')}
+                            className="bg-slate-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Save size={20} />
                             {loading ? "กำลังบันทึก..." : "บันทึกการตั้งค่า"}

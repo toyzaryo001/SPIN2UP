@@ -47,7 +47,28 @@ export default function AgentsPage() {
     });
     const [isSaving, setIsSaving] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchAgents();
     }, []);
 
@@ -184,7 +205,8 @@ export default function AgentsPage() {
                 <h2 className="text-2xl font-bold text-slate-800">จัดการ Agent (API Connection)</h2>
                 <button
                     onClick={() => openModal()}
-                    className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2"
+                    disabled={!hasPerm('agents')}
+                    className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Plus size={18} /> เพิ่ม Agent
                 </button>
@@ -228,18 +250,18 @@ export default function AgentsPage() {
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => toggleStatus(agent)}
-                                                className={`px-3 py-1 rounded-full text-xs font-medium ${agent.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}
+                                                disabled={!hasPerm('agents')}
+                                                className={`px-3 py-1 rounded-full text-xs font-medium ${agent.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                             >
                                                 {agent.isActive ? 'Active' : 'Inactive'}
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <a href={`/agents/${agent.id}`} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg flex items-center gap-1 border border-blue-100 bg-white shadow-sm transition-all hover:shadow-md">
-                                                    <Settings size={16} />
-                                                    <span className="text-xs font-bold">ตั้งค่า</span>
-                                                </a>
-                                                <button onClick={() => openDeleteModal(agent)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg border border-transparent hover:border-red-100">
+                                                <button onClick={() => openModal(agent)} disabled={!hasPerm('agents')} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg border border-transparent hover:border-blue-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <Settings size={18} />
+                                                </button>
+                                                <button onClick={() => openDeleteModal(agent)} disabled={!hasPerm('agents')} className="text-red-500 hover:bg-red-50 p-2 rounded-lg border border-transparent hover:border-red-100 disabled:opacity-50 disabled:cursor-not-allowed">
                                                     <Trash2 size={18} />
                                                 </button>
                                             </div>

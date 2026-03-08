@@ -24,7 +24,28 @@ export default function BankAccountsPage() {
         minDeposit: 0,
     });
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['settings']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchBanks();
     }, []);
 
@@ -138,7 +159,8 @@ export default function BankAccountsPage() {
                         setFormData({ bankName: "", accountName: "", accountNumber: "", type: "deposit", minDeposit: 0 });
                         setIsModalOpen(true);
                     }}
-                    className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
+                    disabled={!hasPerm('banks')}
+                    className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Plus size={20} />
                     เพิ่มบัญชี
@@ -234,7 +256,8 @@ export default function BankAccountsPage() {
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => handleToggleStatus(bank)}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 ${bank.isActive ? 'bg-emerald-500' : 'bg-slate-200'
+                                                disabled={!hasPerm('banks')}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${bank.isActive ? 'bg-emerald-500' : 'bg-slate-200'
                                                     }`}
                                             >
                                                 <span className={`${bank.isActive ? 'translate-x-6' : 'translate-x-1'
@@ -252,14 +275,16 @@ export default function BankAccountsPage() {
                                                 </button>
                                                 <button
                                                     onClick={() => openEdit(bank)}
-                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    disabled={!hasPerm('banks')}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     title="แก้ไข"
                                                 >
                                                     <Edit2 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(bank.id)}
-                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    disabled={!hasPerm('banks')}
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     title="ลบ"
                                                 >
                                                     <Trash2 size={18} />
@@ -288,9 +313,10 @@ export default function BankAccountsPage() {
                                 <div className="space-y-2">
                                     <select
                                         required
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                         value={formData.bankName}
                                         onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                                        disabled={!hasPerm('banks')}
                                     >
                                         <option value="">-- เลือกธนาคาร --</option>
                                         <option value="KBANK">ธนาคารกสิกรไทย (KBANK)</option>
@@ -322,9 +348,10 @@ export default function BankAccountsPage() {
                                     <input
                                         type="text"
                                         required
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                         value={formData.accountNumber}
                                         onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                                        disabled={!hasPerm('banks')}
                                     />
                                 </div>
                                 <div>
@@ -333,9 +360,10 @@ export default function BankAccountsPage() {
                                         type="number"
                                         min="0"
                                         step="0.01"
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                         value={formData.minDeposit}
                                         onChange={(e) => setFormData({ ...formData, minDeposit: Number(e.target.value) })}
+                                        disabled={!hasPerm('banks')}
                                     />
                                 </div>
                             </div>
@@ -345,17 +373,19 @@ export default function BankAccountsPage() {
                                 <input
                                     type="text"
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={formData.accountName}
                                     onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                                    disabled={!hasPerm('banks')}
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ประเภท</label>
                                 <select
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                    disabled={!hasPerm('banks')}
                                 >
                                     <option value="deposit">บัญชีฝาก (ลูกค้าโอนเข้า)</option>
                                     <option value="withdraw">บัญชีถอน (โอนให้ลูกค้า)</option>
@@ -371,7 +401,8 @@ export default function BankAccountsPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium shadow-lg shadow-slate-900/20 transition-all active:scale-95"
+                                    disabled={!hasPerm('banks')}
+                                    className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium shadow-lg shadow-slate-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     บันทึก
                                 </button>

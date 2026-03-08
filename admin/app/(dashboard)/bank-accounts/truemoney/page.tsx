@@ -28,7 +28,28 @@ export default function TrueMoneyPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [showSecret, setShowSecret] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['settings']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchWallets();
     }, []);
 
@@ -121,7 +142,7 @@ export default function TrueMoneyPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800">จัดการ TrueMoney Wallet</h2>
                 </div>
-                <button onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800">
+                <button onClick={() => openModal()} disabled={!hasPerm('banks')} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus size={18} /> เพิ่ม Wallet
                 </button>
             </div>
@@ -196,8 +217,9 @@ export default function TrueMoneyPage() {
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => handleToggleStatus(wallet)}
+                                                disabled={!hasPerm('banks')}
                                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 ${wallet.isActive ? 'bg-emerald-500' : 'bg-slate-200'
-                                                    }`}
+                                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                                             >
                                                 <span className={`${wallet.isActive ? 'translate-x-6' : 'translate-x-1'
                                                     } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
@@ -207,14 +229,16 @@ export default function TrueMoneyPage() {
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => openModal(wallet)}
-                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    disabled={!hasPerm('banks')}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     title="แก้ไข"
                                                 >
                                                     <Edit2 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => { setDeletingWallet(wallet); setIsDeleteModalOpen(true); }}
-                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    disabled={!hasPerm('banks')}
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     title="ลบ"
                                                 >
                                                     <Trash2 size={18} />

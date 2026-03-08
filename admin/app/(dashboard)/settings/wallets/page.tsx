@@ -23,6 +23,17 @@ export default function WalletsSettingsPage() {
     const [showSecret, setShowSecret] = useState(false);
     const [form, setForm] = useState({ phoneNumber: "", accountName: "", jwtSecret: "" });
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     const fetchWallets = async () => {
         try {
             setLoading(true);
@@ -35,7 +46,19 @@ export default function WalletsSettingsPage() {
         }
     };
 
-    useEffect(() => { fetchWallets(); }, []);
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
+        fetchWallets();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -114,7 +137,8 @@ export default function WalletsSettingsPage() {
                         <RefreshCw className="w-4 h-4" /> รีเฟรช
                     </button>
                     <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ phoneNumber: "", accountName: "", jwtSecret: "" }); }}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-1">
+                        disabled={!hasPerm('banks')}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Plus className="w-4 h-4" /> เพิ่มวอลเล็ท
                     </button>
                 </div>
@@ -154,7 +178,7 @@ export default function WalletsSettingsPage() {
                             <p className="text-xs text-gray-500 mt-1">สำคัญ: ใส่ Secret ที่ได้รับหลังตั้งค่า Webhook ที่ TrueWallet เพื่อ verify ว่าข้อมูลมาจาก TrueWallet จริง</p>
                         </div>
                         <div className="flex gap-2">
-                            <button type="submit" className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm flex items-center gap-1">
+                            <button type="submit" disabled={!hasPerm('banks')} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <Save className="w-4 h-4" /> {editingId ? "อัปเดต" : "บันทึก"}
                             </button>
                             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }}
@@ -224,13 +248,16 @@ export default function WalletsSettingsPage() {
                                 {/* Actions */}
                                 <div className="flex gap-2">
                                     <button onClick={() => handleToggle(wallet)}
-                                        className={`px-3 py-1.5 text-xs rounded-lg ${wallet.isActive ? "bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30" : "bg-green-600/20 text-green-400 hover:bg-green-600/30"}`}>
+                                        disabled={!hasPerm('banks')}
+                                        className={`px-3 py-1.5 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${wallet.isActive ? "bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30" : "bg-green-600/20 text-green-400 hover:bg-green-600/30"}`}>
                                         {wallet.isActive ? "ปิด" : "เปิด"}
                                     </button>
                                     <button onClick={() => handleEdit(wallet)}
-                                        className="px-3 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs rounded-lg">แก้ไข</button>
+                                        disabled={!hasPerm('banks')}
+                                        className="px-3 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">แก้ไข</button>
                                     <button onClick={() => handleDelete(wallet.id)}
-                                        className="px-3 py-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 text-xs rounded-lg">
+                                        disabled={!hasPerm('banks')}
+                                        className="px-3 py-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                 </div>

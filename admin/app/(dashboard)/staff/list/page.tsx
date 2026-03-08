@@ -46,7 +46,28 @@ export default function StaffListPage() {
     });
     const [isSaving, setIsSaving] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['staff']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchStaffs();
         fetchRoles();
     }, []);
@@ -148,7 +169,8 @@ export default function StaffListPage() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg transition-all flex items-center gap-2"
+                    disabled={!hasPerm('admins')}
+                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <UserPlus size={18} />
                     เพิ่มพนักงาน
@@ -207,10 +229,10 @@ export default function StaffListPage() {
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="flex items-center justify-center gap-2">
-                                            <button onClick={() => openEditModal(staff)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
+                                            <button onClick={() => openEditModal(staff)} disabled={!hasPerm('admins')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
                                                 <Edit size={16} />
                                             </button>
-                                            <button onClick={() => openDeleteModal(staff)} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors">
+                                            <button onClick={() => openDeleteModal(staff)} disabled={!hasPerm('admins')} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>
@@ -239,8 +261,8 @@ export default function StaffListPage() {
                                     type="text"
                                     value={formData.username}
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                    disabled={!!editingStaff}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-100 text-slate-900"
+                                    disabled={!!editingStaff || !hasPerm('admins')}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-100 disabled:text-slate-500 text-slate-900"
                                 />
                             </div>
                             <div>
@@ -251,7 +273,8 @@ export default function StaffListPage() {
                                     type="password"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
+                                    disabled={!hasPerm('admins')}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-50 text-slate-900"
                                 />
                             </div>
                             <div>
@@ -260,7 +283,8 @@ export default function StaffListPage() {
                                     type="text"
                                     value={formData.fullName}
                                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
+                                    disabled={!hasPerm('admins')}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-50 text-slate-900"
                                 />
                             </div>
                             <div>
@@ -268,7 +292,8 @@ export default function StaffListPage() {
                                 <select
                                     value={formData.roleId}
                                     onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
+                                    disabled={!hasPerm('admins')}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-50 text-slate-900"
                                 >
                                     <option value="">-- เลือกตำแหน่ง --</option>
                                     {roles.map(role => (
@@ -282,7 +307,8 @@ export default function StaffListPage() {
                                     <select
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-900"
+                                        disabled={!hasPerm('admins')}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-slate-50 text-slate-900"
                                     >
                                         <option value="ACTIVE">ACTIVE</option>
                                         <option value="SUSPENDED">SUSPENDED</option>
@@ -299,7 +325,7 @@ export default function StaffListPage() {
                             </button>
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving}
+                                disabled={isSaving || !hasPerm('admins')}
                                 className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 <Save size={18} />

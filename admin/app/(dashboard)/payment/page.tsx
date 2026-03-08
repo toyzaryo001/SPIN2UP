@@ -84,7 +84,28 @@ export default function PaymentPage() {
         }
     };
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['settings']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchGateways();
     }, []);
 
@@ -234,7 +255,8 @@ export default function PaymentPage() {
                     </button>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
+                        disabled={!hasPerm('payment')}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Plus size={18} />
                         <span>เพิ่ม Payment</span>
@@ -315,8 +337,9 @@ export default function PaymentPage() {
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => handleToggleDeposit(gateway.id, gateway.canDeposit || false)}
+                                                disabled={!hasPerm('payment')}
                                                 className={cn(
-                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2",
+                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed",
                                                     gateway.canDeposit ? 'bg-emerald-500' : 'bg-slate-200'
                                                 )}
                                                 title="เปิด/ปิด การฝาก"
@@ -330,8 +353,9 @@ export default function PaymentPage() {
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => handleToggleWithdraw(gateway.id, gateway.canWithdraw || false)}
+                                                disabled={!hasPerm('payment')}
                                                 className={cn(
-                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2",
+                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed",
                                                     gateway.canWithdraw ? 'bg-amber-500' : 'bg-slate-200'
                                                 )}
                                                 title="เปิด/ปิด การถอน"
@@ -345,8 +369,9 @@ export default function PaymentPage() {
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => handleToggleAuto(gateway.id, gateway.isAutoWithdraw || false)}
+                                                disabled={!hasPerm('payment')}
                                                 className={cn(
-                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2",
+                                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed",
                                                     gateway.isAutoWithdraw ? 'bg-blue-600' : 'bg-slate-200'
                                                 )}
                                                 title="เปิด/ปิด การถอนออโต้"
@@ -361,14 +386,16 @@ export default function PaymentPage() {
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => handleEdit(gateway)}
-                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    disabled={!hasPerm('payment')}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     title="ตั้งค่า"
                                                 >
                                                     <Settings size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(gateway.id)}
-                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    disabled={!hasPerm('payment')}
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     title="ลบ"
                                                 >
                                                     <Trash2 size={18} />

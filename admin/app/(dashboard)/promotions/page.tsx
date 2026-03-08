@@ -38,7 +38,28 @@ export default function PromotionsPage() {
     });
     const [isSaving, setIsSaving] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchPromotions();
     }, []);
 
@@ -150,7 +171,8 @@ export default function PromotionsPage() {
                 <h2 className="text-2xl font-bold text-slate-800">จัดการโปรโมชั่น</h2>
                 <button
                     onClick={openCreateModal}
-                    className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 font-medium"
+                    disabled={!hasPerm('promotions')}
+                    className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Plus size={20} />
                     เพิ่มโปรโมชั่น
@@ -181,7 +203,8 @@ export default function PromotionsPage() {
                                     <div className="absolute top-3 right-3">
                                         <button
                                             onClick={() => toggleStatus(promo)}
-                                            className={`p-1 rounded-full ${promo.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                                            disabled={!hasPerm('promotions')}
+                                            className={`p-1 rounded-full ${promo.isActive ? 'bg-emerald-500' : 'bg-slate-400'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                         >
                                             {promo.isActive ? <ToggleRight size={24} className="text-white" /> : <ToggleLeft size={24} className="text-white" />}
                                         </button>
@@ -203,10 +226,10 @@ export default function PromotionsPage() {
                                     </div>
 
                                     <div className="mt-auto pt-4 border-t border-slate-100 flex justify-end gap-2">
-                                        <button onClick={() => openEditModal(promo)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                                        <button onClick={() => openEditModal(promo)} disabled={!hasPerm('promotions')} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Edit2 size={18} />
                                         </button>
-                                        <button onClick={() => openDeleteModal(promo)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                                        <button onClick={() => openDeleteModal(promo)} disabled={!hasPerm('promotions')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Trash2 size={18} />
                                         </button>
                                     </div>

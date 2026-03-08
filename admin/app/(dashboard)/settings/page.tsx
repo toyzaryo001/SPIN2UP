@@ -9,7 +9,28 @@ export default function SettingsPage() {
     const [settings, setSettings] = useState<any>({});
     const [loading, setLoading] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['settings']?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchSettings();
     }, []);
 
@@ -56,9 +77,10 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อเว็บไซต์</label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={settings.siteName || ""}
                                     onChange={(e) => handleChange("siteName", e.target.value)}
+                                    disabled={!hasPerm('general')}
                                     placeholder="เช่น PLAYNEX89 CASINO"
                                 />
                             </div>
@@ -66,9 +88,10 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Logo URL</label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={settings.logoUrl || ""}
                                     onChange={(e) => handleChange("logoUrl", e.target.value)}
+                                    disabled={!hasPerm('general')}
                                     placeholder="https://example.com/logo.png"
                                 />
                                 <p className="text-xs text-slate-400 mt-1">ลิงก์รูปภาพโลโก้ (ถ้ามีจะแสดงแทนชื่อเว็บ)</p>
@@ -77,9 +100,10 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Prefix (สำหรับ Username)</label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg uppercase text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg uppercase text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={settings.prefix || ""}
                                     onChange={(e) => handleChange("prefix", e.target.value.toUpperCase())}
+                                    disabled={!hasPerm('general')}
                                     placeholder="เช่น SPIN"
                                     maxLength={10}
                                 />
@@ -96,18 +120,20 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ฝากขั้นต่ำ (บาท)</label>
                                 <input
                                     type="number"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={settings.minDeposit || "1"}
                                     onChange={(e) => handleChange("minDeposit", e.target.value)}
+                                    disabled={!hasPerm('general')}
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ถอนขั้นต่ำ (บาท)</label>
                                 <input
                                     type="number"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={settings.minWithdraw || "100"}
                                     onChange={(e) => handleChange("minWithdraw", e.target.value)}
+                                    disabled={!hasPerm('general')}
                                 />
                             </div>
                         </div>
@@ -117,18 +143,20 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">ถอนสูงสุดต่อครั้ง (บาท)</label>
                                 <input
                                     type="number"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={settings.maxWithdrawPerTime || "50000"}
                                     onChange={(e) => handleChange("maxWithdrawPerTime", e.target.value)}
+                                    disabled={!hasPerm('general')}
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">จำนวนครั้งถอนต่อวัน</label>
                                 <input
                                     type="number"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={settings.maxWithdrawPerDay || "5"}
                                     onChange={(e) => handleChange("maxWithdrawPerDay", e.target.value)}
+                                    disabled={!hasPerm('general')}
                                 />
                             </div>
                         </div>
@@ -141,20 +169,23 @@ export default function SettingsPage() {
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-slate-900"
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                         value={settings.jwtSecret || ""}
                                         onChange={(e) => handleChange("jwtSecret", e.target.value)}
+                                        disabled={!hasPerm('general')}
                                         placeholder="ใส่ Secret Key สำหรับ JWT Token"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => {
+                                            if (!hasPerm('general')) return;
                                             const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
                                                 .map(b => b.toString(16).padStart(2, '0'))
                                                 .join('');
                                             handleChange("jwtSecret", secret);
                                         }}
-                                        className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition-colors border border-slate-200"
+                                        disabled={!hasPerm('general')}
+                                        className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition-colors border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                         title="Generate Random Key"
                                     >
                                         <RefreshCw size={18} />
@@ -167,9 +198,10 @@ export default function SettingsPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">API URL</label>
                                 <input
                                     type="text"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                     value={settings.apiUrl || ""}
                                     onChange={(e) => handleChange("apiUrl", e.target.value)}
+                                    disabled={!hasPerm('general')}
                                     placeholder="https://api.yourdomain.com"
                                 />
                                 <p className="text-xs text-slate-400 mt-1">URL ของ Backend API</p>
@@ -179,8 +211,8 @@ export default function SettingsPage() {
                         <div className="pt-6">
                             <button
                                 type="submit"
-                                disabled={loading}
-                                className="bg-slate-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50"
+                                disabled={loading || !hasPerm('general')}
+                                className="bg-slate-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Save size={20} />
                                 {loading ? "กำลังบันทึก..." : "บันทึกการตั้งค่า"}

@@ -29,6 +29,17 @@ export default function BannersPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
 
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.[action];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
     // --- Image Upload Handler ---
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -78,6 +89,16 @@ export default function BannersPage() {
     };
 
     useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
         fetchBanners();
     }, []);
 
@@ -152,7 +173,7 @@ export default function BannersPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800">จัดการแบนเนอร์</h2>
                 </div>
-                <button onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800">
+                <button onClick={() => openModal()} disabled={!hasPerm('banners')} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus size={18} /> เพิ่มแบนเนอร์
                 </button>
             </div>
@@ -221,8 +242,8 @@ export default function BannersPage() {
                                         </td>
                                         <td className="px-6 py-3 text-right">
                                             <div className="flex justify-end gap-2">
-                                                <button onClick={() => openModal(banner)} className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg text-slate-500 transition-all shadow-sm hover:shadow"><Edit size={16} /></button>
-                                                <button onClick={() => { setDeletingBanner(banner); setIsDeleteModalOpen(true); }} className="p-2 hover:bg-red-50 border border-transparent hover:border-red-100 rounded-lg text-red-500 transition-all shadow-sm hover:shadow"><Trash2 size={16} /></button>
+                                                <button onClick={() => openModal(banner)} disabled={!hasPerm('banners')} className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg text-slate-500 transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"><Edit size={16} /></button>
+                                                <button onClick={() => { setDeletingBanner(banner); setIsDeleteModalOpen(true); }} disabled={!hasPerm('banners')} className="p-2 hover:bg-red-50 border border-transparent hover:border-red-100 rounded-lg text-red-500 transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
                                             </div>
                                         </td>
                                     </tr>

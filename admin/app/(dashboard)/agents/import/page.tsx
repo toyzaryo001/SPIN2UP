@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { Loader2, Download, Gamepad2, CheckCircle2, XCircle, RefreshCcw, Server } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -18,6 +18,30 @@ export default function GameImportPage() {
     const [activeTab, setActiveTab] = useState<'betflix' | 'nexus'>('betflix');
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<SyncResult[] | null>(null);
+
+    const [adminPermissions, setAdminPermissions] = useState<any>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    const hasPerm = (action: string) => {
+        if (isSuperAdmin) return true;
+        const p = adminPermissions?.['agents'];
+        if (!p) return false;
+        if (typeof p === 'boolean') return p;
+        return !!p.manage;
+    };
+
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            try {
+                const res = await api.get('/admin/me');
+                if (res.data.success && res.data.data) {
+                    setAdminPermissions(res.data.data.permissions || {});
+                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                }
+            } catch (error) { console.error(error); }
+        };
+        fetchAdminData();
+    }, []);
 
     const startBetflixSync = async () => {
         if (loading) return;
@@ -148,8 +172,8 @@ export default function GameImportPage() {
                 <button
                     onClick={() => !loading && setActiveTab('betflix')}
                     className={`px-6 py-3 rounded-t-lg font-bold transition-all flex items-center gap-2 ${activeTab === 'betflix'
-                            ? 'bg-slate-800 text-green-400 border-t border-x border-slate-700'
-                            : 'text-slate-500 hover:text-slate-300'
+                        ? 'bg-slate-800 text-green-400 border-t border-x border-slate-700'
+                        : 'text-slate-500 hover:text-slate-300'
                         }`}
                 >
                     <Gamepad2 size={18} /> Betflix Import
@@ -157,8 +181,8 @@ export default function GameImportPage() {
                 <button
                     onClick={() => !loading && setActiveTab('nexus')}
                     className={`px-6 py-3 rounded-t-lg font-bold transition-all flex items-center gap-2 ${activeTab === 'nexus'
-                            ? 'bg-slate-800 text-purple-400 border-t border-x border-slate-700'
-                            : 'text-slate-500 hover:text-slate-300'
+                        ? 'bg-slate-800 text-purple-400 border-t border-x border-slate-700'
+                        : 'text-slate-500 hover:text-slate-300'
                         }`}
                 >
                     <Server size={18} /> Nexus Import (Direct API)
@@ -183,8 +207,8 @@ export default function GameImportPage() {
                             </div>
                             <button
                                 onClick={startBetflixSync}
-                                disabled={loading}
-                                className={`flex items-center justify-center bg-green-700 hover:bg-green-600 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-green-900/20 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                disabled={loading || !hasPerm('agents')}
+                                className={`flex items-center justify-center bg-green-700 hover:bg-green-600 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-green-900/20 ${(loading || !hasPerm('agents')) ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 {loading ? (
                                     <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> กำลังดึงข้อมูล...</>
@@ -207,8 +231,8 @@ export default function GameImportPage() {
                             </div>
                             <button
                                 onClick={startNexusSync}
-                                disabled={loading}
-                                className={`flex items-center justify-center bg-purple-700 hover:bg-purple-600 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-purple-900/20 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                disabled={loading || !hasPerm('agents')}
+                                className={`flex items-center justify-center bg-purple-700 hover:bg-purple-600 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-purple-900/20 ${(loading || !hasPerm('agents')) ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 {loading ? (
                                     <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Connecting Nexus...</>
@@ -239,8 +263,8 @@ export default function GameImportPage() {
                                     setLoading(false);
                                 }
                             }}
-                            disabled={loading}
-                            className={`flex items-center justify-center text-red-500 hover:text-red-400 hover:bg-red-950/30 font-semibold w-full h-10 rounded-lg transition-all text-sm ${loading ? 'hidden' : ''}`}
+                            disabled={loading || !hasPerm('agents')}
+                            className={`flex items-center justify-center text-red-500 hover:text-red-400 hover:bg-red-950/30 font-semibold w-full h-10 rounded-lg transition-all text-sm ${loading ? 'hidden' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             <span className="flex items-center">
                                 <span className="mr-2">🗑️</span> ล้างข้อมูลเกม (Clear All)

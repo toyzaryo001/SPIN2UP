@@ -319,7 +319,6 @@ export default function PendingWithdrawalsPage() {
                                 />
                                 <div>
                                     <div className="font-medium text-sm text-slate-900">คืนยอดเครดิต (Refund)</div>
-                                    <div className="text-xs text-slate-500">ติ๊กถูกเพื่อคืนเงินกลับเข้ากระเป๋า Betflix และเว็บ</div>
                                 </div>
                             </label>
 

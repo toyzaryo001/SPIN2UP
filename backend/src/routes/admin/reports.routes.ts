@@ -424,6 +424,17 @@ router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), as
             orderBy: { createdAt: 'desc' }
         });
 
+        // Fetch admins manually
+        const adminIds = [...new Set(transactions.map(t => t.adminId).filter(Boolean))] as number[];
+        const adminsMap: Record<number, string> = {};
+        if (adminIds.length > 0) {
+            const admins = await prisma.admin.findMany({
+                where: { id: { in: adminIds } },
+                select: { id: true, fullName: true, username: true }
+            });
+            admins.forEach(a => adminsMap[a.id] = a.fullName || a.username);
+        }
+
         // 2. Normalize Data (Transaction Only)
         const mergedData: DepositReportItem[] = transactions.map(t => ({
             id: `tx_${t.id}`,
@@ -439,7 +450,7 @@ router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), as
                 t.type === 'MANUAL_ADD' ? 'Manual' :
                     t.type === 'BONUS' ? 'Bonus' :
                         t.type === 'CASHBACK' ? 'Cashback' : t.type,
-            admin: t.adminId ? `Admin #${t.adminId}` : 'System',
+            admin: t.adminId ? adminsMap[t.adminId] || `Admin #${t.adminId}` : 'System',
             source: 'TRANSACTION',
             rawMessage: null
         }));

@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
             }
         }
 
-        const [transactions, total] = await Promise.all([
+        const [transactionsRaw, total] = await Promise.all([
             prisma.transaction.findMany({
                 where,
                 include: { user: { select: { username: true, fullName: true, phone: true } } },
@@ -79,6 +79,23 @@ router.get('/', async (req, res) => {
             }),
             prisma.transaction.count({ where }),
         ]);
+
+        // Fetch admins manually since no relation
+        const adminIds = [...new Set(transactionsRaw.map(t => t.adminId).filter(Boolean))] as number[];
+        const adminsMap: Record<number, string> = {};
+        if (adminIds.length > 0) {
+            const admins = await prisma.admin.findMany({
+                where: { id: { in: adminIds } },
+                select: { id: true, fullName: true, username: true }
+            });
+            admins.forEach(a => adminsMap[a.id] = a.fullName || a.username);
+        }
+
+        const transactions = transactionsRaw.map(t => ({
+            ...t,
+            admin: t.adminId ? adminsMap[t.adminId] || `Admin #${t.adminId}` : null
+        }));
+
 
         // Summary
         // Summary

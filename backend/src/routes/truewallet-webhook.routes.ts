@@ -250,6 +250,24 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // =============================================
+// GET /api/webhooks/truewallet/logs
+// ดูประวัติ Webhook ย้อนหลัง 50 รายการล่าสุด
+// =============================================
+router.get('/logs', async (req: Request, res: Response) => {
+    try {
+        const logs = await prisma.trueWalletLog.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+            include: { user: { select: { username: true, fullName: true, phone: true } } }
+        });
+        res.status(200).json({ success: true, count: logs.length, data: logs });
+    } catch (err: any) {
+        console.error('[TrueWallet Webhook Logs Error:', err);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
+// =============================================
 // Catch-all: รองรับทุก sub-path และ HTTP method
 // กันกรณีแอป TrueWallet ส่งไปที่ /webhook หรือ path อื่น
 // =============================================

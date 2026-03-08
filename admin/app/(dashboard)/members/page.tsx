@@ -180,8 +180,8 @@ export default function MembersPage() {
                 let totalDeposit = 0, totalWithdraw = 0;
                 allTx.forEach((tx: any) => {
                     if (tx.status === 'COMPLETED' || tx.status === 'APPROVED') {
-                        if (tx.type === 'DEPOSIT') totalDeposit += Number(tx.amount);
-                        if (tx.type === 'WITHDRAW') totalWithdraw += Number(tx.amount);
+                        if (tx.type === 'DEPOSIT' || tx.type === 'MANUAL_ADD') totalDeposit += Number(tx.amount);
+                        if (tx.type === 'WITHDRAW' || tx.type === 'MANUAL_DEDUCT') totalWithdraw += Number(tx.amount);
                     }
                 });
                 setHistorySummary({

@@ -236,12 +236,12 @@ export default function BannersPage() {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-6">
+                    <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-6 shrink-0">
                             <h3 className="text-xl font-bold">{editingBanner ? 'แก้ไขแบนเนอร์' : 'เพิ่มแบนเนอร์'}</h3>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
                         </div>
-                        <div className="space-y-4">
+                        <div className="space-y-4 overflow-y-auto pr-2 pb-2 flex-1">
                             {/* Position Selector */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">ตำแหน่งแบนเนอร์</label>
@@ -273,7 +273,7 @@ export default function BannersPage() {
                                 {/* Image Preview */}
                                 <div className="mb-3 w-full rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center relative aspect-video">
                                     {formData.image ? (
-                                        <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                                        <img src={formData.image} alt="Preview" className="w-full h-full object-contain" />
                                     ) : (
                                         <div className="flex flex-col items-center justify-center text-slate-400">
                                             <ImageIcon size={32} className="mb-2 opacity-50" />
@@ -329,7 +329,7 @@ export default function BannersPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-3 mt-6">
+                        <div className="flex gap-3 mt-6 shrink-0">
                             <button onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">ยกเลิก</button>
                             <button onClick={handleSave} disabled={isSaving || uploading} className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-900/20">
                                 <Save size={18} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}

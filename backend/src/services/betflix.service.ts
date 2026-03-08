@@ -220,6 +220,33 @@ export class BetflixService {
     }
 
     /**
+     * Change User Password on Betflix
+     * @param username Betflix Username
+     * @param password New password
+     */
+    static async changePassword(username: string, password: string): Promise<boolean> {
+        try {
+            const api = await this.getApi();
+            const params = new URLSearchParams();
+            const apiUser = await this.applyPrefix(username);
+            params.append('username', apiUser);
+            params.append('password', password);
+
+            const res = await api.post('/v4/user/changePassword', params);
+
+            if (res.data.status === 'success' || res.data.status === 1 || res.data.error_code === 0) {
+                return true;
+            }
+
+            console.error('Betflix Change Password Failed:', res.data);
+            return false;
+        } catch (error: any) {
+            console.error('Betflix Change Password Error:', error?.response?.data || error.message);
+            return false;
+        }
+    }
+
+    /**
      * Get User Balance directly from Betflix
      * @param username Betflix Username
      */

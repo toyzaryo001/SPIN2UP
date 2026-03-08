@@ -379,8 +379,11 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
                             // Check specific permission
                             const { category, action } = sub.permissionCheck;
                             const perm = permissions?.[category]?.[action];
+                            if (!perm) return false;
                             if (typeof perm === 'boolean') return perm === true;
-                            if (typeof perm === 'object' && perm !== null) return perm.view || perm.manage;
+                            if (typeof perm === 'object' && perm !== null) {
+                              return (perm as any).view || (perm as any).manage || (perm as any).true;
+                            }
                             return false;
                           })
                           .map((sub) => {

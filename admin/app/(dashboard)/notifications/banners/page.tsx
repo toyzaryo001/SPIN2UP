@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Megaphone, Plus, Edit, Trash2, X, Save, AlertTriangle, Image } from "lucide-react";
+import { Megaphone, Plus, Edit, Trash2, X, Save, AlertTriangle, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Banner {
@@ -27,6 +27,55 @@ export default function BannersPage() {
 
     const [formData, setFormData] = useState({ title: "", image: "", link: "", sortOrder: "0", isActive: true, position: 'TOP' });
     const [isSaving, setIsSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
+
+    // --- Image Upload Handler ---
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validation
+        if (!file.type.startsWith('image/')) {
+            toast.error('กรุณาอัพโหลดไฟล์รูปภาพเท่านั้น');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('ขนาดไฟล์ต้องไม่เกิน 5MB');
+            return;
+        }
+
+        setUploading(true);
+        try {
+            // Convert to Base64
+            const base64Image = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            // Upload via our API using existing endpoint
+            const res = await api.post('/admin/upload', {
+                image: base64Image,
+                folder: 'banners'
+            });
+
+            if (res.data.success) {
+                setFormData(prev => ({ ...prev, image: res.data.data.url }));
+                toast.success('อัพโหลดรูปภาพสำเร็จ');
+            } else {
+                throw new Error(res.data.message || 'Upload failed');
+            }
+        } catch (err: any) {
+            console.error('Upload error:', err);
+            toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ');
+        } finally {
+            setUploading(false);
+            // Reset input so the same file could be uploaded again if needed
+            e.target.value = '';
+        }
+    };
 
     useEffect(() => {
         fetchBanners();
@@ -146,7 +195,7 @@ export default function BannersPage() {
                             ) : filteredBanners.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
-                                        <Image size={32} className="mx-auto mb-2 opacity-20" />
+                                        <ImageIcon size={32} className="mx-auto mb-2 opacity-20" />
                                         <p>ไม่มีข้อมูลแบนเนอร์ในส่วนนี้</p>
                                     </td>
                                 </tr>
@@ -158,7 +207,7 @@ export default function BannersPage() {
                                                 {banner.image ? (
                                                     <img src={banner.image} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="flex items-center justify-center h-full text-slate-300"><Image size={20} /></div>
+                                                    <div className="flex items-center justify-center h-full text-slate-300"><ImageIcon size={20} /></div>
                                                 )}
                                             </div>
                                         </td>
@@ -219,8 +268,51 @@ export default function BannersPage() {
                                 <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 outline-none" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">URL รูปภาพ *</label>
-                                <input type="text" value={formData.image} onChange={(e) => setFormData({ ...formData, image: e.target.value })} placeholder="https://..." className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 outline-none" required />
+                                <label className="block text-sm font-medium text-slate-700 mb-2">รูปภาพแบนเนอร์ *</label>
+
+                                {/* Image Preview */}
+                                <div className="mb-3 w-full rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center relative aspect-video">
+                                    {formData.image ? (
+                                        <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center text-slate-400">
+                                            <ImageIcon size={32} className="mb-2 opacity-50" />
+                                            <span className="text-sm">ไม่มีรูปภาพ</span>
+                                        </div>
+                                    )}
+
+                                    {/* Upload Overlay while uploading */}
+                                    {uploading && (
+                                        <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10">
+                                            <Loader2 className="animate-spin text-purple-600 mb-2" size={24} />
+                                            <span className="text-sm font-medium text-slate-700">กำลังอัพโหลด...</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* URL Input & Upload Button */}
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={formData.image}
+                                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                                        placeholder="หรือกรอก URL รูปภาพ (https://...)"
+                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 outline-none text-sm"
+                                        required
+                                        disabled={uploading}
+                                    />
+                                    <label className={`flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 rounded-lg cursor-pointer transition-colors ${uploading ? 'bg-slate-100 text-slate-400' : 'bg-white hover:bg-slate-50 text-slate-700'}`}>
+                                        <Upload size={16} />
+                                        <span className="text-sm font-medium">อัพโหลดไฟล์</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileUpload}
+                                            className="hidden"
+                                            disabled={uploading}
+                                        />
+                                    </label>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Link (ถ้ามี)</label>
@@ -239,7 +331,7 @@ export default function BannersPage() {
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">ยกเลิก</button>
-                            <button onClick={handleSave} disabled={isSaving} className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-900/20">
+                            <button onClick={handleSave} disabled={isSaving || uploading} className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-900/20">
                                 <Save size={18} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
                             </button>
                         </div>

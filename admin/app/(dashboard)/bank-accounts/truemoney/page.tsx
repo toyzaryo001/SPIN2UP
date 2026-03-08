@@ -63,7 +63,12 @@ export default function TrueMoneyPage() {
         setIsSaving(true);
         try {
             if (editingWallet) {
-                await api.put(`/admin/settings/truemoney/${editingWallet.id}`, formData);
+                const submissionData = { ...formData };
+                // ถ้าแก้ไข และ ไม่ได้กรอก jwtSecret ใหม่ ให้ลบออกก่อนส่ง จะได้ไม่ทับของเดิม
+                if (!submissionData.jwtSecret) {
+                    delete (submissionData as any).jwtSecret;
+                }
+                await api.put(`/admin/settings/truemoney/${editingWallet.id}`, submissionData);
             } else {
                 await api.post("/admin/settings/truemoney", formData);
             }

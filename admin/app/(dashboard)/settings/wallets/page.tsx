@@ -28,7 +28,7 @@ export default function WalletsSettingsPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.[action];
+        const p = adminPermissions?.['settings']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;

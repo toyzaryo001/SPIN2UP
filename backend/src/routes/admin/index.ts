@@ -46,16 +46,15 @@ router.get('/me', async (req: AuthRequest, res: Response) => {
         if (isActuallySuperAdmin || req.user?.role === 'SUPER_ADMIN') {
             // Super admin has all permissions - matching PERMISSION_MATRIX
             permissions = {
-                members: { view: true, view_detail: true, create: true, edit: true, delete: true, view_logs: true },
-                manual: { view_deposits: true, view_withdrawals: true, add_credit: true, add_bonus: true, deduct: true, approve_deposit: true, approve_withdraw: true, reject_withdraw: true },
-                reports: { view_new_users: true, view_deposits: true, view_withdrawals: true, view_bonus: true, view_profit: true, view_inactive: true },
-                settings: { view: true, edit: true, banks: true, truemoney: true, agents: true, features: true },
-                promotions: { view: true, create: true, edit: true, delete: true, view_logs: true },
-                banners: { view: true, create: true, edit: true, delete: true },
-                games: { view: true, edit: true },
-                announcements: { view: true, create: true, edit: true, delete: true },
-                agents: { view: true, create: true, edit: true, delete: true },
-                staff: { view: true, create: true, edit: true, delete: true, manage_roles: true, view_logs: true },
+                members: { list: true, register: true, edit_general: true, edit_bank: true, edit_password: true, change_status: true, delete: true, history: true },
+                manual: { deposit: true, withdraw: true, withdrawals: true, history: true },
+                reports: { new_users: true, new_users_deposit: true, deposits: true, withdrawals: true, bonus: true, profit: true, inactive_users: true, win_lose: true },
+                settings: { general: true, features: true, contacts: true, notify: true, banks: true, truemoney: true, logobank: true, payment: true },
+                promotions: { list: true, history: true },
+                banners: { banners: true, announcements: true },
+                agents: { settings: true, import: true, categories: true, providers: true, games: true, mix_board: true, connection_test: true },
+                activities: { cashback: true, streak: true, commission: true, history: true, referral: true, ranks: true },
+                staff: { admins: true, roles: true, logs: true },
             };
         } else if (admin.role) {
             try {

@@ -90,7 +90,7 @@ export default function CategoriesPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.['agents'];
+        const p = adminPermissions?.['agents']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;
@@ -263,7 +263,7 @@ export default function CategoriesPage() {
                         <p className="text-sm text-slate-500">ลากเพื่อจัดลำดับ</p>
                     </div>
                 </div>
-                <button disabled={!hasPerm('agents')} onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button disabled={!hasPerm('categories')} onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus size={18} /> เพิ่มหมวดหมู่
                 </button>
             </div>
@@ -292,9 +292,9 @@ export default function CategoriesPage() {
                                         <SortableRow
                                             key={cat.id}
                                             cat={cat}
-                                            toggle={hasPerm('agents') ? toggle : () => { }}
-                                            openModal={hasPerm('agents') ? openModal : () => { }}
-                                            confirmDelete={hasPerm('agents') ? confirmDelete : () => { }}
+                                            toggle={hasPerm('categories') ? toggle : () => { }}
+                                            openModal={hasPerm('categories') ? openModal : () => { }}
+                                            confirmDelete={hasPerm('categories') ? confirmDelete : () => { }}
                                             isImageIcon={isImageIcon}
                                         />
                                     ))

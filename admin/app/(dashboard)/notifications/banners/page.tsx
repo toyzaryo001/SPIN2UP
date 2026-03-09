@@ -34,7 +34,7 @@ export default function BannersPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.[action];
+        const p = adminPermissions?.['banners']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;

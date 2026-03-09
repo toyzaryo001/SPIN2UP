@@ -147,9 +147,9 @@ const allMenuItems: MenuItem[] = [
     label: 'พนักงาน',
     permissionKey: 'staff',
     submenu: [
-      { label: 'จัดการแอดมิน', href: '/staff/list', permissionCheck: { category: 'staff', action: 'view' } },
-      { label: 'สิทธิ์การเข้าถึง', href: '/staff/roles', permissionCheck: { category: 'staff', action: 'manage_roles' } },
-      { label: 'ประวัติแอดมิน', href: '/staff/logs', permissionCheck: { category: 'staff', action: 'view_logs' } },
+      { label: 'จัดการแอดมิน', href: '/staff/list', permissionCheck: { category: 'staff', action: 'admins' } },
+      { label: 'สิทธิ์การเข้าถึง', href: '/staff/roles', permissionCheck: { category: 'staff', action: 'roles' } },
+      { label: 'ประวัติแอดมิน', href: '/staff/logs', permissionCheck: { category: 'staff', action: 'logs' } },
     ]
   },
 ];

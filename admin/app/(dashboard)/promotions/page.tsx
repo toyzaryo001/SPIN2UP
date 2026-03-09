@@ -43,7 +43,7 @@ export default function PromotionsPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.[action];
+        const p = adminPermissions?.['promotions']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;
@@ -171,7 +171,7 @@ export default function PromotionsPage() {
                 <h2 className="text-2xl font-bold text-slate-800">จัดการโปรโมชั่น</h2>
                 <button
                     onClick={openCreateModal}
-                    disabled={!hasPerm('promotions')}
+                    disabled={!hasPerm('list')}
                     className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Plus size={20} />
@@ -203,7 +203,7 @@ export default function PromotionsPage() {
                                     <div className="absolute top-3 right-3">
                                         <button
                                             onClick={() => toggleStatus(promo)}
-                                            disabled={!hasPerm('promotions')}
+                                            disabled={!hasPerm('list')}
                                             className={`p-1 rounded-full ${promo.isActive ? 'bg-emerald-500' : 'bg-slate-400'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                         >
                                             {promo.isActive ? <ToggleRight size={24} className="text-white" /> : <ToggleLeft size={24} className="text-white" />}
@@ -226,10 +226,10 @@ export default function PromotionsPage() {
                                     </div>
 
                                     <div className="mt-auto pt-4 border-t border-slate-100 flex justify-end gap-2">
-                                        <button onClick={() => openEditModal(promo)} disabled={!hasPerm('promotions')} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <button onClick={() => openEditModal(promo)} disabled={!hasPerm('list')} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Edit2 size={18} />
                                         </button>
-                                        <button onClick={() => openDeleteModal(promo)} disabled={!hasPerm('promotions')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <button onClick={() => openDeleteModal(promo)} disabled={!hasPerm('list')} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Trash2 size={18} />
                                         </button>
                                     </div>

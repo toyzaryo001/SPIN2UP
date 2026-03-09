@@ -24,7 +24,7 @@ export default function GameImportPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.['agents'];
+        const p = adminPermissions?.['agents']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;
@@ -207,8 +207,8 @@ export default function GameImportPage() {
                             </div>
                             <button
                                 onClick={startBetflixSync}
-                                disabled={loading || !hasPerm('agents')}
-                                className={`flex items-center justify-center bg-green-700 hover:bg-green-600 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-green-900/20 ${(loading || !hasPerm('agents')) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                disabled={loading || !hasPerm('import')}
+                                className={`flex items-center justify-center bg-green-700 hover:bg-green-600 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-green-900/20 ${(loading || !hasPerm('import')) ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 {loading ? (
                                     <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> กำลังดึงข้อมูล...</>
@@ -231,8 +231,8 @@ export default function GameImportPage() {
                             </div>
                             <button
                                 onClick={startNexusSync}
-                                disabled={loading || !hasPerm('agents')}
-                                className={`flex items-center justify-center bg-purple-700 hover:bg-purple-600 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-purple-900/20 ${(loading || !hasPerm('agents')) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                disabled={loading || !hasPerm('import')}
+                                className={`flex items-center justify-center bg-purple-700 hover:bg-purple-600 text-white font-semibold w-full h-12 rounded-lg transition-all shadow-lg hover:shadow-purple-900/20 ${(loading || !hasPerm('import')) ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 {loading ? (
                                     <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Connecting Nexus...</>
@@ -263,7 +263,7 @@ export default function GameImportPage() {
                                     setLoading(false);
                                 }
                             }}
-                            disabled={loading || !hasPerm('agents')}
+                            disabled={loading || !hasPerm('import')}
                             className={`flex items-center justify-center text-red-500 hover:text-red-400 hover:bg-red-950/30 font-semibold w-full h-10 rounded-lg transition-all text-sm ${loading ? 'hidden' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             <span className="flex items-center">

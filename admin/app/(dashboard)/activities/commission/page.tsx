@@ -29,7 +29,7 @@ export default function CommissionSettingsPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.[action];
+        const p = adminPermissions?.['activities']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;
@@ -104,7 +104,7 @@ export default function CommissionSettingsPage() {
                             type="number"
                             step="0.01"
                             value={settings.rate}
-                            disabled={!hasPerm('activities')}
+                            disabled={!hasPerm('commission')}
                             onChange={(e) => setSettings({ ...settings, rate: parseFloat(e.target.value) || 0 })}
                             className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                         />
@@ -118,7 +118,7 @@ export default function CommissionSettingsPage() {
                         <input
                             type="number"
                             value={settings.minTurnover}
-                            disabled={!hasPerm('activities')}
+                            disabled={!hasPerm('commission')}
                             onChange={(e) => setSettings({ ...settings, minTurnover: parseFloat(e.target.value) || 0 })}
                             className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                         />
@@ -131,7 +131,7 @@ export default function CommissionSettingsPage() {
                         <input
                             type="number"
                             value={settings.maxReward}
-                            disabled={!hasPerm('activities')}
+                            disabled={!hasPerm('commission')}
                             onChange={(e) => setSettings({ ...settings, maxReward: parseFloat(e.target.value) || 0 })}
                             className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                         />
@@ -143,7 +143,7 @@ export default function CommissionSettingsPage() {
                         <input
                             type="checkbox"
                             checked={settings.isActive}
-                            disabled={!hasPerm('activities')}
+                            disabled={!hasPerm('commission')}
                             onChange={(e) => setSettings({ ...settings, isActive: e.target.checked })}
                             className="w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 disabled:opacity-50"
                         />
@@ -161,7 +161,7 @@ export default function CommissionSettingsPage() {
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={saving || !hasPerm('activities')}
+                        disabled={saving || !hasPerm('commission')}
                         className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Save size={18} />

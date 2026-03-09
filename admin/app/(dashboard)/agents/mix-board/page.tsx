@@ -65,7 +65,7 @@ export default function MixBoardPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.['agents'];
+        const p = adminPermissions?.['agents']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;
@@ -340,7 +340,7 @@ export default function MixBoardPage() {
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    disabled={!hasPerm('agents')}
+                    disabled={!hasPerm('mix_board')}
                     className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Plus size={16} /> สร้างค่ายใหม่ (Custom)
@@ -360,7 +360,7 @@ export default function MixBoardPage() {
                             {selectedSourceGameIds.length > 0 && (
                                 <button
                                     onClick={handleMoveGames}
-                                    disabled={!targetProviderId || !hasPerm('agents')}
+                                    disabled={!targetProviderId || !hasPerm('mix_board')}
                                     className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg shadow hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-400 flex items-center gap-1 transition-all disabled:cursor-not-allowed"
                                 >
                                     <span>ย้าย {selectedSourceGameIds.length} เกม</span>
@@ -448,7 +448,7 @@ export default function MixBoardPage() {
                     </div>
                     <button
                         onClick={handleMoveGames}
-                        disabled={selectedSourceGameIds.length === 0 || !targetProviderId || !hasPerm('agents')}
+                        disabled={selectedSourceGameIds.length === 0 || !targetProviderId || !hasPerm('mix_board')}
                         className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all flex flex-col items-center min-w-[140px] disabled:cursor-not-allowed"
                     >
                         {!targetProviderId ? (
@@ -474,10 +474,10 @@ export default function MixBoardPage() {
                             </div>
                             {targetProviderId && (
                                 <div className="flex gap-1">
-                                    <button disabled={!hasPerm('agents')} onClick={openEditModal} className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed" title="แก้ไขชื่อ">
+                                    <button disabled={!hasPerm('mix_board')} onClick={openEditModal} className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed" title="แก้ไขชื่อ">
                                         <Edit2 size={16} />
                                     </button>
-                                    <button disabled={!hasPerm('agents')} onClick={() => handleDeleteProvider(targetProviderId!)} className="p-1 hover:bg-red-100 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="ลบค่ายนี้">
+                                    <button disabled={!hasPerm('mix_board')} onClick={() => handleDeleteProvider(targetProviderId!)} className="p-1 hover:bg-red-100 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="ลบค่ายนี้">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>

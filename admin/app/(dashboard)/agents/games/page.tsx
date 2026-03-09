@@ -61,7 +61,7 @@ export default function GamesPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.['agents'];
+        const p = adminPermissions?.['agents']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;
@@ -235,10 +235,10 @@ export default function GamesPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button disabled={!hasPerm('agents')} onClick={() => setIsUpdateImagesModalOpen(true)} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button disabled={!hasPerm('games')} onClick={() => setIsUpdateImagesModalOpen(true)} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Sparkles size={18} /> อัพเดทรูป (JSON)
                     </button>
-                    <button disabled={!hasPerm('agents')} onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button disabled={!hasPerm('games')} onClick={() => openModal()} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Plus size={18} /> เพิ่มเกม
                     </button>
                 </div>
@@ -298,23 +298,23 @@ export default function GamesPage() {
                                             ) : <span className="text-slate-300">-</span>}
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <button disabled={!hasPerm('agents')} onClick={() => toggle(game.id, 'isHot', game.isHot)} className={`p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed ${game.isHot ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-300'}`}>
+                                            <button disabled={!hasPerm('games')} onClick={() => toggle(game.id, 'isHot', game.isHot)} className={`p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed ${game.isHot ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-300'}`}>
                                                 <Flame size={18} />
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <button disabled={!hasPerm('agents')} onClick={() => toggle(game.id, 'isNew', game.isNew)} className={`p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed ${game.isNew ? 'bg-blue-100 text-blue-500' : 'bg-slate-100 text-slate-300'}`}>
+                                            <button disabled={!hasPerm('games')} onClick={() => toggle(game.id, 'isNew', game.isNew)} className={`p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed ${game.isNew ? 'bg-blue-100 text-blue-500' : 'bg-slate-100 text-slate-300'}`}>
                                                 <Sparkles size={18} />
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <button disabled={!hasPerm('agents')} onClick={() => toggle(game.id, 'isActive', game.isActive)} className="disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <button disabled={!hasPerm('games')} onClick={() => toggle(game.id, 'isActive', game.isActive)} className="disabled:opacity-50 disabled:cursor-not-allowed">
                                                 {game.isActive ? <ToggleRight size={24} className="text-emerald-500" /> : <ToggleLeft size={24} className="text-slate-300" />}
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <button disabled={!hasPerm('agents')} onClick={() => openModal(game)} className="p-2 hover:bg-slate-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"><Edit size={16} /></button>
-                                            <button disabled={!hasPerm('agents')} onClick={() => confirmDelete(game)} className="p-2 hover:bg-red-50 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
+                                            <button disabled={!hasPerm('games')} onClick={() => openModal(game)} className="p-2 hover:bg-slate-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"><Edit size={16} /></button>
+                                            <button disabled={!hasPerm('games')} onClick={() => confirmDelete(game)} className="p-2 hover:bg-red-50 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
                                         </td>
                                     </tr>
                                 ))

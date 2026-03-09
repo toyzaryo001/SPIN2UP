@@ -85,11 +85,21 @@ router.post('/banks', requirePermission('settings', 'banks', 'manage'), async (r
 // PUT /api/admin/settings/banks/:id (ต้องมีสิทธิ์ settings.banks)
 router.put('/banks/:id', requirePermission('settings', 'banks', 'manage'), async (req, res) => {
     try {
-        const { bankName, accountNumber, accountName, type, isActive, minDeposit } = req.body;
+        const { bankName, accountNumber, accountName, type, isActive, isShow, minDeposit } = req.body;
+
+        const updateData: any = {
+            bankName,
+            accountNumber,
+            accountName,
+            type,
+            ...(isActive !== undefined && { isActive }),
+            ...(isShow !== undefined && { isShow }),
+            ...(minDeposit !== undefined && { minDeposit: Number(minDeposit) })
+        };
 
         const bank = await prisma.bankAccount.update({
             where: { id: Number(req.params.id) },
-            data: { bankName, accountNumber, accountName, type, isActive, minDeposit: minDeposit !== undefined ? minDeposit : 0 },
+            data: updateData,
         });
 
         res.json({ success: true, data: bank });
@@ -236,12 +246,18 @@ router.get('/truemoney', requirePermission('settings', 'truemoney', 'view'), asy
 // POST /api/admin/settings/truemoney (ต้องมีสิทธิ์ settings.truemoney)
 router.post('/truemoney', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
-        const { phoneNumber, accountName, jwtSecret, isActive, minDeposit } = req.body;
+        const { phoneNumber, accountName, jwtSecret, isActive, isShow, minDeposit } = req.body;
 
         const wallet = await prisma.trueMoneyWallet.create({
-            data: { phoneNumber, accountName, jwtSecret: jwtSecret || null, isActive: isActive ?? true, minDeposit: minDeposit || 0 },
+            data: {
+                phoneNumber,
+                accountName,
+                jwtSecret: jwtSecret || null,
+                isActive: isActive ?? true,
+                isShow: isShow ?? true,
+                minDeposit: minDeposit ? Number(minDeposit) : 0
+            },
         });
-
         res.status(201).json({ success: true, data: wallet });
     } catch (error) {
         console.error('Create truemoney error:', error);
@@ -252,12 +268,13 @@ router.post('/truemoney', requirePermission('settings', 'truemoney', 'manage'), 
 // PUT /api/admin/settings/truemoney/:id (ต้องมีสิทธิ์ settings.truemoney)
 router.put('/truemoney/:id', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
-        const { phoneNumber, accountName, jwtSecret, isActive, minDeposit } = req.body;
+        const { phoneNumber, accountName, jwtSecret, isActive, isShow, minDeposit } = req.body;
         const updateData: any = {};
         if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
         if (accountName !== undefined) updateData.accountName = accountName;
         if (jwtSecret !== undefined) updateData.jwtSecret = jwtSecret || null;
         if (isActive !== undefined) updateData.isActive = isActive;
+        if (isShow !== undefined) updateData.isShow = isShow;
         if (minDeposit !== undefined) updateData.minDeposit = minDeposit;
 
         const wallet = await prisma.trueMoneyWallet.update({

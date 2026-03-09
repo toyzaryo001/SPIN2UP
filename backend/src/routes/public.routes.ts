@@ -198,6 +198,7 @@ router.get('/bank-accounts', async (req: Request, res: Response) => {
         const accounts = await prisma.bankAccount.findMany({
             where: {
                 isActive: true,
+                isShow: true,
                 ...(type && { type: type as string })
             }
         });
@@ -211,7 +212,7 @@ router.get('/bank-accounts', async (req: Request, res: Response) => {
 router.get('/truemoney', async (req: Request, res: Response) => {
     try {
         const wallets = await prisma.trueMoneyWallet.findMany({
-            where: { isActive: true }
+            where: { isActive: true, isShow: true }
         });
         res.json(wallets);
     } catch (error) {

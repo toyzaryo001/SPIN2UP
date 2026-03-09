@@ -46,6 +46,12 @@ export default function ReferralPage() {
                 }
             } catch (error) {
                 console.error("Failed to fetch referral stats", error);
+                if (axios.isAxiosError(error) && error.response?.status === 401) {
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("user");
+                    localStorage.removeItem("lastActive");
+                    window.dispatchEvent(new Event('user-logout'));
+                }
                 // Fallback to user data
                 if (user) {
                     const origin = typeof window !== 'undefined' ? window.location.origin : '';

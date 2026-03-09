@@ -130,11 +130,16 @@ api.interceptors.response.use(
 
         // 401 Unauthorized → auto logout
         if (error.response?.status === 401 && typeof window !== 'undefined') {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.dispatchEvent(new Event('user-logout'));
-            if (window.location.pathname !== '/') {
-                window.location.href = '/?action=login';
+            const token = localStorage.getItem('token');
+            if (token) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                localStorage.removeItem('lastActive');
+                window.dispatchEvent(new Event('user-logout'));
+                // Prevent immediate redirect loop if already on home page login modal
+                if (window.location.pathname !== '/') {
+                    window.location.href = '/?action=login';
+                }
             }
         }
 

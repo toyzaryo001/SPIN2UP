@@ -22,6 +22,8 @@ function performLogout() {
         }
         localStorage.removeItem('token');
         localStorage.removeItem('lastActive');
+        localStorage.removeItem('user');
+        window.dispatchEvent(new Event('user-logout'));
         window.location.href = '/';
     }
 }

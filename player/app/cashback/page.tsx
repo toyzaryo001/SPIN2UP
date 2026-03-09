@@ -41,6 +41,12 @@ export default function CashbackPage() {
                 }
             } catch (error) {
                 console.error("Failed to fetch cashback data", error);
+                if (axios.isAxiosError(error) && error.response?.status === 401) {
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("user");
+                    localStorage.removeItem("lastActive");
+                    window.dispatchEvent(new Event('user-logout'));
+                }
             } finally {
                 setLoading(false);
             }

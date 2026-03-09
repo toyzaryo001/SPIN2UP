@@ -72,15 +72,27 @@ export default function ProfilePage() {
             }
         } catch (error) {
             console.error("Fetch user error:", error);
-            // Use localStorage fallback
+            // Use localStorage fallback if network error, otherwise if 401 clear it
+            const err = error as any;
+            if (err.response?.status === 401) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                localStorage.removeItem("lastActive");
+                window.dispatchEvent(new Event('user-logout'));
+                router.push("/?action=login");
+                return;
+            }
+
             const userData = localStorage.getItem("user");
             if (userData && userData !== "undefined") {
                 try {
                     setUser(JSON.parse(userData));
                 } catch (e) {
+                    localStorage.removeItem("token");
                     router.push("/?action=login");
                 }
             } else {
+                localStorage.removeItem("token");
                 router.push("/?action=login");
             }
         } finally {

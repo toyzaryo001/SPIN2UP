@@ -59,6 +59,10 @@ export default function WithdrawPage() {
             console.error("Fetch user error:", error);
             // Optional: Redirect to login if 401
             if (axios.isAxiosError(error) && error.response?.status === 401) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                localStorage.removeItem("lastActive");
+                window.dispatchEvent(new Event('user-logout'));
                 router.push("/?action=login");
             }
         }

@@ -723,7 +723,16 @@ function HomePageLogic() {
         setUser(res.data.data);
         localStorage.setItem("user", JSON.stringify(res.data.data));
       }
-    } catch (err) { console.error("Failed to fetch user:", err); }
+    } catch (err: any) {
+      console.error("Failed to fetch user:", err);
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("lastActive");
+        setUser(null);
+        window.dispatchEvent(new Event('user-logout'));
+      }
+    }
     finally { setRefreshingBalance(false); }
   };
 

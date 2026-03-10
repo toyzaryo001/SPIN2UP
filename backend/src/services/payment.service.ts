@@ -129,28 +129,34 @@ export class PaymentService {
         }
 
         // ============================================
-        // STEP A: หัก balance ใน DB ก่อน (Atomic) — ป้องกัน double-spend
+        // STEP A: หัก balance ใน DB ก่อน (Atomic Optimistic Lock) — ป้องกัน double-spend
         // ============================================
         const transaction = await prisma.$transaction(async (tx) => {
-            // เช็ค balance อีกครั้งใน transaction (pessimistic)
-            const freshUser = await tx.user.findUnique({ where: { id: userId } });
-            if (!freshUser || Number(freshUser.balance) < amount) {
-                throw new Error('ยอดเงินไม่เพียงพอ');
-            }
-
-            // หัก balance ทันที
-            await tx.user.update({
-                where: { id: userId },
+            // เช็ค balance และหักเงินทันทีโดยใช้เงื่อนไข (Optimistic Concurrency Control)
+            // วิธีนี้ Database จะหา Record ที่เงินพอเท่านั้น ถ้าไม่พอ `count` จะเป็น 0 ทันที 
+            // ลดความเสี่ยงจาก Race condition 100%
+            const updateResult = await tx.user.updateMany({
+                where: {
+                    id: userId,
+                    balance: { gte: amount } // เช็คระดับ DB ว่ายอดต้องมากกว่าหรือเท่ากับที่ขอถอน
+                },
                 data: { balance: { decrement: amount } }
             });
+
+            if (updateResult.count === 0) {
+                throw new Error('ยอดเงินไม่เพียงพอ หรือมีการทำรายการซ้อนทับกัน');
+            }
+
+            // เนื่องจาก updateMany ไม่คืนค่า object ที่อัปเดต ต้องดึงค่าเพื่อทำ log
+            const freshUser = await tx.user.findUnique({ where: { id: userId } });
 
             return await tx.transaction.create({
                 data: {
                     userId,
                     type: 'WITHDRAW',
                     amount: new Decimal(amount),
-                    balanceBefore: freshUser.balance,
-                    balanceAfter: new Decimal(Number(freshUser.balance) - amount),
+                    balanceBefore: new Decimal(Number(freshUser!.balance) + amount), // ย้อนค่าก่อนหัก
+                    balanceAfter: freshUser!.balance,
                     status: 'PENDING',
                     note: 'Withdraw Request',
                     paymentGatewayId: null

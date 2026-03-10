@@ -211,39 +211,36 @@ export class RewardService {
         // ============================================
         // PREPARE SAGA: 1. Create PRE-CLAIM Record
         // ============================================
-        // Check again and create in a rapid transaction to prevent race conditions
-        const claimRecord = await prisma.$transaction(async (tx) => {
-            // Check claims specifically for this period start to ensure atomic check
-            const existingClaim = await tx.rewardClaim.findFirst({
-                where: {
-                    userId,
-                    type,
-                    periodStart: new Date(target.periodStart)
-                }
-            });
+        // Check and create atomically using Raw SQL to prevent Race Conditions without needing Schema Unique constraints
+        const periodStartStr = new Date(target.periodStart).toISOString();
+        const periodEndStr = new Date(target.periodEnd).toISOString();
 
-            if (existingClaim) {
-                throw new Error('Already claimed or currently processing');
-            }
+        // This query inserts ONLY IF no other claim exists for this user + type + periodStart
+        // RETURNING id gives us the newly created claim ID, or undefined if it was skipped (race condition won)
+        const insertResult: any[] = await prisma.$queryRaw`
+            INSERT INTO "RewardClaim" ("userId", "type", "amount", "periodStart", "periodEnd", "claimedAt")
+            SELECT ${userId}, ${type}, ${amount}, ${new Date(target.periodStart)}, ${new Date(target.periodEnd)}, NOW()
+            WHERE NOT EXISTS (
+                SELECT 1 FROM "RewardClaim" 
+                WHERE "userId" = ${userId} 
+                  AND "type" = ${type} 
+                  AND "periodStart" = ${new Date(target.periodStart)}
+            )
+            RETURNING id;
+        `;
 
-            // Create placeholder claim
-            return await tx.rewardClaim.create({
-                data: {
-                    userId,
-                    type,
-                    amount: amount,
-                    periodStart: new Date(target.periodStart),
-                    periodEnd: new Date(target.periodEnd),
-                }
-            });
-        });
+        if (!insertResult || insertResult.length === 0) {
+            throw new Error('Already claimed or currently processing');
+        }
+
+        const claimRecordId = insertResult[0].id;
 
         // ============================================
         // BETFLIX SYNC: Deposit to Game Wallet MUST Happen AFTER DB lock
         // ============================================
         try {
             const betflixResult = await BetflixService.ensureAndTransfer(
-                userId, user.phone, user.betflixUsername, amount, `REWARD_${type}_${claimRecord.id}`
+                userId, user.phone, user.betflixUsername, amount, `REWARD_${type}_${claimRecordId}`
             );
 
             if (!betflixResult.success) {
@@ -279,7 +276,7 @@ export class RewardService {
             // ROLLBACK SAGA: Remove claim record so they can try again
             // ============================================
             console.error('[Reward] Claim failed, rolling back claim record', error);
-            await prisma.rewardClaim.delete({ where: { id: claimRecord.id } }).catch(() => { });
+            await prisma.rewardClaim.delete({ where: { id: claimRecordId } }).catch(() => { });
             throw error;
         }
     }

@@ -10,6 +10,7 @@ interface TrueMoneyWallet {
     phoneNumber: string;
     accountName: string;
     isActive: boolean;
+    isShow?: boolean;
     jwtSecret?: string | null;
     hasSecret?: boolean;
     webhookUrl?: string;
@@ -24,7 +25,7 @@ export default function TrueMoneyPage() {
     const [editingWallet, setEditingWallet] = useState<TrueMoneyWallet | null>(null);
     const [deletingWallet, setDeletingWallet] = useState<TrueMoneyWallet | null>(null);
 
-    const [formData, setFormData] = useState({ phoneNumber: "", accountName: "", isActive: true, jwtSecret: "", minDeposit: 0 });
+    const [formData, setFormData] = useState({ phoneNumber: "", accountName: "", isActive: true, isShow: true, jwtSecret: "", minDeposit: 0 });
     const [isSaving, setIsSaving] = useState(false);
     const [showSecret, setShowSecret] = useState(false);
 
@@ -67,10 +68,10 @@ export default function TrueMoneyPage() {
     const openModal = (wallet?: TrueMoneyWallet) => {
         if (wallet) {
             setEditingWallet(wallet);
-            setFormData({ phoneNumber: wallet.phoneNumber, accountName: wallet.accountName, isActive: wallet.isActive, jwtSecret: "", minDeposit: wallet.minDeposit || 0 });
+            setFormData({ phoneNumber: wallet.phoneNumber, accountName: wallet.accountName, isActive: wallet.isActive, isShow: wallet.isShow ?? true, jwtSecret: "", minDeposit: wallet.minDeposit || 0 });
         } else {
             setEditingWallet(null);
-            setFormData({ phoneNumber: "", accountName: "", isActive: true, jwtSecret: "", minDeposit: 0 });
+            setFormData({ phoneNumber: "", accountName: "", isActive: true, isShow: true, jwtSecret: "", minDeposit: 0 });
         }
         setShowSecret(false);
         setIsModalOpen(true);
@@ -119,9 +120,22 @@ export default function TrueMoneyPage() {
             const newStatus = !wallet.isActive;
             await api.put(`/admin/settings/truemoney/${wallet.id}`, { ...wallet, isActive: newStatus });
             setWallets(wallets.map(w => w.id === wallet.id ? { ...w, isActive: newStatus } : w));
-            toast.success(`เปลี่ยนสถานะเป็น ${newStatus ? 'ใช้งาน' : 'ปิด'}`);
+            toast.success(`เปลี่ยนสถานะรับยอดเป็น ${newStatus ? 'เปิด' : 'ปิด'}`);
         } catch (error) {
             console.error("Toggle error:", error);
+            toast.error("เปลี่ยนสถานะไม่สำเร็จ");
+            fetchWallets();
+        }
+    };
+
+    const handleToggleShow = async (wallet: TrueMoneyWallet) => {
+        try {
+            const newShow = !(wallet.isShow ?? true);
+            await api.put(`/admin/settings/truemoney/${wallet.id}`, { ...wallet, isShow: newShow });
+            setWallets(wallets.map(w => w.id === wallet.id ? { ...w, isShow: newShow } : w));
+            toast.success(`เปลี่ยนสถานะโชว์หน้าเว็บเป็น ${newShow ? 'เปิด' : 'ปิด'}`);
+        } catch (error) {
+            console.error("Toggle show error:", error);
             toast.error("เปลี่ยนสถานะไม่สำเร็จ");
             fetchWallets();
         }
@@ -157,7 +171,8 @@ export default function TrueMoneyPage() {
                                 <th className="px-6 py-4">เบอร์โทร / ชื่อบัญชี</th>
                                 <th className="px-6 py-4">Webhook URL</th>
                                 <th className="px-6 py-4">การเชื่อมต่อ</th>
-                                <th className="px-6 py-4 text-center">สถานะ</th>
+                                <th className="px-6 py-4 text-center">โชว์หน้าเว็บ</th>
+                                <th className="px-6 py-4 text-center">รับยอดออโต้</th>
                                 <th className="px-6 py-4 text-right">จัดการ</th>
                             </tr>
                         </thead>
@@ -216,10 +231,23 @@ export default function TrueMoneyPage() {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <button
+                                                onClick={() => handleToggleShow(wallet)}
+                                                disabled={!hasPerm('banks')}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 ${(wallet.isShow ?? true) ? 'bg-blue-500' : 'bg-slate-200'
+                                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                                title={(wallet.isShow ?? true) ? "แสดงบนหน้าฝากเงินผู้เล่น" : "ซ่อนจากหน้าฝากเงินผู้เล่น"}
+                                            >
+                                                <span className={`${(wallet.isShow ?? true) ? 'translate-x-6' : 'translate-x-1'
+                                                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button
                                                 onClick={() => handleToggleStatus(wallet)}
                                                 disabled={!hasPerm('banks')}
                                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 ${wallet.isActive ? 'bg-emerald-500' : 'bg-slate-200'
                                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                                title={wallet.isActive ? "ระบบจะปรับยอดให้อัตโนมัติ" : "ปิดการปรับยอดอัตโนมัติ"}
                                             >
                                                 <span className={`${wallet.isActive ? 'translate-x-6' : 'translate-x-1'
                                                     } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
@@ -311,9 +339,21 @@ export default function TrueMoneyPage() {
                                     </ol>
                                 </div>
                             )}
-                            <div className="flex items-center pt-2">
-                                <input type="checkbox" id="walletActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded text-orange-500 focus:ring-orange-500" />
-                                <label htmlFor="walletActive" className="ml-2 text-sm font-medium text-slate-700 cursor-pointer">เปิดใช้งาน Wallet นี้</label>
+                            <div className="flex flex-col gap-3 pt-2">
+                                <div className="flex items-center">
+                                    <input type="checkbox" id="walletShow" checked={formData.isShow} onChange={(e) => setFormData({ ...formData, isShow: e.target.checked })} className="w-5 h-5 rounded text-blue-500 focus:ring-blue-500" />
+                                    <div className="ml-2">
+                                        <label htmlFor="walletShow" className="text-sm font-medium text-slate-700 cursor-pointer">โชว์หน้าเว็บ</label>
+                                        <p className="text-xs text-slate-500">แสดงบัญชีนี้ในหน้าฝากเงินของฝั่งผู้เล่น</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center">
+                                    <input type="checkbox" id="walletActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded text-emerald-500 focus:ring-emerald-500" />
+                                    <div className="ml-2">
+                                        <label htmlFor="walletActive" className="text-sm font-medium text-slate-700 cursor-pointer">เปิดรับยอดออโต้</label>
+                                        <p className="text-xs text-slate-500">ระบบจะทำการตรวจสอบและปรับยอดให้อัตโนมัติ (ควรเปิดไว้เสมอ)</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">

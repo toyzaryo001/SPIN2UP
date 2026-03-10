@@ -413,11 +413,22 @@ router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), as
 
 
         // 1. Fetch Valid Transactions
+        const where: any = {
+            type: { in: ['DEPOSIT', 'MANUAL_ADD', 'BONUS', 'CASHBACK'] },
+            createdAt: { gte: start, lte: end }
+        };
+
+        const { status } = req.query;
+        if (status && status !== 'all') {
+            if (typeof status === 'string' && status.includes(',')) {
+                where.status = { in: status.split(',') };
+            } else {
+                where.status = status;
+            }
+        }
+
         const transactions = await prisma.transaction.findMany({
-            where: {
-                type: { in: ['DEPOSIT', 'MANUAL_ADD', 'BONUS', 'CASHBACK'] },
-                createdAt: { gte: start, lte: end }
-            },
+            where,
             include: {
                 user: { select: { username: true, fullName: true, phone: true } }
             },

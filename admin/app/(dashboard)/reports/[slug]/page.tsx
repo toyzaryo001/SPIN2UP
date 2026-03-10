@@ -12,6 +12,8 @@ const reportConfig: Record<string, { title: string; columns: string[] }> = {
     "new-users-deposit": { title: "รายงานสมัครใหม่ฝากเงิน", columns: ["วันที่", "Username", "ชื่อ-นามสกุล", "ยอดฝากแรก", "สถานะ"] },
     "deposit": { title: "รายงานฝากเงิน", columns: ["วันที่", "Username", "จำนวนเงิน", "ช่องทาง", "สถานะ", "ผู้ทำรายการ"] },
     "withdraw": { title: "รายงานถอนเงิน", columns: ["วันที่", "Username", "จำนวนเงิน", "ธนาคาร", "เลขบัญชี", "สถานะ", "ผู้ทำรายการ"] },
+    "failed-deposit": { title: "รายงานฝากล้มเหลว", columns: ["วันที่", "Username", "จำนวนเงิน", "ช่องทาง", "สถานะ", "ผู้ทำรายการ"] },
+    "failed-withdraw": { title: "รายงานถอนล้มเหลว", columns: ["วันที่", "Username", "จำนวนเงิน", "ธนาคาร", "เลขบัญชี", "สถานะ", "ผู้ทำรายการ"] },
     "bonus": { title: "รายงานโบนัส", columns: ["วันที่", "Username", "ประเภท", "จำนวนเงิน", "สถานะ"] },
     "profit-loss": { title: "รายงานกำไรขาดทุน", columns: ["ยอดฝากรวม", "ยอดถอนรวม", "โบนัสรวม", "กำไรสุทธิ"] },
     "inactive-users": { title: "รายงานยูสไม่ออนไลน์", columns: ["Username", "ชื่อ-นามสกุล", "เข้าใช้ล่าสุด", "ยอดคงเหลือ", "สถานะ"] },
@@ -198,14 +200,16 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                 // e.g. use "/admin/transactions" NOT "/api/admin/transactions"
                 // ======================================================
 
-                if (['withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
+                if (['withdraw', 'failed-withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
                     // Transaction-based reports → /admin/transactions
                     const typeMap: Record<string, string> = {
                         "withdraw": "WITHDRAW",
+                        "failed-withdraw": "WITHDRAW,MANUAL_DEDUCT",
                         "bonus": "BONUS",
                         "new-users-deposit": "DEPOSIT",
                     };
-                    const url = `/admin/transactions${query}&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}`;
+                    const statusQuery = slug === 'withdraw' ? '&status=PENDING,COMPLETED' : slug === 'failed-withdraw' ? '&status=FAILED' : '';
+                    const url = `/admin/transactions${query}&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}${statusQuery}`;
                     const res = await api.get(url);
                     const result = res.data;
                     if (result.success) {
@@ -214,9 +218,10 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                         setTotalPages(result.data.pagination?.totalPages || 1);
                     }
 
-                } else if (slug === 'deposit') {
+                } else if (['deposit', 'failed-deposit'].includes(slug)) {
                     // All deposits (inclusive of MANUAL_ADD, BONUS, CASHBACK)
-                    const url = `/admin/reports/all-deposits${query}&preset=custom&startDate=${startISO}&endDate=${endISO}`;
+                    const statusQuery = slug === 'deposit' ? '&status=PENDING,COMPLETED' : '&status=FAILED';
+                    const url = `/admin/reports/all-deposits${query}&preset=custom&startDate=${startISO}&endDate=${endISO}${statusQuery}`;
                     const res = await api.get(url);
                     const result = res.data;
                     if (result.success) {
@@ -297,7 +302,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     const renderRow = (item: any, index: number) => {
         const rowNum = index + 1 + (page - 1) * 20;
 
-        if (slug === 'deposit' || slug === 'new-users-deposit') {
+        if (slug === 'deposit' || slug === 'failed-deposit' || slug === 'new-users-deposit') {
             return (
                 <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
@@ -316,7 +321,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                     ) : (
                         <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
                     )}
-                    {slug === 'deposit' && (
+                    {(slug === 'deposit' || slug === 'failed-deposit') && (
                         <td className="px-6 py-4">
                             <span className={`text-xs px-2 py-1 rounded ${item.channel?.includes('Auto') || item.subType?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
                                 item.type === 'MANUAL_ADD' ? 'bg-blue-100 text-blue-700' :
@@ -332,14 +337,14 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                             {item.status}
                         </span>
                     </td>
-                    {slug === 'deposit' && (
+                    {(slug === 'deposit' || slug === 'failed-deposit') && (
                         <td className="px-6 py-4 text-slate-400 text-xs">{item.admin || (item.adminId ? `Admin #${item.adminId}` : 'System')}</td>
                     )}
                 </tr>
             );
         }
 
-        if (slug === 'withdraw') {
+        if (slug === 'withdraw' || slug === 'failed-withdraw') {
             return (
                 <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>

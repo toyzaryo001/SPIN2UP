@@ -78,6 +78,7 @@ router.get('/', async (req, res) => {
             }),
             // Recent transactions (last 10)
             prisma.transaction.findMany({
+                where: { status: { not: 'FAILED' } },
                 orderBy: { createdAt: 'desc' },
                 take: 10,
                 include: { user: { select: { username: true, fullName: true } } }

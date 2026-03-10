@@ -4,20 +4,8 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import {
-  LayoutDashboard,
-  Users,
-  HandCoins,
-  FileText,
-  CreditCard,
-  Settings,
-  Bell,
-  Tag,
-  UserCog,
-  LogOut,
-  ChevronDown,
-  ChevronRight,
-  ShieldCheck,
-  X
+  Users, UserPlus, CreditCard, PieChart, LogOut, FileText, ChevronDown, ChevronRight, KeyRound, CheckCircle2, Copy, Trash2, Edit2, ShieldCheck, Tag,
+  Bell, Activity, HelpCircle, MonitorDot, Link as LucideLink, ArrowRight, Settings, Plus, Gamepad2, Megaphone, Check, X, HandCoins, UserCog, Wallet, LayoutDashboard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from 'next-auth/react';
@@ -61,14 +49,23 @@ const allMenuItems: MenuItem[] = [
     ]
   },
   {
+    icon: Wallet,
+    label: 'รายการธุรกรรม',
+    permissionKey: 'reports',
+    submenu: [
+      { label: 'รายงานฝากเงิน', href: '/reports/deposit', permissionCheck: { category: 'reports', action: 'deposits' } },
+      { label: 'รายงานถอนเงิน', href: '/reports/withdraw', permissionCheck: { category: 'reports', action: 'withdrawals' } },
+      { label: 'ฝากล้มเหลว', href: '/reports/failed-deposit', permissionCheck: { category: 'reports', action: 'failed_deposits' } },
+      { label: 'ถอนล้มเหลว', href: '/reports/failed-withdraw', permissionCheck: { category: 'reports', action: 'failed_withdrawals' } },
+    ]
+  },
+  {
     icon: FileText,
     label: 'รายงานต่างๆ',
     permissionKey: 'reports',
     submenu: [
       { label: 'รายงานสมัครใหม่', href: '/reports/new-users' },
       { label: 'รายงานสมัครใหม่ฝากเงิน', href: '/reports/new-users-deposit' },
-      { label: 'รายงานฝากเงิน', href: '/reports/deposit' },
-      { label: 'รายงานถอนเงิน', href: '/reports/withdraw' },
       { label: 'รายงานโบนัส', href: '/reports/bonus' },
       { label: 'รายงานกำไรขาดทุน', href: '/reports/profit-loss' },
       { label: 'รายงานยูสไม่ออนไลน์', href: '/reports/inactive-users' },

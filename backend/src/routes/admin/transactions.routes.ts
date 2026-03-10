@@ -49,7 +49,13 @@ router.get('/', async (req, res) => {
                 where.type = type;
             }
         }
-        if (status && status !== 'all') where.status = status;
+        if (status && status !== 'all') {
+            if (typeof status === 'string' && status.includes(',')) {
+                where.status = { in: status.split(',') };
+            } else {
+                where.status = status;
+            }
+        }
         if (userId) where.userId = Number(userId);
 
         // Filter for manual transactions (adminId is not null)

@@ -96,6 +96,7 @@ router.post('/', requirePermission('agents', 'providers', 'manage'), async (req,
                 categoryId: Number(categoryId),
                 isActive: isActive ?? true,
                 sortOrder: sortOrder ?? 0,
+                defaultAgentId: req.body.defaultAgentId ? Number(req.body.defaultAgentId) : null,
             },
         });
 
@@ -128,9 +129,17 @@ router.put('/reorder', requirePermission('agents', 'providers', 'manage'), async
 // PUT /api/admin/providers/:id - แก้ไขค่ายเกม
 router.put('/:id', requirePermission('agents', 'providers', 'manage'), async (req, res) => {
     try {
+        const { defaultAgentId, ...rest } = req.body;
+        const dataToUpdate: any = { ...rest };
+
+        // Handle optional defaultAgentId update
+        if (defaultAgentId !== undefined) {
+            dataToUpdate.defaultAgentId = defaultAgentId ? Number(defaultAgentId) : null;
+        }
+
         const provider = await prisma.gameProvider.update({
             where: { id: Number(req.params.id) },
-            data: req.body,
+            data: dataToUpdate,
         });
 
         res.json({ success: true, data: provider });

@@ -62,6 +62,12 @@ interface Category {
     name: string;
 }
 
+interface Agent {
+    id: number;
+    name: string;
+    isMain?: boolean;
+}
+
 interface Provider {
     id: number;
     name: string;
@@ -74,18 +80,20 @@ interface Provider {
     sortOrder: number;
     _count: { games: number };
     sourceAgent?: string;
+    defaultAgentId?: number | null;
 }
 
 export default function ProvidersPage() {
     const [providers, setProviders] = useState<Provider[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [agents, setAgents] = useState<Agent[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterCat, setFilterCat] = useState("all");
 
     // Modal & Form State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Provider | null>(null);
-    const [formData, setFormData] = useState({ name: "", slug: "", logo: "", categoryId: "", isActive: true });
+    const [formData, setFormData] = useState({ name: "", slug: "", logo: "", categoryId: "", isActive: true, defaultAgentId: "" });
 
     // Delete State
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -176,7 +184,15 @@ export default function ProvidersPage() {
         fetchAdminData();
         fetchData();
         fetchCategories();
+        fetchAgents();
     }, []);
+
+    const fetchAgents = async () => {
+        try {
+            const res = await api.get("/admin/agents");
+            if (res.data.success) setAgents(res.data.data);
+        } catch (error) { console.error(error); }
+    };
 
     const fetchCategories = async () => {
         try {
@@ -241,10 +257,10 @@ export default function ProvidersPage() {
     const openModal = (item?: Provider) => {
         if (item) {
             setEditingItem(item);
-            setFormData({ name: item.name, slug: item.slug, logo: item.logo || "", categoryId: item.categoryId.toString(), isActive: item.isActive });
+            setFormData({ name: item.name, slug: item.slug, logo: item.logo || "", categoryId: item.categoryId.toString(), isActive: item.isActive, defaultAgentId: item.defaultAgentId ? item.defaultAgentId.toString() : "" });
         } else {
             setEditingItem(null);
-            setFormData({ name: "", slug: "", logo: "", categoryId: categories[0]?.id.toString() || "", isActive: true });
+            setFormData({ name: "", slug: "", logo: "", categoryId: categories[0]?.id.toString() || "", isActive: true, defaultAgentId: "" });
         }
         setIsModalOpen(true);
     };
@@ -252,7 +268,13 @@ export default function ProvidersPage() {
     const handleSave = async () => {
         if (!formData.categoryId) { toast.error("กรุณาเลือกหมวดหมู่"); return; }
         try {
-            const payload = { ...formData, slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'), categoryId: Number(formData.categoryId) };
+            const payload: any = { ...formData, slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'), categoryId: Number(formData.categoryId) };
+            if (payload.defaultAgentId) {
+                payload.defaultAgentId = Number(payload.defaultAgentId);
+            } else {
+                payload.defaultAgentId = null;
+            }
+
             if (editingItem) {
                 await api.put(`/admin/providers/${editingItem.id}`, payload);
             } else {
@@ -432,6 +454,13 @@ export default function ProvidersPage() {
                                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">กระดาน (Agent)</label>
+                                <select value={formData.defaultAgentId} onChange={(e) => setFormData({ ...formData, defaultAgentId: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900">
+                                    <option value="">กระดานหลัก (Betflix หรือ กำหนดโดยเกม)</option>
+                                    {agents.map(a => <option key={a.id} value={a.id}>{a.name}{a.isMain ? ' (ระบบหลัก)' : ''}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">โลโก้</label>

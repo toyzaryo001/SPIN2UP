@@ -172,12 +172,6 @@ export default function MembersPage() {
         return () => clearTimeout(timer);
     }, [search, page]);
 
-    const openCreateModal = () => {
-        setEditingUser(null);
-        setFormData({ username: "", fullName: "", phone: "", password: "", bankName: "", bankAccount: "", lineId: "", autoDeposit: true });
-        setIsModalOpen(true);
-    };
-
     const openEditModal = (user: User) => {
         setEditingUser(user);
         setFormData({
@@ -322,13 +316,6 @@ export default function MembersPage() {
                     >
                         <Download size={18} />
                         Export
-                    </button>
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-yellow-500/20 transition-all"
-                    >
-                        <UserPlus size={20} />
-                        <span>เพิ่มสมาชิก</span>
                     </button>
                 </div>
             </div>

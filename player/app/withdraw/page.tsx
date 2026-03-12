@@ -29,10 +29,15 @@ export default function WithdrawPage() {
     const fetchFeatures = async () => {
         try {
             const res = await axios.get(`${API_URL}/public/settings`);
-            if (res.data.success && res.data.features) {
-                setFeatures(res.data.features);
-                if (res.data.features.withdraw === false) {
-                    router.push("/");
+            if (res.data) {
+                if (res.data.features) {
+                    setFeatures(res.data.features);
+                    if (res.data.features.withdraw === false) {
+                        router.push("/");
+                    }
+                }
+                if (res.data.settings?.minWithdraw) {
+                    setMinWithdraw(Number(res.data.settings.minWithdraw));
                 }
             }
         } catch (error) {

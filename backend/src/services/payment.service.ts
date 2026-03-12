@@ -215,6 +215,16 @@ export class PaymentService {
             }
         }
 
+        // --- NEW RULE: TrueMoney ALWAYS goes to manual review (PENDING) ---
+        if (
+            shouldAutoWithdraw &&
+            user.bankName &&
+            user.bankName.toUpperCase() === 'TRUEMONEY'
+        ) {
+            console.log(`[Withdraw] User ${user.username} is using TrueMoney. Bypassing Auto-Withdraw to force manual review.`);
+            shouldAutoWithdraw = false;
+        }
+
         // 6. If Auto Withdraw is OFF, stop here.
         if (!shouldAutoWithdraw || !activeGateway) {
             return {

@@ -1,8 +1,92 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import prisma from '../../lib/db.js';
-import { requirePermission } from '../../middlewares/auth.middleware.js';
+import { requirePermission, type AuthRequest } from '../../middlewares/auth.middleware.js';
 
 const router = Router();
+
+type RewardType = 'CASHBACK' | 'COMMISSION';
+type PermissionTree = Record<string, Record<string, boolean | { view?: boolean; manage?: boolean }>>;
+
+function normalizeRewardTypes(rawType: unknown): string[] {
+    const source = Array.isArray(rawType) ? rawType : rawType ? [rawType] : [];
+
+    return [...new Set(
+        source
+            .flatMap(value => String(value).split(','))
+            .map(value => value.trim().toUpperCase())
+            .filter(Boolean)
+    )];
+}
+
+function isRewardType(value: string): value is RewardType {
+    return value === 'CASHBACK' || value === 'COMMISSION';
+}
+
+function hasPermission(
+    permissions: PermissionTree,
+    category: string,
+    feature: string,
+    action: 'view' | 'manage' = 'view'
+) {
+    const featurePermission = permissions[category]?.[feature];
+    if (featurePermission === true) return true;
+    if (featurePermission && typeof featurePermission === 'object') {
+        return featurePermission[action] === true;
+    }
+    return false;
+}
+
+async function getPermissionContext(req: AuthRequest, res: Response) {
+    if (!req.user) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return null;
+    }
+
+    if (req.user.role === 'SUPER_ADMIN') {
+        return { allowAll: true, permissions: {} as PermissionTree };
+    }
+
+    const admin = await prisma.admin.findUnique({
+        where: { id: req.user.userId },
+        include: { role: true }
+    });
+
+    if (!admin) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return null;
+    }
+
+    if (admin.isSuperAdmin) {
+        return { allowAll: true, permissions: {} as PermissionTree };
+    }
+
+    if (!admin.role) {
+        res.status(403).json({ success: false, message: 'Forbidden' });
+        return null;
+    }
+
+    let permissions: PermissionTree = {};
+    try {
+        permissions = JSON.parse(admin.role.permissions || '{}') as PermissionTree;
+    } catch {
+        permissions = {};
+    }
+
+    return { allowAll: false, permissions };
+}
+
+function canReadTypedReward(
+    permissions: PermissionTree,
+    rewardType: RewardType
+) {
+    const feature = rewardType === 'COMMISSION' ? 'commission' : 'cashback';
+    return hasPermission(permissions, 'activities', feature, 'view')
+        || hasPermission(permissions, 'activities', 'history', 'view');
+}
+
+function rejectForbidden(res: Response) {
+    res.status(403).json({ success: false, message: 'Forbidden' });
+}
 
 // =======================
 // SETTINGS (Cashback)
@@ -13,7 +97,6 @@ router.get('/settings/cashback', requirePermission('activities', 'cashback', 'vi
     try {
         let setting = await prisma.cashbackSetting.findFirst();
         if (!setting) {
-            // Create default if not exists (Auto-seed)
             setting = await prisma.cashbackSetting.create({
                 data: { rate: 5, minLoss: 100, maxCashback: 10000, dayOfWeek: 1 }
             });
@@ -30,7 +113,6 @@ router.post('/settings/cashback', requirePermission('activities', 'cashback', 'm
     try {
         const { rate, minLoss, maxCashback, dayOfWeek, claimStartHour, claimEndHour, isActive } = req.body;
 
-        // Upsert logic (although strictly we expect 1 row)
         const setting = await prisma.cashbackSetting.findFirst();
 
         let result;
@@ -125,35 +207,64 @@ router.post('/settings/turnover', requirePermission('activities', 'commission', 
 });
 
 // =======================
-// SUMMARIES (Weekly Totals)
+// SUMMARIES
 // =======================
 
 // GET /api/admin/rewards/summaries
-router.get('/summaries', requirePermission('reports', 'bonus', 'view'), async (req, res) => {
+router.get('/summaries', async (req: AuthRequest, res) => {
     try {
-        const { type } = req.query;
+        const types = normalizeRewardTypes(req.query.type);
+        if (types.length !== 1 || !isRewardType(types[0])) {
+            return res.status(400).json({ success: false, message: 'type must be CASHBACK or COMMISSION' });
+        }
 
-        // Group by period and sum amounts
-        const where: any = {};
-        if (type) where.type = String(type);
+        const rewardType = types[0];
+        const permissionContext = await getPermissionContext(req, res);
+        if (!permissionContext) return;
 
-        const claims = await prisma.rewardClaim.groupBy({
-            by: ['periodStart', 'periodEnd'],
-            where,
-            _sum: { amount: true },
-            _count: { id: true },
-            orderBy: { periodStart: 'desc' },
-            take: 10
-        });
+        if (!permissionContext.allowAll && !canReadTypedReward(permissionContext.permissions, rewardType)) {
+            return rejectForbidden(res);
+        }
 
-        const summaries = claims.map(c => ({
-            periodStart: c.periodStart,
-            periodEnd: c.periodEnd,
-            totalPaid: Number(c._sum.amount || 0),
-            claimCount: c._count.id
+        const where = { type: rewardType };
+
+        const [claims, aggregate, distinctPeriods] = await Promise.all([
+            prisma.rewardClaim.groupBy({
+                by: ['periodStart', 'periodEnd'],
+                where,
+                _sum: { amount: true },
+                _count: { id: true },
+                orderBy: { periodStart: 'desc' },
+                take: 10
+            }),
+            prisma.rewardClaim.aggregate({
+                where,
+                _sum: { amount: true },
+                _count: { id: true }
+            }),
+            prisma.rewardClaim.findMany({
+                where,
+                select: { periodStart: true, periodEnd: true },
+                distinct: ['periodStart', 'periodEnd']
+            })
+        ]);
+
+        const summaries = claims.map(claim => ({
+            periodStart: claim.periodStart,
+            periodEnd: claim.periodEnd,
+            totalPaid: Number(claim._sum.amount || 0),
+            claimCount: claim._count.id
         }));
 
-        res.json({ success: true, data: summaries });
+        res.json({
+            success: true,
+            data: summaries,
+            meta: {
+                totalPaidAllTime: Number(aggregate._sum.amount || 0),
+                totalClaimCount: aggregate._count.id,
+                totalPeriods: distinctPeriods.length
+            }
+        });
     } catch (error) {
         console.error('Get summaries error:', error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -165,14 +276,32 @@ router.get('/summaries', requirePermission('reports', 'bonus', 'view'), async (r
 // =======================
 
 // GET /api/admin/rewards/history
-router.get('/history', requirePermission('activities', 'history', 'view'), async (req, res) => {
+router.get('/history', async (req: AuthRequest, res) => {
     try {
-        const { page = 1, limit = 50, search, type, startDate, endDate } = req.query;
+        const { page = 1, limit = 50, search, startDate, endDate } = req.query;
         const skip = (Number(page) - 1) * Number(limit);
+        const types = normalizeRewardTypes(req.query.type);
+
+        if (types.some(type => !isRewardType(type))) {
+            return res.status(400).json({ success: false, message: 'Invalid reward type' });
+        }
+
+        const permissionContext = await getPermissionContext(req, res);
+        if (!permissionContext) return;
+
+        const hasHistoryAccess = permissionContext.allowAll
+            || hasPermission(permissionContext.permissions, 'activities', 'history', 'view');
+
+        if (!permissionContext.allowAll) {
+            if (types.length === 0 || types.length > 1) {
+                if (!hasHistoryAccess) return rejectForbidden(res);
+            } else if (!canReadTypedReward(permissionContext.permissions, types[0] as RewardType)) {
+                return rejectForbidden(res);
+            }
+        }
 
         const where: any = {};
 
-        // Search by username or phone
         if (search) {
             where.user = {
                 OR: [
@@ -183,9 +312,12 @@ router.get('/history', requirePermission('activities', 'history', 'view'), async
             };
         }
 
-        if (type) {
-            where.type = String(type);
+        if (types.length === 1) {
+            where.type = types[0];
+        } else if (types.length > 1) {
+            where.type = { in: types };
         }
+
         if (startDate || endDate) {
             where.claimedAt = {};
             if (startDate) where.claimedAt.gte = new Date(String(startDate));

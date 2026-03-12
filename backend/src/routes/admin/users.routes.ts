@@ -4,6 +4,7 @@ import { z } from 'zod';
 import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission, adminMiddleware } from '../../middlewares/auth.middleware.js';
 import { BetflixService } from '../../services/betflix.service.js';
+import { TelegramNotifyService } from '../../services/telegram-notify.service.js';
 
 const router = Router();
 
@@ -230,6 +231,15 @@ router.post('/', requirePermission('members', 'register', 'manage'), async (req:
                 adminId: req.user!.userId,
             },
         });
+
+        // Send Telegram Notification with Admin Name
+        try {
+            const admin = await prisma.admin.findUnique({ where: { id: req.user!.userId }, select: { fullName: true, username: true } });
+            const adminIdentifier = admin ? `${admin.fullName} (${admin.username})` : 'Unknown Admin';
+            TelegramNotifyService.notifyRegister(username, fullName, phone, adminIdentifier).catch((e: any) => console.error('[Telegram] error:', e));
+        } catch (nofifyErr) {
+            console.error('Failed to notify register:', nofifyErr);
+        }
 
         res.status(201).json({ success: true, message: 'สร้างสมาชิกสำเร็จ', data: { userId: user.id } });
     } catch (error: any) {

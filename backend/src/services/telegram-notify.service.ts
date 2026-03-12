@@ -101,7 +101,7 @@ export class TelegramNotifyService {
     /**
      * Notify about a new registration
      */
-    static async notifyRegister(username: string, fullName: string, phone: string) {
+    static async notifyRegister(username: string, fullName: string, phone: string, adminName?: string) {
         try {
             const s = await this.getSettings();
             if (s.telegramNotifyRegister !== 'true') return { success: false, message: 'Telegram register notify disabled' };
@@ -113,7 +113,7 @@ export class TelegramNotifyService {
             const msg = `🆕 <b>สมาชิกใหม่!</b>
 👤 ยูสเซอร์: <code>${username}</code>
 📝 ชื่อ: ${fullName}
-📱 เบอร์: ${phone}
+📱 เบอร์: ${phone}${adminName ? `\n🧑‍💼 สมัครโดย: <b>${adminName}</b>` : ''}
 🕒 เวลา: ${new Date().toLocaleString('th-TH')}`;
 
             return this.sendMessage(botToken, chatId, msg);

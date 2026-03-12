@@ -276,6 +276,31 @@ async function processWebhookMessage(message: string, source: string, res: Respo
 
     console.log(`[Webhook ${source}] Created pending transaction:`, transaction.id);
 
+    // === Per-User Auto Deposit Check ===
+    if ((matchedUser as any).autoDeposit === false) {
+        console.log(`[Webhook ${source}] User ${matchedUser.id} has autoDeposit=false, leaving transaction PENDING for manual review`);
+        // Log to SMS webhook log
+        try {
+            await (prisma as any).smsWebhookLog.create({
+                data: {
+                    rawMessage: message,
+                    messageHash,
+                    parsedData: JSON.stringify(parsed),
+                    amount: depositAmount,
+                    destAccount: parsed.destAccountLast4,
+                    sourceAccount: parsed.sourceAccountLast4,
+                    sourceBank: parsed.sourceBank,
+                    sourceName: parsed.sourceName,
+                    matchedUserId: matchedUser.id,
+                    transactionId: transaction.id,
+                    status: 'PENDING_REVIEW',
+                    matchLevel: 3
+                }
+            });
+        } catch (e) { console.error('SMS log error:', e); }
+        return res.json({ success: true, status: 'PENDING_REVIEW', message: 'รอตรวจสอบ (ฝากออโต้ปิดสำหรับผู้ใช้นี้)' });
+    }
+
     // Deposit to Betflix
     const betflixResult = await BetflixService.ensureAndTransfer(
         matchedUser.id,

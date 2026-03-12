@@ -305,6 +305,16 @@ router.put('/:id', adminMiddleware, async (req: AuthRequest, res) => {
             }
         }
 
+        // AutoDeposit toggle
+        const { autoDeposit } = req.body;
+        if (autoDeposit !== undefined) {
+            const newVal = autoDeposit === true || autoDeposit === 'true';
+            if (newVal !== (oldUser as any).autoDeposit) {
+                updateData.autoDeposit = newVal;
+                changes.push({ field: 'autoDeposit', oldValue: String((oldUser as any).autoDeposit), newValue: String(newVal) });
+            }
+        }
+
         // If no changes, still return success
         if (Object.keys(updateData).length === 0) {
             return res.json({ success: true, message: 'ไม่มีการเปลี่ยนแปลง' });

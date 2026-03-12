@@ -177,6 +177,29 @@ router.post('/', async (req: Request, res: Response) => {
 
         console.log(`[TrueWallet Webhook] Matched user: ${matchedUser.fullName} (ID: ${matchedUser.id}, level: ${matchLevel})`);
 
+        // === Per-User Auto Deposit Check ===
+        if ((matchedUser as any).autoDeposit === false) {
+            console.log(`[TrueWallet Webhook] User ${matchedUser.id} has autoDeposit=false, creating PENDING transaction for manual review`);
+            // Create pending transaction for manual review
+            const pendingTx = await prisma.transaction.create({
+                data: {
+                    userId: matchedUser.id,
+                    type: 'DEPOSIT',
+                    amount: amountBaht,
+                    status: 'PENDING',
+                    balanceBefore: Number(matchedUser.balance),
+                    balanceAfter: Number(matchedUser.balance),
+                    subType: 'TrueWallet',
+                    note: `TrueWallet deposit - รอตรวจสอบ (ฝากออโต้ปิดรายบุคคล)`
+                }
+            });
+            await prisma.trueWalletLog.update({
+                where: { id: walletLog.id },
+                data: { status: 'PENDING_REVIEW', transactionId: String(pendingTx.id) }
+            });
+            return res.status(200).json({ success: true, status: 'PENDING_REVIEW', message: 'รอตรวจสอบ (ฝากออโต้ปิดสำหรับผู้ใช้นี้)', logId: walletLog.id });
+        }
+
         // 8. ฝากเงินเข้ากระดาน — ใช้ ensureAndTransfer() ที่ refactor ไว้แล้ว
         const betflixResult = await BetflixService.ensureAndTransfer(
             matchedUser.id,

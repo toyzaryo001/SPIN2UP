@@ -29,6 +29,7 @@ model User {
   updatedAt         DateTime              @updatedAt
   lastActiveAgentId Int?
   sessionToken      String?
+  autoDeposit       Boolean               @default(true)
   gameSessions      GameSession[]
   promotionLogs     PromotionLog[]
   rewards           RewardClaim[]

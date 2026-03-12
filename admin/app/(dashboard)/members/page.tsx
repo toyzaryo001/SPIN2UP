@@ -18,6 +18,7 @@ interface User {
     status: string;
     lineId?: string;
     createdAt: string;
+    autoDeposit?: boolean;
 }
 
 interface HistoryItem {
@@ -116,7 +117,8 @@ export default function MembersPage() {
         password: "",
         bankName: "",
         bankAccount: "",
-        lineId: ""
+        lineId: "",
+        autoDeposit: true
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -171,7 +173,7 @@ export default function MembersPage() {
 
     const openCreateModal = () => {
         setEditingUser(null);
-        setFormData({ username: "", fullName: "", phone: "", password: "", bankName: "", bankAccount: "", lineId: "" });
+        setFormData({ username: "", fullName: "", phone: "", password: "", bankName: "", bankAccount: "", lineId: "", autoDeposit: true });
         setIsModalOpen(true);
     };
 
@@ -184,7 +186,8 @@ export default function MembersPage() {
             password: "",
             bankName: user.bankName,
             bankAccount: user.bankAccount,
-            lineId: user.lineId || ""
+            lineId: user.lineId || "",
+            autoDeposit: user.autoDeposit !== false
         });
         setIsModalOpen(true);
     };
@@ -571,6 +574,40 @@ export default function MembersPage() {
                                     className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                 />
                             </div>
+
+                            {/* Auto Deposit Toggle (only in edit mode) */}
+                            {editingUser && (
+                                <div className="border-t border-slate-200 pt-4 mt-2">
+                                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${formData.autoDeposit ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                                                {formData.autoDeposit ? (
+                                                    <CheckCircle className="text-emerald-500" size={18} />
+                                                ) : (
+                                                    <AlertTriangle className="text-amber-500" size={18} />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-slate-700">
+                                                    ฝากออโต้: <span className={formData.autoDeposit ? 'text-emerald-600' : 'text-amber-600'}>
+                                                        {formData.autoDeposit ? 'เปิด' : 'ปิด (รอตรวจสอบ)'}
+                                                    </span>
+                                                </p>
+                                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                                    {formData.autoDeposit ? 'ฝากเงินจะเข้าอัตโนมัติ' : 'ฝากเงินจะรอแอดมินตรวจสอบก่อน'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, autoDeposit: !formData.autoDeposit })}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.autoDeposit ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.autoDeposit ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Suspend / Activate Toggle (only in edit mode) */}
                             {editingUser && (

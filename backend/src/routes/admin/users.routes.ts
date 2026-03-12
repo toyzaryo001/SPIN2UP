@@ -331,6 +331,8 @@ router.put('/:id', adminMiddleware, async (req: AuthRequest, res) => {
         // AutoDeposit toggle
         const { autoDeposit } = req.body;
         if (autoDeposit !== undefined) {
+            if (!hasPerm('auto_deposit')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์ เปิด/ปิด ฝากออโต้' });
+            
             const newVal = autoDeposit === true || autoDeposit === 'true';
             if (newVal !== (oldUser as any).autoDeposit) {
                 updateData.autoDeposit = newVal;

@@ -64,7 +64,7 @@ export class TelegramNotifyService {
 👤 ยูสเซอร์: <code>${username}</code>
 💵 จำนวน: <b>${amount.toLocaleString()} บาท</b>
 🔌 ช่องทาง: ${method}
-🕒 เวลา: ${new Date().toLocaleString('th-TH')}`;
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
 
             return this.sendMessage(botToken, chatId, msg);
         } catch (error: any) {
@@ -88,7 +88,7 @@ export class TelegramNotifyService {
             const msg = `💸 <b>แจ้งถอนเงิน!</b>
 👤 ยูสเซอร์: <code>${username}</code>
 💵 จำนวน: <b>${amount.toLocaleString()} บาท</b>
-🕒 เวลา: ${new Date().toLocaleString('th-TH')}
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
 ⚠️ โปรดตรวจสอบและอนุมัติในระบบ`;
 
             return this.sendMessage(botToken, chatId, msg);
@@ -114,7 +114,7 @@ export class TelegramNotifyService {
 👤 ยูสเซอร์: <code>${username}</code>
 📝 ชื่อ: ${fullName}
 📱 เบอร์: ${phone}${adminName ? `\n🧑‍💼 สมัครโดย: <b>${adminName}</b>` : ''}
-🕒 เวลา: ${new Date().toLocaleString('th-TH')}`;
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
 
             return this.sendMessage(botToken, chatId, msg);
         } catch (error: any) {
@@ -136,7 +136,7 @@ export class TelegramNotifyService {
             }
 
             const msg = `✅ <b>ทดสอบส่ง Telegram สำเร็จ!</b>
-🕒 เวลา: ${new Date().toLocaleString('th-TH')}
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
 📡 ระบบแจ้งเตือนทำงานปกติ`;
 
             return this.sendMessage(botToken, chatId, msg);

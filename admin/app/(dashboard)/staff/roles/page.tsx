@@ -24,6 +24,7 @@ const PERMISSION_MATRIX = [
             { key: 'edit_bank', label: 'แก้ไขข้อมูลธนาคาร' },
             { key: 'edit_password', label: 'แก้ไขรหัสผ่าน' },
             { key: 'change_status', label: 'แบนกระเป๋า/เปิดบัญชี' },
+            { key: 'auto_deposit', label: 'เปิด/ปิด ฝากออโต้' },
             { key: 'delete', label: 'ลบสมาชิก' },
             { key: 'history', label: 'ประวัติแก้ไข' },
         ]

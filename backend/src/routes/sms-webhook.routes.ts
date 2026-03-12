@@ -3,6 +3,8 @@ import prisma from '../lib/db.js';
 import { parseBankSMS, matchBankName, matchAccountLast4, generateMessageHash, getBankThaiName } from '../services/sms-parser.service.js';
 import { BetflixService } from '../services/betflix.service.js';
 import { LineNotifyService } from '../services/line-notify.service.js';
+import { DepositBonusService } from '../services/deposit-bonus.service.js';
+import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 
 const router = Router();
 
@@ -153,7 +155,8 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             bankAccount: true,
             bankName: true,
             balance: true,
-            betflixUsername: true
+            betflixUsername: true,
+            autoDeposit: true
         }
     });
 
@@ -268,16 +271,23 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             subType: 'AUTO_SMS',
             amount: depositAmount,
             balanceBefore: balanceBefore,
-            balanceAfter: balanceBefore + depositAmount,
+            balanceAfter: balanceBefore,
             status: 'PENDING',
             note: `Auto deposit via SMS - ${parsed.sourceBank} X${parsed.sourceAccountLast4} - ${parsed.sourceName}`
         }
     });
 
+    await PromotionSelectionService.bindSelectedPromotionToTransaction(
+        matchedUser.id,
+        transaction.id,
+        Number(depositAmount),
+        'passive'
+    );
+
     console.log(`[Webhook ${source}] Created pending transaction:`, transaction.id);
 
     // === Per-User Auto Deposit Check ===
-    if ((matchedUser as any).autoDeposit === false) {
+    if (matchedUser.autoDeposit === false) {
         console.log(`[Webhook ${source}] User ${matchedUser.id} has autoDeposit=false, leaving transaction PENDING for manual review`);
         // Log to SMS webhook log
         try {
@@ -313,17 +323,18 @@ async function processWebhookMessage(message: string, source: string, res: Respo
     const betflixError = betflixResult.error || '';
 
     if (betflixSuccess) {
-        // Update transaction to completed
-        await prisma.transaction.update({
-            where: { id: transaction.id },
-            data: { status: 'COMPLETED' }
-        });
-
-        // Update user balance
-        await prisma.user.update({
+        const updatedUser = await prisma.user.update({
             where: { id: matchedUser.id },
             data: {
                 balance: { increment: depositAmount }
+            }
+        });
+
+        await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: {
+                status: 'COMPLETED',
+                balanceAfter: updatedUser.balance
             }
         });
 
@@ -356,6 +367,8 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             TelegramNotifyService.notifyDeposit(matchedUser.username, depositAmount, `Automatic SMS (${parsed.sourceBank})`)
                 .catch(err => console.error('[Telegram] Error:', err));
         }).catch(() => {});
+
+        await DepositBonusService.applyPostDepositBenefits(transaction.id);
 
         const elapsed = Date.now() - startTime;
         console.log(`[Webhook ${source}] ✅ Deposit completed in ${elapsed}ms`);

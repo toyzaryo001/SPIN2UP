@@ -22,6 +22,8 @@ model User {
   status            String                @default("ACTIVE")
   balance           Decimal               @default(0)
   bonusBalance      Decimal               @default(0)
+  turnoverLimit     Decimal               @default(0)
+  currentTurnover   Decimal               @default(0)
   betflixUsername   String?               @unique
   betflixPassword   String?
   lastLoginAt       DateTime?
@@ -30,9 +32,12 @@ model User {
   lastActiveAgentId Int?
   sessionToken      String?
   autoDeposit       Boolean               @default(true)
+  selectedPromotionId Int?
+  selectedPromotionAt DateTime?
   gameSessions      GameSession[]
   promotionLogs     PromotionLog[]
   rewards           RewardClaim[]
+  selectedPromotion Promotion?            @relation("UserSelectedPromotion", fields: [selectedPromotionId], references: [id])
   transactions      Transaction[]
   trueWalletLogs    TrueWalletLog[]
   externalAccounts  UserExternalAccount[]
@@ -40,6 +45,7 @@ model User {
   @@index([phone])
   @@index([referrerCode])
   @@index([createdAt])
+  @@index([selectedPromotionId])
 }
 
 model UserExternalAccount {
@@ -114,6 +120,8 @@ model Transaction {
   slipImage        String?
   note             String?
   adminId          Int?
+  promotionId      Int?
+  promotionBonusAmount Decimal?    @default(0)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   externalId       String?
@@ -122,12 +130,15 @@ model Transaction {
   rawResponse      String?
   referenceId      String?         @unique
   paymentGateway   PaymentGateway? @relation(fields: [paymentGatewayId], references: [id])
+  promotion        Promotion?      @relation(fields: [promotionId], references: [id])
+  promotionLog     PromotionLog?
   user             User            @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([type])
   @@index([status])
   @@index([createdAt])
+  @@index([promotionId])
   @@index([referenceId])
 }
 
@@ -298,8 +309,9 @@ model Promotion {
   type        String
   value       Decimal
   minDeposit  Decimal?
-  maxBonus    Decimal?
-  turnover    Decimal?
+  maxBonus          Decimal?
+  requiresTurnover  Boolean        @default(false)
+  turnoverMultiplier Decimal       @default(1)
   image       String?
   isActive    Boolean        @default(true)
   startAt     DateTime?
@@ -307,16 +319,21 @@ model Promotion {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   logs        PromotionLog[]
+  selectedUsers User[]       @relation("UserSelectedPromotion")
+  transactions Transaction[]
 }
 
 model PromotionLog {
-  id          Int       @id @default(autoincrement())
-  userId      Int
-  promotionId Int
-  amount      Decimal
-  createdAt   DateTime  @default(now())
-  promotion   Promotion @relation(fields: [promotionId], references: [id])
-  user        User      @relation(fields: [userId], references: [id])
+  id             Int         @id @default(autoincrement())
+  userId         Int
+  promotionId    Int
+  transactionId  Int?        @unique
+  amount         Decimal
+  turnoverApplied Decimal    @default(0)
+  createdAt      DateTime    @default(now())
+  promotion      Promotion   @relation(fields: [promotionId], references: [id])
+  transaction    Transaction? @relation(fields: [transactionId], references: [id])
+  user           User        @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([promotionId])
@@ -434,7 +451,8 @@ model StreakSetting {
   bonusAmount        Decimal
   isActive           Boolean  @default(true)
   updatedAt          DateTime @updatedAt
-  turnoverMultiplier Int      @default(1)
+  requiresTurnover   Boolean  @default(false)
+  turnoverMultiplier Decimal  @default(1)
 }
 
 model CommissionSetting {

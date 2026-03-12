@@ -4,6 +4,7 @@ import prisma from '../lib/db.js';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PaymentService } from '../services/payment.service.js';
+import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 
 const router = Router();
 
@@ -75,6 +76,14 @@ router.post('/deposit', authMiddleware, async (req: AuthRequest, res) => {
             return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
         }
 
+        const selectedPromotion = await PromotionSelectionService.getSelectedPromotion(req.user!.userId);
+        if (selectedPromotion && Number(amount) < selectedPromotion.minDeposit) {
+            return res.status(400).json({
+                success: false,
+                message: 'ยอดฝากยังไม่ถึงขั้นต่ำของโปรโมชั่นที่เลือก',
+            });
+        }
+
         const transaction = await prisma.transaction.create({
             data: {
                 userId: req.user!.userId,
@@ -86,6 +95,13 @@ router.post('/deposit', authMiddleware, async (req: AuthRequest, res) => {
                 slipImage: slipImage || null,
             },
         });
+
+        await PromotionSelectionService.bindSelectedPromotionToTransaction(
+            req.user!.userId,
+            transaction.id,
+            Number(amount),
+            'interactive'
+        );
 
         res.status(201).json({
             success: true,

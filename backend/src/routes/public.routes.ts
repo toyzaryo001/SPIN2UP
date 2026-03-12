@@ -37,8 +37,25 @@ router.get('/banners', async (req: Request, res: Response) => {
 // GET /api/public/promotions - ดึงโปรโมชั่น
 router.get('/promotions', async (req: Request, res: Response) => {
     try {
+        const now = new Date();
         const promotions = await prisma.promotion.findMany({
-            where: { isActive: true },
+            where: {
+                isActive: true,
+                AND: [
+                    {
+                        OR: [
+                            { startAt: null },
+                            { startAt: { lte: now } }
+                        ]
+                    },
+                    {
+                        OR: [
+                            { endAt: null },
+                            { endAt: { gte: now } }
+                        ]
+                    }
+                ]
+            },
             orderBy: { createdAt: 'desc' }
         });
         res.json(promotions);

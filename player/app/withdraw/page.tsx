@@ -53,12 +53,13 @@ export default function WithdrawPage() {
                 return;
             }
 
-            const res = await axios.get(`${API_URL}/wallet/me`, {
+            const res = await axios.get(`${API_URL}/users/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
             if (res.data.success) {
-                setUser(res.data.user);
+                setUser(res.data.data);
+                localStorage.setItem("user", JSON.stringify(res.data.data));
             }
         } catch (error) {
             console.error("Fetch user error:", error);
@@ -112,6 +113,8 @@ export default function WithdrawPage() {
             setAmount(Math.floor(Number(user.balance)).toString());
         }
     };
+
+    const hasIncompleteTurnover = user?.turnoverLimit && Number(user.turnoverLimit) > 0 && Number(user.currentTurnover || 0) < Number(user.turnoverLimit);
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#0a0a15] via-[#0f0f1a] to-[#0a0a15]">
@@ -208,6 +211,34 @@ export default function WithdrawPage() {
                                 ))}
                             </div>
 
+                            {/* Turnover Warning */}
+                            {user?.turnoverLimit && Number(user.turnoverLimit) > 0 && (
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                                    <h3 className="text-red-400 font-bold mb-2 flex items-center gap-2">
+                                        <AlertCircle size={18} /> ยอดเทิร์นโอเวอร์
+                                    </h3>
+                                    <div className="flex justify-between text-sm text-slate-300 mb-1">
+                                        <span>ปัจจุบันทำได้</span>
+                                        <span>{Number(user.currentTurnover || 0).toLocaleString()} / {Number(user.turnoverLimit).toLocaleString()} ฿</span>
+                                    </div>
+                                    <div className="w-full bg-black/40 rounded-full h-2 mb-2 overflow-hidden">
+                                        <div 
+                                            className="bg-gradient-to-r from-red-500 to-rose-400 h-2 rounded-full transition-all duration-500" 
+                                            style={{ width: `${Math.min(100, (Number(user.currentTurnover || 0) / Number(user.turnoverLimit)) * 100)}%` }}
+                                        ></div>
+                                    </div>
+                                    {hasIncompleteTurnover ? (
+                                        <p className="text-xs text-red-400/80 mt-2">
+                                            * ต้องทำเทิร์นให้ครบเป้าหมายก่อน จึงจะสามารถถอนเงินได้ (ขาดอีก {(Number(user.turnoverLimit) - Number(user.currentTurnover || 0)).toLocaleString()} ฿)
+                                        </p>
+                                    ) : (
+                                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1">
+                                            <CheckCircle2 size={14} /> ทำเทิร์นครบแล้ว สามารถถอนเงืนได้
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Info */}
                             <div className="flex items-start gap-3 text-sm text-slate-400 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
                                 <AlertCircle size={18} className="shrink-0 mt-0.5 text-blue-400" />
@@ -221,7 +252,7 @@ export default function WithdrawPage() {
                             {/* Submit Button */}
                             <button
                                 onClick={handleWithdraw}
-                                disabled={!amount || Number(amount) < minWithdraw || isLoading || Number(amount) > Number(user.balance)}
+                                disabled={!amount || Number(amount) < minWithdraw || isLoading || Number(amount) > Number(user.balance) || !!hasIncompleteTurnover}
                                 className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black py-4 rounded-xl text-lg font-black shadow-lg shadow-yellow-500/30 hover:shadow-yellow-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                             >
                                 {isLoading ? (

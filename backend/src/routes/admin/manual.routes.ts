@@ -3,6 +3,7 @@ import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission } from '../../middlewares/auth.middleware.js';
 import { Prisma } from '@prisma/client';
 import { BetflixService } from '../../services/betflix.service.js';
+import { DepositBonusService } from '../../services/deposit-bonus.service.js';
 
 const router = Router();
 
@@ -347,6 +348,7 @@ router.post('/approve-deposit', requirePermission('manual', 'deposit', 'manage')
                 data: { status: 'COMPLETED', balanceAfter: new Prisma.Decimal(newBalance), adminId: req.user!.userId },
             });
         });
+        DepositBonusService.applyPostDepositBenefits(transaction.id).catch(err => console.error('[Approve Deposit Bonus Error]:', err));
 
         res.json({ success: true, message: 'อนุมัติสำเร็จ' });
     } catch (error) {

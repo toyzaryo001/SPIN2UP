@@ -26,6 +26,32 @@ interface BankAccount {
     minDeposit?: number;
 }
 
+interface SelectedPromotionSummary {
+    id: number;
+    name: string;
+    description: string | null;
+    type: string;
+    value: number;
+    minDeposit: number;
+    maxBonus: number | null;
+    requiresTurnover: boolean;
+    turnoverMultiplier: number;
+    image: string | null;
+    selectedAt: string | null;
+}
+
+const formatCurrency = (value: number | null | undefined) =>
+    Number(value || 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+const getPromotionFormula = (promotion: SelectedPromotionSummary) => {
+    if (promotion.type === "FIXED") {
+        return `โบนัส ${formatCurrency(promotion.value)} บาท`;
+    }
+
+    const maxBonusText = promotion.maxBonus ? ` สูงสุด ${formatCurrency(promotion.maxBonus)} บาท` : "";
+    return `โบนัส ${promotion.value}%${maxBonusText}`;
+};
+
 export default function DepositPage() {
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
@@ -61,6 +87,7 @@ export default function DepositPage() {
     const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
     const [withdrawAmount, setWithdrawAmount] = useState<string>("");
     const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
+    const [selectedPromotion, setSelectedPromotion] = useState<SelectedPromotionSummary | null>(null);
 
     // Alert Modal State
     const [alertState, setAlertState] = useState<{
@@ -84,6 +111,76 @@ export default function DepositPage() {
         setTimeout(() => setCopied(null), 2000);
     };
 
+    const refreshUserProfile = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            return null;
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/users/me`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setUser(data.data);
+                localStorage.setItem("user", JSON.stringify(data.data));
+                return data.data;
+            }
+        } catch (error) {
+            console.error("User profile refresh error:", error);
+        }
+
+        return null;
+    };
+
+    const fetchSelectedPromotion = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setSelectedPromotion(null);
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/users/promotions/selected`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setSelectedPromotion(data.data || null);
+            }
+        } catch (error) {
+            console.error("Selected promotion fetch error:", error);
+        }
+    };
+
+    const clearSelectedPromotion = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/users/promotions/selected`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setSelectedPromotion(null);
+                showAlert("ยกเลิกโปรโมชั่นที่เลือกแล้ว", "success");
+            } else {
+                showAlert(String(data.message || "ยกเลิกโปรโมชั่นไม่สำเร็จ"), "error");
+            }
+        } catch (error) {
+            console.error("Clear selected promotion error:", error);
+            showAlert("เกิดข้อผิดพลาดในการยกเลิกโปรโมชั่น", "error");
+        }
+    };
+
     useEffect(() => {
         if (!user) {
             const saved = localStorage.getItem("user");
@@ -94,6 +191,13 @@ export default function DepositPage() {
         setLoading(false);
         fetchConfig();
     }, [user]);
+
+    useEffect(() => {
+        if (loading) return;
+
+        refreshUserProfile();
+        fetchSelectedPromotion();
+    }, [loading]);
 
     const fetchConfig = async () => {
         try {
@@ -177,6 +281,14 @@ export default function DepositPage() {
             return;
         }
 
+        if (selectedPromotion && Number(depositAmount) < Number(selectedPromotion.minDeposit || 0)) {
+            showAlert(
+                `ยอดฝากยังไม่ถึงขั้นต่ำของโปรโมชั่นที่เลือก (ขั้นต่ำ ${formatCurrency(selectedPromotion.minDeposit)} บาท)`,
+                "warning"
+            );
+            return;
+        }
+
         setGeneratingQr(true);
         setQrData(null);
         try {
@@ -195,6 +307,8 @@ export default function DepositPage() {
 
             if (data.success) {
                 setQrData(data.data);
+                fetchSelectedPromotion();
+                refreshUserProfile();
             } else {
                 // Localize Error Messages
                 let msg = String(data.message || "สร้าง QR Code ไม่สำเร็จ");
@@ -216,6 +330,8 @@ export default function DepositPage() {
                     msg = "ระบบชำระเงินอยู่ระหว่างปรับปรุง กรุณาลองใหม่ภายหลัง";
                 } else if (msg.includes("Failed to create payment")) {
                     msg = "ไม่สามารถสร้างรายการฝากเงินได้ กรุณาลองใหม่อีกครั้ง";
+                } else if (msg.includes("SELECTED_PROMOTION_MIN_DEPOSIT_NOT_MET")) {
+                    msg = "ยอดฝากยังไม่ถึงขั้นต่ำของโปรโมชั่นที่เลือก";
                 } else if (/^[a-zA-Z\s.,!?:;()\-]+$/.test(msg)) {
                     // Catch-all: If message is entirely English, show generic Thai error
                     console.error("[Deposit] Untranslated error:", msg);
@@ -243,6 +359,11 @@ export default function DepositPage() {
             return;
         }
 
+        if (hasIncompleteTurnover) {
+            showAlert(`ท่านยังทำเทิร์นไม่ครบ (ขาดอีก ${formatCurrency(turnoverRemaining)} บาท)`, "warning");
+            return;
+        }
+
         setSubmittingWithdraw(true);
         try {
             const res = await fetch(`${API_URL}/wallet/withdraw`, {
@@ -260,12 +381,7 @@ export default function DepositPage() {
             if (data.success) {
                 showAlert(String(data.message || "ทำรายการถอนเงินสำเร็จ"), "success");
                 setWithdrawAmount("");
-                // Refresh User Balance
-                const userRes = await fetch(`${API_URL}/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
-                });
-                const userData = await userRes.json();
-                if (userData.success) setUser(userData.user);
+                refreshUserProfile();
             } else {
                 showAlert(String(data.message || "ทำรายการไม่สำเร็จ"), "error");
             }
@@ -276,6 +392,16 @@ export default function DepositPage() {
             setSubmittingWithdraw(false);
         }
     };
+
+    const turnoverRemaining = Math.max(
+        0,
+        Number(user?.turnoverLimit || 0) - Number(user?.currentTurnover || 0)
+    );
+    const hasIncompleteTurnover = Number(user?.turnoverLimit || 0) > 0 && turnoverRemaining > 0;
+    const depositBlockedByPromotion =
+        !!selectedPromotion &&
+        Number(depositAmount || 0) > 0 &&
+        Number(depositAmount) < Number(selectedPromotion.minDeposit || 0);
 
     // ... (rest of the component render logic)
     // IMPORTANT: Inject <AlertModal /> before closing PlayerLayout
@@ -480,6 +606,54 @@ export default function DepositPage() {
                 {activeTab === "deposit" ? (
                     // ... (keep deposit content)
                     <>
+                        {selectedPromotion && (
+                            <div style={{
+                                background: "linear-gradient(135deg, rgba(255,215,0,0.12), rgba(249,115,22,0.16))",
+                                borderRadius: "16px",
+                                padding: "18px",
+                                border: "1px solid rgba(255,215,0,0.28)",
+                                boxShadow: "0 4px 20px rgba(0,0,0,0.18)"
+                            }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" }}>
+                                    <div style={{ flex: 1 }}>
+                                        <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: "#FFD700" }}>โปรโมชั่นที่เลือกอยู่</p>
+                                        <h3 style={{ margin: "6px 0 8px", color: "#FFFFFF", fontSize: "18px", fontWeight: 800 }}>{selectedPromotion.name}</h3>
+                                        <p style={{ margin: 0, color: "#D1D5DB", fontSize: "13px", lineHeight: 1.55 }}>
+                                            {selectedPromotion.description || getPromotionFormula(selectedPromotion)}
+                                        </p>
+                                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "12px" }}>
+                                            <span style={{ fontSize: "11px", color: "#FFD700", border: "1px solid rgba(255,215,0,0.28)", borderRadius: "999px", padding: "6px 10px" }}>
+                                                {getPromotionFormula(selectedPromotion)}
+                                            </span>
+                                            <span style={{ fontSize: "11px", color: "#E5E7EB", border: "1px solid rgba(255,255,255,0.16)", borderRadius: "999px", padding: "6px 10px" }}>
+                                                ฝากขั้นต่ำ {formatCurrency(selectedPromotion.minDeposit)} บาท
+                                            </span>
+                                            <span style={{ fontSize: "11px", color: selectedPromotion.requiresTurnover ? "#FCA5A5" : "#86EFAC", border: "1px solid rgba(255,255,255,0.16)", borderRadius: "999px", padding: "6px 10px" }}>
+                                                {selectedPromotion.requiresTurnover ? `ติดเทิร์น x${selectedPromotion.turnoverMultiplier}` : "ไม่ติดเทิร์น"}
+                                            </span>
+                                        </div>
+                                        <p style={{ margin: "12px 0 0", fontSize: "12px", color: "#CBD5E1" }}>
+                                            โปรโมชั่นนี้จะถูกใช้กับรายการฝากที่เข้าเงื่อนไขครั้งถัดไป
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={clearSelectedPromotion}
+                                        style={{
+                                            border: "none",
+                                            background: "rgba(239,68,68,0.14)",
+                                            color: "#FCA5A5",
+                                            borderRadius: "12px",
+                                            padding: "10px 14px",
+                                            cursor: "pointer",
+                                            fontWeight: 700
+                                        }}
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Channel Selection */}
                         <div style={{
                             background: "#21262D",
@@ -607,9 +781,24 @@ export default function DepositPage() {
                                             ))}
                                         </div>
 
+                                        {depositBlockedByPromotion && selectedPromotion && (
+                                            <div style={{
+                                                background: "rgba(239,68,68,0.1)",
+                                                border: "1px solid rgba(239,68,68,0.2)",
+                                                borderRadius: "12px",
+                                                padding: "12px",
+                                                marginBottom: "16px",
+                                                color: "#FCA5A5",
+                                                fontSize: "13px",
+                                                lineHeight: 1.5
+                                            }}>
+                                                ยอดฝากยังไม่ถึงขั้นต่ำของโปรโมชั่นที่เลือก ต้องฝากอย่างน้อย {formatCurrency(selectedPromotion.minDeposit)} บาท
+                                            </div>
+                                        )}
+
                                         <button
                                             onClick={handleDeposit}
-                                            disabled={generatingQr}
+                                            disabled={generatingQr || depositBlockedByPromotion}
                                             style={{
                                                 width: "100%",
                                                 background: "linear-gradient(135deg, #FFD700, #FFC000)",
@@ -619,8 +808,8 @@ export default function DepositPage() {
                                                 borderRadius: "14px",
                                                 fontSize: "18px",
                                                 fontWeight: 700,
-                                                cursor: generatingQr ? "not-allowed" : "pointer",
-                                                opacity: generatingQr ? 0.7 : 1,
+                                                cursor: generatingQr || depositBlockedByPromotion ? "not-allowed" : "pointer",
+                                                opacity: generatingQr || depositBlockedByPromotion ? 0.7 : 1,
                                                 boxShadow: "0 6px 20px rgba(255,215,0,0.4)"
                                             }}
                                         >
@@ -680,14 +869,26 @@ export default function DepositPage() {
                             <p style={{ fontSize: "32px", fontWeight: 900, color: "#FFD700", textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>
                                 ฿{(user?.balance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </p>
+                            <div style={{
+                                marginTop: "12px",
+                                display: "inline-block",
+                                background: "rgba(16, 185, 129, 0.1)",
+                                border: "1px solid rgba(16, 185, 129, 0.2)",
+                                padding: "6px 16px",
+                                borderRadius: "20px"
+                            }}>
+                                <p style={{ fontSize: "12px", color: "#10B981", fontWeight: 600 }}>
+                                    ⏱ ระบบจะดำเนินการโอนเงินให้ท่านภายใน 1-5 นาที
+                                </p>
+                            </div>
                         </div>
 
                         <div style={{ marginBottom: "16px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                                 <label style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>จำนวนเงิน</label>
-                                {Number(config?.minWithdraw) > 0 && (
-                                    <span style={{ fontSize: "12px", color: "#EF4444", fontWeight: 700 }}>ถอนขั้นต่ำ {config.minWithdraw} บาท</span>
-                                )}
+                                <span style={{ fontSize: "12px", color: "#EF4444", fontWeight: 700 }}>
+                                    ถอนขั้นต่ำ {config?.minWithdraw || '100'} บาท
+                                </span>
                             </div>
                             <input
                                 type="number"
@@ -731,6 +932,39 @@ export default function DepositPage() {
                             ))}
                         </div>
 
+                        {Number(user?.turnoverLimit || 0) > 0 && (
+                            <div style={{
+                                background: "rgba(239,68,68,0.1)",
+                                borderRadius: "14px",
+                                padding: "16px",
+                                marginBottom: "16px",
+                                border: "1px solid rgba(239,68,68,0.2)"
+                            }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", color: "#FCA5A5", fontWeight: 700 }}>
+                                    <AlertCircle size={16} />
+                                    ยอดเทิร์นโอเวอร์
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#E2E8F0", marginBottom: "8px" }}>
+                                    <span>ความคืบหน้า</span>
+                                    <span>{formatCurrency(Number(user?.currentTurnover || 0))} / {formatCurrency(Number(user?.turnoverLimit || 0))} บาท</span>
+                                </div>
+                                <div style={{ width: "100%", height: "8px", borderRadius: "999px", background: "rgba(15,23,42,0.55)", overflow: "hidden" }}>
+                                    <div
+                                        style={{
+                                            width: `${Math.min(100, (Number(user?.currentTurnover || 0) / Math.max(1, Number(user?.turnoverLimit || 0))) * 100)}%`,
+                                            height: "100%",
+                                            background: "linear-gradient(90deg, #EF4444, #F97316)"
+                                        }}
+                                    />
+                                </div>
+                                <p style={{ margin: "10px 0 0", fontSize: "12px", color: hasIncompleteTurnover ? "#FCA5A5" : "#86EFAC" }}>
+                                    {hasIncompleteTurnover
+                                        ? `ยังขาดอีก ${formatCurrency(turnoverRemaining)} บาทก่อนถอน`
+                                        : "ทำเทิร์นครบแล้ว สามารถถอนเงินได้"}
+                                </p>
+                            </div>
+                        )}
+
                         {/* User's bank account */}
                         <div style={{
                             background: "rgba(255,255,255,0.05)",
@@ -765,7 +999,7 @@ export default function DepositPage() {
 
                         <button
                             onClick={handleWithdraw}
-                            disabled={submittingWithdraw}
+                            disabled={submittingWithdraw || hasIncompleteTurnover}
                             style={{
                                 width: "100%",
                                 background: "linear-gradient(135deg, #FFD700, #FFC000)",
@@ -775,8 +1009,8 @@ export default function DepositPage() {
                                 borderRadius: "14px",
                                 fontSize: "18px",
                                 fontWeight: 700,
-                                cursor: submittingWithdraw ? "not-allowed" : "pointer",
-                                opacity: submittingWithdraw ? 0.7 : 1,
+                                cursor: submittingWithdraw || hasIncompleteTurnover ? "not-allowed" : "pointer",
+                                opacity: submittingWithdraw || hasIncompleteTurnover ? 0.7 : 1,
                                 boxShadow: "0 6px 20px rgba(255,215,0,0.4)"
                             }}
                         >

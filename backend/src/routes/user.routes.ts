@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 import { BetflixService } from '../services/betflix.service.js';
 import { RewardService } from '../services/reward.service.js';
+import { PromotionSelectionService } from '../services/promotion-selection.service.js';
+import { TurnoverService } from '../services/turnover.service.js';
 
 const router = Router();
 
@@ -27,6 +29,8 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
                 lastLoginAt: true,
                 createdAt: true,
                 betflixUsername: true,
+                currentTurnover: true,
+                turnoverLimit: true,
             },
         });
 
@@ -39,29 +43,83 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
             where: {
                 userId: req.user!.userId,
                 type: 'DEPOSIT',
-                status: 'APPROVED'
+                status: { in: ['APPROVED', 'COMPLETED'] }
             }
         });
         const totalDeposit = depositAgg._sum.amount || 0;
+
+        let liveBalance = Number(user.balance || 0);
 
         // Fetch Betflix Balance
         if (user.betflixUsername) {
             const betflixBalance = await BetflixService.getBalance(user.betflixUsername);
 
-            // Sync to local DB if changed
+            liveBalance = betflixBalance;
+
             if (Number(user.balance) !== betflixBalance) {
                 await prisma.user.update({
                     where: { id: user.id },
                     data: { balance: betflixBalance }
                 });
             }
-
-            (user as any).balance = betflixBalance;
         }
 
-        res.json({ success: true, data: { ...user, totalDeposit } });
+        const turnoverCleared = await TurnoverService.clearIfLowBalance(user.id, liveBalance);
+        const selectedPromotion = await PromotionSelectionService.getSelectedPromotion(user.id);
+
+        res.json({
+            success: true,
+            data: {
+                ...user,
+                balance: liveBalance,
+                currentTurnover: turnoverCleared ? 0 : user.currentTurnover,
+                turnoverLimit: turnoverCleared ? 0 : user.turnoverLimit,
+                totalDeposit,
+                selectedPromotion,
+            }
+        });
     } catch (error) {
         console.error('Get user error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+router.get('/promotions/selected', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const promotion = await PromotionSelectionService.getSelectedPromotion(req.user!.userId);
+        res.json({ success: true, data: promotion });
+    } catch (error) {
+        console.error('Get selected promotion error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+router.post('/promotions/:id/select', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const promotionId = Number(req.params.id);
+        if (!Number.isInteger(promotionId) || promotionId <= 0) {
+            return res.status(400).json({ success: false, message: 'โปรโมชั่นไม่ถูกต้อง' });
+        }
+
+        const promotion = await PromotionSelectionService.selectPromotion(req.user!.userId, promotionId);
+        res.json({ success: true, data: promotion, message: 'เลือกโปรโมชั่นแล้ว' });
+    } catch (error: any) {
+        console.error('Select promotion error:', error);
+
+        if (error.message === 'PROMOTION_NOT_AVAILABLE') {
+            return res.status(400).json({ success: false, message: 'โปรโมชั่นนี้ไม่พร้อมใช้งานแล้ว' });
+        }
+
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+router.delete('/promotions/selected', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        await PromotionSelectionService.clearSelectedPromotion(req.user!.userId);
+        res.json({ success: true, message: 'ยกเลิกโปรโมชั่นที่เลือกแล้ว' });
+    } catch (error) {
+        console.error('Clear selected promotion error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });

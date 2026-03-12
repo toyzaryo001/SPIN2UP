@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import axios from 'axios';
 import { BetflixService } from './betflix.service';
 import prisma from '../lib/db.js';
+import { TurnoverService } from './turnover.service.js';
 
 export class BetLogSyncService {
 
@@ -68,6 +69,7 @@ export class BetLogSyncService {
                     const betflixUser = log.username;
                     const amount = parseFloat(log.bet);
                     const winAmount = parseFloat(log.win);
+                    const validBet = parseFloat(log.turnover || log.valid_amount || log.valid_bet || amount.toString() || '0');
                     const gameCode = log.game_code || 'Unknown';
 
                     const user = await prisma.user.findFirst({
@@ -105,6 +107,11 @@ export class BetLogSyncService {
                                         balanceAfter: currentBalance, // Changing balance here requires Wallet logic, skipping for log-sync only
                                     }
                                 });
+
+                                // Accumulate Turnover for user
+                                if (validBet > 0 && user.turnoverLimit && Number(user.turnoverLimit) > 0) {
+                                    await TurnoverService.recordProgress(user.id, validBet);
+                                }
 
                                 totalImported++;
                             }

@@ -4,7 +4,8 @@ import jwt from 'jsonwebtoken';
 import prisma from '../lib/db.js';
 import { BetflixService } from '../services/betflix.service.js';
 import { LineNotifyService } from '../services/line-notify.service.js';
-import { PaymentService } from '../services/payment.service.js';
+import { DepositBonusService } from '../services/deposit-bonus.service.js';
+import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 
 const router = Router();
 
@@ -144,7 +145,7 @@ router.post('/', async (req: Request, res: Response) => {
         // 6. Match user จากเบอร์ + ชื่อ
         const allUsers = await prisma.user.findMany({
             where: { status: 'ACTIVE' },
-            select: { id: true, phone: true, fullName: true, betflixUsername: true, bankAccount: true, username: true, balance: true }
+            select: { id: true, phone: true, fullName: true, betflixUsername: true, bankAccount: true, username: true, balance: true, autoDeposit: true }
         });
 
         const { user: matchedUser, level: matchLevel } = matchUser(allUsers, senderMobile, senderName);
@@ -178,7 +179,7 @@ router.post('/', async (req: Request, res: Response) => {
         console.log(`[TrueWallet Webhook] Matched user: ${matchedUser.fullName} (ID: ${matchedUser.id}, level: ${matchLevel})`);
 
         // === Per-User Auto Deposit Check ===
-        if ((matchedUser as any).autoDeposit === false) {
+        if (matchedUser.autoDeposit === false) {
             console.log(`[TrueWallet Webhook] User ${matchedUser.id} has autoDeposit=false, creating PENDING transaction for manual review`);
             // Create pending transaction for manual review
             const pendingTx = await prisma.transaction.create({
@@ -193,6 +194,12 @@ router.post('/', async (req: Request, res: Response) => {
                     note: `TrueWallet deposit - รอตรวจสอบ (ฝากออโต้ปิดรายบุคคล)`
                 }
             });
+            await PromotionSelectionService.bindSelectedPromotionToTransaction(
+                matchedUser.id,
+                pendingTx.id,
+                Number(amountBaht),
+                'passive'
+            );
             await prisma.trueWalletLog.update({
                 where: { id: walletLog.id },
                 data: { status: 'PENDING_REVIEW', transactionId: String(pendingTx.id) }
@@ -241,6 +248,13 @@ router.post('/', async (req: Request, res: Response) => {
             });
         });
 
+        await PromotionSelectionService.bindSelectedPromotionToTransaction(
+            matchedUser.id,
+            transaction.id,
+            Number(amountBaht),
+            'passive'
+        );
+
         // 10. อัปเดต log เป็น COMPLETED
         await prisma.trueWalletLog.update({
             where: { id: walletLog.id },
@@ -266,7 +280,7 @@ router.post('/', async (req: Request, res: Response) => {
         }).catch(() => {});
 
         // 12. [FIXED] คำนวณแจกโบนัสฝากสะสม (Streak Bonus)
-        PaymentService.processStreakBonus(matchedUser.id).catch(err => console.error('[TrueWallet Streak Bonus Error]:', err));
+        await DepositBonusService.applyPostDepositBenefits(transaction.id);
 
         return res.status(200).json({
             success: true,

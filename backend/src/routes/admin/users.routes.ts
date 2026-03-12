@@ -54,6 +54,7 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
                     lastLoginAt: true,
                     createdAt: true,
                     betflixUsername: true,
+                    referredBy: true,
                 },
                 orderBy: { [sortField]: sortOrder },
                 take: Number(limit),
@@ -62,9 +63,22 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
             prisma.user.count({ where }),
         ]);
 
+        // Get referrers to resolve their phone numbers
+        const referrerIds = [...new Set(users.map(u => u.referredBy).filter(Boolean))] as number[];
+        let referrersMap: Record<number, string> = {};
+        if (referrerIds.length > 0) {
+            const referrers = await prisma.user.findMany({
+                where: { id: { in: referrerIds } },
+                select: { id: true, phone: true }
+            });
+            referrers.forEach(r => { referrersMap[r.id] = r.phone; });
+        }
+
         // Sync Balance with Betflix (Real-time)
 
         const usersWithBalance = await Promise.all(users.map(async (user) => {
+            let finalUser: any = { ...user, referrerPhone: user.referredBy ? referrersMap[user.referredBy] : '-' };
+            
             if (user.betflixUsername) {
                 try {
                     const betflixBalance = await BetflixService.getBalance(user.betflixUsername);
@@ -75,14 +89,13 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
                             where: { id: user.id },
                             data: { balance: betflixBalance }
                         });
-                        return { ...user, balance: betflixBalance };
+                        finalUser.balance = betflixBalance;
                     }
-                    return user;
                 } catch (e) {
-                    return user;
+                    // Ignore error and keep old balance
                 }
             }
-            return user;
+            return finalUser;
         }));
 
         res.json({

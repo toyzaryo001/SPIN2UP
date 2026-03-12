@@ -254,6 +254,17 @@ export class RewardService {
             // COMPLETE SAGA: 2. Confirm Claim & Update Balance
             // ============================================
             return await prisma.$transaction(async (tx) => {
+                const statDate = RewardService.getStatDate(target.periodStart);
+                const existingSnapshot = await tx.rewardUserSnapshot.findUnique({
+                    where: {
+                        userId_type_statDate: {
+                            userId,
+                            type,
+                            statDate
+                        }
+                    }
+                });
+
                 const updatedUser = await tx.user.update({
                     where: { id: userId },
                     data: { balance: { increment: amount } }
@@ -271,27 +282,70 @@ export class RewardService {
                     }
                 });
 
-                await tx.rewardDailyStat.upsert({
+                await tx.rewardUserSnapshot.upsert({
                     where: {
-                        type_statDate: {
+                        userId_type_statDate: {
+                            userId,
                             type,
-                            statDate: RewardService.getStatDate(target.periodStart)
+                            statDate
                         }
                     },
                     update: {
                         periodStart: new Date(target.periodStart),
                         periodEnd: new Date(target.periodEnd),
-                        claimedUserCount: { increment: 1 },
-                        claimCount: { increment: 1 },
-                        totalClaimedAmount: { increment: amount }
+                        rewardAmount: amount,
+                        isClaimed: true,
+                        claimedAt: new Date()
+                    },
+                    create: {
+                        userId,
+                        type,
+                        statDate,
+                        periodStart: new Date(target.periodStart),
+                        periodEnd: new Date(target.periodEnd),
+                        rewardAmount: amount,
+                        isClaimed: true,
+                        claimedAt: new Date()
+                    }
+                });
+
+                await tx.rewardDailyStat.upsert({
+                    where: {
+                        type_statDate: {
+                            type,
+                            statDate
+                        }
+                    },
+                    update: {
+                        periodStart: new Date(target.periodStart),
+                        periodEnd: new Date(target.periodEnd),
+                        ...(existingSnapshot
+                            ? {}
+                            : {
+                                eligibleUserCount: { increment: 1 },
+                                totalCalculatedAmount: { increment: amount }
+                            }),
+                        ...(!existingSnapshot || !existingSnapshot.isClaimed
+                            ? {
+                                claimedUserCount: { increment: 1 },
+                                claimCount: { increment: 1 },
+                                totalClaimedAmount: { increment: amount }
+                            }
+                            : {}),
+                        ...(existingSnapshot && !existingSnapshot.isClaimed
+                            ? { unclaimedUserCount: { decrement: 1 } }
+                            : {})
                     },
                     create: {
                         type,
-                        statDate: RewardService.getStatDate(target.periodStart),
+                        statDate,
                         periodStart: new Date(target.periodStart),
                         periodEnd: new Date(target.periodEnd),
+                        eligibleUserCount: 1,
                         claimedUserCount: 1,
+                        unclaimedUserCount: 0,
                         claimCount: 1,
+                        totalCalculatedAmount: amount,
                         totalClaimedAmount: amount
                     }
                 });

@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../../lib/db.js';
 import { requirePermission, type AuthRequest } from '../../middlewares/auth.middleware.js';
+import { RewardSnapshotService } from '../../services/reward-snapshot.service.js';
 
 const router = Router();
 
@@ -86,6 +87,14 @@ function canReadTypedReward(
 
 function rejectForbidden(res: Response) {
     res.status(403).json({ success: false, message: 'Forbidden' });
+}
+
+function parseSnapshotDate(rawDate: unknown) {
+    if (!rawDate) return undefined;
+    const parsed = new Date(String(rawDate));
+    if (Number.isNaN(parsed.getTime())) return null;
+    parsed.setHours(0, 0, 0, 0);
+    return parsed;
 }
 
 // =======================
@@ -329,6 +338,202 @@ router.get('/daily-stats', async (req: AuthRequest, res) => {
         });
     } catch (error) {
         console.error('Get reward daily stats error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
+// =======================
+// DAILY OVERVIEW
+// =======================
+
+// GET /api/admin/rewards/daily-overview
+router.get('/daily-overview', async (req: AuthRequest, res) => {
+    try {
+        const types = normalizeRewardTypes(req.query.type);
+        if (types.length !== 1 || !isRewardType(types[0])) {
+            return res.status(400).json({ success: false, message: 'type must be CASHBACK or COMMISSION' });
+        }
+
+        const rewardType = types[0];
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(365, Math.max(1, Number(req.query.limit) || 30));
+        const skip = (page - 1) * limit;
+
+        const permissionContext = await getPermissionContext(req, res);
+        if (!permissionContext) return;
+
+        if (!permissionContext.allowAll && !canReadTypedReward(permissionContext.permissions, rewardType)) {
+            return rejectForbidden(res);
+        }
+
+        await RewardSnapshotService.syncDailySnapshots(rewardType);
+
+        const where = { type: rewardType };
+        const [total, rows] = await Promise.all([
+            prisma.rewardDailyStat.count({ where }),
+            prisma.rewardDailyStat.findMany({
+                where,
+                orderBy: { statDate: 'desc' },
+                skip,
+                take: limit
+            })
+        ]);
+
+        res.json({
+            success: true,
+            data: rows.map(row => ({
+                id: row.id,
+                type: row.type,
+                statDate: row.statDate,
+                periodStart: row.periodStart,
+                periodEnd: row.periodEnd,
+                eligibleUserCount: row.eligibleUserCount,
+                claimedUserCount: row.claimedUserCount,
+                unclaimedUserCount: row.unclaimedUserCount,
+                totalCalculatedAmount: Number(row.totalCalculatedAmount || 0),
+                totalClaimedAmount: Number(row.totalClaimedAmount || 0)
+            })),
+            total,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Get reward daily overview error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
+// =======================
+// ELIGIBILITY SNAPSHOTS
+// =======================
+
+// GET /api/admin/rewards/eligibility
+router.get('/eligibility', async (req: AuthRequest, res) => {
+    try {
+        const types = normalizeRewardTypes(req.query.type);
+        if (types.length !== 1 || !isRewardType(types[0])) {
+            return res.status(400).json({ success: false, message: 'type must be CASHBACK or COMMISSION' });
+        }
+
+        const rewardType = types[0];
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(1000, Math.max(1, Number(req.query.limit) || 50));
+        const skip = (page - 1) * limit;
+        const search = String(req.query.search || '').trim();
+        const status = String(req.query.status || 'ALL').toUpperCase();
+        const requestedDate = parseSnapshotDate(req.query.date);
+
+        if (requestedDate === null) {
+            return res.status(400).json({ success: false, message: 'Invalid date' });
+        }
+
+        if (!['ALL', 'CLAIMED', 'UNCLAIMED'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Invalid status' });
+        }
+
+        const permissionContext = await getPermissionContext(req, res);
+        if (!permissionContext) return;
+
+        if (!permissionContext.allowAll && !canReadTypedReward(permissionContext.permissions, rewardType)) {
+            return rejectForbidden(res);
+        }
+
+        if (!requestedDate || RewardSnapshotService.isDefaultStatDate(String(req.query.date || ''))) {
+            await RewardSnapshotService.syncDailySnapshots(rewardType, requestedDate ? String(req.query.date) : undefined);
+        }
+
+        let selectedDate = requestedDate;
+        if (!selectedDate) {
+            const latest = await prisma.rewardUserSnapshot.findFirst({
+                where: { type: rewardType },
+                orderBy: { statDate: 'desc' },
+                select: { statDate: true }
+            });
+            selectedDate = latest?.statDate || RewardSnapshotService.getPeriod().statDate;
+        }
+
+        const where: any = {
+            type: rewardType,
+            statDate: selectedDate
+        };
+
+        if (status === 'CLAIMED') {
+            where.isClaimed = true;
+        } else if (status === 'UNCLAIMED') {
+            where.isClaimed = false;
+        }
+
+        if (search) {
+            where.user = {
+                OR: [
+                    { username: { contains: search, mode: 'insensitive' } },
+                    { phone: { contains: search } },
+                    { fullName: { contains: search, mode: 'insensitive' } }
+                ]
+            };
+        }
+
+        const [total, items, summary] = await Promise.all([
+            prisma.rewardUserSnapshot.count({ where }),
+            prisma.rewardUserSnapshot.findMany({
+                where,
+                include: {
+                    user: {
+                        select: {
+                            username: true,
+                            fullName: true,
+                            phone: true
+                        }
+                    }
+                },
+                orderBy: [
+                    { rewardAmount: 'desc' },
+                    { userId: 'asc' }
+                ],
+                skip,
+                take: limit
+            }),
+            prisma.rewardUserSnapshot.aggregate({
+                where,
+                _sum: { rewardAmount: true },
+                _count: { id: true }
+            })
+        ]);
+
+        res.json({
+            success: true,
+            data: items.map(item => ({
+                id: item.id,
+                userId: item.userId,
+                type: item.type,
+                statDate: item.statDate,
+                periodStart: item.periodStart,
+                periodEnd: item.periodEnd,
+                turnover: Number(item.turnover || 0),
+                netLoss: Number(item.netLoss || 0),
+                rewardAmount: Number(item.rewardAmount || 0),
+                isClaimed: item.isClaimed,
+                claimedAt: item.claimedAt,
+                user: item.user
+            })),
+            selectedDate,
+            summary: {
+                totalUsers: summary._count.id,
+                totalRewardAmount: Number(summary._sum.rewardAmount || 0)
+            },
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Get reward eligibility error:', error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 });

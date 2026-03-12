@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import api from "@/lib/api";
-import { Settings, Save, RefreshCw, Search, Clock, Calendar, DollarSign, History, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import {
+    Calendar,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    RefreshCw,
+    Save,
+    Search,
+    Settings,
+} from "lucide-react";
+import api from "@/lib/api";
 
 const DAYS = [
     { value: 0, label: "อาทิตย์" },
@@ -17,13 +26,13 @@ const DAYS = [
     { value: 7, label: "ทุกวัน" },
 ];
 
-const HOURS = Array.from({ length: 24 }, (_, i) => ({
-    value: i,
-    label: `${i.toString().padStart(2, "0")}:00 น.`
+const HOURS = Array.from({ length: 24 }, (_, index) => ({
+    value: index,
+    label: `${index.toString().padStart(2, "0")}:00 น.`,
 }));
 
-const PAGE_SIZES = [50, 100, 300, 500, 1000];
-const DAILY_STAT_PAGE_SIZES = [10, 30, 50, 100];
+const OVERVIEW_PAGE_SIZES = [10, 30, 50, 100];
+const TABLE_PAGE_SIZES = [20, 50, 100, 300];
 
 interface CashbackSettings {
     id?: number;
@@ -36,36 +45,36 @@ interface CashbackSettings {
     isActive: boolean;
 }
 
-interface WeeklySummary {
-    periodStart: string;
-    periodEnd: string;
-    totalPaid: number;
-    claimCount: number;
-}
-
-interface ClaimHistory {
+interface DailyOverviewRow {
     id: number;
-    userId: number;
-    user: { username?: string; phone: string; fullName?: string };
-    amount: number;
-    periodStart: string;
-    periodEnd: string;
-    claimedAt: string;
-}
-
-interface RewardDailyStat {
-    id: number;
-    type: "CASHBACK" | "COMMISSION";
     statDate: string;
     periodStart: string;
     periodEnd: string;
+    eligibleUserCount: number;
     claimedUserCount: number;
-    claimCount: number;
+    unclaimedUserCount: number;
+    totalCalculatedAmount: number;
     totalClaimedAmount: number;
 }
 
+interface EligibilityRow {
+    id: number;
+    userId: number;
+    statDate: string;
+    periodStart: string;
+    periodEnd: string;
+    rewardAmount: number;
+    netLoss: number;
+    isClaimed: boolean;
+    claimedAt?: string | null;
+    user: {
+        username?: string;
+        fullName?: string;
+        phone?: string;
+    };
+}
+
 export default function CashbackSettingsPage() {
-    // Settings State
     const [settings, setSettings] = useState<CashbackSettings>({
         rate: 5,
         minLoss: 100,
@@ -75,118 +84,149 @@ export default function CashbackSettingsPage() {
         claimEndHour: 23,
         isActive: true,
     });
-    const [loading, setLoading] = useState(true);
+    const [loadingSettings, setLoadingSettings] = useState(true);
     const [saving, setSaving] = useState(false);
 
     const [adminPermissions, setAdminPermissions] = useState<any>(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
+    const [overviewRows, setOverviewRows] = useState<DailyOverviewRow[]>([]);
+    const [overviewTotal, setOverviewTotal] = useState(0);
+    const [overviewPage, setOverviewPage] = useState(1);
+    const [overviewPageSize, setOverviewPageSize] = useState(30);
+    const [loadingOverview, setLoadingOverview] = useState(false);
+
+    const [eligibilityRows, setEligibilityRows] = useState<EligibilityRow[]>([]);
+    const [eligibilityTotal, setEligibilityTotal] = useState(0);
+    const [eligibilityPage, setEligibilityPage] = useState(1);
+    const [eligibilityPageSize, setEligibilityPageSize] = useState(50);
+    const [eligibilitySearch, setEligibilitySearch] = useState("");
+    const [eligibilityStatus, setEligibilityStatus] = useState("ALL");
+    const [selectedDate, setSelectedDate] = useState("");
+    const [loadingEligibility, setLoadingEligibility] = useState(false);
+
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.['activities']?.[action];
-        if (!p) return false;
-        if (typeof p === 'boolean') return p;
-        return !!p.manage;
+        const permission = adminPermissions?.activities?.[action];
+        if (!permission) return false;
+        if (typeof permission === "boolean") return permission;
+        return !!permission.manage;
     };
 
-    // Summary State
-    const [summaries, setSummaries] = useState<WeeklySummary[]>([]);
-    const [loadingSummary, setLoadingSummary] = useState(false);
+    const formatDate = (dateStr: string) =>
+        new Date(dateStr).toLocaleDateString("th-TH", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        });
 
-    // History State
-    const [dailyStats, setDailyStats] = useState<RewardDailyStat[]>([]);
-    const [dailyStatsTotal, setDailyStatsTotal] = useState(0);
-    const [dailyStatsPage, setDailyStatsPage] = useState(1);
-    const [dailyStatsPageSize, setDailyStatsPageSize] = useState(30);
-    const [loadingDailyStats, setLoadingDailyStats] = useState(false);
+    const formatDateTime = (dateStr?: string | null) =>
+        dateStr
+            ? new Date(dateStr).toLocaleString("th-TH", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+            })
+            : "-";
 
-    const [history, setHistory] = useState<ClaimHistory[]>([]);
-    const [historyTotal, setHistoryTotal] = useState(0);
-    const [historyPage, setHistoryPage] = useState(1);
-    const [historyPageSize, setHistoryPageSize] = useState(50);
-    const [historySearch, setHistorySearch] = useState("");
-    const [loadingHistory, setLoadingHistory] = useState(false);
+    const formatMoney = (amount: number) =>
+        Number(amount).toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
 
-    // Fetch Settings
+    const toDateInputValue = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
+
     const fetchSettings = async () => {
         try {
-            setLoading(true);
+            setLoadingSettings(true);
             const res = await api.get("/admin/rewards/settings/cashback");
             if (res.data.success && res.data.data) {
                 setSettings({
-                    ...settings,
-                    ...res.data.data,
-                    claimStartHour: res.data.data.claimStartHour ?? 0,
-                    claimEndHour: res.data.data.claimEndHour ?? 23,
+                    id: res.data.data.id,
+                    rate: Number(res.data.data.rate ?? 5),
+                    minLoss: Number(res.data.data.minLoss ?? 100),
+                    maxCashback: Number(res.data.data.maxCashback ?? 10000),
+                    dayOfWeek: Number(res.data.data.dayOfWeek ?? 1),
+                    claimStartHour: Number(res.data.data.claimStartHour ?? 0),
+                    claimEndHour: Number(res.data.data.claimEndHour ?? 23),
+                    isActive: Boolean(res.data.data.isActive),
                 });
             }
         } catch (error) {
-            console.error("Fetch error:", error);
+            console.error("Fetch cashback settings error:", error);
+            toast.error("ดึงข้อมูลไม่สำเร็จ");
         } finally {
-            setLoading(false);
+            setLoadingSettings(false);
         }
     };
 
-    // Fetch Weekly Summaries
-    const fetchSummaries = async () => {
+    const fetchOverview = async () => {
         try {
-            setLoadingSummary(true);
-            const res = await api.get("/admin/rewards/summaries?type=CASHBACK");
-            if (res.data.success) {
-                setSummaries(res.data.data || []);
-            }
-        } catch (error) {
-            console.error("Summary fetch error:", error);
-        } finally {
-            setLoadingSummary(false);
-        }
-    };
-
-    const fetchDailyStats = async () => {
-        try {
-            setLoadingDailyStats(true);
+            setLoadingOverview(true);
             const params = new URLSearchParams({
                 type: "CASHBACK",
-                page: dailyStatsPage.toString(),
-                limit: dailyStatsPageSize.toString(),
+                page: overviewPage.toString(),
+                limit: overviewPageSize.toString(),
             });
-
-            const res = await api.get(`/admin/rewards/daily-stats?${params.toString()}`);
+            const res = await api.get(`/admin/rewards/daily-overview?${params.toString()}`);
             if (res.data.success) {
-                setDailyStats(res.data.data || []);
-                setDailyStatsTotal(Number(res.data.total || 0));
+                const rows = res.data.data || [];
+                setOverviewRows(rows);
+                setOverviewTotal(Number(res.data.pagination?.total || res.data.total || 0));
+
+                if (!selectedDate && rows.length > 0) {
+                    setSelectedDate(toDateInputValue(rows[0].statDate));
+                }
             }
         } catch (error) {
-            console.error("Daily stats fetch error:", error);
+            console.error("Fetch cashback overview error:", error);
         } finally {
-            setLoadingDailyStats(false);
+            setLoadingOverview(false);
         }
     };
 
-    // Fetch Claim History
-    const fetchHistory = async () => {
+    const fetchEligibility = async () => {
         try {
-            setLoadingHistory(true);
+            setLoadingEligibility(true);
             const params = new URLSearchParams({
                 type: "CASHBACK",
-                page: historyPage.toString(),
-                limit: historyPageSize.toString(),
+                page: eligibilityPage.toString(),
+                limit: eligibilityPageSize.toString(),
+                status: eligibilityStatus,
             });
-            if (historySearch) params.append("search", historySearch);
 
-            const res = await api.get(`/admin/rewards/history?${params}`);
+            if (selectedDate) {
+                params.append("date", selectedDate);
+            }
+
+            if (eligibilitySearch.trim()) {
+                params.append("search", eligibilitySearch.trim());
+            }
+
+            const res = await api.get(`/admin/rewards/eligibility?${params.toString()}`);
             if (res.data.success) {
-                setHistory(res.data.data || []);
-                setHistoryTotal(res.data.total || 0);
+                setEligibilityRows(res.data.data || []);
+                setEligibilityTotal(Number(res.data.pagination?.total || 0));
+                if (res.data.selectedDate && !selectedDate) {
+                    setSelectedDate(toDateInputValue(res.data.selectedDate));
+                }
             }
         } catch (error) {
-            console.error("History fetch error:", error);
+            console.error("Fetch cashback eligibility error:", error);
         } finally {
-            setLoadingHistory(false);
+            setLoadingEligibility(false);
         }
     };
 
-    // Save Settings
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -195,131 +235,135 @@ export default function CashbackSettingsPage() {
                 toast.success("บันทึกสำเร็จ");
             }
         } catch (error) {
+            console.error("Save cashback settings error:", error);
             toast.error("เกิดข้อผิดพลาด");
         } finally {
             setSaving(false);
         }
     };
 
-    // Initial Load
+    const handleEligibilitySearch = () => {
+        if (eligibilityPage !== 1) {
+            setEligibilityPage(1);
+            return;
+        }
+        fetchEligibility();
+    };
+
     useEffect(() => {
         const fetchAdminData = async () => {
             try {
-                const res = await api.get('/admin/me');
+                const res = await api.get("/admin/me");
                 if (res.data.success && res.data.data) {
                     setAdminPermissions(res.data.data.permissions || {});
-                    setIsSuperAdmin(res.data.data.isSuperAdmin === true || res.data.data.role?.name === 'SUPER_ADMIN');
+                    setIsSuperAdmin(
+                        res.data.data.isSuperAdmin === true || res.data.data.role?.name === "SUPER_ADMIN"
+                    );
                 }
-            } catch (error) { console.error(error); }
+            } catch (error) {
+                console.error(error);
+            }
         };
+
         fetchAdminData();
         fetchSettings();
-        fetchSummaries();
     }, []);
 
-    // Fetch history when page/size/search changes
     useEffect(() => {
-        fetchHistory();
-    }, [historyPage, historyPageSize]);
+        fetchOverview();
+    }, [overviewPage, overviewPageSize]);
 
     useEffect(() => {
-        fetchDailyStats();
-    }, [dailyStatsPage, dailyStatsPageSize]);
+        fetchEligibility();
+    }, [eligibilityPage, eligibilityPageSize, eligibilityStatus, selectedDate]);
 
-    // Handle Search
-    const handleSearch = () => {
-        if (historyPage !== 1) {
-            setHistoryPage(1);
-            return;
-        }
-        fetchHistory();
-    };
+    const overviewTotalPages = Math.ceil(overviewTotal / overviewPageSize);
+    const eligibilityTotalPages = Math.ceil(eligibilityTotal / eligibilityPageSize);
 
-    const totalPages = Math.ceil(historyTotal / historyPageSize);
-    const dailyStatsTotalPages = Math.ceil(dailyStatsTotal / dailyStatsPageSize);
-
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" });
-    };
-
-    const formatDateTime = (dateStr: string) => {
-        return new Date(dateStr).toLocaleString("th-TH", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-    };
-
-    if (loading) {
+    if (loadingSettings) {
         return <div className="p-6 text-center">กำลังโหลด...</div>;
     }
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">ตั้งค่ายอดเสีย (Cashback)</h2>
-                    <p className="text-slate-500 text-sm mt-1">กำหนดเงื่อนไขการคืนยอดเสียให้ผู้เล่น</p>
+                    <p className="mt-1 text-sm text-slate-500">กำหนดเงื่อนไขการคืนยอดเสีย และดูสิทธิ์รับของสมาชิกแบบรายวัน</p>
                 </div>
-                <Link href="/activities" className="text-blue-500 hover:underline text-sm">
+                <Link href="/activities" className="text-sm text-blue-500 hover:underline">
                     ← กลับ
                 </Link>
             </div>
 
-            {/* Settings Card */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+                <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
                     <Settings size={20} className="text-yellow-500" />
                     ตั้งค่าเงื่อนไข
                 </h3>
 
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 gap-6 lg:grid-cols-3">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            เปอร์เซ็นต์คืนยอดเสีย (%)
-                        </label>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">เปอร์เซ็นต์คืนยอดเสีย (%)</label>
                         <input
                             type="number"
                             step="0.1"
                             value={settings.rate}
-                            disabled={!hasPerm('cashback')}
-                            onChange={(e) => setSettings({ ...settings, rate: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                            disabled={!hasPerm("cashback")}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    rate: parseFloat(event.target.value) || 0,
+                                }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            ยอดเสียขั้นต่ำ (บาท)
-                        </label>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">ยอดเสียขั้นต่ำ (บาท)</label>
                         <input
                             type="number"
                             value={settings.minLoss}
-                            disabled={!hasPerm('cashback')}
-                            onChange={(e) => setSettings({ ...settings, minLoss: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                            disabled={!hasPerm("cashback")}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    minLoss: parseFloat(event.target.value) || 0,
+                                }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            คืนสูงสุด (บาท)
-                        </label>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">คืนสูงสุด (บาท)</label>
                         <input
                             type="number"
                             value={settings.maxCashback}
-                            disabled={!hasPerm('cashback')}
-                            onChange={(e) => setSettings({ ...settings, maxCashback: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                            disabled={!hasPerm("cashback")}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    maxCashback: parseFloat(event.target.value) || 0,
+                                }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            วันที่รับได้
-                        </label>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">วันที่รับได้</label>
                         <select
                             value={settings.dayOfWeek}
-                            disabled={!hasPerm('cashback')}
-                            onChange={(e) => setSettings({ ...settings, dayOfWeek: parseInt(e.target.value) })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                            disabled={!hasPerm("cashback")}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    dayOfWeek: parseInt(event.target.value, 10),
+                                }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
                         >
                             {DAYS.map((day) => (
                                 <option key={day.value} value={day.value}>
@@ -330,15 +374,20 @@ export default function CashbackSettingsPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            <Clock size={14} className="inline mr-1" />
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                            <Clock size={14} className="mr-1 inline" />
                             เริ่มกดรับได้ (เวลา)
                         </label>
                         <select
                             value={settings.claimStartHour}
-                            disabled={!hasPerm('cashback')}
-                            onChange={(e) => setSettings({ ...settings, claimStartHour: parseInt(e.target.value) })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                            disabled={!hasPerm("cashback")}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    claimStartHour: parseInt(event.target.value, 10),
+                                }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
                         >
                             {HOURS.map((hour) => (
                                 <option key={hour.value} value={hour.value}>
@@ -349,15 +398,20 @@ export default function CashbackSettingsPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            <Clock size={14} className="inline mr-1" />
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                            <Clock size={14} className="mr-1 inline" />
                             หมดเวลากดรับ (เวลา)
                         </label>
                         <select
                             value={settings.claimEndHour}
-                            disabled={!hasPerm('cashback')}
-                            onChange={(e) => setSettings({ ...settings, claimEndHour: parseInt(e.target.value) })}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                            disabled={!hasPerm("cashback")}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    claimEndHour: parseInt(event.target.value, 10),
+                                }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
                         >
                             {HOURS.map((hour) => (
                                 <option key={hour.value} value={hour.value}>
@@ -369,30 +423,35 @@ export default function CashbackSettingsPage() {
                 </div>
 
                 <div className="mt-6 flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex cursor-pointer items-center gap-2">
                         <input
                             type="checkbox"
                             checked={settings.isActive}
-                            disabled={!hasPerm('cashback')}
-                            onChange={(e) => setSettings({ ...settings, isActive: e.target.checked })}
-                            className="w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 disabled:opacity-50"
+                            disabled={!hasPerm("cashback")}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    isActive: event.target.checked,
+                                }))
+                            }
+                            className="h-5 w-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 disabled:opacity-50"
                         />
                         <span className="text-sm font-medium text-slate-700">เปิดใช้งาน</span>
                     </label>
                 </div>
 
-                <div className="flex gap-3 mt-8 pt-6 border-t border-slate-100">
+                <div className="mt-8 flex gap-3 border-t border-slate-100 pt-6">
                     <button
                         onClick={fetchSettings}
-                        className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 hover:bg-slate-50"
                     >
                         <RefreshCw size={18} />
                         รีเซ็ต
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={saving || !hasPerm('cashback')}
-                        className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={saving || !hasPerm("cashback")}
+                        className="flex items-center gap-2 rounded-lg bg-yellow-500 px-6 py-2 text-white hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <Save size={18} />
                         {saving ? "กำลังบันทึก..." : "บันทึก"}
@@ -400,58 +459,27 @@ export default function CashbackSettingsPage() {
                 </div>
             </div>
 
-            {/* Weekly Summaries */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <DollarSign size={20} className="text-green-500" />
-                    รายการคำนวณล่าสุด
-                </h3>
-
-                {loadingSummary ? (
-                    <div className="text-center py-4 text-slate-500">กำลังโหลด...</div>
-                ) : summaries.length === 0 ? (
-                    <div className="text-center py-4 text-slate-400">ยังไม่มีข้อมูล</div>
-                ) : (
-                    <div className="space-y-2">
-                        {summaries.map((summary, idx) => (
-                            <div key={idx} className="flex items-center justify-between bg-slate-50 p-4 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <Calendar size={18} className="text-slate-400" />
-                                    <span className="text-slate-700">
-                                        รอบวันที่ {formatDate(summary.periodStart)} - {formatDate(summary.periodEnd)}
-                                    </span>
-                                    <span className="text-xs text-slate-400">({summary.claimCount} คน)</span>
-                                </div>
-                                <span className="text-lg font-bold text-green-600">
-                                    {summary.totalPaid.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between mb-4">
+            <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center justify-between">
                     <div>
-                        <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-800">
                             <Calendar size={20} className="text-indigo-500" />
-                            สถิติการกดรับรายวัน
+                            ตารางคำนวณยอดเสียรายวัน
                         </h3>
-                        <p className="text-sm text-slate-500 mt-1">
-                            เก็บจำนวนคนกดรับและยอดรวมแยกตามวัน เพื่อให้ดูย้อนหลังได้ทุกวัน
+                        <p className="mt-1 text-sm text-slate-500">
+                            แสดงยอดเสียรวมที่ระบบคำนวณได้ในแต่ละรอบ พร้อมจำนวนคนที่รับแล้วและยังไม่รับ
                         </p>
                     </div>
 
                     <select
-                        value={dailyStatsPageSize}
-                        onChange={(e) => {
-                            setDailyStatsPageSize(parseInt(e.target.value, 10));
-                            setDailyStatsPage(1);
+                        value={overviewPageSize}
+                        onChange={(event) => {
+                            setOverviewPageSize(parseInt(event.target.value, 10));
+                            setOverviewPage(1);
                         }}
-                        className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     >
-                        {DAILY_STAT_PAGE_SIZES.map((size) => (
+                        {OVERVIEW_PAGE_SIZES.map((size) => (
                             <option key={size} value={size}>
                                 {size} วัน
                             </option>
@@ -459,68 +487,84 @@ export default function CashbackSettingsPage() {
                     </select>
                 </div>
 
-                {loadingDailyStats ? (
-                    <div className="text-center py-8 text-slate-500">กำลังโหลด...</div>
-                ) : dailyStats.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">ยังไม่มีสถิติรายวัน</div>
+                {loadingOverview ? (
+                    <div className="py-8 text-center text-slate-500">กำลังโหลด...</div>
+                ) : overviewRows.length === 0 ? (
+                    <div className="py-8 text-center text-slate-400">ยังไม่มีข้อมูลการคำนวณ</div>
                 ) : (
                     <>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-slate-50 text-left">
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">#</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">วันที่</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">คนกดรับ</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">จำนวนรายการ</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">ยอดรวมที่รับ</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">รอบคำนวณ</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">#</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">รอบวันที่</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ผู้มีสิทธิ์</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">รับแล้ว</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ยังไม่รับ</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ยอดคำนวณรวม</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ยอดที่รับแล้ว</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {dailyStats.map((item, idx) => (
-                                        <tr key={item.id} className="hover:bg-slate-50">
-                                            <td className="px-4 py-3 text-sm text-slate-500">
-                                                {(dailyStatsPage - 1) * dailyStatsPageSize + idx + 1}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm font-medium text-slate-800">
-                                                {formatDate(item.statDate)}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-slate-600">
-                                                {item.claimedUserCount.toLocaleString("th-TH")} คน
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-slate-600">
-                                                {item.claimCount.toLocaleString("th-TH")} รายการ
-                                            </td>
-                                            <td className="px-4 py-3 text-sm font-semibold text-green-600">
-                                                {Number(item.totalClaimedAmount).toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-slate-500">
-                                                {formatDate(item.periodStart)} - {formatDate(item.periodEnd)}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {overviewRows.map((row, index) => {
+                                        const rowDate = toDateInputValue(row.statDate);
+                                        const isSelected = selectedDate === rowDate;
+
+                                        return (
+                                            <tr
+                                                key={row.id}
+                                                className={`cursor-pointer hover:bg-slate-50 ${isSelected ? "bg-yellow-50" : ""}`}
+                                                onClick={() => {
+                                                    setSelectedDate(rowDate);
+                                                    setEligibilityPage(1);
+                                                }}
+                                            >
+                                                <td className="px-4 py-3 text-sm text-slate-500">
+                                                    {(overviewPage - 1) * overviewPageSize + index + 1}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                                                    {formatDate(row.periodStart)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-slate-600">
+                                                    {row.eligibleUserCount.toLocaleString("th-TH")} คน
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-green-600">
+                                                    {row.claimedUserCount.toLocaleString("th-TH")} คน
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-amber-600">
+                                                    {row.unclaimedUserCount.toLocaleString("th-TH")} คน
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-slate-800">
+                                                    {formatMoney(row.totalCalculatedAmount)} ฿
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-green-600">
+                                                    {formatMoney(row.totalClaimedAmount)} ฿
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
 
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
                             <div className="text-sm text-slate-500">
-                                แสดง {(dailyStatsPage - 1) * dailyStatsPageSize + 1} - {Math.min(dailyStatsPage * dailyStatsPageSize, dailyStatsTotal)} จาก {dailyStatsTotal} วัน
+                                แสดง {(overviewPage - 1) * overviewPageSize + 1} - {Math.min(overviewPage * overviewPageSize, overviewTotal)} จาก {overviewTotal} วัน
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => setDailyStatsPage((page) => Math.max(1, page - 1))}
-                                    disabled={dailyStatsPage <= 1}
-                                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                                    onClick={() => setOverviewPage((page) => Math.max(1, page - 1))}
+                                    disabled={overviewPage <= 1}
+                                    className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50 disabled:opacity-50"
                                 >
                                     <ChevronLeft size={18} />
                                 </button>
-                                <span className="text-sm text-slate-600">หน้า {dailyStatsPage} / {dailyStatsTotalPages || 1}</span>
+                                <span className="text-sm text-slate-600">หน้า {overviewPage} / {overviewTotalPages || 1}</span>
                                 <button
-                                    onClick={() => setDailyStatsPage((page) => Math.min(dailyStatsTotalPages || 1, page + 1))}
-                                    disabled={dailyStatsPage >= dailyStatsTotalPages}
-                                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                                    onClick={() => setOverviewPage((page) => Math.min(overviewTotalPages || 1, page + 1))}
+                                    disabled={overviewPage >= overviewTotalPages}
+                                    className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50 disabled:opacity-50"
                                 >
                                     <ChevronRight size={18} />
                                 </button>
@@ -529,93 +573,144 @@ export default function CashbackSettingsPage() {
                     </>
                 )}
             </div>
-
-            {/* Claim History Table */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <History size={20} className="text-blue-500" />
-                        ประวัติการกดรับ
-                    </h3>
+            <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center justify-between">
+                    <div>
+                        <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-800">
+                            <Calendar size={20} className="text-blue-500" />
+                            รายชื่อผู้มีสิทธิ์รับยอดเสีย
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                            แสดงสถานะว่า รับแล้วหรือยังไม่รับ พร้อมตัวกรองค้นหา
+                        </p>
+                    </div>
 
                     <div className="flex items-center gap-3">
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(event) => {
+                                setSelectedDate(event.target.value);
+                                setEligibilityPage(1);
+                            }}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        />
+                        <select
+                            value={eligibilityStatus}
+                            onChange={(event) => {
+                                setEligibilityStatus(event.target.value);
+                                setEligibilityPage(1);
+                            }}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        >
+                            <option value="ALL">ทั้งหมด</option>
+                            <option value="CLAIMED">รับแล้ว</option>
+                            <option value="UNCLAIMED">ยังไม่รับ</option>
+                        </select>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
                                 type="text"
                                 placeholder="ค้นหา username/เบอร์โทร"
-                                value={historySearch}
-                                onChange={(e) => setHistorySearch(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                                className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-sm w-64"
+                                value={eligibilitySearch}
+                                onChange={(event) => setEligibilitySearch(event.target.value)}
+                                onKeyDown={(event) => event.key === "Enter" && handleEligibilitySearch()}
+                                className="w-64 rounded-lg border border-slate-200 py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-yellow-400"
                             />
                         </div>
-                        <button onClick={handleSearch} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm">
+                        <button
+                            onClick={handleEligibilitySearch}
+                            className="rounded-lg bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+                        >
                             ค้นหา
                         </button>
                         <select
-                            value={historyPageSize}
-                            onChange={(e) => { setHistoryPageSize(parseInt(e.target.value)); setHistoryPage(1); }}
-                            className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                            value={eligibilityPageSize}
+                            onChange={(event) => {
+                                setEligibilityPageSize(parseInt(event.target.value, 10));
+                                setEligibilityPage(1);
+                            }}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
                         >
-                            {PAGE_SIZES.map(size => (
-                                <option key={size} value={size}>{size} รายการ</option>
+                            {TABLE_PAGE_SIZES.map((size) => (
+                                <option key={size} value={size}>
+                                    {size} รายการ
+                                </option>
                             ))}
                         </select>
                     </div>
                 </div>
 
-                {loadingHistory ? (
-                    <div className="text-center py-8 text-slate-500">กำลังโหลด...</div>
-                ) : history.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">ไม่พบข้อมูล</div>
+                {loadingEligibility ? (
+                    <div className="py-8 text-center text-slate-500">กำลังโหลด...</div>
+                ) : eligibilityRows.length === 0 ? (
+                    <div className="py-8 text-center text-slate-400">ไม่พบข้อมูล</div>
                 ) : (
                     <>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-slate-50 text-left">
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">#</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Username/เบอร์โทร</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">ชื่อ</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">ยอดที่รับ</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">ช่วงเวลา</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">วันที่กดรับ</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">#</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">Username/เบอร์โทร</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ชื่อ</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ยอดเสีย</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ยอดรับได้</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">สถานะ</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">เวลากดรับ</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {history.map((item, idx) => (
-                                        <tr key={item.id} className="hover:bg-slate-50">
-                                            <td className="px-4 py-3 text-sm text-slate-500">{(historyPage - 1) * historyPageSize + idx + 1}</td>
-                                            <td className="px-4 py-3 text-sm font-medium text-slate-800">{item.user?.username || item.user?.phone}</td>
-                                            <td className="px-4 py-3 text-sm text-slate-600">{item.user?.fullName || "-"}</td>
-                                            <td className="px-4 py-3 text-sm font-semibold text-green-600">{Number(item.amount).toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
-                                            <td className="px-4 py-3 text-sm text-slate-500">{formatDate(item.periodStart)} - {formatDate(item.periodEnd)}</td>
-                                            <td className="px-4 py-3 text-sm text-slate-500">{formatDateTime(item.claimedAt)}</td>
+                                    {eligibilityRows.map((row, index) => (
+                                        <tr key={row.id} className="hover:bg-slate-50">
+                                            <td className="px-4 py-3 text-sm text-slate-500">
+                                                {(eligibilityPage - 1) * eligibilityPageSize + index + 1}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                                                {row.user?.username || row.user?.phone}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-slate-600">{row.user?.fullName || "-"}</td>
+                                            <td className="px-4 py-3 text-sm text-slate-600">{formatMoney(row.netLoss)} ฿</td>
+                                            <td className="px-4 py-3 text-sm font-semibold text-green-600">
+                                                {formatMoney(row.rewardAmount)} ฿
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">
+                                                <span
+                                                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                                        row.isClaimed
+                                                            ? "bg-green-100 text-green-600"
+                                                            : "bg-amber-100 text-amber-600"
+                                                    }`}
+                                                >
+                                                    {row.isClaimed ? "รับแล้ว" : "ยังไม่รับ"}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-slate-500">{formatDateTime(row.claimedAt)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
 
-                        {/* Pagination */}
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
                             <div className="text-sm text-slate-500">
-                                แสดง {(historyPage - 1) * historyPageSize + 1} - {Math.min(historyPage * historyPageSize, historyTotal)} จาก {historyTotal} รายการ
+                                แสดง {(eligibilityPage - 1) * eligibilityPageSize + 1} - {Math.min(eligibilityPage * eligibilityPageSize, eligibilityTotal)} จาก {eligibilityTotal} รายการ
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-                                    disabled={historyPage <= 1}
-                                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                                    onClick={() => setEligibilityPage((page) => Math.max(1, page - 1))}
+                                    disabled={eligibilityPage <= 1}
+                                    className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50 disabled:opacity-50"
                                 >
                                     <ChevronLeft size={18} />
                                 </button>
-                                <span className="text-sm text-slate-600">หน้า {historyPage} / {totalPages || 1}</span>
+                                <span className="text-sm text-slate-600">
+                                    หน้า {eligibilityPage} / {eligibilityTotalPages || 1}
+                                </span>
                                 <button
-                                    onClick={() => setHistoryPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={historyPage >= totalPages}
-                                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                                    onClick={() => setEligibilityPage((page) => Math.min(eligibilityTotalPages || 1, page + 1))}
+                                    disabled={eligibilityPage >= eligibilityTotalPages}
+                                    className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50 disabled:opacity-50"
                                 >
                                     <ChevronRight size={18} />
                                 </button>

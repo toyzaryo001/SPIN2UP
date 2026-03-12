@@ -37,6 +37,7 @@ model User {
   gameSessions      GameSession[]
   promotionLogs     PromotionLog[]
   rewards           RewardClaim[]
+  rewardSnapshots   RewardUserSnapshot[]
   selectedPromotion Promotion?            @relation("UserSelectedPromotion", fields: [selectedPromotionId], references: [id])
   transactions      Transaction[]
   trueWalletLogs    TrueWalletLog[]
@@ -494,14 +495,38 @@ model RewardDailyStat {
   statDate           DateTime
   periodStart        DateTime
   periodEnd          DateTime
+  eligibleUserCount  Int      @default(0)
   claimedUserCount   Int      @default(0)
+  unclaimedUserCount Int      @default(0)
   claimCount         Int      @default(0)
+  totalCalculatedAmount Decimal @default(0)
   totalClaimedAmount Decimal  @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   @@unique([type, statDate])
   @@index([type, statDate])
+}
+
+model RewardUserSnapshot {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  type         String
+  statDate     DateTime
+  periodStart  DateTime
+  periodEnd    DateTime
+  turnover     Decimal  @default(0)
+  netLoss      Decimal  @default(0)
+  rewardAmount Decimal  @default(0)
+  isClaimed    Boolean  @default(false)
+  claimedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type, statDate])
+  @@index([type, statDate])
+  @@index([type, statDate, isClaimed])
 }
 
 model Prefix {

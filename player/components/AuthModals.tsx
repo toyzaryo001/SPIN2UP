@@ -149,8 +149,8 @@ export default function AuthModals({
                             </div>
 
                             <div>
-                                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน</label>
-                                <input type="password" placeholder="••••••••" className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.password} onChange={e => setRegisterForm({ ...registerForm, password: e.target.value })} required />
+                                <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">รหัสผ่าน (ตัวเลข 6 หลัก)</label>
+                                <input type="password" placeholder="••••••" inputMode="numeric" pattern="[0-9]*" maxLength={6} className="w-full bg-[#0f172a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-green-500 focus:outline-none" value={registerForm.password} onChange={e => setRegisterForm({ ...registerForm, password: e.target.value })} required />
                             </div>
                             <div>
                                 <label className="text-slate-400 text-xs font-bold ml-1 mb-1 block">ยืนยันรหัสผ่าน</label>

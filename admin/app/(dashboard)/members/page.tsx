@@ -19,6 +19,7 @@ interface User {
     lineId?: string;
     createdAt: string;
     autoDeposit?: boolean;
+    referrerPhone?: string;
 }
 
 interface HistoryItem {
@@ -353,6 +354,7 @@ export default function MembersPage() {
                         <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
                             <tr>
                                 <th className="px-6 py-4">ข้อมูลส่วนตัว</th>
+                                <th className="px-6 py-4 text-center">Note</th>
                                 <th className="px-6 py-4">ธนาคาร</th>
                                 <th className="px-6 py-4 text-right">เครดิตคงเหลือ</th>
                                 <th className="px-6 py-4 text-center">สถานะ</th>
@@ -363,13 +365,13 @@ export default function MembersPage() {
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
+                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
                                         กำลังโหลดข้อมูล...
                                     </td>
                                 </tr>
                             ) : users.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
+                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
                                         ไม่พบข้อมูลสมาชิก
                                     </td>
                                 </tr>
@@ -393,6 +395,19 @@ export default function MembersPage() {
                                                     )}
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button 
+                                                onClick={() => {
+                                                    const text = `======= รายละเอียด =======\nUser : ${user.username}\nName : ${user.fullName}\nธนาคาร : ${user.bankName}\nเลขบัญชี : ${user.bankAccount}\nผู้แนะนำ : ${user.referrerPhone || '-'}`;
+                                                    navigator.clipboard.writeText(text);
+                                                    toast.success("คัดลอกรายละเอียดแล้ว", { duration: 1500 });
+                                                }}
+                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                                title="คัดลอกรายละเอียด (Note)"
+                                            >
+                                                <Copy size={16} />
+                                            </button>
                                         </td>
                                         <td className="px-6 py-4 text-slate-600">
                                             <div className="flex items-center gap-2">

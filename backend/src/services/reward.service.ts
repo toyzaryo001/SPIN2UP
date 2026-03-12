@@ -28,6 +28,9 @@ interface RewardStats {
 }
 
 export class RewardService {
+    private static getStatDate(periodStart: string) {
+        return dayjs(periodStart).startOf('day').toDate();
+    }
 
     /**
      * Get current reward stats for a user (Cashback & Commission)
@@ -265,6 +268,31 @@ export class RewardService {
                         balanceAfter: Number(updatedUser.balance),
                         status: 'COMPLETED',
                         note: `${type} for period ${target.periodStart.split(' ')[0]}`
+                    }
+                });
+
+                await tx.rewardDailyStat.upsert({
+                    where: {
+                        type_statDate: {
+                            type,
+                            statDate: RewardService.getStatDate(target.periodStart)
+                        }
+                    },
+                    update: {
+                        periodStart: new Date(target.periodStart),
+                        periodEnd: new Date(target.periodEnd),
+                        claimedUserCount: { increment: 1 },
+                        claimCount: { increment: 1 },
+                        totalClaimedAmount: { increment: amount }
+                    },
+                    create: {
+                        type,
+                        statDate: RewardService.getStatDate(target.periodStart),
+                        periodStart: new Date(target.periodStart),
+                        periodEnd: new Date(target.periodEnd),
+                        claimedUserCount: 1,
+                        claimCount: 1,
+                        totalClaimedAmount: amount
                     }
                 });
 

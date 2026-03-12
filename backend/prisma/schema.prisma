@@ -488,6 +488,22 @@ model RewardClaim {
   @@index([claimedAt])
 }
 
+model RewardDailyStat {
+  id                 Int      @id @default(autoincrement())
+  type               String
+  statDate           DateTime
+  periodStart        DateTime
+  periodEnd          DateTime
+  claimedUserCount   Int      @default(0)
+  claimCount         Int      @default(0)
+  totalClaimedAmount Decimal  @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([type, statDate])
+  @@index([type, statDate])
+}
+
 model Prefix {
   id           Int      @id @default(autoincrement())
   code         String   @unique

@@ -272,6 +272,68 @@ router.get('/summaries', async (req: AuthRequest, res) => {
 });
 
 // =======================
+// DAILY STATS
+// =======================
+
+// GET /api/admin/rewards/daily-stats
+router.get('/daily-stats', async (req: AuthRequest, res) => {
+    try {
+        const types = normalizeRewardTypes(req.query.type);
+        if (types.length !== 1 || !isRewardType(types[0])) {
+            return res.status(400).json({ success: false, message: 'type must be CASHBACK or COMMISSION' });
+        }
+
+        const rewardType = types[0];
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(1000, Math.max(1, Number(req.query.limit) || 30));
+        const skip = (page - 1) * limit;
+
+        const permissionContext = await getPermissionContext(req, res);
+        if (!permissionContext) return;
+
+        if (!permissionContext.allowAll && !canReadTypedReward(permissionContext.permissions, rewardType)) {
+            return rejectForbidden(res);
+        }
+
+        const where = { type: rewardType };
+
+        const [total, stats] = await Promise.all([
+            prisma.rewardDailyStat.count({ where }),
+            prisma.rewardDailyStat.findMany({
+                where,
+                orderBy: { statDate: 'desc' },
+                skip,
+                take: limit
+            })
+        ]);
+
+        res.json({
+            success: true,
+            data: stats.map(item => ({
+                id: item.id,
+                type: item.type,
+                statDate: item.statDate,
+                periodStart: item.periodStart,
+                periodEnd: item.periodEnd,
+                claimedUserCount: item.claimedUserCount,
+                claimCount: item.claimCount,
+                totalClaimedAmount: Number(item.totalClaimedAmount || 0)
+            })),
+            total,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Get reward daily stats error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
+// =======================
 // REPORTS (Claim History)
 // =======================
 

@@ -23,6 +23,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => ({
 }));
 
 const PAGE_SIZES = [50, 100, 300, 500, 1000];
+const DAILY_STAT_PAGE_SIZES = [10, 30, 50, 100];
 
 interface CashbackSettings {
     id?: number;
@@ -50,6 +51,17 @@ interface ClaimHistory {
     periodStart: string;
     periodEnd: string;
     claimedAt: string;
+}
+
+interface RewardDailyStat {
+    id: number;
+    type: "CASHBACK" | "COMMISSION";
+    statDate: string;
+    periodStart: string;
+    periodEnd: string;
+    claimedUserCount: number;
+    claimCount: number;
+    totalClaimedAmount: number;
 }
 
 export default function CashbackSettingsPage() {
@@ -82,6 +94,12 @@ export default function CashbackSettingsPage() {
     const [loadingSummary, setLoadingSummary] = useState(false);
 
     // History State
+    const [dailyStats, setDailyStats] = useState<RewardDailyStat[]>([]);
+    const [dailyStatsTotal, setDailyStatsTotal] = useState(0);
+    const [dailyStatsPage, setDailyStatsPage] = useState(1);
+    const [dailyStatsPageSize, setDailyStatsPageSize] = useState(30);
+    const [loadingDailyStats, setLoadingDailyStats] = useState(false);
+
     const [history, setHistory] = useState<ClaimHistory[]>([]);
     const [historyTotal, setHistoryTotal] = useState(0);
     const [historyPage, setHistoryPage] = useState(1);
@@ -121,6 +139,27 @@ export default function CashbackSettingsPage() {
             console.error("Summary fetch error:", error);
         } finally {
             setLoadingSummary(false);
+        }
+    };
+
+    const fetchDailyStats = async () => {
+        try {
+            setLoadingDailyStats(true);
+            const params = new URLSearchParams({
+                type: "CASHBACK",
+                page: dailyStatsPage.toString(),
+                limit: dailyStatsPageSize.toString(),
+            });
+
+            const res = await api.get(`/admin/rewards/daily-stats?${params.toString()}`);
+            if (res.data.success) {
+                setDailyStats(res.data.data || []);
+                setDailyStatsTotal(Number(res.data.total || 0));
+            }
+        } catch (error) {
+            console.error("Daily stats fetch error:", error);
+        } finally {
+            setLoadingDailyStats(false);
         }
     };
 
@@ -183,13 +222,21 @@ export default function CashbackSettingsPage() {
         fetchHistory();
     }, [historyPage, historyPageSize]);
 
+    useEffect(() => {
+        fetchDailyStats();
+    }, [dailyStatsPage, dailyStatsPageSize]);
+
     // Handle Search
     const handleSearch = () => {
-        setHistoryPage(1);
+        if (historyPage !== 1) {
+            setHistoryPage(1);
+            return;
+        }
         fetchHistory();
     };
 
     const totalPages = Math.ceil(historyTotal / historyPageSize);
+    const dailyStatsTotalPages = Math.ceil(dailyStatsTotal / dailyStatsPageSize);
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" });
@@ -381,6 +428,105 @@ export default function CashbackSettingsPage() {
                             </div>
                         ))}
                     </div>
+                )}
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                            <Calendar size={20} className="text-indigo-500" />
+                            สถิติการกดรับรายวัน
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                            เก็บจำนวนคนกดรับและยอดรวมแยกตามวัน เพื่อให้ดูย้อนหลังได้ทุกวัน
+                        </p>
+                    </div>
+
+                    <select
+                        value={dailyStatsPageSize}
+                        onChange={(e) => {
+                            setDailyStatsPageSize(parseInt(e.target.value, 10));
+                            setDailyStatsPage(1);
+                        }}
+                        className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    >
+                        {DAILY_STAT_PAGE_SIZES.map((size) => (
+                            <option key={size} value={size}>
+                                {size} วัน
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {loadingDailyStats ? (
+                    <div className="text-center py-8 text-slate-500">กำลังโหลด...</div>
+                ) : dailyStats.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">ยังไม่มีสถิติรายวัน</div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-slate-50 text-left">
+                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">#</th>
+                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">วันที่</th>
+                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">คนกดรับ</th>
+                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">จำนวนรายการ</th>
+                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">ยอดรวมที่รับ</th>
+                                        <th className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase">รอบคำนวณ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {dailyStats.map((item, idx) => (
+                                        <tr key={item.id} className="hover:bg-slate-50">
+                                            <td className="px-4 py-3 text-sm text-slate-500">
+                                                {(dailyStatsPage - 1) * dailyStatsPageSize + idx + 1}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                                                {formatDate(item.statDate)}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-slate-600">
+                                                {item.claimedUserCount.toLocaleString("th-TH")} คน
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-slate-600">
+                                                {item.claimCount.toLocaleString("th-TH")} รายการ
+                                            </td>
+                                            <td className="px-4 py-3 text-sm font-semibold text-green-600">
+                                                {Number(item.totalClaimedAmount).toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-slate-500">
+                                                {formatDate(item.periodStart)} - {formatDate(item.periodEnd)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                            <div className="text-sm text-slate-500">
+                                แสดง {(dailyStatsPage - 1) * dailyStatsPageSize + 1} - {Math.min(dailyStatsPage * dailyStatsPageSize, dailyStatsTotal)} จาก {dailyStatsTotal} วัน
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setDailyStatsPage((page) => Math.max(1, page - 1))}
+                                    disabled={dailyStatsPage <= 1}
+                                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <span className="text-sm text-slate-600">หน้า {dailyStatsPage} / {dailyStatsTotalPages || 1}</span>
+                                <button
+                                    onClick={() => setDailyStatsPage((page) => Math.min(dailyStatsTotalPages || 1, page + 1))}
+                                    disabled={dailyStatsPage >= dailyStatsTotalPages}
+                                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </>
                 )}
             </div>
 

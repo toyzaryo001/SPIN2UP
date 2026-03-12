@@ -326,6 +326,11 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             depositAmount,
             `Automatic SMS (${parsed.sourceBank})`
         ).catch(err => console.error('[LineNotify] Error:', err));
+        // Notify Admins via Telegram
+        import('../services/telegram-notify.service.js').then(({ TelegramNotifyService }) => {
+            TelegramNotifyService.notifyDeposit(matchedUser.username, depositAmount, `Automatic SMS (${parsed.sourceBank})`)
+                .catch(err => console.error('[Telegram] Error:', err));
+        }).catch(() => {});
 
         const elapsed = Date.now() - startTime;
         console.log(`[Webhook ${source}] ✅ Deposit completed in ${elapsed}ms`);

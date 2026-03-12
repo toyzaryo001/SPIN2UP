@@ -3,6 +3,7 @@ import { PaymentFactory } from './payment/PaymentFactory';
 import { BetflixService } from './betflix.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { LineNotifyService } from './line-notify.service';
+import { TelegramNotifyService } from './telegram-notify.service';
 import { AlertService } from './alert.service';
 
 export class PaymentService {
@@ -181,6 +182,8 @@ export class PaymentService {
 
         // Notify Admins via LINE
         LineNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[LineNotify] Error:', err));
+        // Notify Admins via Telegram
+        TelegramNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[Telegram] Error:', err));
 
         // 5. Check Auto Withdraw Condition
         // Logic: Auto Feature ON + Gateway Auto ON + Gateway Withdraw ON
@@ -454,6 +457,12 @@ export class PaymentService {
                         amount,
                         transaction.subType || 'Automatic'
                     ).catch(err => console.error('[LineNotify] Error:', err));
+                    // Notify Admins via Telegram
+                    TelegramNotifyService.notifyDeposit(
+                        transaction.user?.username || 'Unknown',
+                        amount,
+                        transaction.subType || 'Automatic'
+                    ).catch(err => console.error('[Telegram] Error:', err));
 
                     // ============================================
                     // TRIGGER STREAK BONUS CHECK

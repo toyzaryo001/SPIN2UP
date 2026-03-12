@@ -132,18 +132,50 @@ export default function NotifySettingsPage() {
                                 value={settings.telegramBotToken || ""}
                                 onChange={(e) => handleChange("telegramBotToken", e.target.value)}
                                 disabled={!hasPerm('notify')}
+                                placeholder="ใส่ Bot Token จาก @BotFather"
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Chat ID</label>
-                            <input
-                                type="text"
-                                className="w-full px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
-                                value={settings.telegramChatId || ""}
-                                onChange={(e) => handleChange("telegramChatId", e.target.value)}
-                                disabled={!hasPerm('notify')}
-                            />
+
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chat ID แยกตามกลุ่ม</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 mb-1">💰 กลุ่มฝาก</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
+                                        value={settings.telegramChatIdDeposit || ""}
+                                        onChange={(e) => handleChange("telegramChatIdDeposit", e.target.value)}
+                                        disabled={!hasPerm('notify')}
+                                        placeholder="Chat ID ฝาก"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 mb-1">💸 กลุ่มถอน</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
+                                        value={settings.telegramChatIdWithdraw || ""}
+                                        onChange={(e) => handleChange("telegramChatIdWithdraw", e.target.value)}
+                                        disabled={!hasPerm('notify')}
+                                        placeholder="Chat ID ถอน"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 mb-1">🆕 กลุ่มสมัคร</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
+                                        value={settings.telegramChatIdRegister || ""}
+                                        onChange={(e) => handleChange("telegramChatIdRegister", e.target.value)}
+                                        disabled={!hasPerm('notify')}
+                                        placeholder="Chat ID สมัคร"
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-slate-400">* ถ้ากรอก Chat ID เดียวกันทั้ง 3 ช่อง จะส่งไปกลุ่มเดียวกันหมด</p>
                         </div>
+
                         <div className="flex items-center gap-3">
                             <input
                                 type="checkbox"
@@ -165,6 +197,17 @@ export default function NotifySettingsPage() {
                                 className="w-5 h-5 rounded disabled:opacity-50"
                             />
                             <label htmlFor="telegramNotifyWithdraw" className="text-sm text-slate-700">แจ้งเตือนเมื่อมีถอนเงิน</label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="telegramNotifyRegister"
+                                checked={settings.telegramNotifyRegister === 'true' || settings.telegramNotifyRegister === true}
+                                onChange={(e) => handleChange("telegramNotifyRegister", e.target.checked.toString())}
+                                disabled={!hasPerm('notify')}
+                                className="w-5 h-5 rounded disabled:opacity-50"
+                            />
+                            <label htmlFor="telegramNotifyRegister" className="text-sm text-slate-700">แจ้งเตือนเมื่อมีสมัครสมาชิกใหม่</label>
                         </div>
                         <button
                             type="button"

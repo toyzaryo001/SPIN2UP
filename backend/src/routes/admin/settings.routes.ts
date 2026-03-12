@@ -422,4 +422,22 @@ router.delete('/contacts/:id', requirePermission('settings', 'contacts', 'manage
     }
 });
 
+// === Telegram Test ===
+
+// POST /api/admin/settings/test-telegram
+router.post('/test-telegram', requirePermission('settings', 'notify', 'manage'), async (req, res) => {
+    try {
+        const { TelegramNotifyService } = await import('../../services/telegram-notify.service.js');
+        const result = await TelegramNotifyService.sendTest();
+        if (result.success) {
+            res.json({ success: true, message: 'ส่งข้อความทดสอบสำเร็จ' });
+        } else {
+            res.status(400).json({ success: false, message: 'ส่งไม่สำเร็จ' });
+        }
+    } catch (error: any) {
+        console.error('Test telegram error:', error);
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาด' });
+    }
+});
+
 export default router;

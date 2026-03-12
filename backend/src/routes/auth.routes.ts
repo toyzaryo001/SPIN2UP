@@ -155,6 +155,12 @@ router.post('/register', async (req, res) => {
                 token,
             },
         });
+
+        // Notify Admins via Telegram (fire-and-forget, after response)
+        import('../services/telegram-notify.service.js').then(({ TelegramNotifyService }) => {
+            TelegramNotifyService.notifyRegister(user.username, fullName, phone)
+                .catch(err => console.error('[Telegram] Register notify error:', err));
+        }).catch(() => {});
     } catch (error) {
         console.error('Register error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });

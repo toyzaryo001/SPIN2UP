@@ -236,6 +236,11 @@ router.post('/', async (req: Request, res: Response) => {
             amountBaht,
             'TrueWallet'
         ).catch(err => console.error('[TrueWallet LineNotify] Error:', err));
+        // แจ้งเตือนทาง Telegram
+        import('../services/telegram-notify.service.js').then(({ TelegramNotifyService }) => {
+            TelegramNotifyService.notifyDeposit(matchedUser.username || matchedUser.fullName || 'Unknown', amountBaht, 'TrueWallet')
+                .catch(err => console.error('[TrueWallet Telegram] Error:', err));
+        }).catch(() => {});
 
         // 12. [FIXED] คำนวณแจกโบนัสฝากสะสม (Streak Bonus)
         PaymentService.processStreakBonus(matchedUser.id).catch(err => console.error('[TrueWallet Streak Bonus Error]:', err));

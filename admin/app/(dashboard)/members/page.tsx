@@ -110,6 +110,7 @@ export default function MembersPage() {
     const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [historySummary, setHistorySummary] = useState({ totalDeposit: 0, totalWithdraw: 0, profit: 0 });
+    const [isExporting, setIsExporting] = useState(false);
 
     const [formData, setFormData] = useState({
         username: "",
@@ -291,15 +292,26 @@ export default function MembersPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     <button
+                        disabled={isExporting}
                         onClick={async () => {
+                            setIsExporting(true);
                             try {
                                 const res = await api.get('/admin/users?page=1&limit=10000');
                                 const allUsers = res.data?.data?.users || res.data?.data || [];
                                 const BOM = '\uFEFF';
                                 const headers = ['Username', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'ธนาคาร', 'เลขบัญชี', 'ยอดคงเหลือ', 'สถานะ', 'วันที่สมัคร'];
+                                const escapeCSV = (val: any) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+                                const forceText = (val: any) => `="${String(val ?? '').replace(/"/g, '""')}"`;
                                 const rows = allUsers.map((u: any) => [
-                                    u.username, u.fullName, u.phone, u.bankName, u.bankAccount, u.balance || 0, u.status, formatDate(u.createdAt)
-                                ].map((c: any) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','));
+                                    escapeCSV(u.username),
+                                    escapeCSV(u.fullName),
+                                    forceText(u.phone),
+                                    escapeCSV(u.bankName),
+                                    forceText(u.bankAccount),
+                                    escapeCSV(u.balance || 0),
+                                    escapeCSV(u.status),
+                                    escapeCSV(formatDate(u.createdAt))
+                                ].join(','));
                                 const csv = BOM + [headers.join(','), ...rows].join('\n');
                                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                                 const link = document.createElement('a');
@@ -310,12 +322,14 @@ export default function MembersPage() {
                                 toast.success('Export สำเร็จ');
                             } catch {
                                 toast.error('Export ไม่สำเร็จ');
+                            } finally {
+                                setIsExporting(false);
                             }
                         }}
-                        className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-all"
+                        className={`flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-all ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        <Download size={18} />
-                        Export
+                        <Download size={18} className={isExporting ? 'animate-spin' : ''} />
+                        {isExporting ? 'กำลัง Export...' : 'Export'}
                     </button>
                 </div>
             </div>

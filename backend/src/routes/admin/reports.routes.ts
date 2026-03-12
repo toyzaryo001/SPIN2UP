@@ -405,8 +405,11 @@ router.get('/user-win-lose/:userId', requirePermission('reports', 'win_lose', 'v
 // GET /api/admin/reports/all-deposits - รายการฝากเงินทั้งหมด (รวม Auto, Manual, Bonus, Cashback และ SMS ที่ไม่ Match)
 router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), async (req, res) => {
     try {
-        const { preset = 'today', startDate, endDate } = req.query;
+        const { preset = 'today', startDate, endDate, page = 1, limit = 20, search } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+        const pageNum = Math.max(1, Number(page) || 1);
+        const limitNum = Math.min(10000, Math.max(1, Number(limit) || 20));
+        const skip = (pageNum - 1) * limitNum;
 
         // Ensure accurate filtering matching Start/End Date Range exactly by timezone
         // The default dayjs object parses startDate/End into properly adjusted UTC boundary
@@ -419,21 +422,50 @@ router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), as
         };
 
         const { status } = req.query;
-        if (status && status !== 'all') {
-            if (typeof status === 'string' && status.includes(',')) {
-                where.status = { in: status.split(',') };
-            } else {
-                where.status = status;
+        const normalizedStatuses = Array.isArray(status)
+            ? status.flatMap(item => String(item).split(','))
+            : typeof status === 'string'
+                ? status.split(',')
+                : [];
+        const statusValues = normalizedStatuses
+            .map(item => item.trim())
+            .filter(item => item && item !== 'all');
+        if (statusValues.length === 1) {
+            where.status = statusValues[0];
+        } else if (statusValues.length > 1) {
+            where.status = { in: statusValues };
+        }
+
+        if (search) {
+            const searchValue = String(search).trim();
+            if (searchValue) {
+                where.OR = [
+                    { note: { contains: searchValue, mode: 'insensitive' } },
+                    { subType: { contains: searchValue, mode: 'insensitive' } },
+                    { user: { is: { username: { contains: searchValue, mode: 'insensitive' } } } },
+                    { user: { is: { fullName: { contains: searchValue, mode: 'insensitive' } } } },
+                    { user: { is: { phone: { contains: searchValue } } } }
+                ];
             }
         }
 
-        const transactions = await prisma.transaction.findMany({
-            where,
-            include: {
-                user: { select: { username: true, fullName: true, phone: true } }
-            },
-            orderBy: { createdAt: 'desc' }
-        });
+        const [transactions, total, summary] = await Promise.all([
+            prisma.transaction.findMany({
+                where,
+                include: {
+                    user: { select: { username: true, fullName: true, phone: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: limitNum,
+                skip
+            }),
+            prisma.transaction.count({ where }),
+            prisma.transaction.aggregate({
+                where,
+                _sum: { amount: true },
+                _count: true
+            })
+        ]);
 
         // Fetch admins manually
         const adminIds = [...new Set(transactions.map(t => t.adminId).filter(Boolean))] as number[];
@@ -466,15 +498,20 @@ router.get('/all-deposits', requirePermission('reports', 'deposits', 'view'), as
             rawMessage: null
         }));
 
-        const totalCount = transactions.length;
-        const totalAmount = transactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-
         res.json({
             success: true,
             data: {
                 transactions: mergedData,
-                summary: { totalCount, totalAmount },
-                pagination: { page: 1, limit: transactions.length, totalPages: 1, total: transactions.length }
+                summary: {
+                    totalCount: summary._count,
+                    totalAmount: Number(summary._sum.amount || 0)
+                },
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(total / limitNum),
+                    total
+                }
             }
         });
     } catch (error) {

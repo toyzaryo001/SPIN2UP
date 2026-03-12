@@ -13,7 +13,8 @@ interface Promotion {
     value: number;
     minDeposit?: number;
     maxBonus?: number;
-    turnover?: number;
+    requiresTurnover?: boolean;
+    turnoverMultiplier?: number;
     image?: string;
     isActive: boolean;
 }
@@ -33,7 +34,8 @@ export default function PromotionsPage() {
         value: "",
         minDeposit: "",
         maxBonus: "",
-        turnover: "",
+        requiresTurnover: false,
+        turnoverMultiplier: "1",
         isActive: true
     });
     const [isSaving, setIsSaving] = useState(false);
@@ -78,7 +80,7 @@ export default function PromotionsPage() {
 
     const openCreateModal = () => {
         setEditingPromo(null);
-        setFormData({ name: "", description: "", type: "PERCENT", value: "", minDeposit: "", maxBonus: "", turnover: "", isActive: true });
+        setFormData({ name: "", description: "", type: "PERCENT", value: "", minDeposit: "", maxBonus: "", requiresTurnover: false, turnoverMultiplier: "1", isActive: true });
         setIsModalOpen(true);
     };
 
@@ -91,7 +93,8 @@ export default function PromotionsPage() {
             value: promo.value.toString(),
             minDeposit: promo.minDeposit?.toString() || "",
             maxBonus: promo.maxBonus?.toString() || "",
-            turnover: promo.turnover?.toString() || "",
+            requiresTurnover: promo.requiresTurnover || false,
+            turnoverMultiplier: promo.turnoverMultiplier?.toString() || "1",
             isActive: promo.isActive
         });
         setIsModalOpen(true);
@@ -114,7 +117,8 @@ export default function PromotionsPage() {
                 value: Number(formData.value) || 0,
                 minDeposit: Number(formData.minDeposit) || 0,
                 maxBonus: Number(formData.maxBonus) || 0,
-                turnover: Number(formData.turnover) || 1
+                requiresTurnover: formData.requiresTurnover,
+                turnoverMultiplier: Number(formData.turnoverMultiplier) || 1
             };
 
             if (editingPromo) {
@@ -223,6 +227,13 @@ export default function PromotionsPage() {
                                             {promo.type === 'PERCENT' ? `${promo.value}%` : `฿${promo.value}`}
                                         </span>
                                         {promo.maxBonus && <span className="text-slate-400"> (สูงสุด ฿{promo.maxBonus})</span>}
+                                        <div className="mt-1 text-xs">
+                                            {promo.requiresTurnover ? (
+                                                <span className="text-red-500 font-medium">ติดเทิร์น x{promo.turnoverMultiplier}</span>
+                                            ) : (
+                                                <span className="text-emerald-500 font-medium">ไม่ติดเทิร์น</span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="mt-auto pt-4 border-t border-slate-100 flex justify-end gap-2">
@@ -313,26 +324,43 @@ export default function PromotionsPage() {
                                         className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">เทิร์นโอเวอร์</label>
-                                    <input
-                                        type="number"
-                                        value={formData.turnover}
-                                        onChange={(e) => setFormData({ ...formData, turnover: e.target.value })}
-                                        placeholder="1"
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
-                                    />
-                                </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="checkbox"
-                                    id="isActive"
-                                    checked={formData.isActive}
-                                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                                    className="w-5 h-5 rounded border-slate-300 text-yellow-500"
-                                />
-                                <label htmlFor="isActive" className="text-sm font-medium text-slate-700">เปิดใช้งานโปรโมชั่น</label>
+                            <div className="flex flex-col gap-3 mt-4">
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        id="requiresTurnover"
+                                        checked={formData.requiresTurnover}
+                                        onChange={(e) => setFormData({ ...formData, requiresTurnover: e.target.checked })}
+                                        className="w-5 h-5 rounded border-slate-300 text-yellow-500"
+                                    />
+                                    <label htmlFor="requiresTurnover" className="text-sm font-medium text-slate-700">ต้องทำเทิร์นโอเวอร์ก่อนถอน</label>
+                                </div>
+                                
+                                {formData.requiresTurnover && (
+                                    <div className="ml-8">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">จำนวนเท่า (Multiplier)</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={formData.turnoverMultiplier}
+                                            onChange={(e) => setFormData({ ...formData, turnoverMultiplier: e.target.value })}
+                                            placeholder="เช่น 1 หรือ 1.5 หรือ 2"
+                                            className="w-full max-w-[200px] px-4 py-2 border border-slate-200 rounded-lg text-slate-900"
+                                        />
+                                    </div>
+                                )}
+                                
+                                <div className="flex items-center gap-3 mt-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isActive"
+                                        checked={formData.isActive}
+                                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                                        className="w-5 h-5 rounded border-slate-300 text-yellow-500"
+                                    />
+                                    <label htmlFor="isActive" className="text-sm font-medium text-slate-700">เปิดใช้งานโปรโมชั่น</label>
+                                </div>
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">

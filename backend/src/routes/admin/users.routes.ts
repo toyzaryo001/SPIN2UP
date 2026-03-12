@@ -257,7 +257,7 @@ router.post('/', requirePermission('members', 'register', 'manage'), async (req:
 // PUT /api/admin/users/:id
 router.put('/:id', adminMiddleware, async (req: AuthRequest, res) => {
     try {
-        const { fullName, phone, bankName, bankAccount, status, lineId, password } = req.body;
+        const { fullName, phone, bankName, bankAccount, status, lineId, password, currentTurnover, turnoverLimit } = req.body;
         const userId = Number(req.params.id);
 
         const oldUser = await prisma.user.findUnique({ where: { id: userId } });
@@ -338,6 +338,18 @@ router.put('/:id', adminMiddleware, async (req: AuthRequest, res) => {
                 updateData.autoDeposit = newVal;
                 changes.push({ field: 'autoDeposit', oldValue: String((oldUser as any).autoDeposit), newValue: String(newVal) });
             }
+        }
+
+        // Turnover fields
+        if (currentTurnover !== undefined && Number(currentTurnover) !== Number(oldUser.currentTurnover)) {
+            if (!hasPerm('edit_general')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขข้อมูลทั่วไป (เทิร์นโอเวอร์)' });
+            updateData.currentTurnover = Number(currentTurnover);
+            changes.push({ field: 'currentTurnover', oldValue: String(oldUser.currentTurnover), newValue: String(currentTurnover) });
+        }
+        if (turnoverLimit !== undefined && Number(turnoverLimit) !== Number(oldUser.turnoverLimit)) {
+            if (!hasPerm('edit_general')) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขข้อมูลทั่วไป (เป้าเทิร์นโอเวอร์)' });
+            updateData.turnoverLimit = Number(turnoverLimit);
+            changes.push({ field: 'turnoverLimit', oldValue: String(oldUser.turnoverLimit), newValue: String(turnoverLimit) });
         }
 
         // If no changes, still return success

@@ -21,7 +21,7 @@ router.get('/', requirePermission('promotions', 'list', 'view'), async (req, res
 // POST /api/admin/promotions (ต้องมีสิทธิ์แก้ไข)
 router.post('/', requirePermission('promotions', 'list', 'manage'), async (req, res) => {
     try {
-        const { name, description, type, value, minDeposit, maxBonus, turnover, image, isActive, startAt, endAt } = req.body;
+        const { name, description, type, value, minDeposit, maxBonus, requiresTurnover, turnoverMultiplier, image, isActive, startAt, endAt } = req.body;
 
         const promotion = await prisma.promotion.create({
             data: {
@@ -31,7 +31,8 @@ router.post('/', requirePermission('promotions', 'list', 'manage'), async (req, 
                 value,
                 minDeposit,
                 maxBonus,
-                turnover,
+                requiresTurnover: requiresTurnover === true || requiresTurnover === 'true',
+                turnoverMultiplier: turnoverMultiplier ? Number(turnoverMultiplier) : 1,
                 image,
                 isActive: isActive ?? true,
                 startAt: startAt ? new Date(startAt) : null,
@@ -49,9 +50,16 @@ router.post('/', requirePermission('promotions', 'list', 'manage'), async (req, 
 // PUT /api/admin/promotions/:id (ต้องมีสิทธิ์แก้ไข)
 router.put('/:id', requirePermission('promotions', 'list', 'manage'), async (req, res) => {
     try {
+        const { name, description, type, value, minDeposit, maxBonus, requiresTurnover, turnoverMultiplier, image, isActive, startAt, endAt } = req.body;
+        const updateData: any = { name, description, type, value, minDeposit, maxBonus, image, isActive };
+        if (requiresTurnover !== undefined) updateData.requiresTurnover = requiresTurnover === true || requiresTurnover === 'true';
+        if (turnoverMultiplier !== undefined) updateData.turnoverMultiplier = Number(turnoverMultiplier);
+        if (startAt !== undefined) updateData.startAt = startAt ? new Date(startAt) : null;
+        if (endAt !== undefined) updateData.endAt = endAt ? new Date(endAt) : null;
+
         const promotion = await prisma.promotion.update({
             where: { id: Number(req.params.id) },
-            data: req.body,
+            data: updateData,
         });
 
         res.json({ success: true, data: promotion });

@@ -72,13 +72,13 @@ router.get('/streak', async (req, res) => {
         // Create default if empty
         if (settings.length === 0) {
             const defaults = [
-                { day: 1, minDeposit: 100, bonusAmount: 10, turnoverMultiplier: 1 },
-                { day: 2, minDeposit: 100, bonusAmount: 20, turnoverMultiplier: 1 },
-                { day: 3, minDeposit: 100, bonusAmount: 30, turnoverMultiplier: 1 },
-                { day: 4, minDeposit: 100, bonusAmount: 50, turnoverMultiplier: 1 },
-                { day: 5, minDeposit: 100, bonusAmount: 100, turnoverMultiplier: 1 },
-                { day: 6, minDeposit: 100, bonusAmount: 150, turnoverMultiplier: 1 },
-                { day: 7, minDeposit: 100, bonusAmount: 300, turnoverMultiplier: 1 },
+                { day: 1, minDeposit: 100, bonusAmount: 10, requiresTurnover: false, turnoverMultiplier: 1 },
+                { day: 2, minDeposit: 100, bonusAmount: 20, requiresTurnover: false, turnoverMultiplier: 1 },
+                { day: 3, minDeposit: 100, bonusAmount: 30, requiresTurnover: false, turnoverMultiplier: 1 },
+                { day: 4, minDeposit: 100, bonusAmount: 50, requiresTurnover: false, turnoverMultiplier: 1 },
+                { day: 5, minDeposit: 100, bonusAmount: 100, requiresTurnover: false, turnoverMultiplier: 1 },
+                { day: 6, minDeposit: 100, bonusAmount: 150, requiresTurnover: false, turnoverMultiplier: 1 },
+                { day: 7, minDeposit: 100, bonusAmount: 300, requiresTurnover: false, turnoverMultiplier: 1 },
             ];
 
             for (const d of defaults) {
@@ -101,12 +101,12 @@ router.get('/streak', async (req, res) => {
 router.put('/streak/:day', async (req, res) => {
     try {
         const day = parseInt(req.params.day);
-        const { minDeposit, bonusAmount, turnoverMultiplier, isActive } = req.body;
+        const { minDeposit, bonusAmount, requiresTurnover, turnoverMultiplier, isActive } = req.body;
 
         const settings = await prisma.streakSetting.upsert({
             where: { day },
-            update: { minDeposit, bonusAmount, turnoverMultiplier, isActive },
-            create: { day, minDeposit, bonusAmount, turnoverMultiplier: turnoverMultiplier ?? 1, isActive: isActive ?? true }
+            update: { minDeposit, bonusAmount, requiresTurnover, turnoverMultiplier, isActive },
+            create: { day, minDeposit, bonusAmount, requiresTurnover: requiresTurnover ?? false, turnoverMultiplier: turnoverMultiplier ?? 1, isActive: isActive ?? true }
         });
 
         res.json({ success: true, data: settings });

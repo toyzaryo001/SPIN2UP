@@ -11,6 +11,7 @@ interface StreakDay {
     day: number;
     minDeposit: number;
     bonusAmount: number;
+    requiresTurnover?: boolean;
     turnoverMultiplier?: number;
     isActive: boolean;
 }
@@ -58,6 +59,7 @@ export default function StreakSettingsPage() {
                 await api.put(`/admin/activities/streak/${item.day}`, {
                     minDeposit: item.minDeposit,
                     bonusAmount: item.bonusAmount,
+                    requiresTurnover: item.requiresTurnover,
                     turnoverMultiplier: item.turnoverMultiplier,
                     isActive: item.isActive
                 });
@@ -110,6 +112,7 @@ export default function StreakSettingsPage() {
                             <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">วันที่</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">ฝากขั้นต่ำ (บาท)</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">โบนัส (บาท)</th>
+                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">ติดเทิร์น</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">เทิร์น (เท่า)</th>
                             <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">เปิดใช้งาน</th>
                         </tr>
@@ -144,14 +147,31 @@ export default function StreakSettingsPage() {
                                         className="w-32 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                                     />
                                 </td>
+                                <td className="px-6 py-4 text-center">
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={item.requiresTurnover || false}
+                                            disabled={!hasPerm('streak')}
+                                            onChange={(e) => handleUpdate(item.day, 'requiresTurnover', e.target.checked)}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                                    </label>
+                                </td>
                                 <td className="px-6 py-4">
-                                    <input
-                                        type="number"
-                                        value={item.turnoverMultiplier ?? 1}
-                                        disabled={!hasPerm('streak')}
-                                        onChange={(e) => handleUpdate(item.day, 'turnoverMultiplier', parseFloat(e.target.value) || 0)}
-                                        className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
-                                    />
+                                    {item.requiresTurnover ? (
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={item.turnoverMultiplier ?? 1}
+                                            disabled={!hasPerm('streak')}
+                                            onChange={(e) => handleUpdate(item.day, 'turnoverMultiplier', parseFloat(e.target.value) || 0)}
+                                            className="w-24 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-yellow-400 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                                        />
+                                    ) : (
+                                        <span className="text-slate-400 text-sm italic">ไม่ต้องทำเทิร์น</span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                     <label className="relative inline-flex items-center cursor-pointer">

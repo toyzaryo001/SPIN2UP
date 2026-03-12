@@ -20,6 +20,8 @@ interface User {
     createdAt: string;
     autoDeposit?: boolean;
     referrerPhone?: string;
+    currentTurnover?: number;
+    turnoverLimit?: number;
 }
 
 interface HistoryItem {
@@ -120,7 +122,9 @@ export default function MembersPage() {
         bankName: "",
         bankAccount: "",
         lineId: "",
-        autoDeposit: true
+        autoDeposit: true,
+        currentTurnover: 0,
+        turnoverLimit: 0
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -183,7 +187,9 @@ export default function MembersPage() {
             bankName: user.bankName,
             bankAccount: user.bankAccount,
             lineId: user.lineId || "",
-            autoDeposit: user.autoDeposit !== false
+            autoDeposit: user.autoDeposit !== false,
+            currentTurnover: user.currentTurnover !== undefined ? Number(user.currentTurnover) : 0,
+            turnoverLimit: user.turnoverLimit !== undefined ? Number(user.turnoverLimit) : 0
         });
         setIsModalOpen(true);
     };
@@ -590,6 +596,51 @@ export default function MembersPage() {
                                     className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
                                 />
                             </div>
+
+                            {/* Turnover Management (Edit only) */}
+                            {editingUser && (
+                                <div className="border-t border-slate-200 pt-4 mt-2">
+                                    <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
+                                        <span>จัดการเทิร์นโอเวอร์</span>
+                                        <button
+                                            onClick={() => setFormData(prev => ({ ...prev, currentTurnover: 0, turnoverLimit: 0 }))}
+                                            disabled={!hasPerm('edit_general')}
+                                            className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200 disabled:opacity-50"
+                                            type="button"
+                                        >
+                                            ล้างเทิร์นทั้งหมด (Reset)
+                                        </button>
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-700 mb-1">เทิร์นสะสมปัจจุบัน (฿)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.currentTurnover}
+                                                onChange={(e) => setFormData({ ...formData, currentTurnover: Number(e.target.value) || 0 })}
+                                                disabled={!hasPerm('edit_general')}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-700 mb-1">เป้าหมายเทิร์นโอเวอร์ (฿)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.turnoverLimit}
+                                                onChange={(e) => setFormData({ ...formData, turnoverLimit: Number(e.target.value) || 0 })}
+                                                disabled={!hasPerm('edit_general')}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50 disabled:text-slate-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 p-2 bg-yellow-50 rounded text-xs text-yellow-800 flex justify-between">
+                                        <span>ความคืบหน้า:</span>
+                                        <span className="font-bold">
+                                            {Number(formData.currentTurnover).toLocaleString()} / {Number(formData.turnoverLimit).toLocaleString()} ฿
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Auto Deposit Toggle (only in edit mode) */}
                             {editingUser && (

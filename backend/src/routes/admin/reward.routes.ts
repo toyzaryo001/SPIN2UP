@@ -98,6 +98,21 @@ function parseSnapshotDate(rawDate: unknown) {
     return parsed;
 }
 
+function toBoolean(value: unknown) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'true') return true;
+        if (normalized === 'false') return false;
+    }
+    return Boolean(value);
+}
+
+function toNumber(value: unknown, fallback = 0) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 // =======================
 // SETTINGS (Cashback)
 // =======================
@@ -108,7 +123,14 @@ router.get('/settings/cashback', requirePermission('activities', 'cashback', 'vi
         let setting = await prisma.cashbackSetting.findFirst();
         if (!setting) {
             setting = await prisma.cashbackSetting.create({
-                data: { rate: 5, minLoss: 100, maxCashback: 10000, dayOfWeek: 1 }
+                data: {
+                    rate: 5,
+                    minLoss: 100,
+                    maxCashback: 10000,
+                    dayOfWeek: 1,
+                    requiresTurnover: false,
+                    turnoverMultiplier: 1,
+                }
             });
         }
         res.json({ success: true, data: setting });
@@ -121,7 +143,26 @@ router.get('/settings/cashback', requirePermission('activities', 'cashback', 'vi
 // POST /api/admin/rewards/settings/cashback
 router.post('/settings/cashback', requirePermission('activities', 'cashback', 'manage'), async (req, res) => {
     try {
-        const { rate, minLoss, maxCashback, dayOfWeek, claimStartHour, claimEndHour, isActive } = req.body;
+        const {
+            rate,
+            minLoss,
+            maxCashback,
+            dayOfWeek,
+            claimStartHour,
+            claimEndHour,
+            isActive,
+            requiresTurnover,
+            turnoverMultiplier,
+        } = req.body;
+
+        const enabledTurnover = toBoolean(requiresTurnover);
+        const normalizedMultiplier = enabledTurnover ? toNumber(turnoverMultiplier, 1) : 1;
+        if (enabledTurnover && normalizedMultiplier <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Turnover multiplier must be greater than 0',
+            });
+        }
 
         const setting = await prisma.cashbackSetting.findFirst();
 
@@ -130,25 +171,29 @@ router.post('/settings/cashback', requirePermission('activities', 'cashback', 'm
             result = await prisma.cashbackSetting.update({
                 where: { id: setting.id },
                 data: {
-                    rate: Number(rate),
-                    minLoss: Number(minLoss),
-                    maxCashback: Number(maxCashback),
-                    dayOfWeek: Number(dayOfWeek),
-                    claimStartHour: claimStartHour !== undefined ? Number(claimStartHour) : undefined,
-                    claimEndHour: claimEndHour !== undefined ? Number(claimEndHour) : undefined,
-                    isActive: Boolean(isActive)
+                    rate: toNumber(rate),
+                    minLoss: toNumber(minLoss),
+                    maxCashback: toNumber(maxCashback),
+                    dayOfWeek: toNumber(dayOfWeek),
+                    claimStartHour: claimStartHour !== undefined ? toNumber(claimStartHour) : undefined,
+                    claimEndHour: claimEndHour !== undefined ? toNumber(claimEndHour) : undefined,
+                    isActive: toBoolean(isActive),
+                    requiresTurnover: enabledTurnover,
+                    turnoverMultiplier: normalizedMultiplier,
                 }
             });
         } else {
             result = await prisma.cashbackSetting.create({
                 data: {
-                    rate: Number(rate),
-                    minLoss: Number(minLoss),
-                    maxCashback: Number(maxCashback),
-                    dayOfWeek: Number(dayOfWeek),
-                    claimStartHour: claimStartHour !== undefined ? Number(claimStartHour) : 0,
-                    claimEndHour: claimEndHour !== undefined ? Number(claimEndHour) : 23,
-                    isActive: Boolean(isActive)
+                    rate: toNumber(rate),
+                    minLoss: toNumber(minLoss),
+                    maxCashback: toNumber(maxCashback),
+                    dayOfWeek: toNumber(dayOfWeek),
+                    claimStartHour: claimStartHour !== undefined ? toNumber(claimStartHour) : 0,
+                    claimEndHour: claimEndHour !== undefined ? toNumber(claimEndHour) : 23,
+                    isActive: toBoolean(isActive),
+                    requiresTurnover: enabledTurnover,
+                    turnoverMultiplier: normalizedMultiplier,
                 }
             });
         }
@@ -170,7 +215,13 @@ router.get('/settings/turnover', requirePermission('activities', 'commission', '
         let setting = await prisma.turnoverSetting.findFirst();
         if (!setting) {
             setting = await prisma.turnoverSetting.create({
-                data: { rate: 0.5, minTurnover: 100, maxReward: 10000 }
+                data: {
+                    rate: 0.5,
+                    minTurnover: 100,
+                    maxReward: 10000,
+                    requiresTurnover: false,
+                    turnoverMultiplier: 1,
+                }
             });
         }
         res.json({ success: true, data: setting });
@@ -183,7 +234,23 @@ router.get('/settings/turnover', requirePermission('activities', 'commission', '
 // POST /api/admin/rewards/settings/turnover
 router.post('/settings/turnover', requirePermission('activities', 'commission', 'manage'), async (req, res) => {
     try {
-        const { rate, minTurnover, maxReward, isActive } = req.body;
+        const {
+            rate,
+            minTurnover,
+            maxReward,
+            isActive,
+            requiresTurnover,
+            turnoverMultiplier,
+        } = req.body;
+
+        const enabledTurnover = toBoolean(requiresTurnover);
+        const normalizedMultiplier = enabledTurnover ? toNumber(turnoverMultiplier, 1) : 1;
+        if (enabledTurnover && normalizedMultiplier <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Turnover multiplier must be greater than 0',
+            });
+        }
 
         const setting = await prisma.turnoverSetting.findFirst();
 
@@ -192,19 +259,23 @@ router.post('/settings/turnover', requirePermission('activities', 'commission', 
             result = await prisma.turnoverSetting.update({
                 where: { id: setting.id },
                 data: {
-                    rate: Number(rate),
-                    minTurnover: Number(minTurnover),
-                    maxReward: Number(maxReward),
-                    isActive: Boolean(isActive)
+                    rate: toNumber(rate),
+                    minTurnover: toNumber(minTurnover),
+                    maxReward: toNumber(maxReward),
+                    isActive: toBoolean(isActive),
+                    requiresTurnover: enabledTurnover,
+                    turnoverMultiplier: normalizedMultiplier,
                 }
             });
         } else {
             result = await prisma.turnoverSetting.create({
                 data: {
-                    rate: Number(rate),
-                    minTurnover: Number(minTurnover),
-                    maxReward: Number(maxReward),
-                    isActive: Boolean(isActive)
+                    rate: toNumber(rate),
+                    minTurnover: toNumber(minTurnover),
+                    maxReward: toNumber(maxReward),
+                    isActive: toBoolean(isActive),
+                    requiresTurnover: enabledTurnover,
+                    turnoverMultiplier: normalizedMultiplier,
                 }
             });
         }

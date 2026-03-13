@@ -438,15 +438,17 @@ model ContactChannel {
 }
 
 model CashbackSetting {
-  id             Int      @id @default(autoincrement())
-  rate           Decimal  @default(5)
-  minLoss        Decimal  @default(100)
-  maxCashback    Decimal  @default(10000)
-  dayOfWeek      Int      @default(1)
-  isActive       Boolean  @default(true)
-  updatedAt      DateTime @updatedAt
-  claimEndHour   Int      @default(23)
-  claimStartHour Int      @default(0)
+    id             Int      @id @default(autoincrement())
+    rate           Decimal  @default(5)
+    minLoss        Decimal  @default(100)
+    maxCashback    Decimal  @default(10000)
+    dayOfWeek      Int      @default(1)
+    isActive       Boolean  @default(true)
+    updatedAt      DateTime @updatedAt
+    claimEndHour   Int      @default(23)
+    claimStartHour Int      @default(0)
+    requiresTurnover   Boolean @default(false)
+    turnoverMultiplier Decimal @default(1)
 }
 
 model StreakSetting {
@@ -470,12 +472,14 @@ model CommissionSetting {
 }
 
 model TurnoverSetting {
-  id          Int      @id @default(autoincrement())
-  rate        Decimal  @default(0.5)
-  minTurnover Decimal  @default(100)
-  maxReward   Decimal  @default(10000)
-  isActive    Boolean  @default(true)
-  updatedAt   DateTime @updatedAt
+    id          Int      @id @default(autoincrement())
+    rate        Decimal  @default(0.5)
+    minTurnover Decimal  @default(100)
+    maxReward   Decimal  @default(10000)
+    isActive    Boolean  @default(true)
+    updatedAt   DateTime @updatedAt
+    requiresTurnover   Boolean @default(false)
+    turnoverMultiplier Decimal @default(1)
 }
 
 model RewardClaim {

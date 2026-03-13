@@ -293,7 +293,29 @@ router.get('/cashback', async (req: Request, res: Response) => {
         const settings = await prisma.cashbackSetting.findFirst({
             where: { isActive: true }
         });
-        res.json(settings || { rate: 5, minLoss: 100, maxCashback: 10000, dayOfWeek: 1, isActive: true });
+        res.json(settings
+            ? {
+                rate: Number(settings.rate || 0),
+                minLoss: Number(settings.minLoss || 0),
+                maxCashback: Number(settings.maxCashback || 0),
+                dayOfWeek: settings.dayOfWeek,
+                claimStartHour: settings.claimStartHour,
+                claimEndHour: settings.claimEndHour,
+                isActive: settings.isActive,
+                requiresTurnover: settings.requiresTurnover === true,
+                turnoverMultiplier: Number(settings.turnoverMultiplier || 1),
+            }
+            : {
+                rate: 5,
+                minLoss: 100,
+                maxCashback: 10000,
+                dayOfWeek: 1,
+                claimStartHour: 0,
+                claimEndHour: 23,
+                isActive: true,
+                requiresTurnover: false,
+                turnoverMultiplier: 1,
+            });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch cashback settings' });
     }
@@ -321,13 +343,17 @@ router.get('/commission', async (req: Request, res: Response) => {
                 rate: Number(setting.rate || 0),
                 minTurnover: Number(setting.minTurnover || 0),
                 maxReward: Number(setting.maxReward || 0),
-                isActive: setting.isActive
+                isActive: setting.isActive,
+                requiresTurnover: setting.requiresTurnover === true,
+                turnoverMultiplier: Number(setting.turnoverMultiplier || 1),
             }
             : {
                 rate: 0.5,
                 minTurnover: 100,
                 maxReward: 10000,
-                isActive: false
+                isActive: false,
+                requiresTurnover: false,
+                turnoverMultiplier: 1,
             }
         );
     } catch (error) {

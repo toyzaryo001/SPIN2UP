@@ -3,6 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db.js';
 import { BetflixService } from './betflix.service.js';
 import { thaiNow } from '../lib/thai-time.js';
+import { TurnoverService } from './turnover.service.js';
 
 type DbLike = Prisma.TransactionClient | typeof prisma;
 
@@ -11,6 +12,8 @@ type TurnoverSettingRecord = {
     minTurnover: Decimal | number;
     maxReward: Decimal | number;
     isActive: boolean;
+    requiresTurnover?: boolean;
+    turnoverMultiplier?: Decimal | number;
 };
 
 export class CommissionService {
@@ -118,6 +121,8 @@ export class CommissionService {
             turnover,
             minTurnover: this.toNumber(setting?.minTurnover),
             maxReward: this.toNumber(setting?.maxReward),
+            requiresTurnover: setting?.requiresTurnover === true,
+            turnoverMultiplier: Math.max(1, this.toNumber(setting?.turnoverMultiplier || 1)),
             periodStart: periodStart.toISOString(),
             periodEnd: periodEnd.toISOString(),
             isClaimed: false,
@@ -149,6 +154,8 @@ export class CommissionService {
         if (amount <= 0) {
             throw new Error('No reward amount to claim');
         }
+        const requiresTurnover = setting?.requiresTurnover === true;
+        const turnoverMultiplier = Math.max(1, this.toNumber(setting?.turnoverMultiplier || 1));
 
         const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
         const periodEnd = thaiNow().toDate();
@@ -190,21 +197,40 @@ export class CommissionService {
                 const updatedUser = await tx.user.update({
                     where: { id: userId },
                     data: {
-                        balance: { increment: amount },
+                        ...(requiresTurnover
+                            ? { bonusBalance: { increment: new Decimal(amount) } }
+                            : { balance: { increment: amount } }),
                         commissionTurnover: new Decimal(0),
                         commissionCycleStartedAt: cycleResetAt,
                     },
                 });
+
+                let turnoverApplied = 0;
+                if (requiresTurnover) {
+                    turnoverApplied = await TurnoverService.addRequirement(
+                        userId,
+                        amount,
+                        turnoverMultiplier,
+                        `COMMISSION for period ${periodStart.toISOString()} - ${periodEnd.toISOString()}`,
+                        tx
+                    );
+                }
 
                 await tx.transaction.create({
                     data: {
                         userId,
                         type: 'REWARD_COMMISSION',
                         amount: new Decimal(amount),
-                        balanceBefore: new Decimal(Number(updatedUser.balance) - amount),
-                        balanceAfter: updatedUser.balance,
+                        balanceBefore: requiresTurnover
+                            ? new Decimal(Number(updatedUser.bonusBalance) - amount)
+                            : new Decimal(Number(updatedUser.balance) - amount),
+                        balanceAfter: requiresTurnover
+                            ? updatedUser.bonusBalance
+                            : updatedUser.balance,
                         status: 'COMPLETED',
-                        note: `COMMISSION for period ${periodStart.toISOString()} - ${periodEnd.toISOString()}`,
+                        note: requiresTurnover
+                            ? `COMMISSION for period ${periodStart.toISOString()} - ${periodEnd.toISOString()} (Turnover x${turnoverMultiplier})`
+                            : `COMMISSION for period ${periodStart.toISOString()} - ${periodEnd.toISOString()}`,
                     },
                 });
 
@@ -212,6 +238,9 @@ export class CommissionService {
                     success: true,
                     amount,
                     balance: updatedUser.balance,
+                    bonusBalance: updatedUser.bonusBalance,
+                    walletType: requiresTurnover ? 'BONUS' : 'BALANCE',
+                    turnoverApplied,
                     periodStart: periodStart.toISOString(),
                     periodEnd: periodEnd.toISOString(),
                 };

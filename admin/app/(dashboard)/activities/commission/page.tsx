@@ -21,6 +21,8 @@ interface TurnoverSettings {
     rate: number;
     minTurnover: number;
     maxReward: number;
+    requiresTurnover: boolean;
+    turnoverMultiplier: number;
     isActive: boolean;
 }
 
@@ -48,6 +50,8 @@ export default function CommissionSettingsPage() {
         rate: 0.5,
         minTurnover: 100,
         maxReward: 10000,
+        requiresTurnover: false,
+        turnoverMultiplier: 1,
         isActive: true,
     });
     const [loadingSettings, setLoadingSettings] = useState(true);
@@ -114,6 +118,8 @@ export default function CommissionSettingsPage() {
                     rate: Number(res.data.data.rate ?? 0.5),
                     minTurnover: Number(res.data.data.minTurnover ?? 100),
                     maxReward: Number(res.data.data.maxReward ?? 10000),
+                    requiresTurnover: Boolean(res.data.data.requiresTurnover),
+                    turnoverMultiplier: Number(res.data.data.turnoverMultiplier ?? 1),
                     isActive: Boolean(res.data.data.isActive),
                 });
             }
@@ -157,6 +163,11 @@ export default function CommissionSettingsPage() {
     };
 
     const handleSave = async () => {
+        if (settings.requiresTurnover && settings.turnoverMultiplier <= 0) {
+            toast.error("กรุณากำหนดเทิร์นมากกว่า 0");
+            return;
+        }
+
         try {
             setSaving(true);
             const res = await api.post("/admin/rewards/settings/turnover", settings);
@@ -239,7 +250,7 @@ export default function CommissionSettingsPage() {
                     ตั้งค่าเงื่อนไข
                 </h3>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                     <div>
                         <label className="mb-2 block text-sm font-medium text-slate-700">เปอร์เซ็นต์คืนค่าคอม (%)</label>
                         <input
@@ -287,6 +298,51 @@ export default function CommissionSettingsPage() {
                             }
                             className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
                         />
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">กำหนดเทิร์นหลังรับ</label>
+                        <label className="flex h-[52px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-4 py-3">
+                            <input
+                                type="checkbox"
+                                checked={settings.requiresTurnover}
+                                disabled={!canManageCommission}
+                                onChange={(event) =>
+                                    setSettings((current) => ({
+                                        ...current,
+                                        requiresTurnover: event.target.checked,
+                                        turnoverMultiplier: event.target.checked
+                                            ? current.turnoverMultiplier || 1
+                                            : 1,
+                                    }))
+                                }
+                                className="h-5 w-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 disabled:opacity-50"
+                            />
+                            <span className="text-sm font-medium text-slate-700">
+                                {settings.requiresTurnover ? "ติดเทิร์นหลังรับรางวัล" : "ไม่ติดเทิร์น"}
+                            </span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">เทิร์น (เท่า)</label>
+                        <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={settings.requiresTurnover ? settings.turnoverMultiplier : 1}
+                            disabled={!canManageCommission || !settings.requiresTurnover}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    turnoverMultiplier: parseFloat(event.target.value) || 0,
+                                }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
+                        />
+                        <p className="mt-1 text-xs text-slate-400">
+                            ตัวอย่าง: รับค่าคอม 100 บาท ตั้ง 3 เท่า = เทิร์น 300
+                        </p>
                     </div>
                 </div>
 

@@ -1,8 +1,10 @@
+import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db';
 import { BetflixService } from './betflix.service';
 import { NexusProvider } from './agents/NexusProvider';
 import { thaiNow, thaiStartOfDay, thaiEndOfDay } from '../lib/thai-time';
 import { CommissionService } from './commission.service.js';
+import { TurnoverService } from './turnover.service.js';
 
 // Types for Reward Calculation
 interface RewardStats {
@@ -12,6 +14,8 @@ interface RewardStats {
         netLoss: number;
         minLoss: number;
         maxReward: number;
+        requiresTurnover: boolean;
+        turnoverMultiplier: number;
         periodStart: string;
         periodEnd: string;
         isClaimed: boolean;
@@ -159,6 +163,8 @@ export class RewardService {
                 netLoss,
                 minLoss: cbMinLoss,
                 maxReward: cbMax,
+                requiresTurnover: cashbackSetting?.requiresTurnover === true,
+                turnoverMultiplier: Math.max(1, Number(cashbackSetting?.turnoverMultiplier || 1)),
                 periodStart,
                 periodEnd,
                 isClaimed: !!cashbackClaimed
@@ -189,6 +195,9 @@ export class RewardService {
         const amount = target.claimable;
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new Error('User not found');
+        const cashbackSetting = await prisma.cashbackSetting.findFirst();
+        const requiresTurnover = cashbackSetting?.requiresTurnover === true;
+        const turnoverMultiplier = Math.max(1, Number(cashbackSetting?.turnoverMultiplier || 1));
 
         // ============================================
         // PREPARE SAGA: 1. Create PRE-CLAIM Record
@@ -243,18 +252,37 @@ export class RewardService {
 
                 const updatedUser = await tx.user.update({
                     where: { id: userId },
-                    data: { balance: { increment: amount } }
+                    data: requiresTurnover
+                        ? { bonusBalance: { increment: new Decimal(amount) } }
+                        : { balance: { increment: amount } }
                 });
+
+                let turnoverApplied = 0;
+                if (requiresTurnover) {
+                    turnoverApplied = await TurnoverService.addRequirement(
+                        userId,
+                        amount,
+                        turnoverMultiplier,
+                        `CASHBACK for period ${target.periodStart.split(' ')[0]}`,
+                        tx
+                    );
+                }
 
                 await tx.transaction.create({
                     data: {
                         userId,
                         type: type === 'CASHBACK' ? 'REWARD_CASHBACK' : 'REWARD_COMMISSION',
-                        amount: amount,
-                        balanceBefore: Number(updatedUser.balance) - amount,
-                        balanceAfter: Number(updatedUser.balance),
+                        amount: new Decimal(amount),
+                        balanceBefore: requiresTurnover
+                            ? new Decimal(Number(updatedUser.bonusBalance) - amount)
+                            : new Decimal(Number(updatedUser.balance) - amount),
+                        balanceAfter: requiresTurnover
+                            ? updatedUser.bonusBalance
+                            : updatedUser.balance,
                         status: 'COMPLETED',
-                        note: `${type} for period ${target.periodStart.split(' ')[0]}`
+                        note: requiresTurnover
+                            ? `${type} for period ${target.periodStart.split(' ')[0]} (Turnover x${turnoverMultiplier})`
+                            : `${type} for period ${target.periodStart.split(' ')[0]}`
                     }
                 });
 
@@ -326,7 +354,14 @@ export class RewardService {
                     }
                 });
 
-                return { success: true, amount, balance: updatedUser.balance };
+                return {
+                    success: true,
+                    amount,
+                    balance: updatedUser.balance,
+                    bonusBalance: updatedUser.bonusBalance,
+                    walletType: requiresTurnover ? 'BONUS' : 'BALANCE',
+                    turnoverApplied,
+                };
             });
 
         } catch (error: any) {

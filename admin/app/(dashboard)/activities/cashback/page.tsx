@@ -39,6 +39,8 @@ interface CashbackSettings {
     rate: number;
     minLoss: number;
     maxCashback: number;
+    requiresTurnover: boolean;
+    turnoverMultiplier: number;
     dayOfWeek: number;
     claimStartHour: number;
     claimEndHour: number;
@@ -79,6 +81,8 @@ export default function CashbackSettingsPage() {
         rate: 5,
         minLoss: 100,
         maxCashback: 10000,
+        requiresTurnover: false,
+        turnoverMultiplier: 1,
         dayOfWeek: 1,
         claimStartHour: 0,
         claimEndHour: 23,
@@ -155,6 +159,8 @@ export default function CashbackSettingsPage() {
                     rate: Number(res.data.data.rate ?? 5),
                     minLoss: Number(res.data.data.minLoss ?? 100),
                     maxCashback: Number(res.data.data.maxCashback ?? 10000),
+                    requiresTurnover: Boolean(res.data.data.requiresTurnover),
+                    turnoverMultiplier: Number(res.data.data.turnoverMultiplier ?? 1),
                     dayOfWeek: Number(res.data.data.dayOfWeek ?? 1),
                     claimStartHour: Number(res.data.data.claimStartHour ?? 0),
                     claimEndHour: Number(res.data.data.claimEndHour ?? 23),
@@ -228,6 +234,11 @@ export default function CashbackSettingsPage() {
     };
 
     const handleSave = async () => {
+        if (settings.requiresTurnover && settings.turnoverMultiplier <= 0) {
+            toast.error("กรุณากำหนดเทิร์นมากกว่า 0");
+            return;
+        }
+
         try {
             setSaving(true);
             const res = await api.post("/admin/rewards/settings/cashback", settings);
@@ -371,6 +382,51 @@ export default function CashbackSettingsPage() {
                                 </option>
                             ))}
                         </select>
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">กำหนดเทิร์นหลังรับ</label>
+                        <label className="flex h-[52px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-4 py-3">
+                            <input
+                                type="checkbox"
+                                checked={settings.requiresTurnover}
+                                disabled={!hasPerm("cashback")}
+                                onChange={(event) =>
+                                    setSettings((current) => ({
+                                        ...current,
+                                        requiresTurnover: event.target.checked,
+                                        turnoverMultiplier: event.target.checked
+                                            ? current.turnoverMultiplier || 1
+                                            : 1,
+                                    }))
+                                }
+                                className="h-5 w-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 disabled:opacity-50"
+                            />
+                            <span className="text-sm font-medium text-slate-700">
+                                {settings.requiresTurnover ? "ติดเทิร์นหลังรับรางวัล" : "ไม่ติดเทิร์น"}
+                            </span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">เทิร์น (เท่า)</label>
+                        <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={settings.requiresTurnover ? settings.turnoverMultiplier : 1}
+                            disabled={!hasPerm("cashback") || !settings.requiresTurnover}
+                            onChange={(event) =>
+                                setSettings((current) => ({
+                                    ...current,
+                                    turnoverMultiplier: parseFloat(event.target.value) || 0,
+                                }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:ring-2 focus:ring-yellow-400 disabled:bg-slate-100 disabled:text-slate-500"
+                        />
+                        <p className="mt-1 text-xs text-slate-400">
+                            ตัวอย่าง: รับยอดเสีย 100 บาท ตั้ง 3 เท่า = เทิร์น 300
+                        </p>
                     </div>
 
                     <div>

@@ -142,6 +142,12 @@ export default function MembersPage() {
         return !!membersPerm.manage;
     };
 
+    const getRemainingTurnover = (user: User) => {
+        const turnoverLimit = Number(user.turnoverLimit || 0);
+        const currentTurnover = Number(user.currentTurnover || 0);
+        return Math.max(0, turnoverLimit - currentTurnover);
+    };
+
     const fetchUsers = async () => {
         try {
             setLoading(true);
@@ -305,7 +311,7 @@ export default function MembersPage() {
                                 const res = await api.get('/admin/users?page=1&limit=10000');
                                 const allUsers = res.data?.data?.users || res.data?.data || [];
                                 const BOM = '\uFEFF';
-                                const headers = ['Username', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'ธนาคาร', 'เลขบัญชี', 'ยอดคงเหลือ', 'สถานะ', 'วันที่สมัคร'];
+                                const headers = ['Username', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'ธนาคาร', 'เลขบัญชี', 'ยอดคงเหลือ', 'เทิร์นคงเหลือ', 'สถานะ', 'วันที่สมัคร'];
                                 const escapeCSV = (val: any) => `"${String(val ?? '').replace(/"/g, '""')}"`;
                                 const forceText = (val: any) => `="${String(val ?? '').replace(/"/g, '""')}"`;
                                 const rows = allUsers.map((u: any) => [
@@ -315,6 +321,7 @@ export default function MembersPage() {
                                     escapeCSV(u.bankName),
                                     forceText(u.bankAccount),
                                     escapeCSV(u.balance || 0),
+                                    escapeCSV(getRemainingTurnover(u)),
                                     escapeCSV(u.status),
                                     escapeCSV(formatDate(u.createdAt))
                                 ].join(','));
@@ -364,6 +371,7 @@ export default function MembersPage() {
                                 <th className="px-6 py-4 text-center">Note</th>
                                 <th className="px-6 py-4">ธนาคาร</th>
                                 <th className="px-6 py-4 text-right">เครดิตคงเหลือ</th>
+                                <th className="px-6 py-4 text-right">เทิร์นคงเหลือ</th>
                                 <th className="px-6 py-4 text-center">สถานะ</th>
                                 <th className="px-6 py-4">สมัครเมื่อ</th>
                                 <th className="px-6 py-4 text-center">จัดการ</th>
@@ -372,13 +380,13 @@ export default function MembersPage() {
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
+                                    <td colSpan={8} className="px-6 py-8 text-center text-slate-400">
                                         กำลังโหลดข้อมูล...
                                     </td>
                                 </tr>
                             ) : users.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
+                                    <td colSpan={8} className="px-6 py-8 text-center text-slate-400">
                                         ไม่พบข้อมูลสมาชิก
                                     </td>
                                 </tr>
@@ -430,6 +438,16 @@ export default function MembersPage() {
                                             {Number(user.bonusBalance) > 0 && (
                                                 <p className="text-xs text-amber-500 mt-0.5">
                                                     โบนัส: {formatBaht(user.bonusBalance)}
+                                                </p>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <p className={`font-bold ${getRemainingTurnover(user) > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                                {formatBaht(getRemainingTurnover(user))}
+                                            </p>
+                                            {Number(user.turnoverLimit || 0) > 0 && (
+                                                <p className="text-xs text-slate-400 mt-0.5">
+                                                    {formatBaht(Number(user.currentTurnover || 0))} / {formatBaht(Number(user.turnoverLimit || 0))}
                                                 </p>
                                             )}
                                         </td>

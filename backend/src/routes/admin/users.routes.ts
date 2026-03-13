@@ -52,6 +52,8 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
                     status: true,
                     balance: true,
                     bonusBalance: true,
+                    currentTurnover: true,
+                    turnoverLimit: true,
                     lastLoginAt: true,
                     createdAt: true,
                     betflixUsername: true,

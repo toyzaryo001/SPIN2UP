@@ -111,7 +111,7 @@ export default function RankPage() {
                             <div>
                                 <h1 className="text-3xl font-black text-white">พิชิต Rank รับโบนัสปลดล็อก</h1>
                                 <p className="mt-2 max-w-2xl text-sm text-white/65">
-                                    ยิ่งฝากสะสมมาก ยิ่งปลดล็อกรางวัล Rank ได้มากขึ้น โบนัสจะเข้ากระเป๋าโบนัสและติดเทิร์นตามที่แต่ละ Rank กำหนด
+                                    ยิ่งฝากสะสมมาก ยิ่งปลดล็อกรางวัล Rank ได้มากขึ้น และกดรับโบนัสปลดล็อกได้ทันทีเมื่อถึงเงื่อนไข
                                 </p>
                             </div>
                         </div>
@@ -147,14 +147,10 @@ export default function RankPage() {
                                         <p className="mt-1 text-sm text-white/65">ยอดฝากสะสมของคุณ ฿{totalDeposit.toLocaleString()}</p>
                                     </div>
                                 </div>
-                                <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="grid gap-3 sm:grid-cols-1">
                                     <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                                         <p className="text-xs uppercase tracking-[0.18em] text-white/40">รางวัล Rank นี้</p>
                                         <p className="mt-2 text-xl font-black text-[#ffd86b]">฿{Number(currentTier.rewardAmount || 0).toLocaleString()}</p>
-                                    </div>
-                                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">เทิร์นของรางวัล</p>
-                                        <p className="mt-2 text-xl font-black text-white">{Number(currentTier.rewardTurnover || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>
@@ -247,14 +243,10 @@ export default function RankPage() {
                                             </div>
                                         </div>
 
-                                        <div className="grid gap-3 sm:grid-cols-3">
+                                        <div className="grid gap-3 sm:grid-cols-2">
                                             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                                                 <p className="text-xs uppercase tracking-[0.14em] text-white/40">โบนัส</p>
                                                 <p className="mt-1 text-lg font-black text-[#ffd86b]">฿{Number(tier.rewardAmount || 0).toLocaleString()}</p>
-                                            </div>
-                                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                                                <p className="text-xs uppercase tracking-[0.14em] text-white/40">เทิร์น</p>
-                                                <p className="mt-1 text-lg font-black text-white">{Number(tier.rewardTurnover || 0).toLocaleString()}</p>
                                             </div>
                                             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                                                 <p className="text-xs uppercase tracking-[0.14em] text-white/40">สถานะ</p>

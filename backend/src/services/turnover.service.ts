@@ -46,6 +46,26 @@ export class TurnoverService {
         return requiredTurnover;
     }
 
+    static async addManualRequirement(
+        userId: number,
+        turnoverAmount: number,
+        db: TurnoverDb = prisma
+    ) {
+        const normalizedTurnover = this.toNumber(turnoverAmount);
+        if (normalizedTurnover <= 0) {
+            return 0;
+        }
+
+        await db.user.update({
+            where: { id: userId },
+            data: {
+                turnoverLimit: { increment: new Decimal(normalizedTurnover) },
+            },
+        });
+
+        return normalizedTurnover;
+    }
+
     static async recordProgress(userId: number, validBet: number, db: TurnoverDb = prisma) {
         const normalizedBet = this.toNumber(validBet);
         if (normalizedBet <= 0) {

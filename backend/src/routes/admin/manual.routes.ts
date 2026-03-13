@@ -1,26 +1,25 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission } from '../../middlewares/auth.middleware.js';
-import { Prisma } from '@prisma/client';
 import { BetflixService } from '../../services/betflix.service.js';
 import { DepositBonusService } from '../../services/deposit-bonus.service.js';
+import { TurnoverService } from '../../services/turnover.service.js';
 
 const router = Router();
 
-// POST /api/admin/manual/deposit - เติมเงินมือ (ต้องมีสิทธิ์ add_credit หรือ add_bonus ตาม subType)
 router.post('/deposit', async (req: AuthRequest, res) => {
     try {
-        const { userId, amount, subType, note } = req.body;
-        // subType: 'credit' | 'bonus'
+        const { userId, amount, subType, note, turnoverAmount } = req.body;
 
         if (!userId || !amount || amount <= 0) {
             return res.status(400).json({ success: false, message: 'ข้อมูลไม่ถูกต้อง' });
         }
 
-        const isBonus = subType === 'bonus';
-        const requiredPermission = 'deposit'; // Both credit and bonus fall under manual deposit on frontend
+        const isBonus = typeof subType === 'string' && subType.startsWith('bonus');
+        const normalizedTurnoverAmount = Number(turnoverAmount || 0);
+        const requiredPermission = 'deposit';
 
-        // Check permission manually
         const admin = await prisma.admin.findUnique({
             where: { id: req.user!.userId },
             include: { role: true }
@@ -30,7 +29,9 @@ router.post('/deposit', async (req: AuthRequest, res) => {
             let permissions: any = {};
             try {
                 permissions = JSON.parse(admin?.role?.permissions || '{}');
-            } catch (e) { }
+            } catch {
+                permissions = {};
+            }
 
             if (permissions.manual?.[requiredPermission]?.manage !== true) {
                 return res.status(403).json({
@@ -48,33 +49,44 @@ router.post('/deposit', async (req: AuthRequest, res) => {
         const balanceBefore = isBonus ? user.bonusBalance : user.balance;
         const balanceAfter = Number(balanceBefore) + Number(amount);
 
-        // Betflix Deposit
         if (!isBonus) {
             const result = await BetflixService.ensureAndTransfer(
-                user.id, user.phone, user.betflixUsername, Number(amount), `MANUAL_${Date.now()}`
+                user.id,
+                user.phone,
+                user.betflixUsername,
+                Number(amount),
+                `MANUAL_${Date.now()}`
             );
+
             if (!result.success) {
                 const status = result.betflixUsername ? 502 : 400;
-                return res.status(status).json({ success: false, message: result.error || 'เติมเงินเข้ากระเป๋า Betflix ไม่สำเร็จ' });
+                return res.status(status).json({
+                    success: false,
+                    message: result.error || 'เติมเงินเข้ากระเป๋าเกมไม่สำเร็จ'
+                });
             }
         }
 
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            // Update balance
             if (isBonus) {
-                await tx.user.update({ where: { id: user.id }, data: { bonusBalance: new Prisma.Decimal(balanceAfter) } });
+                await tx.user.update({
+                    where: { id: user.id },
+                    data: { bonusBalance: new Prisma.Decimal(balanceAfter) }
+                });
             } else {
-                await tx.user.update({ where: { id: user.id }, data: { balance: new Prisma.Decimal(balanceAfter) } });
+                await tx.user.update({
+                    where: { id: user.id },
+                    data: { balance: new Prisma.Decimal(balanceAfter) }
+                });
             }
 
-            // Create transaction
             await tx.transaction.create({
                 data: {
                     userId: user.id,
                     type: isBonus ? 'BONUS' : 'MANUAL_ADD',
                     subType: subType || 'credit',
                     amount: new Prisma.Decimal(amount),
-                    balanceBefore: balanceBefore,
+                    balanceBefore,
                     balanceAfter: new Prisma.Decimal(balanceAfter),
                     status: 'COMPLETED',
                     note: note || `เติม${isBonus ? 'โบนัส' : 'เครดิต'}โดยแอดมิน`,
@@ -82,7 +94,10 @@ router.post('/deposit', async (req: AuthRequest, res) => {
                 },
             });
 
-            // Log
+            if (isBonus && normalizedTurnoverAmount > 0) {
+                await TurnoverService.addManualRequirement(user.id, normalizedTurnoverAmount, tx);
+            }
+
             await tx.editLog.create({
                 data: {
                     targetType: 'Transaction',
@@ -95,14 +110,20 @@ router.post('/deposit', async (req: AuthRequest, res) => {
             });
         });
 
-        res.json({ success: true, message: 'เติมเงินสำเร็จ', data: { newBalance: balanceAfter } });
+        return res.json({
+            success: true,
+            message: 'เติมเงินสำเร็จ',
+            data: {
+                newBalance: balanceAfter,
+                turnoverAmount: isBonus ? normalizedTurnoverAmount : 0
+            }
+        });
     } catch (error) {
         console.error('Manual deposit error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });
 
-// POST /api/admin/manual/deduct - ลดเครดิต (ต้องมีสิทธิ์ deduct)
 router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { userId, amount, subType, note } = req.body;
@@ -116,7 +137,7 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
             return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
         }
 
-        const isBonus = subType === 'bonus';
+        const isBonus = typeof subType === 'string' && subType.startsWith('bonus');
         const balanceBefore = isBonus ? user.bonusBalance : user.balance;
 
         if (Number(balanceBefore) < amount) {
@@ -125,17 +146,28 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
 
         const balanceAfter = Number(balanceBefore) - Number(amount);
 
-        // Betflix Deduct
         if (!isBonus && user.betflixUsername) {
-            const success = await BetflixService.transfer(user.betflixUsername, -Number(amount), `DEDUCT_${Date.now()}`);
-            if (!success) return res.status(500).json({ success: false, message: 'ดึงเงินจากกระเป๋า Betflix ไม่สำเร็จ' });
+            const success = await BetflixService.transfer(
+                user.betflixUsername,
+                -Number(amount),
+                `DEDUCT_${Date.now()}`
+            );
+            if (!success) {
+                return res.status(500).json({ success: false, message: 'ดึงเงินจากกระเป๋าเกมไม่สำเร็จ' });
+            }
         }
 
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             if (isBonus) {
-                await tx.user.update({ where: { id: user.id }, data: { bonusBalance: new Prisma.Decimal(balanceAfter) } });
+                await tx.user.update({
+                    where: { id: user.id },
+                    data: { bonusBalance: new Prisma.Decimal(balanceAfter) }
+                });
             } else {
-                await tx.user.update({ where: { id: user.id }, data: { balance: new Prisma.Decimal(balanceAfter) } });
+                await tx.user.update({
+                    where: { id: user.id },
+                    data: { balance: new Prisma.Decimal(balanceAfter) }
+                });
             }
 
             await tx.transaction.create({
@@ -144,7 +176,7 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
                     type: 'MANUAL_DEDUCT',
                     subType: subType || 'credit',
                     amount: new Prisma.Decimal(amount),
-                    balanceBefore: balanceBefore,
+                    balanceBefore,
                     balanceAfter: new Prisma.Decimal(balanceAfter),
                     status: 'COMPLETED',
                     note: note || 'ลดเครดิตโดยแอดมิน',
@@ -164,18 +196,16 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
             });
         });
 
-        res.json({ success: true, message: 'ลดเครดิตสำเร็จ', data: { newBalance: balanceAfter } });
+        return res.json({ success: true, message: 'ลดเครดิตสำเร็จ', data: { newBalance: balanceAfter } });
     } catch (error) {
         console.error('Manual deduct error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });
 
-// POST /api/admin/manual/approve-withdrawal - อนุมัติถอน (ต้องมีสิทธิ์ withdrawals.manage)
 router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { transactionId, mode, gatewayCode } = req.body;
-        // mode: 'manual' (default) | 'auto'
 
         const transaction = await prisma.transaction.findUnique({
             where: { id: Number(transactionId) },
@@ -190,15 +220,8 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'm
             return res.status(400).json({ success: false, message: 'รายการนี้ถูกดำเนินการแล้ว' });
         }
 
-        // NOTE: In Single Wallet Architecture, Balance was ALREADY deducted at creation.
-        // So here we DO NOT deduct balance again.
-
         if (mode === 'auto') {
-            // Auto Payout via Gateway
-            const { PaymentFactory } = require('../../services/payment/PaymentFactory'); // Dynamic import to avoid circular dependency if any
-
-            // 1. Get Provider
-            // Defualt to 'bibpay' or whatever is passed
+            const { PaymentFactory } = require('../../services/payment/PaymentFactory');
             const code = gatewayCode || 'bibpay';
             const provider = await PaymentFactory.getProvider(code);
 
@@ -206,15 +229,12 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'm
                 return res.status(400).json({ success: false, message: `Payment Provider ${code} not found` });
             }
 
-            // 2. Prepare Reference
             const refId = `PAYOUT_ADMIN_${transaction.id}`;
             await prisma.transaction.update({ where: { id: transaction.id }, data: { referenceId: refId } });
 
-            // 3. Call Payout
             const result = await provider.createPayout(Number(transaction.amount), transaction.user, refId);
 
             if (result.success) {
-                // Success -> Mark Completed
                 await prisma.transaction.update({
                     where: { id: transaction.id },
                     data: {
@@ -226,40 +246,34 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'm
                     },
                 });
                 return res.json({ success: true, message: 'ทำรายการถอนอัตโนมัติสำเร็จ' });
-            } else {
-                // Failed -> Return Error but KEEP PENDING (Admin can try again or Manual)
-                return res.status(400).json({
-                    success: false,
-                    message: `ทำรายการถอนอัตโนมัติไม่สำเร็จ: ${result.message}`,
-                    details: result.rawResponse
-                });
             }
 
-        } else {
-            // Manual Mode: Just update status
-            await prisma.transaction.update({
-                where: { id: transaction.id },
-                data: {
-                    status: 'COMPLETED',
-                    adminId: req.user!.userId,
-                    note: (transaction.note || '') + ' [Manual-Approved]'
-                },
+            return res.status(400).json({
+                success: false,
+                message: `ทำรายการถอนอัตโนมัติไม่สำเร็จ: ${result.message}`,
+                details: result.rawResponse
             });
-
-            return res.json({ success: true, message: 'อนุมัติสำเร็จ (Manual)' });
         }
 
+        await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: {
+                status: 'COMPLETED',
+                adminId: req.user!.userId,
+                note: (transaction.note || '') + ' [Manual-Approved]'
+            },
+        });
+
+        return res.json({ success: true, message: 'อนุมัติสำเร็จ (Manual)' });
     } catch (error: any) {
         console.error('Approve withdrawal error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด: ' + error.message });
+        return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด: ' + error.message });
     }
 });
 
-// POST /api/admin/manual/reject-withdrawal - ปฏิเสธถอน (ต้องมีสิทธิ์ withdrawals.manage)
 router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { transactionId, note, refund } = req.body;
-        // refund: boolean (default true usually, but frontend should send explicit)
 
         const transaction = await prisma.transaction.findUnique({
             where: { id: Number(transactionId) },
@@ -270,18 +284,15 @@ router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'ma
             return res.status(400).json({ success: false, message: 'รายการไม่ถูกต้อง' });
         }
 
-        const shouldRefund = refund !== false; // Default to true if undefined, strictly check false
+        const shouldRefund = refund !== false;
 
         if (shouldRefund) {
-            // REFUND LOGIC: Return to Betflix & Local
             const amount = Number(transaction.amount);
 
-            // 1. Return to Betflix
             if (transaction.user.betflixUsername) {
                 await BetflixService.transfer(transaction.user.betflixUsername, amount, `REFUND_${transaction.id}`);
             }
 
-            // 2. Return to Local & Update Status
             await prisma.$transaction([
                 prisma.user.update({
                     where: { id: transaction.userId },
@@ -294,24 +305,20 @@ router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'ma
             ]);
 
             return res.json({ success: true, message: 'ปฏิเสธและคืนยอดเงินสำเร็จ' });
-
-        } else {
-            // NO REFUND: Just mark Rejected (Confiscate)
-            await prisma.transaction.update({
-                where: { id: Number(transactionId) },
-                data: { status: 'REJECTED', note, adminId: req.user!.userId },
-            });
-
-            return res.json({ success: true, message: 'ปฏิเสธสำเร็จ (ไม่คืนยอด)' });
         }
 
+        await prisma.transaction.update({
+            where: { id: Number(transactionId) },
+            data: { status: 'REJECTED', note, adminId: req.user!.userId },
+        });
+
+        return res.json({ success: true, message: 'ปฏิเสธสำเร็จ (ไม่คืนยอด)' });
     } catch (error) {
         console.error('Reject withdrawal error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });
 
-// POST /api/admin/manual/approve-deposit - อนุมัติฝาก (ต้องมีสิทธิ์ approve_deposit)
 router.post('/approve-deposit', requirePermission('manual', 'deposit', 'manage'), async (req: AuthRequest, res) => {
     try {
         const { transactionId } = req.body;
@@ -327,14 +334,20 @@ router.post('/approve-deposit', requirePermission('manual', 'deposit', 'manage')
 
         const newBalance = Number(transaction.user.balance) + Number(transaction.amount);
 
-        // Betflix Deposit
         const betflixResult = await BetflixService.ensureAndTransfer(
-            transaction.userId, transaction.user.phone, transaction.user.betflixUsername,
-            Number(transaction.amount), `DEP_${transaction.id}`
+            transaction.userId,
+            transaction.user.phone,
+            transaction.user.betflixUsername,
+            Number(transaction.amount),
+            `DEP_${transaction.id}`
         );
+
         if (!betflixResult.success) {
             const status = betflixResult.betflixUsername ? 502 : 400;
-            return res.status(status).json({ success: false, message: betflixResult.error || 'เติมเงินเข้ากระเป๋า Betflix ไม่สำเร็จ' });
+            return res.status(status).json({
+                success: false,
+                message: betflixResult.error || 'เติมเงินเข้ากระเป๋าเกมไม่สำเร็จ'
+            });
         }
 
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -345,15 +358,22 @@ router.post('/approve-deposit', requirePermission('manual', 'deposit', 'manage')
 
             await tx.transaction.update({
                 where: { id: transaction.id },
-                data: { status: 'COMPLETED', balanceAfter: new Prisma.Decimal(newBalance), adminId: req.user!.userId },
+                data: {
+                    status: 'COMPLETED',
+                    balanceAfter: new Prisma.Decimal(newBalance),
+                    adminId: req.user!.userId
+                },
             });
         });
-        DepositBonusService.applyPostDepositBenefits(transaction.id).catch(err => console.error('[Approve Deposit Bonus Error]:', err));
 
-        res.json({ success: true, message: 'อนุมัติสำเร็จ' });
+        DepositBonusService.applyPostDepositBenefits(transaction.id).catch(err => {
+            console.error('[Approve Deposit Bonus Error]:', err);
+        });
+
+        return res.json({ success: true, message: 'อนุมัติสำเร็จ' });
     } catch (error) {
         console.error('Approve deposit error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+        return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });
 

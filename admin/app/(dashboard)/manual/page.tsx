@@ -26,6 +26,7 @@ export default function ManualPage() {
     const [userSearch, setUserSearch] = useState("");
     const [foundUser, setFoundUser] = useState<any>(null);
     const [amount, setAmount] = useState("");
+    const [turnoverAmount, setTurnoverAmount] = useState("");
     const [reason, setReason] = useState("");
     const [note, setNote] = useState("");
     const [loading, setLoading] = useState(false);
@@ -46,6 +47,8 @@ export default function ManualPage() {
     const [confirmAction, setConfirmAction] = useState<() => Promise<void>>();
     const [confirmTitle, setConfirmTitle] = useState("");
     const [confirmMessage, setConfirmMessage] = useState<React.ReactNode>("");
+    const requiresTurnoverInput =
+        activeTab === "deposit" && (reason === "bonus_credit" || reason === "bonus_event");
 
     useEffect(() => {
         const fetchAdminData = async () => {
@@ -126,6 +129,9 @@ export default function ManualPage() {
             <div className="space-y-2">
                 <p>จำนวนเงิน: <span className={`font-bold text-lg ${activeTab === 'deposit' ? 'text-emerald-600' : 'text-red-600'}`}>฿{formatBaht(Number(amount))}</span></p>
                 <p>สาเหตุ: <span className="font-medium text-slate-700">{reasonLabel}</span></p>
+                {requiresTurnoverInput && Number(turnoverAmount) > 0 ? (
+                    <p>เทิร์น: <span className="font-medium text-slate-700">{formatBaht(Number(turnoverAmount))}</span></p>
+                ) : null}
             </div>
         );
 
@@ -137,12 +143,14 @@ export default function ManualPage() {
                     userId: foundUser.id,
                     amount: Number(amount),
                     subType: reason,
-                    note
+                    note,
+                    turnoverAmount: requiresTurnoverInput ? Number(turnoverAmount || 0) : 0
                 });
 
                 if (res.data.success) {
                     toast.success("ทำรายการสำเร็จ");
                     setAmount("");
+                    setTurnoverAmount("");
                     setReason("");
                     setNote("");
                     searchUser();
@@ -162,6 +170,7 @@ export default function ManualPage() {
     const handleTabChange = (tab: "deposit" | "deduct") => {
         setActiveTab(tab);
         setReason("");
+        setTurnoverAmount("");
     };
 
     const currentReasons = activeTab === "deposit" ? depositReasons : deductReasons;
@@ -257,6 +266,20 @@ export default function ManualPage() {
                                 ))}
                             </select>
                         </div>
+                        {requiresTurnoverInput && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">เทิร์นที่ต้องทำ</label>
+                                <input
+                                    type="number"
+                                    value={turnoverAmount}
+                                    onChange={(e) => setTurnoverAmount(e.target.value)}
+                                    disabled={!hasPerm('deposit')}
+                                    placeholder="0.00"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-slate-900 disabled:bg-slate-50"
+                                />
+                                <p className="mt-1 text-xs text-slate-400">ไม่กรอกหรือกรอก 0 = โบนัสนี้ไม่มีเทิร์น</p>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">จำนวนเงิน *</label>
                             <input

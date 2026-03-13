@@ -1,8 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db.js';
-import { thaiDateKey, thaiNow, thaiStartOfDay } from '../lib/thai-time.js';
 import { PromotionSelectionService } from './promotion-selection.service.js';
+import { StreakService } from './streak.service.js';
 import { TurnoverService } from './turnover.service.js';
 
 export class DepositBonusService {
@@ -24,7 +24,7 @@ export class DepositBonusService {
         }
 
         await this.applyPromotionBonus(transaction);
-        await this.processStreakBonus(transaction.userId);
+        await StreakService.processStreakBonus(transaction.userId);
     }
 
     private static async applyPromotionBonus(transaction: {
@@ -124,127 +124,6 @@ export class DepositBonusService {
                 return;
             }
             throw error;
-        }
-    }
-
-    static async processStreakBonus(userId: number) {
-        try {
-            const settings = await prisma.streakSetting.findMany({
-                where: { isActive: true },
-                orderBy: { day: 'asc' },
-            });
-
-            if (settings.length === 0) {
-                return;
-            }
-
-            const minDeposit = Number(settings[0].minDeposit) || 100;
-            const maxDay = settings[settings.length - 1].day;
-
-            const lookBackDate = new Date();
-            lookBackDate.setDate(lookBackDate.getDate() - (maxDay + 2));
-
-            const transactions = await prisma.transaction.findMany({
-                where: {
-                    userId,
-                    type: 'DEPOSIT',
-                    status: { in: ['APPROVED', 'COMPLETED'] },
-                    createdAt: { gte: lookBackDate },
-                },
-                select: {
-                    amount: true,
-                    createdAt: true,
-                },
-                orderBy: { createdAt: 'desc' },
-            });
-
-            const dailyDeposits: Record<string, number> = {};
-            transactions.forEach((tx) => {
-                const dateStr = thaiDateKey(tx.createdAt);
-                dailyDeposits[dateStr] = (dailyDeposits[dateStr] || 0) + Number(tx.amount);
-            });
-
-            const today = thaiDateKey();
-            if ((dailyDeposits[today] || 0) < minDeposit) {
-                return;
-            }
-
-            let currentStreak = 1;
-            let checkDate = thaiNow().subtract(1, 'day');
-
-            for (let i = 1; i < maxDay; i++) {
-                const dateStr = thaiDateKey(checkDate.toDate());
-                if ((dailyDeposits[dateStr] || 0) >= minDeposit) {
-                    currentStreak++;
-                    checkDate = checkDate.subtract(1, 'day');
-                } else {
-                    break;
-                }
-            }
-
-            if (currentStreak > maxDay) {
-                currentStreak = maxDay;
-            }
-
-            const matchedSetting = settings.find((item) => item.day === currentStreak);
-            if (!matchedSetting || Number(matchedSetting.bonusAmount) <= 0) {
-                return;
-            }
-
-            const startOfToday = thaiStartOfDay().toDate();
-
-            const existingBonus = await prisma.transaction.findFirst({
-                where: {
-                    userId,
-                    type: 'BONUS',
-                    subType: 'STREAK',
-                    note: { contains: `Streak Day ${currentStreak}` },
-                    createdAt: { gte: startOfToday },
-                },
-            });
-
-            if (existingBonus) {
-                return;
-            }
-
-            const bonusAmount = Number(matchedSetting.bonusAmount);
-            const turnoverMultiplier = Number(matchedSetting.turnoverMultiplier || 1);
-
-            await prisma.$transaction(async (tx) => {
-                const updatedUser = await tx.user.update({
-                    where: { id: userId },
-                    data: {
-                        bonusBalance: { increment: new Decimal(bonusAmount) },
-                    },
-                });
-
-                if (matchedSetting.requiresTurnover) {
-                    await TurnoverService.addRequirement(
-                        userId,
-                        bonusAmount,
-                        turnoverMultiplier,
-                        `Streak Day ${currentStreak}`,
-                        tx
-                    );
-                }
-
-                await tx.transaction.create({
-                    data: {
-                        userId,
-                        type: 'BONUS',
-                        subType: 'STREAK',
-                        amount: new Decimal(bonusAmount),
-                        balanceBefore: new Decimal(Number(updatedUser.bonusBalance) - bonusAmount),
-                        balanceAfter: updatedUser.bonusBalance,
-                        status: 'COMPLETED',
-                        note: matchedSetting.requiresTurnover
-                            ? `Streak Day ${currentStreak} Bonus (Turnover x${turnoverMultiplier})`
-                            : `Streak Day ${currentStreak} Bonus`,
-                    },
-                });
-            });
-        } catch (error) {
-            console.error('[Streak Calculation Error]', error);
         }
     }
 }

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/db.js';
 import { RankService } from '../services/rank.service.js';
+import { StreakService } from '../services/streak.service.js';
 
 const router = Router();
 
@@ -301,10 +302,7 @@ router.get('/cashback', async (req: Request, res: Response) => {
 // GET /api/public/streak - Get streak settings for player
 router.get('/streak', async (req: Request, res: Response) => {
     try {
-        const settings = await prisma.streakSetting.findMany({
-            where: { isActive: true },
-            orderBy: { day: 'asc' }
-        });
+        const settings = (await StreakService.getSettings()).filter((item) => item.isActive);
         res.json(settings);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch streak settings' });

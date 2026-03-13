@@ -606,7 +606,4 @@ export class PaymentService {
         }
     }
 
-    static async processStreakBonus(userId: number) {
-        await DepositBonusService.processStreakBonus(userId);
-    }
 }

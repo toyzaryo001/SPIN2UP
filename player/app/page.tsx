@@ -453,7 +453,7 @@ const HomeContent = ({ games, banners, providers, apiCategories, onPlay, feature
               </button>
               <button onClick={() => router.push('/streak')} className={`h-22 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl md:rounded-2xl bg-gradient-to-br from-green-600/20 to-green-900/40 border border-green-500/30 hover:border-green-400 transition-all group shadow-lg`}>
                 <span className="text-xl md:text-2xl mb-1 group-hover:scale-110 transition-transform">📅</span>
-                <span className="text-[8px] md:text-xs font-bold text-green-100 uppercase tracking-widest text-center">ฝากต่อเนื่อง</span>
+                <span className="text-[8px] md:text-xs font-bold text-green-100 uppercase tracking-widest text-center">ฝาก 30 วัน</span>
               </button>
               <button onClick={() => router.push('/cashback')} className={`h-22 ${hasSideBanners ? 'md:h-auto md:aspect-square' : 'md:h-28'} flex flex-col items-center justify-center p-2 rounded-xl md:rounded-2xl bg-gradient-to-br from-red-600/20 to-red-900/40 border border-red-500/30 hover:border-red-400 transition-all group shadow-lg`}>
                 <span className="text-xl md:text-2xl mb-1 group-hover:scale-110 transition-transform">💸</span>

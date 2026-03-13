@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { requirePermission } from '../../middlewares/auth.middleware';
 import { RankService } from '../../services/rank.service.js';
+import { StreakService } from '../../services/streak.service.js';
 
 const router = Router();
 
@@ -54,35 +55,12 @@ router.put('/cashback', async (req, res) => {
 });
 
 // =====================
-// STREAK SETTINGS
+// DAILY STREAK SETTINGS
 // =====================
 
 router.get('/streak', async (_req, res) => {
     try {
-        let settings = await prisma.streakSetting.findMany({
-            orderBy: { day: 'asc' },
-        });
-
-        if (settings.length === 0) {
-            const defaults = [
-                { day: 1, minDeposit: 100, bonusAmount: 10, requiresTurnover: false, turnoverMultiplier: 1 },
-                { day: 2, minDeposit: 100, bonusAmount: 20, requiresTurnover: false, turnoverMultiplier: 1 },
-                { day: 3, minDeposit: 100, bonusAmount: 30, requiresTurnover: false, turnoverMultiplier: 1 },
-                { day: 4, minDeposit: 100, bonusAmount: 50, requiresTurnover: false, turnoverMultiplier: 1 },
-                { day: 5, minDeposit: 100, bonusAmount: 100, requiresTurnover: false, turnoverMultiplier: 1 },
-                { day: 6, minDeposit: 100, bonusAmount: 150, requiresTurnover: false, turnoverMultiplier: 1 },
-                { day: 7, minDeposit: 100, bonusAmount: 300, requiresTurnover: false, turnoverMultiplier: 1 },
-            ];
-
-            for (const item of defaults) {
-                await prisma.streakSetting.create({ data: item });
-            }
-
-            settings = await prisma.streakSetting.findMany({
-                orderBy: { day: 'asc' },
-            });
-        }
-
+        const settings = await StreakService.getSettings();
         res.json({ success: true, data: settings });
     } catch (error) {
         console.error('Get streak settings error:', error);
@@ -95,15 +73,25 @@ router.put('/streak/:day', async (req, res) => {
         const day = Number.parseInt(req.params.day, 10);
         const { minDeposit, bonusAmount, requiresTurnover, turnoverMultiplier, isActive } = req.body;
 
+        if (!Number.isInteger(day) || day <= 0) {
+            return res.status(400).json({ success: false, message: 'ขั้นของภารกิจไม่ถูกต้อง' });
+        }
+
         const settings = await prisma.streakSetting.upsert({
             where: { day },
-            update: { minDeposit, bonusAmount, requiresTurnover, turnoverMultiplier, isActive },
+            update: {
+                minDeposit: Number(minDeposit || 0),
+                bonusAmount: Number(bonusAmount || 0),
+                requiresTurnover: !!requiresTurnover,
+                turnoverMultiplier: Number(turnoverMultiplier || 1),
+                isActive: isActive ?? true,
+            },
             create: {
                 day,
-                minDeposit,
-                bonusAmount,
-                requiresTurnover: requiresTurnover ?? false,
-                turnoverMultiplier: turnoverMultiplier ?? 1,
+                minDeposit: Number(minDeposit || 0),
+                bonusAmount: Number(bonusAmount || 0),
+                requiresTurnover: !!requiresTurnover,
+                turnoverMultiplier: Number(turnoverMultiplier || 1),
                 isActive: isActive ?? true,
             },
         });

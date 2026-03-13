@@ -1,202 +1,195 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PlayerLayout from "@/components/PlayerLayout";
-import { Calendar, Flame } from "lucide-react";
+import api from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import axios from "axios";
-import { API_URL } from "@/lib/api";
+import { useToast } from "@/components/Toast";
+import { CalendarDays, Flame, Gift, ShieldCheck, Sparkles } from "lucide-react";
 
-interface StreakDay {
+type StreakLevel = {
     day: number;
     minDeposit: number;
     bonusAmount: number;
+    requiresTurnover: boolean;
+    turnoverMultiplier: number;
     isActive: boolean;
-}
+    claimed: boolean;
+    isCurrentTarget: boolean;
+};
+
+type StreakStatus = {
+    currentStreak: number;
+    maxDay: number;
+    todayDeposit: number;
+    minDeposit: number;
+    nextDay: number | null;
+    nextDayMinDeposit: number | null;
+    levels: StreakLevel[];
+};
 
 export default function StreakPage() {
     const { user, loading: authLoading } = useAuth(true);
-    const [settings, setSettings] = useState<StreakDay[]>([]);
+    const toast = useToast();
     const [loading, setLoading] = useState(true);
-    const [currentStreak, setCurrentStreak] = useState(0);
+    const [status, setStatus] = useState<StreakStatus | null>(null);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const load = async () => {
             try {
-                const [settingsRes, statsRes] = await Promise.all([
-                    axios.get(`${API_URL}/public/streak`),
-                    user ? axios.get(`${API_URL}/users/streak-stats`, {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                    }) : Promise.resolve({ data: { success: true, data: { currentStreak: 0 } } })
-                ]);
-
-                if (Array.isArray(settingsRes.data)) {
-                    setSettings(settingsRes.data);
+                const res = await api.get("/users/streak-stats");
+                if (res.data.success) {
+                    setStatus(res.data.data);
                 }
-
-                if (statsRes.data.success) {
-                    setCurrentStreak(statsRes.data.data.currentStreak);
-                }
-            } catch (error) {
-                console.error("Failed to fetch streak data", error);
-                if (axios.isAxiosError(error) && error.response?.status === 401) {
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("user");
-                    localStorage.removeItem("lastActive");
-                    window.dispatchEvent(new Event('user-logout'));
-                }
+            } catch (error: any) {
+                console.error("Fetch streak status error:", error);
+                toast.error("โหลดภารกิจฝากต่อเนื่องไม่สำเร็จ", error.response?.data?.message || "กรุณาลองใหม่อีกครั้ง");
             } finally {
                 setLoading(false);
             }
         };
 
         if (!authLoading) {
-            fetchData();
+            void load();
         }
-    }, [authLoading, user]);
+    }, [authLoading, toast]);
+
+    const progressPercent = useMemo(() => {
+        if (!status || !status.maxDay) return 0;
+        return Math.max(0, Math.min(100, (status.currentStreak / status.maxDay) * 100));
+    }, [status]);
 
     if (authLoading || loading) {
-        return <PlayerLayout><div className="flex h-[50vh] items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div></div></PlayerLayout>;
+        return (
+            <PlayerLayout>
+                <div className="p-10 text-center text-white/70">กำลังโหลด...</div>
+            </PlayerLayout>
+        );
     }
 
-    if (!user) return null;
-
-    // Create streak data from API or defaults
-    const streakBonus = settings.length > 0
-        ? settings.map(s => ({
-            day: s.day,
-            bonus: Number(s.bonusAmount),
-            minDeposit: Number(s.minDeposit),
-            claimed: s.day <= currentStreak
-        }))
-        : [
-            { day: 1, bonus: 10, minDeposit: 100, claimed: false },
-            { day: 2, bonus: 20, minDeposit: 100, claimed: false },
-            { day: 3, bonus: 30, minDeposit: 100, claimed: false },
-            { day: 4, bonus: 50, minDeposit: 100, claimed: false },
-            { day: 5, bonus: 100, minDeposit: 100, claimed: false },
-            { day: 6, bonus: 150, minDeposit: 100, claimed: false },
-            { day: 7, bonus: 300, minDeposit: 100, claimed: false },
-        ];
+    if (!user || !status) {
+        return null;
+    }
 
     return (
         <PlayerLayout>
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                {/* Banner */}
-                <div style={{
-                    background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
-                    borderRadius: "16px",
-                    padding: "20px",
-                    color: "#0D1117",
-                    boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
-                    display: "flex", alignItems: "center", gap: "12px"
-                }}>
-                    <span style={{ fontSize: "40px", filter: "drop-shadow(2px 2px 4px rgba(0,0,0,0.1))" }}>🔥</span>
-                    <div>
-                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>ฝากต่อเนื่อง</h1>
-                        <p style={{ fontSize: "14px", opacity: 0.9, marginTop: "4px" }}>ทำภารกิจสะสมวันรับโบนัสฟรี</p>
-                    </div>
-                </div>
-
-                {/* Current Streak */}
-                <div style={{
-                    background: "#21262D",
-                    borderRadius: "16px",
-                    padding: "24px",
-                    textAlign: "center",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                    border: "1px solid rgba(255,215,0,0.3)"
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", marginBottom: "8px" }}>
-                        <Flame size={44} color="#FFD700" style={{ animation: "pulse 2s infinite" }} />
-                        <span style={{
-                            fontSize: "64px",
-                            fontWeight: 900,
-                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent"
-                        }}>
-                            {currentStreak}
-                        </span>
-                    </div>
-                    <p style={{ color: "#8B949E", fontWeight: 600, fontSize: "15px" }}>วันที่ฝากต่อเนื่อง</p>
-                    <div style={{ width: "100%", background: "rgba(255,255,255,0.1)", height: "10px", borderRadius: "5px", marginTop: "16px", overflow: "hidden" }}>
-                        <div style={{
-                            height: "100%",
-                            background: "linear-gradient(90deg, #FFD700, #FFC000)",
-                            width: `${(currentStreak / 7) * 100}%`,
-                            borderRadius: "5px",
-                            transition: "width 0.5s"
-                        }} />
-                    </div>
-                </div>
-
-                {/* Calendar Grid */}
-                <div style={{
-                    background: "#21262D",
-                    borderRadius: "16px",
-                    padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                    border: "1px solid rgba(255,255,255,0.1)"
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                        <Calendar size={20} color="#FFD700" />
-                        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF" }}>โบนัสประจำวัน</h3>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px" }}>
-                        {streakBonus.map((item) => (
-                            <div
-                                key={item.day}
-                                style={{
-                                    background: item.claimed
-                                        ? "linear-gradient(135deg, #FFD700, #FFC000)"
-                                        : item.day === currentStreak + 1
-                                            ? "rgba(255, 215, 0, 0.1)"
-                                            : "rgba(255,255,255,0.05)",
-                                    borderRadius: "12px",
-                                    padding: "12px 8px",
-                                    textAlign: "center",
-                                    border: item.day === currentStreak + 1 ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
-                                    boxShadow: item.claimed ? "0 4px 12px rgba(255,215,0,0.3)" : "none"
-                                }}
-                            >
-                                <p style={{
-                                    fontSize: "11px",
-                                    fontWeight: 600,
-                                    color: item.claimed ? "rgba(13,17,23,0.9)" : "#8B949E",
-                                    marginBottom: "4px"
-                                }}>
-                                    วัน {item.day}
-                                </p>
-                                <p style={{
-                                    fontSize: "16px",
-                                    fontWeight: 800,
-                                    color: item.claimed ? "#0D1117" : "#FFFFFF"
-                                }}>
-                                    ฿{item.bonus}
-                                </p>
-                                {item.claimed && (
-                                    <span style={{ fontSize: "14px" }}>✓</span>
-                                )}
+            <div className="space-y-5">
+                <div className="overflow-hidden rounded-[28px] border border-orange-400/20 bg-[radial-gradient(circle_at_top_left,_rgba(249,115,22,0.28),_transparent_45%),linear-gradient(135deg,#141b28_0%,#101623_100%)] p-6 shadow-[0_20px_60px_rgba(5,9,18,0.35)]">
+                    <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                        <div className="space-y-3">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-orange-300">
+                                <CalendarDays size={14} />
+                                Daily Streak
                             </div>
-                        ))}
+                            <div>
+                                <h1 className="text-3xl font-black text-white">ฝากต่อเนื่อง 30 วัน</h1>
+                                <p className="mt-2 max-w-2xl text-sm text-white/65">
+                                    ฝากให้ถึงขั้นต่ำของแต่ละวันต่อเนื่องกันเพื่อปลดล็อกโบนัสตั้งแต่วันที่ 1 ถึงวันที่ 30
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center">
+                                <p className="text-xs uppercase tracking-[0.16em] text-white/40">สตรีคปัจจุบัน</p>
+                                <p className="mt-1 text-3xl font-black text-orange-300">{status.currentStreak}</p>
+                                <p className="text-xs text-white/45">จาก {status.maxDay} วัน</p>
+                            </div>
+                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center">
+                                <p className="text-xs uppercase tracking-[0.16em] text-white/40">ฝากวันนี้</p>
+                                <p className="mt-1 text-3xl font-black text-emerald-300">฿{status.todayDeposit.toLocaleString()}</p>
+                                <p className="text-xs text-white/45">
+                                    {status.nextDay && status.nextDayMinDeposit
+                                        ? `เป้าหมายวันที่ ${status.nextDay} ขั้นต่ำ ฿${status.nextDayMinDeposit.toLocaleString()}`
+                                        : "ปลดล็อกครบทุกวันแล้ว"}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+                            <p className="text-white/65">
+                                {status.nextDay
+                                    ? <>เหลืออีก <span className="font-bold text-white">{status.maxDay - status.currentStreak}</span> วัน เพื่อเก็บครบ 30 วัน</>
+                                    : <>คุณสะสมครบทุกวันของภารกิจนี้แล้ว</>}
+                            </p>
+                            <p className="font-bold text-orange-300">{progressPercent.toFixed(0)}%</p>
+                        </div>
+                        <div className="h-3 overflow-hidden rounded-full bg-white/10">
+                            <div
+                                className="h-full rounded-full bg-[linear-gradient(90deg,#fb923c_0%,#facc15_100%)] transition-all"
+                                style={{ width: `${progressPercent}%` }}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* Info */}
-                <div style={{
-                    background: "#21262D",
-                    borderRadius: "14px",
-                    padding: "16px",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
-                    border: "1px solid rgba(255,255,255,0.1)"
-                }}>
-                    <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px" }}>📋 เงื่อนไข</h3>
-                    <ul style={{ fontSize: "13px", color: "#8B949E", lineHeight: 1.8, paddingLeft: "20px", margin: 0 }}>
-                        <li>ฝากขั้นต่ำ ฿{settings[0]?.minDeposit || 100} ต่อวัน</li>
-                        <li>ฝากครบ 7 วันติดต่อกัน รับโบนัสรวม ฿{streakBonus.reduce((a, b) => a + b.bonus, 0)}</li>
-                        <li>หากขาดวันใดวันหนึ่ง ต้องเริ่มนับใหม่</li>
-                        <li>โบนัสจะเข้าบัญชีอัตโนมัติเมื่อฝากสำเร็จ</li>
+                <div className="rounded-[28px] border border-white/10 bg-[#101622]/85 p-5 shadow-[0_18px_50px_rgba(5,9,18,0.28)]">
+                    <div className="mb-5 flex items-center justify-between gap-3">
+                        <div>
+                            <h3 className="flex items-center gap-2 text-lg font-black text-white">
+                                <Gift size={20} className="text-orange-300" />
+                                โบนัสครบ 30 วัน
+                            </h3>
+                            <p className="mt-1 text-sm text-white/55">โบนัสของแต่ละวันจะเข้าอัตโนมัติเมื่อฝากวันนั้นสำเร็จและสตรีคยังไม่ขาด</p>
+                        </div>
+                        <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/60">
+                            ปัจจุบัน {status.currentStreak}/{status.maxDay} วัน
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-5 gap-3 md:grid-cols-6">
+                        {status.levels.map((level) => {
+                            const cardClass = level.claimed
+                                ? "border-orange-300/40 bg-[linear-gradient(135deg,rgba(251,146,60,0.22),rgba(250,204,21,0.14))]"
+                                : level.isCurrentTarget
+                                    ? "border-emerald-300/40 bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(45,212,191,0.12))]"
+                                    : "border-white/10 bg-white/5";
+
+                            return (
+                                <div key={level.day} className={`rounded-2xl border p-3 text-center shadow-sm ${cardClass}`}>
+                                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-black text-white">
+                                        {level.day}
+                                    </div>
+                                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                        วันที่ {level.day}
+                                    </p>
+                                    <p className="mt-2 text-lg font-black text-orange-200">฿{Number(level.bonusAmount || 0).toLocaleString()}</p>
+                                    <p className="mt-1 text-[11px] text-white/45">ฝากขั้นต่ำ ฿{Number(level.minDeposit || 0).toLocaleString()}</p>
+                                    <div className="mt-3 text-[11px] font-semibold">
+                                        {level.claimed ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-400/15 px-2 py-1 text-orange-200">
+                                                <Sparkles size={12} />
+                                                รับแล้ว
+                                            </span>
+                                        ) : level.isCurrentTarget ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-200">
+                                                <Flame size={12} />
+                                                เป้าหมายถัดไป
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-white/55">
+                                                รอปลดล็อก
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="rounded-[24px] border border-white/10 bg-[#101622]/85 p-5 shadow-[0_18px_50px_rgba(5,9,18,0.2)]">
+                    <h3 className="flex items-center gap-2 text-lg font-black text-white">
+                        <ShieldCheck size={18} className="text-sky-300" />
+                        กติกาภารกิจ
+                    </h3>
+                    <ul className="mt-4 space-y-2 text-sm text-white/60">
+                        <li>ระบบนับวันที่ฝากถึงขั้นต่ำตามเวลาไทย และจะนับต่อเนื่องจากวันก่อนหน้า</li>
+                        <li>ถ้าวันใดฝากไม่ถึงขั้นต่ำ สตรีคจะหยุดและเริ่มนับใหม่เมื่อฝากถึงเงื่อนไขอีกครั้ง</li>
+                        <li>โบนัสของวันนั้นจะเข้ากระเป๋าโบนัสอัตโนมัติหลังฝากสำเร็จ โดยไม่จ่ายซ้ำวันเดิม</li>
+                        <li>บางวันอาจตั้งให้ติดเทิร์นตามที่แอดมินกำหนดไว้ในกิจกรรมนั้น</li>
                     </ul>
                 </div>
             </div>

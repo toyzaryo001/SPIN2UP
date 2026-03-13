@@ -7,7 +7,7 @@ import { RewardService } from '../services/reward.service.js';
 import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 import { TurnoverService } from '../services/turnover.service.js';
 import { RankService } from '../services/rank.service.js';
-import { thaiDateKey, thaiNow } from '../lib/thai-time.js';
+import { StreakService } from '../services/streak.service.js';
 
 const router = Router();
 
@@ -248,103 +248,12 @@ router.get('/referral-stats', authMiddleware, async (req: AuthRequest, res) => {
 // GET /api/users/streak-stats - ดึงข้อมูล Streak การฝากเงิน
 router.get('/streak-stats', authMiddleware, async (req: AuthRequest, res) => {
     try {
-        const userId = req.user!.userId;
-
-        // 1. Get Settings
-        const settings = await prisma.streakSetting.findMany({
-            where: { isActive: true },
-            orderBy: { day: 'asc' }
-        });
-
-        if (settings.length === 0) {
-            return res.json({ success: true, data: { currentStreak: 0, nextBonus: null } });
-        }
-
-        const minDeposit = Number(settings[0].minDeposit) || 100;
-
-        // 2. Get User Deposits (Approved only)
-        // Group by Date to see daily total
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 10); // Look back 10 days to be safe
-
-        const transactions = await prisma.transaction.findMany({
-            where: {
-                userId,
-                type: 'DEPOSIT',
-                status: { in: ['APPROVED', 'COMPLETED'] }, // Support both manual and auto deposits
-                createdAt: { gte: sevenDaysAgo }
-            },
-            select: {
-                amount: true,
-                createdAt: true
-            },
-            orderBy: { createdAt: 'desc' }
-        });
-
-        // 3. Process Daily Totals
-        const dailyDeposits: Record<string, number> = {};
-        transactions.forEach(tx => {
-            const dateStr = thaiDateKey(tx.createdAt);
-            dailyDeposits[dateStr] = (dailyDeposits[dateStr] || 0) + Number(tx.amount);
-        });
-
-        // 4. Calculate Streak
-        let currentStreak = 0;
-        const today = thaiDateKey();
-        const yesterday = thaiDateKey(thaiNow().subtract(1, 'day').toDate());
-
-        // If deposited today >= min, we start count from today backwards
-        // If NOT deposited today yet, but deposited yesterday >= min, we start count from yesterday backwards
-        // If neither, streak is 0.
-
-        let checkDate = thaiNow();
-        let streakAlive = false;
-
-        // Check Today
-        if ((dailyDeposits[today] || 0) >= minDeposit) {
-            currentStreak = 1;
-            streakAlive = true;
-            checkDate = checkDate.subtract(1, 'day');
-        } else {
-            // Check Yesterday
-            if ((dailyDeposits[yesterday] || 0) >= minDeposit) {
-                // Streak is alive from yesterday, but today is not done yet.
-                // So current streak count is essentially valid up to yesterday.
-                // Logic: If I deposited yesterday (Day 1), today is Day 2 waiting to happen. 
-                // Current valid completed streak is 1.
-                // So we start checking from yesterday.
-                streakAlive = true;
-                checkDate = checkDate.subtract(1, 'day');
-            } else {
-                currentStreak = 0;
-                streakAlive = false;
-            }
-        }
-
-        if (streakAlive) {
-            // We already processed the first valid day (either today or yesterday).
-            // Now verify strictly consecutive days backwards.
-            // Loop up to 7 days max
-            for (let i = 0; i < 7; i++) {
-                const dateStr = thaiDateKey(checkDate.toDate());
-                if ((dailyDeposits[dateStr] || 0) >= minDeposit) {
-                    currentStreak++;
-                    checkDate = checkDate.subtract(1, 'day');
-                } else {
-                    break;
-                }
-            }
-        }
-
-        // Cap streak at max setting day
-        const maxDay = settings[settings.length - 1].day;
-        if (currentStreak > maxDay) currentStreak = maxDay;
+        const data = await StreakService.getUserStreakStatus(req.user!.userId);
 
         res.json({
             success: true,
             data: {
-                currentStreak,
-                minDeposit
+                ...data
             }
         });
 

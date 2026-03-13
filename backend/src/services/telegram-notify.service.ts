@@ -4,9 +4,6 @@ import prisma from '../lib/db';
 export class TelegramNotifyService {
     private static API_URL = 'https://api.telegram.org';
 
-    /**
-     * Send a message to a specific Telegram chat
-     */
     static async sendMessage(botToken: string, chatId: string, message: string) {
         try {
             const response = await axios.post(
@@ -14,9 +11,10 @@ export class TelegramNotifyService {
                 {
                     chat_id: chatId,
                     text: message,
-                    parse_mode: 'HTML'
+                    parse_mode: 'HTML',
                 }
             );
+
             return { success: response.data.ok, data: response.data };
         } catch (error: any) {
             console.error('[Telegram] Error sending message:', error.response?.data || error.message);
@@ -24,9 +22,6 @@ export class TelegramNotifyService {
         }
     }
 
-    /**
-     * Get settings helper — fetches all telegram-related settings
-     */
     private static async getSettings() {
         const keys = [
             'telegramBotToken',
@@ -40,25 +35,29 @@ export class TelegramNotifyService {
         ];
 
         const settings = await prisma.setting.findMany({
-            where: { key: { in: keys } }
+            where: { key: { in: keys } },
         });
 
         const map: Record<string, string> = {};
-        settings.forEach(s => { map[s.key] = s.value; });
+        settings.forEach((setting) => {
+            map[setting.key] = setting.value;
+        });
+
         return map;
     }
 
-    /**
-     * Notify about a new deposit
-     */
     static async notifyDeposit(username: string, amount: number, method: string) {
         try {
             const s = await this.getSettings();
-            if (s.telegramNotifyDeposit !== 'true') return { success: false, message: 'Telegram deposit notify disabled' };
+            if (s.telegramNotifyDeposit !== 'true') {
+                return { success: false, message: 'Telegram deposit notify disabled' };
+            }
 
             const botToken = s.telegramBotToken;
-            const chatId = s.telegramChatIdDeposit || s.telegramChatId; // fallback to main
-            if (!botToken || !chatId) return { success: false, message: 'Missing bot token or chat ID' };
+            const chatId = s.telegramChatIdDeposit || s.telegramChatId;
+            if (!botToken || !chatId) {
+                return { success: false, message: 'Missing bot token or chat ID' };
+            }
 
             const msg = `💰 <b>แจ้งฝากเงินใหม่!</b>
 👤 ยูสเซอร์: <code>${username}</code>
@@ -73,17 +72,18 @@ export class TelegramNotifyService {
         }
     }
 
-    /**
-     * Notify about a new withdrawal request
-     */
     static async notifyWithdraw(username: string, amount: number) {
         try {
             const s = await this.getSettings();
-            if (s.telegramNotifyWithdraw !== 'true') return { success: false, message: 'Telegram withdraw notify disabled' };
+            if (s.telegramNotifyWithdraw !== 'true') {
+                return { success: false, message: 'Telegram withdraw notify disabled' };
+            }
 
             const botToken = s.telegramBotToken;
             const chatId = s.telegramChatIdWithdraw || s.telegramChatId;
-            if (!botToken || !chatId) return { success: false, message: 'Missing bot token or chat ID' };
+            if (!botToken || !chatId) {
+                return { success: false, message: 'Missing bot token or chat ID' };
+            }
 
             const msg = `💸 <b>แจ้งถอนเงิน!</b>
 👤 ยูสเซอร์: <code>${username}</code>
@@ -98,22 +98,32 @@ export class TelegramNotifyService {
         }
     }
 
-    /**
-     * Notify about a new registration
-     */
-    static async notifyRegister(username: string, fullName: string, phone: string, adminName?: string) {
+    static async notifyRegister(
+        username: string,
+        fullName: string,
+        phone: string,
+        bankName?: string | null,
+        bankAccount?: string | null,
+        adminName?: string
+    ) {
         try {
             const s = await this.getSettings();
-            if (s.telegramNotifyRegister !== 'true') return { success: false, message: 'Telegram register notify disabled' };
+            if (s.telegramNotifyRegister !== 'true') {
+                return { success: false, message: 'Telegram register notify disabled' };
+            }
 
             const botToken = s.telegramBotToken;
             const chatId = s.telegramChatIdRegister || s.telegramChatId;
-            if (!botToken || !chatId) return { success: false, message: 'Missing bot token or chat ID' };
+            if (!botToken || !chatId) {
+                return { success: false, message: 'Missing bot token or chat ID' };
+            }
 
             const msg = `🆕 <b>สมาชิกใหม่!</b>
 👤 ยูสเซอร์: <code>${username}</code>
 📝 ชื่อ: ${fullName}
-📱 เบอร์: ${phone}${adminName ? `\n🧑‍💼 สมัครโดย: <b>${adminName}</b>` : ''}
+📱 เบอร์: ${phone}
+🏦 ธนาคาร: ${bankName || '-'}
+💳 เลขบัญชี: ${bankAccount || '-'}${adminName ? `\n🧑‍💼 สมัครโดย: <b>${adminName}</b>` : ''}
 🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
 
             return this.sendMessage(botToken, chatId, msg);
@@ -123,14 +133,12 @@ export class TelegramNotifyService {
         }
     }
 
-    /**
-     * Send a test message
-     */
     static async sendTest() {
         try {
             const s = await this.getSettings();
             const botToken = s.telegramBotToken;
             const chatId = s.telegramChatId || s.telegramChatIdDeposit || s.telegramChatIdWithdraw || s.telegramChatIdRegister;
+
             if (!botToken || !chatId) {
                 throw new Error('Missing Bot Token or Chat ID');
             }

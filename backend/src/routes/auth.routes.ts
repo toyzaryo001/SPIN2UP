@@ -158,7 +158,7 @@ router.post('/register', async (req, res) => {
 
         // Notify Admins via Telegram (fire-and-forget, after response)
         import('../services/telegram-notify.service.js').then(({ TelegramNotifyService }) => {
-            TelegramNotifyService.notifyRegister(user.username, fullName, phone)
+            TelegramNotifyService.notifyRegister(user.username, fullName, phone, bankName, bankAccount)
                 .catch(err => console.error('[Telegram] Register notify error:', err));
         }).catch(() => {});
     } catch (error) {

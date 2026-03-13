@@ -238,7 +238,7 @@ router.post('/', requirePermission('members', 'register', 'manage'), async (req:
         try {
             const admin = await prisma.admin.findUnique({ where: { id: req.user!.userId }, select: { fullName: true, username: true } });
             const adminIdentifier = admin ? `${admin.fullName} (${admin.username})` : 'Unknown Admin';
-            TelegramNotifyService.notifyRegister(username, fullName, phone, adminIdentifier).catch((e: any) => console.error('[Telegram] error:', e));
+            TelegramNotifyService.notifyRegister(username, fullName, phone, bankName, bankAccount, adminIdentifier).catch((e: any) => console.error('[Telegram] error:', e));
         } catch (nofifyErr) {
             console.error('Failed to notify register:', nofifyErr);
         }

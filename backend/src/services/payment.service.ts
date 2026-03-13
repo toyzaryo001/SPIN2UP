@@ -10,6 +10,199 @@ import { PromotionSelectionService } from './promotion-selection.service.js';
 import { TurnoverService } from './turnover.service.js';
 
 export class PaymentService {
+    private static normalizeCheckedTransaction(rawResult: any) {
+        const data = rawResult?.data?.transaction || rawResult?.data || {};
+        const status = String(data.status || '').toLowerCase();
+
+        let txStatus: 'SUCCESS' | 'FAILED' | 'PENDING' = 'PENDING';
+        if (status === 'completed' || status === 'success') {
+            txStatus = 'SUCCESS';
+        } else if (['failed', 'fail', 'timeout', 'expired'].includes(status)) {
+            txStatus = 'FAILED';
+        }
+
+        return {
+            success: Boolean(rawResult?.status),
+            txStatus,
+            transactionId: data.refferend || data.reference || data.referenceId || '',
+            externalId: data.transactionId || data.transaction_id,
+            amount: Number(data.depositAmount || data.amount || 0),
+            message: data.message || rawResult?.message || rawResult?.msg,
+            rawResponse: rawResult
+        };
+    }
+
+    private static async processTransactionResult(
+        transaction: any,
+        result: {
+            txStatus: 'SUCCESS' | 'FAILED' | 'PENDING';
+            externalId?: string;
+            amount?: number;
+            message?: string;
+            rawResponse?: any;
+        },
+        gatewayCode: string
+    ) {
+        let requiresManualReconcile = false;
+
+        try {
+            if (result.txStatus === 'SUCCESS') {
+                const typeUpper = transaction.type.toUpperCase();
+
+                if (typeUpper === 'DEPOSIT') {
+                    const amount = result.amount || Number(transaction.amount);
+
+                    let betflixSuccess = false;
+                    let betflixError = '';
+
+                    if (transaction.user) {
+                        const betflixResult = await BetflixService.ensureAndTransfer(
+                            transaction.userId,
+                            transaction.user.phone,
+                            transaction.user.betflixUsername,
+                            amount,
+                            `PAYMENT_${transaction.id}`
+                        );
+                        betflixSuccess = betflixResult.success;
+                        betflixError = betflixResult.error || '';
+                    }
+
+                    if (!betflixSuccess) {
+                        await prisma.transaction.update({
+                            where: { id: transaction.id },
+                            data: {
+                                status: 'FAILED',
+                                note: (transaction.note || '') + ` | Betflix Error: ${betflixError}`,
+                                rawResponse: JSON.stringify(result.rawResponse),
+                                externalId: result.externalId || transaction.externalId
+                            }
+                        });
+
+                        return { success: true };
+                    }
+
+                    requiresManualReconcile = true;
+
+                    await prisma.$transaction(async (tx) => {
+                        const updatedUser = await tx.user.update({
+                            where: { id: transaction.userId },
+                            data: { balance: { increment: amount } }
+                        });
+
+                        await tx.transaction.update({
+                            where: { id: transaction.id },
+                            data: {
+                                status: 'COMPLETED',
+                                balanceAfter: updatedUser.balance,
+                                externalId: result.externalId || transaction.externalId,
+                                rawResponse: JSON.stringify(result.rawResponse)
+                            }
+                        });
+                    });
+
+                    requiresManualReconcile = false;
+
+                    LineNotifyService.notifyDeposit(
+                        transaction.user?.username || 'Unknown',
+                        amount,
+                        transaction.subType || 'Automatic'
+                    ).catch(err => console.error('[LineNotify] Error:', err));
+
+                    TelegramNotifyService.notifyDeposit(
+                        transaction.user?.username || 'Unknown',
+                        amount,
+                        transaction.subType || 'Automatic'
+                    ).catch(err => console.error('[Telegram] Error:', err));
+
+                    DepositBonusService.applyPostDepositBenefits(transaction.id).catch(err => console.error('[Deposit Bonus Error]:', err));
+                } else if (typeUpper === 'WITHDRAW') {
+                    await prisma.transaction.update({
+                        where: { id: transaction.id },
+                        data: {
+                            status: 'COMPLETED',
+                            externalId: result.externalId || transaction.externalId,
+                            rawResponse: JSON.stringify(result.rawResponse)
+                        }
+                    });
+                }
+            } else if (result.txStatus === 'FAILED') {
+                await prisma.$transaction(async (tx) => {
+                    if (transaction.type.toUpperCase() === 'WITHDRAW') {
+                        const amount = Number(transaction.amount);
+                        await tx.user.update({
+                            where: { id: transaction.userId },
+                            data: { balance: { increment: amount } }
+                        });
+                    }
+
+                    await tx.transaction.update({
+                        where: { id: transaction.id },
+                        data: {
+                            status: 'FAILED',
+                            note: result.message,
+                            rawResponse: JSON.stringify(result.rawResponse),
+                            externalId: result.externalId || transaction.externalId
+                        }
+                    });
+                });
+            } else {
+                await prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        status: 'PENDING',
+                        note: result.message || 'Waiting provider confirmation',
+                        rawResponse: JSON.stringify(result.rawResponse),
+                        externalId: result.externalId || transaction.externalId
+                    }
+                });
+            }
+
+            return { success: true };
+        } catch (error: any) {
+            console.error(`[Webhook] Processing failed for tx ${transaction.id}:`, error);
+
+            if (requiresManualReconcile) {
+                await prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        status: 'FAILED',
+                        note: `${transaction.note || ''} | Manual reconcile required after Betflix transfer: ${error.message}`,
+                    }
+                }).catch(() => {});
+
+                await AlertService.createAlert({
+                    type: 'CRITICAL',
+                    title: 'Deposit Reconciliation Required',
+                    message: `Deposit transaction #${transaction.id} transferred to game wallet but local finalization failed. Manual review is required.`,
+                    actionUrl: `/admin/transactions`,
+                    actionRequired: true,
+                    metadata: {
+                        gateway: gatewayCode,
+                        transactionId: transaction.id,
+                        userId: transaction.userId,
+                        error: error.message,
+                        timestamp: new Date().toISOString(),
+                    }
+                }).catch(alertError => console.error('[AlertService] Reconcile alert error:', alertError));
+
+                return {
+                    success: false,
+                    message: 'Deposit requires manual reconciliation'
+                };
+            }
+
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: {
+                    status: 'PENDING',
+                    note: `${transaction.note || ''} | Webhook retry pending: ${error.message}`,
+                }
+            }).catch(() => {});
+
+            throw error;
+        }
+    }
+
 
     /**
      * Create a deposit request (Payin)
@@ -353,6 +546,80 @@ export class PaymentService {
         ]);
     }
 
+    static async getDepositStatus(userId: number, transactionId: number) {
+        let transaction = await prisma.transaction.findFirst({
+            where: {
+                id: transactionId,
+                userId,
+                type: 'DEPOSIT'
+            },
+            include: {
+                user: true,
+                paymentGateway: true
+            }
+        });
+
+        if (!transaction) {
+            throw new Error('Deposit transaction not found');
+        }
+
+        if (transaction.status === 'PENDING' && transaction.referenceId && transaction.paymentGateway?.code) {
+            const provider = await PaymentFactory.getProvider(transaction.paymentGateway.code);
+
+            if (provider?.checkTransactionStatus) {
+                try {
+                    const checkedResult = await provider.checkTransactionStatus(transaction.referenceId);
+                    const normalizedResult = this.normalizeCheckedTransaction(checkedResult);
+
+                    if (normalizedResult.success) {
+                        const lockUpdate = await prisma.transaction.updateMany({
+                            where: {
+                                id: transaction.id,
+                                status: 'PENDING'
+                            },
+                            data: {
+                                status: 'PROCESSING'
+                            }
+                        });
+
+                        if (lockUpdate.count > 0) {
+                            await this.processTransactionResult(transaction, normalizedResult, transaction.paymentGateway.code);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`[Deposit Status Check] Failed for tx ${transaction.id}:`, error);
+                }
+
+                transaction = await prisma.transaction.findFirst({
+                    where: {
+                        id: transactionId,
+                        userId,
+                        type: 'DEPOSIT'
+                    },
+                    include: {
+                        user: true,
+                        paymentGateway: true
+                    }
+                });
+            }
+        }
+
+        if (!transaction) {
+            throw new Error('Deposit transaction not found');
+        }
+
+        return {
+            id: transaction.id,
+            status: transaction.status,
+            amount: Number(transaction.amount),
+            balanceAfter: Number(transaction.balanceAfter || 0),
+            referenceId: transaction.referenceId,
+            externalId: transaction.externalId,
+            note: transaction.note,
+            updatedAt: transaction.updatedAt
+        };
+    }
+
     /**
      * Process Webhook from Provider
      */
@@ -446,164 +713,7 @@ export class PaymentService {
             return { success: true, message: 'Already being processed by another request' };
         }
 
-        let requiresManualReconcile = false;
-
-        try {
-            if (result.txStatus === 'SUCCESS') {
-                const typeUpper = transaction.type.toUpperCase();
-
-                if (typeUpper === 'DEPOSIT') {
-                    const amount = result.amount || Number(transaction.amount);
-
-                    let betflixSuccess = false;
-                    let betflixError = '';
-
-                    if (transaction.user) {
-                        const betflixResult = await BetflixService.ensureAndTransfer(
-                            transaction.userId,
-                            transaction.user.phone,
-                            transaction.user.betflixUsername,
-                            amount,
-                            `PAYMENT_${transaction.id}`
-                        );
-                        betflixSuccess = betflixResult.success;
-                        betflixError = betflixResult.error || '';
-                    }
-
-                    if (!betflixSuccess) {
-                        await prisma.transaction.update({
-                            where: { id: transaction.id },
-                            data: {
-                                status: 'FAILED',
-                                note: (transaction.note || '') + ` | Betflix Error: ${betflixError}`,
-                                rawResponse: JSON.stringify(result.rawResponse),
-                                externalId: result.externalId || transaction.externalId
-                            }
-                        });
-
-                        return { success: true };
-                    }
-
-                    requiresManualReconcile = true;
-
-                    await prisma.$transaction(async (tx) => {
-                        const updatedUser = await tx.user.update({
-                            where: { id: transaction.userId },
-                            data: { balance: { increment: amount } }
-                        });
-
-                        await tx.transaction.update({
-                            where: { id: transaction.id },
-                            data: {
-                                status: 'COMPLETED',
-                                balanceAfter: updatedUser.balance,
-                                externalId: result.externalId || transaction.externalId,
-                                rawResponse: JSON.stringify(result.rawResponse)
-                            }
-                        });
-                    });
-
-                    requiresManualReconcile = false;
-
-                    LineNotifyService.notifyDeposit(
-                        transaction.user?.username || 'Unknown',
-                        amount,
-                        transaction.subType || 'Automatic'
-                    ).catch(err => console.error('[LineNotify] Error:', err));
-
-                    TelegramNotifyService.notifyDeposit(
-                        transaction.user?.username || 'Unknown',
-                        amount,
-                        transaction.subType || 'Automatic'
-                    ).catch(err => console.error('[Telegram] Error:', err));
-
-                    DepositBonusService.applyPostDepositBenefits(transaction.id).catch(err => console.error('[Deposit Bonus Error]:', err));
-                } else if (typeUpper === 'WITHDRAW') {
-                    await prisma.transaction.update({
-                        where: { id: transaction.id },
-                        data: {
-                            status: 'COMPLETED',
-                            externalId: result.externalId || transaction.externalId,
-                            rawResponse: JSON.stringify(result.rawResponse)
-                        }
-                    });
-                }
-            } else if (result.txStatus === 'FAILED') {
-                await prisma.$transaction(async (tx) => {
-                    if (transaction.type.toUpperCase() === 'WITHDRAW') {
-                        const amount = Number(transaction.amount);
-                        await tx.user.update({
-                            where: { id: transaction.userId },
-                            data: { balance: { increment: amount } }
-                        });
-                    }
-
-                    await tx.transaction.update({
-                        where: { id: transaction.id },
-                        data: {
-                            status: 'FAILED',
-                            note: result.message,
-                            rawResponse: JSON.stringify(result.rawResponse),
-                            externalId: result.externalId || transaction.externalId
-                        }
-                    });
-                });
-            } else {
-                await prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: {
-                        status: 'PENDING',
-                        note: result.message || 'Waiting provider confirmation',
-                        rawResponse: JSON.stringify(result.rawResponse),
-                        externalId: result.externalId || transaction.externalId
-                    }
-                });
-            }
-
-            return { success: true };
-        } catch (error: any) {
-            console.error(`[Webhook] Processing failed for tx ${transaction.id}:`, error);
-
-            if (requiresManualReconcile) {
-                await prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: {
-                        status: 'FAILED',
-                        note: `${transaction.note || ''} | Manual reconcile required after Betflix transfer: ${error.message}`,
-                    }
-                }).catch(() => {});
-
-                await AlertService.createAlert({
-                    type: 'CRITICAL',
-                    title: 'Deposit Reconciliation Required',
-                    message: `Deposit transaction #${transaction.id} transferred to game wallet but local finalization failed. Manual review is required.`,
-                    actionUrl: `/admin/transactions`,
-                    actionRequired: true,
-                    metadata: {
-                        gateway: gatewayCode,
-                        transactionId: transaction.id,
-                        userId: transaction.userId,
-                        error: error.message,
-                        timestamp: new Date().toISOString(),
-                    }
-                }).catch(alertError => console.error('[AlertService] Reconcile alert error:', alertError));
-
-                return {
-                    success: false,
-                    message: 'Deposit requires manual reconciliation'
-                };
-            }
-
-            await prisma.transaction.update({
-                where: { id: transaction.id },
-                data: {
-                    status: 'PENDING',
-                    note: `${transaction.note || ''} | Webhook retry pending: ${error.message}`,
-                }
-            }).catch(() => {});
-
-            throw error;
-        }
+        return this.processTransactionResult(transaction, result, gatewayCode);
     }
 
 }

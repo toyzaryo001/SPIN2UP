@@ -40,8 +40,31 @@ interface SelectedPromotionSummary {
     selectedAt: string | null;
 }
 
+interface DepositQrData {
+    transactionId: number;
+    referenceId: string;
+    qrCode: string;
+    amount: number;
+    expiredAt?: string;
+}
+
 const formatCurrency = (value: number | null | undefined) =>
     Number(value || 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+const getDepositStatusMessage = (status: string) => {
+    switch (status) {
+        case "COMPLETED":
+        case "APPROVED":
+            return "ฝากสำเร็จ ระบบกำลังอัปเดตยอดให้อัตโนมัติ";
+        case "PROCESSING":
+            return "กำลังตรวจสอบยอดฝากของคุณ";
+        case "FAILED":
+        case "REJECTED":
+            return "รายการฝากไม่สำเร็จ กรุณาสร้างรายการใหม่";
+        default:
+            return "กำลังรอการชำระเงินและตรวจสอบยอดอัตโนมัติ";
+    }
+};
 
 const getPromotionFormula = (promotion: SelectedPromotionSummary) => {
     if (promotion.type === "FIXED") {
@@ -80,8 +103,9 @@ export default function DepositPage() {
     const [copied, setCopied] = useState<string | null>(null);
     const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
     const [depositAmount, setDepositAmount] = useState<string>("");
-    const [qrData, setQrData] = useState<any>(null);
+    const [qrData, setQrData] = useState<DepositQrData | null>(null);
     const [generatingQr, setGeneratingQr] = useState(false);
+    const [depositStatusMessage, setDepositStatusMessage] = useState("");
     const [features, setFeatures] = useState<any>({});
     const [config, setConfig] = useState<any>({});
     const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
@@ -259,6 +283,71 @@ export default function DepositPage() {
         fetchBankAccounts();
     }, [loading]);
 
+    useEffect(() => {
+        if (!qrData?.transactionId) {
+            setDepositStatusMessage("");
+            return;
+        }
+
+        let isMounted = true;
+
+        const pollDepositStatus = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/payment/deposit/${qrData.transactionId}/status`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (!isMounted || !data.success) {
+                    return;
+                }
+
+                const status = String(data.data?.status || "PENDING").toUpperCase();
+                setDepositStatusMessage(getDepositStatusMessage(status));
+
+                if (status === "COMPLETED" || status === "APPROVED") {
+                    await refreshUserProfile();
+                    await fetchSelectedPromotion();
+
+                    if (!isMounted) {
+                        return;
+                    }
+
+                    setQrData(null);
+                    setDepositAmount("");
+                    showAlert("ฝากเงินสำเร็จ ระบบอัปเดตยอดให้อัตโนมัติแล้ว", "success");
+                    return;
+                }
+
+                if (status === "FAILED" || status === "REJECTED") {
+                    if (!isMounted) {
+                        return;
+                    }
+
+                    setQrData(null);
+                    showAlert(String(data.data?.note || "รายการฝากไม่สำเร็จ กรุณาสร้างรายการใหม่"), "error");
+                }
+            } catch (error) {
+                console.error("Deposit status poll error:", error);
+            }
+        };
+
+        setDepositStatusMessage(getDepositStatusMessage("PENDING"));
+        pollDepositStatus();
+
+        const interval = window.setInterval(pollDepositStatus, 5000);
+
+        return () => {
+            isMounted = false;
+            window.clearInterval(interval);
+        };
+    }, [qrData?.transactionId]);
+
     // Auto-select first bank when channel changes
     useEffect(() => {
         const channelFilteredBanks = bankAccounts.filter(bank => {
@@ -307,6 +396,7 @@ export default function DepositPage() {
 
             if (data.success) {
                 setQrData(data.data);
+                setDepositStatusMessage(getDepositStatusMessage("PENDING"));
                 fetchSelectedPromotion();
                 refreshUserProfile();
             } else {
@@ -833,8 +923,18 @@ export default function DepositPage() {
                                         <p style={{ fontSize: "24px", fontWeight: 900, color: "#FFFFFF" }}>฿{Number(qrData.amount).toLocaleString()}</p>
                                         <p style={{ fontSize: "12px", color: "#8B949E", marginTop: "12px" }}>ยอดเงินจะเข้าอัตโนมัติเมื่อทำรายการสำเร็จ</p>
 
+                                        <p style={{ fontSize: "12px", color: "#22C55E", marginTop: "8px", fontWeight: 700 }}>
+                                            {depositStatusMessage || "กำลังรอการชำระเงินและตรวจสอบยอดอัตโนมัติ"}
+                                        </p>
+                                        <p style={{ fontSize: "11px", color: "#8B949E", marginTop: "6px" }}>
+                                            Ref: {qrData.referenceId}
+                                        </p>
+
                                         <button
-                                            onClick={() => setQrData(null)}
+                                            onClick={() => {
+                                                setQrData(null);
+                                                setDepositStatusMessage("");
+                                            }}
                                             style={{
                                                 marginTop: "24px",
                                                 background: "rgba(255,255,255,0.1)",

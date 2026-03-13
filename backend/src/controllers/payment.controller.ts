@@ -66,6 +66,36 @@ export class PaymentController {
     }
 
     /**
+     * User checks their deposit status
+     * GET /api/payment/deposit/:transactionId/status
+     */
+    static async getDepositStatus(req: AuthRequest, res: Response) {
+        try {
+            const userId = req.user?.userId;
+            const transactionId = Number(req.params.transactionId);
+
+            if (!userId) {
+                return res.status(401).json({ success: false, message: 'Unauthorized' });
+            }
+
+            if (!Number.isInteger(transactionId) || transactionId <= 0) {
+                return res.status(400).json({ success: false, message: 'Invalid transaction id' });
+            }
+
+            const result = await PaymentService.getDepositStatus(userId, transactionId);
+            return res.json({ success: true, data: result });
+        } catch (error: any) {
+            console.error('Get Deposit Status Error:', error);
+
+            if (error.message === 'Deposit transaction not found') {
+                return res.status(404).json({ success: false, message: error.message });
+            }
+
+            return res.status(500).json({ success: false, message: error.message || 'Failed to get deposit status' });
+        }
+    }
+
+    /**
      * Webhook Handler for ALL providers
      * POST /api/webhooks/payment/:gateway
      */

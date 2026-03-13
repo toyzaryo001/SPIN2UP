@@ -1,0 +1,3 @@
+-- Intentionally left blank.
+-- This migration directory was created during a discarded monthly challenge design
+-- and must remain in the chain so Prisma migrate deploy can continue.

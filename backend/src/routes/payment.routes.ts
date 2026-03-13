@@ -6,6 +6,7 @@ const router = Router();
 
 // User APIs
 router.post('/deposit', authMiddleware, PaymentController.createDeposit);
+router.get('/deposit/:transactionId/status', authMiddleware, PaymentController.getDepositStatus);
 
 // Webhook Callback (Public)
 router.post('/webhook/:gateway', PaymentController.webhook);

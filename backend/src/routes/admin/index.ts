@@ -46,11 +46,11 @@ router.get('/me', async (req: AuthRequest, res: Response) => {
         if (isActuallySuperAdmin || req.user?.role === 'SUPER_ADMIN') {
             // Super admin has all permissions - matching PERMISSION_MATRIX
             permissions = {
-                members: { list: true, register: true, edit_general: true, edit_bank: true, edit_password: true, change_status: true, delete: true, history: true },
+                members: { list: true, register: true, edit_general: true, edit_bank: true, edit_password: true, auto_deposit: true, change_status: true, delete: true, history: true },
                 manual: { deposit: true, withdraw: true, withdrawals: true, history: true },
-                reports: { new_users: true, new_users_deposit: true, deposits: true, withdrawals: true, bonus: true, profit: true, inactive_users: true, win_lose: true },
+                reports: { new_users: true, new_users_deposit: true, deposits: true, withdrawals: true, failed_deposits: true, failed_withdrawals: true, bonus: true, profit: true, inactive_users: true, win_lose: true },
                 settings: { general: true, features: true, contacts: true, notify: true, banks: true, truemoney: true, logobank: true, payment: true },
-                promotions: { list: true, history: true },
+                promotions: { list: true },
                 banners: { banners: true, announcements: true },
                 agents: { settings: true, import: true, categories: true, providers: true, games: true, mix_board: true, connection_test: true },
                 activities: { cashback: true, streak: true, commission: true, history: true, referral: true, ranks: true },

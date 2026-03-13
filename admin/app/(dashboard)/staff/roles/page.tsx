@@ -23,8 +23,8 @@ const PERMISSION_MATRIX = [
             { key: 'edit_general', label: 'แก้ไขข้อมูลทั่วไป' },
             { key: 'edit_bank', label: 'แก้ไขข้อมูลธนาคาร' },
             { key: 'edit_password', label: 'แก้ไขรหัสผ่าน' },
-            { key: 'change_status', label: 'แบนกระเป๋า/เปิดบัญชี' },
             { key: 'auto_deposit', label: 'เปิด/ปิด ฝากออโต้' },
+            { key: 'change_status', label: 'แบน/เปิดใช้งานบัญชี' },
             { key: 'delete', label: 'ลบสมาชิก' },
             { key: 'history', label: 'ประวัติแก้ไข' },
         ]
@@ -73,8 +73,7 @@ const PERMISSION_MATRIX = [
         key: 'promotions',
         label: 'โปรโมชั่น',
         features: [
-            { key: 'list', label: 'จัดการโปรโมชั่น' },
-            { key: 'history', label: 'ประวัติการรับโปร' },
+            { key: 'list', label: 'จัดการโปรโมชั่น/ประวัติรับโปร' },
         ]
     },
     {

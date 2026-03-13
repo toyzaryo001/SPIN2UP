@@ -4,6 +4,37 @@ import { requirePermission } from '../../middlewares/auth.middleware';
 
 const router = Router();
 
+const DEFAULT_RANK_TIERS = [
+    { id: 'bronze', name: 'Bronze', icon: '🥉', minDeposit: 0, benefit: 'Cashback 3%', colorFrom: '#CD7F32', colorTo: '#A0522D' },
+    { id: 'silver', name: 'Silver', icon: '🥈', minDeposit: 5000, benefit: 'Cashback 4%', colorFrom: '#C0C0C0', colorTo: '#A8A8A8' },
+    { id: 'gold', name: 'Gold', icon: '🥇', minDeposit: 20000, benefit: 'Cashback 5%', colorFrom: '#FFD700', colorTo: '#FFA500' },
+    { id: 'platinum', name: 'Platinum', icon: '💎', minDeposit: 50000, benefit: 'Cashback 7%', colorFrom: '#00CED1', colorTo: '#4169E1' },
+    { id: 'diamond', name: 'Diamond', icon: '👑', minDeposit: 100000, benefit: 'Cashback 10%', colorFrom: '#9B59B6', colorTo: '#E91E63' },
+];
+
+const parseRankTiers = (value?: string | null) => {
+    if (!value) return DEFAULT_RANK_TIERS;
+
+    try {
+        const parsed = JSON.parse(value);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+            return DEFAULT_RANK_TIERS;
+        }
+
+        return parsed.map((tier: any, index: number) => ({
+            id: String(tier.id || `tier_${index + 1}`),
+            name: String(tier.name || `Tier ${index + 1}`),
+            icon: String(tier.icon || '🏅'),
+            minDeposit: Number(tier.minDeposit || 0),
+            benefit: String(tier.benefit || ''),
+            colorFrom: String(tier.colorFrom || '#64748B'),
+            colorTo: String(tier.colorTo || '#334155'),
+        })).sort((a: any, b: any) => a.minDeposit - b.minDeposit);
+    } catch {
+        return DEFAULT_RANK_TIERS;
+    }
+};
+
 // =====================
 // CASHBACK SETTINGS
 // =====================
@@ -168,6 +199,149 @@ router.put('/commission/:level', async (req, res) => {
     } catch (error) {
         console.error('Update commission settings error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// =====================
+// REFERRAL OVERVIEW
+// =====================
+
+router.get('/referral/overview', requirePermission('activities', 'referral', 'view'), async (req, res) => {
+    try {
+        const referredUsers = await prisma.user.findMany({
+            where: { referredBy: { not: null } },
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                phone: true,
+                createdAt: true,
+                referredBy: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        const referrerIds = [...new Set(referredUsers.map((user) => user.referredBy).filter(Boolean))] as number[];
+        const referrers = referrerIds.length > 0
+            ? await prisma.user.findMany({
+                where: { id: { in: referrerIds } },
+                select: {
+                    id: true,
+                    username: true,
+                    fullName: true,
+                    phone: true,
+                    referrerCode: true,
+                },
+            })
+            : [];
+
+        const referrerMap = new Map(referrers.map((referrer) => [referrer.id, referrer]));
+        const topReferrerMap = new Map<number, { referralCount: number; latestReferralAt: Date }>();
+
+        referredUsers.forEach((user) => {
+            if (!user.referredBy) return;
+            const current = topReferrerMap.get(user.referredBy) || { referralCount: 0, latestReferralAt: user.createdAt };
+            topReferrerMap.set(user.referredBy, {
+                referralCount: current.referralCount + 1,
+                latestReferralAt: current.latestReferralAt > user.createdAt ? current.latestReferralAt : user.createdAt,
+            });
+        });
+
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const last7DaysStart = new Date(todayStart);
+        last7DaysStart.setDate(last7DaysStart.getDate() - 6);
+
+        const topReferrers = Array.from(topReferrerMap.entries())
+            .map(([referrerId, stat]) => ({
+                referrerId,
+                referralCount: stat.referralCount,
+                latestReferralAt: stat.latestReferralAt,
+                referrer: referrerMap.get(referrerId) || null,
+            }))
+            .sort((a, b) => {
+                if (b.referralCount !== a.referralCount) return b.referralCount - a.referralCount;
+                return b.latestReferralAt.getTime() - a.latestReferralAt.getTime();
+            })
+            .slice(0, 20);
+
+        const recentReferrals = referredUsers.slice(0, 30).map((user) => ({
+            id: user.id,
+            username: user.username,
+            fullName: user.fullName,
+            phone: user.phone,
+            createdAt: user.createdAt,
+            referrer: user.referredBy ? referrerMap.get(user.referredBy) || null : null,
+        }));
+
+        res.json({
+            success: true,
+            data: {
+                overview: {
+                    totalReferrals: referredUsers.length,
+                    totalReferrers: topReferrerMap.size,
+                    todayReferrals: referredUsers.filter((user) => user.createdAt >= todayStart).length,
+                    last7DaysReferrals: referredUsers.filter((user) => user.createdAt >= last7DaysStart).length,
+                },
+                topReferrers,
+                recentReferrals,
+            },
+        });
+    } catch (error) {
+        console.error('Get referral overview error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลแนะนำเพื่อน' });
+    }
+});
+
+// =====================
+// RANK TIERS
+// =====================
+
+router.get('/ranks', requirePermission('activities', 'ranks', 'view'), async (_req, res) => {
+    try {
+        const setting = await prisma.setting.findUnique({
+            where: { key: 'rank_tiers' },
+        });
+
+        res.json({
+            success: true,
+            data: parseRankTiers(setting?.value),
+        });
+    } catch (error) {
+        console.error('Get rank tiers error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูล Rank' });
+    }
+});
+
+router.put('/ranks', requirePermission('activities', 'ranks', 'manage'), async (req, res) => {
+    try {
+        const tiers = Array.isArray(req.body?.tiers) ? req.body.tiers : [];
+
+        if (tiers.length === 0) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุข้อมูล Rank อย่างน้อย 1 ระดับ' });
+        }
+
+        const normalizedTiers = tiers.map((tier: any, index: number) => ({
+            id: String(tier.id || `tier_${index + 1}`),
+            name: String(tier.name || `Tier ${index + 1}`),
+            icon: String(tier.icon || '🏅'),
+            minDeposit: Number(tier.minDeposit || 0),
+            benefit: String(tier.benefit || ''),
+            colorFrom: String(tier.colorFrom || '#64748B'),
+            colorTo: String(tier.colorTo || '#334155'),
+        })).sort((a: any, b: any) => a.minDeposit - b.minDeposit);
+
+        await prisma.setting.upsert({
+            where: { key: 'rank_tiers' },
+            update: { value: JSON.stringify(normalizedTiers) },
+            create: { key: 'rank_tiers', value: JSON.stringify(normalizedTiers) },
+        });
+
+        res.json({ success: true, data: normalizedTiers });
+    } catch (error) {
+        console.error('Update rank tiers error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึก Rank' });
     }
 });
 

@@ -7,7 +7,18 @@ import { useAuth } from "@/hooks/useAuth";
 import axios from "axios";
 import { API_URL } from "@/lib/api";
 
-const ranks = [
+interface RankTier {
+    id?: string;
+    name: string;
+    gradient?: string;
+    icon: string;
+    minDeposit: number;
+    benefit: string;
+    colorFrom?: string;
+    colorTo?: string;
+}
+
+const DEFAULT_RANKS: RankTier[] = [
     { name: "Bronze", gradient: "linear-gradient(135deg, #CD7F32, #A0522D)", icon: "🥉", minDeposit: 0, benefit: "Cashback 3%" },
     { name: "Silver", gradient: "linear-gradient(135deg, #C0C0C0, #A8A8A8)", icon: "🥈", minDeposit: 5000, benefit: "Cashback 4%" },
     { name: "Gold", gradient: "linear-gradient(135deg, #FFD700, #FFA500)", icon: "🥇", minDeposit: 20000, benefit: "Cashback 5%" },
@@ -19,30 +30,30 @@ export default function RankPage() {
     const { user, loading: authLoading } = useAuth(true);
     const [totalDeposit, setTotalDeposit] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [cashbackRate, setCashbackRate] = useState(5); // Default to 5%
+    const [rankTiers, setRankTiers] = useState<RankTier[]>(DEFAULT_RANKS);
 
-    // Calculate Ranks dynamically
-    const dynamicRanks = ranks.map(rank => ({
+    const dynamicRanks = rankTiers.map((rank) => ({
         ...rank,
-        benefit: `Cashback ${cashbackRate}%`
+        gradient: rank.gradient || `linear-gradient(135deg, ${rank.colorFrom || "#64748B"}, ${rank.colorTo || "#334155"})`,
     }));
 
     useEffect(() => {
         const fetchUserData = async () => {
             const token = localStorage.getItem("token");
             try {
-                const [userRes, cbRes] = await Promise.all([
+                const [userRes, rankRes] = await Promise.all([
                     token ? axios.get(`${API_URL}/users/me`, {
                         headers: { Authorization: `Bearer ${token}` }
                     }) : Promise.resolve({ data: { success: false } }),
-                    axios.get(`${API_URL}/public/cashback`)
+                    axios.get(`${API_URL}/public/ranks`)
                 ]);
 
                 if (userRes.data.success) {
                     setTotalDeposit(Number(userRes.data.data.totalDeposit || 0));
                 }
-                if (cbRes.data) {
-                    setCashbackRate(Number(cbRes.data.rate || 5));
+
+                if (Array.isArray(rankRes.data) && rankRes.data.length > 0) {
+                    setRankTiers(rankRes.data);
                 }
             } catch (error) {
                 console.error("Failed to fetch user data for rank", error);
@@ -50,7 +61,7 @@ export default function RankPage() {
                     localStorage.removeItem("token");
                     localStorage.removeItem("user");
                     localStorage.removeItem("lastActive");
-                    window.dispatchEvent(new Event('user-logout'));
+                    window.dispatchEvent(new Event("user-logout"));
                 }
             } finally {
                 setLoading(false);
@@ -65,7 +76,6 @@ export default function RankPage() {
     }
     if (!user) return null;
 
-    // Calculate Rank Logic
     let currentRank = 0;
     for (let i = dynamicRanks.length - 1; i >= 0; i--) {
         if (totalDeposit >= dynamicRanks[i].minDeposit) {
@@ -76,27 +86,18 @@ export default function RankPage() {
 
     const nextRankIndex = currentRank + 1;
     const nextRank = dynamicRanks[nextRankIndex];
-    const nextRankDeposit = nextRank ? nextRank.minDeposit : dynamicRanks[currentRank].minDeposit; // Maxed out?
+    const nextRankDeposit = nextRank ? nextRank.minDeposit : dynamicRanks[currentRank].minDeposit;
 
-    // Progress Calculation
     let progress = 0;
     if (nextRank) {
-        const currentLevelBase = dynamicRanks[currentRank].minDeposit;
-        const gap = nextRankDeposit - currentLevelBase;
-        const achieved = totalDeposit - currentLevelBase;
-        // Basic progress within the level
-        progress = (achieved / gap) * 100;
-        // Or simpler absolute progress towards goal:
-        // progress = (totalDeposit / nextRankDeposit) * 100; // This usually looks better for "Total Deposit 5000/10000"
         progress = (totalDeposit / nextRankDeposit) * 100;
     } else {
-        progress = 100; // Max Rank
+        progress = 100;
     }
 
     return (
         <PlayerLayout>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {/* Banner */}
                 <div style={{
                     background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
                     borderRadius: "16px",
@@ -112,7 +113,6 @@ export default function RankPage() {
                     </div>
                 </div>
 
-                {/* Current Rank Card */}
                 <div style={{
                     background: dynamicRanks[currentRank].gradient,
                     borderRadius: "16px",
@@ -136,7 +136,6 @@ export default function RankPage() {
                     </div>
                 </div>
 
-                {/* Progress to Next Rank */}
                 {nextRank ? (
                     <div style={{
                         background: "#21262D",
@@ -175,7 +174,6 @@ export default function RankPage() {
                     </div>
                 )}
 
-                {/* All Ranks */}
                 <div style={{
                     background: "#21262D",
                     borderRadius: "16px",

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Gift, Flame, Trophy, ArrowRight } from "lucide-react";
+import { Gift, Flame, Trophy, ArrowRight, Share2, Crown } from "lucide-react";
 
 const activities = [
     {
@@ -27,6 +27,22 @@ const activities = [
         href: "/activities/commission",
         color: "bg-yellow-500",
         gradient: "from-yellow-500 to-amber-500"
+    },
+    {
+        title: "จัดการแนะนำเพื่อน",
+        description: "ดูภาพรวมผู้แนะนำและสมาชิกที่สมัครผ่านโค้ดแนะนำจากข้อมูลจริง",
+        icon: Share2,
+        href: "/activities/referral",
+        color: "bg-sky-500",
+        gradient: "from-sky-500 to-cyan-500"
+    },
+    {
+        title: "จัดการ Rank",
+        description: "ตั้งค่า VIP/Rank tiers เพื่อให้หน้า player ใช้ข้อมูลชุดเดียวกับหลังบ้าน",
+        icon: Crown,
+        href: "/activities/ranks",
+        color: "bg-violet-500",
+        gradient: "from-violet-500 to-fuchsia-500"
     },
 ];
 

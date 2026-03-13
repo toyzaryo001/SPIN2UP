@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db.js';
+import { thaiDateKey, thaiNow, thaiStartOfDay } from '../lib/thai-time.js';
 import { PromotionSelectionService } from './promotion-selection.service.js';
 import { TurnoverService } from './turnover.service.js';
 
@@ -159,24 +160,23 @@ export class DepositBonusService {
 
             const dailyDeposits: Record<string, number> = {};
             transactions.forEach((tx) => {
-                const dateStr = tx.createdAt.toISOString().split('T')[0];
+                const dateStr = thaiDateKey(tx.createdAt);
                 dailyDeposits[dateStr] = (dailyDeposits[dateStr] || 0) + Number(tx.amount);
             });
 
-            const today = new Date().toISOString().split('T')[0];
+            const today = thaiDateKey();
             if ((dailyDeposits[today] || 0) < minDeposit) {
                 return;
             }
 
             let currentStreak = 1;
-            const checkDate = new Date();
-            checkDate.setDate(checkDate.getDate() - 1);
+            let checkDate = thaiNow().subtract(1, 'day');
 
             for (let i = 1; i < maxDay; i++) {
-                const dateStr = checkDate.toISOString().split('T')[0];
+                const dateStr = thaiDateKey(checkDate.toDate());
                 if ((dailyDeposits[dateStr] || 0) >= minDeposit) {
                     currentStreak++;
-                    checkDate.setDate(checkDate.getDate() - 1);
+                    checkDate = checkDate.subtract(1, 'day');
                 } else {
                     break;
                 }
@@ -191,8 +191,7 @@ export class DepositBonusService {
                 return;
             }
 
-            const startOfToday = new Date();
-            startOfToday.setHours(0, 0, 0, 0);
+            const startOfToday = thaiStartOfDay().toDate();
 
             const existingBonus = await prisma.transaction.findFirst({
                 where: {

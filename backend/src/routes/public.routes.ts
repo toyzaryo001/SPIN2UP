@@ -279,14 +279,27 @@ router.get('/streak', async (req: Request, res: Response) => {
     }
 });
 
-// GET /api/public/commission - Get commission rates for player
+// GET /api/public/commission - Get turnover rebate settings for player
 router.get('/commission', async (req: Request, res: Response) => {
     try {
-        const settings = await prisma.commissionSetting.findMany({
-            where: { isActive: true },
-            orderBy: { level: 'asc' }
+        const setting = await prisma.turnoverSetting.findFirst({
+            where: { isActive: true }
         });
-        res.json(settings);
+
+        res.json(setting
+            ? {
+                rate: Number(setting.rate || 0),
+                minTurnover: Number(setting.minTurnover || 0),
+                maxReward: Number(setting.maxReward || 0),
+                isActive: setting.isActive
+            }
+            : {
+                rate: 0.5,
+                minTurnover: 100,
+                maxReward: 10000,
+                isActive: false
+            }
+        );
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch commission settings' });
     }

@@ -298,25 +298,53 @@ export class RewardSnapshotService {
             })
             .filter((snapshot): snapshot is NonNullable<typeof snapshot> => Boolean(snapshot));
 
-        const eligibleUserCount = snapshots.length;
-        const claimedUserCount = snapshots.filter(snapshot => snapshot.isClaimed).length;
-        const unclaimedUserCount = eligibleUserCount - claimedUserCount;
-        const totalCalculatedAmount = snapshots.reduce((sum, snapshot) => sum + snapshot.rewardAmount, 0);
-        const totalClaimedAmount = snapshots
-            .filter(snapshot => snapshot.isClaimed)
-            .reduce((sum, snapshot) => sum + snapshot.rewardAmount, 0);
+        let eligibleUserCount = 0;
+        let claimedUserCount = 0;
+        let unclaimedUserCount = 0;
+        let totalCalculatedAmount = 0;
+        let totalClaimedAmount = 0;
 
         await prisma.$transaction(async (tx) => {
-            await tx.rewardUserSnapshot.deleteMany({
+            for (const snapshot of snapshots) {
+                await tx.rewardUserSnapshot.upsert({
+                    where: {
+                        userId_type_statDate: {
+                            userId: snapshot.userId,
+                            type: snapshot.type,
+                            statDate: snapshot.statDate,
+                        }
+                    },
+                    update: {
+                        periodStart: snapshot.periodStart,
+                        periodEnd: snapshot.periodEnd,
+                        turnover: snapshot.turnover,
+                        netLoss: snapshot.netLoss,
+                        rewardAmount: snapshot.rewardAmount,
+                        isClaimed: snapshot.isClaimed,
+                        claimedAt: snapshot.claimedAt,
+                    },
+                    create: snapshot,
+                });
+            }
+
+            const persistedSnapshots = await tx.rewardUserSnapshot.findMany({
                 where: {
                     type,
                     statDate: period.statDate,
                 },
+                select: {
+                    rewardAmount: true,
+                    isClaimed: true,
+                }
             });
 
-            if (snapshots.length > 0) {
-                await tx.rewardUserSnapshot.createMany({ data: snapshots });
-            }
+            eligibleUserCount = persistedSnapshots.length;
+            claimedUserCount = persistedSnapshots.filter(snapshot => snapshot.isClaimed).length;
+            unclaimedUserCount = eligibleUserCount - claimedUserCount;
+            totalCalculatedAmount = persistedSnapshots.reduce((sum, snapshot) => sum + Number(snapshot.rewardAmount || 0), 0);
+            totalClaimedAmount = persistedSnapshots
+                .filter(snapshot => snapshot.isClaimed)
+                .reduce((sum, snapshot) => sum + Number(snapshot.rewardAmount || 0), 0);
 
             await tx.rewardDailyStat.upsert({
                 where: {

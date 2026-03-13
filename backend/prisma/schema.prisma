@@ -24,6 +24,8 @@ model User {
   bonusBalance      Decimal               @default(0)
   turnoverLimit     Decimal               @default(0)
   currentTurnover   Decimal               @default(0)
+  commissionTurnover Decimal              @default(0)
+  commissionCycleStartedAt DateTime?
   betflixUsername   String?               @unique
   betflixPassword   String?
   lastLoginAt       DateTime?
@@ -47,6 +49,7 @@ model User {
   @@index([referrerCode])
   @@index([createdAt])
   @@index([selectedPromotionId])
+  @@index([commissionTurnover])
 }
 
 model UserExternalAccount {

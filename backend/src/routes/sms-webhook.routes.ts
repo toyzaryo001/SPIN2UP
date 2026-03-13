@@ -14,6 +14,7 @@ const router = Router();
 // =============================================
 function webhookAuth(req: Request, res: Response, next: Function) {
     const expectedKey = process.env.WEBHOOK_API_KEY;
+    const strictMode = process.env.NODE_ENV === 'production' || process.env.REQUIRE_WEBHOOK_API_KEY === 'true';
 
     // ถ้าไม่ได้ตั้ง key → อนุญาตผ่าน (dev mode) พร้อม log เตือน
     if (!expectedKey) {
@@ -428,6 +429,13 @@ async function processWebhookMessage(message: string, source: string, res: Respo
 // =============================================
 router.post('/webhook', webhookAuth, async (req, res) => {
     try {
+        if (!process.env.WEBHOOK_API_KEY && (process.env.NODE_ENV === 'production' || process.env.REQUIRE_WEBHOOK_API_KEY === 'true')) {
+            return res.status(503).json({
+                success: false,
+                error: 'Webhook security is not configured'
+            });
+        }
+
         const message = req.body.message || req.body.body || req.body.text || req.body.key || req.body.msg || '';
 
         if (!message) {
@@ -458,6 +466,13 @@ router.post('/webhook', webhookAuth, async (req, res) => {
 // =============================================
 router.get('/webhook', webhookAuth, async (req, res) => {
     try {
+        if (!process.env.WEBHOOK_API_KEY && (process.env.NODE_ENV === 'production' || process.env.REQUIRE_WEBHOOK_API_KEY === 'true')) {
+            return res.status(503).json({
+                success: false,
+                error: 'Webhook security is not configured'
+            });
+        }
+
         const message = (req.query.message || req.query.body || req.query.text || req.query.msg || req.query.key || '') as string;
 
         if (!message) {

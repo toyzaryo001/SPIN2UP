@@ -3,6 +3,7 @@ import prisma from '../../lib/db.js';
 import { requirePermission, type AuthRequest } from '../../middlewares/auth.middleware.js';
 import { thaiStartOfDay } from '../../lib/thai-time.js';
 import { RewardSnapshotService } from '../../services/reward-snapshot.service.js';
+import { CommissionService } from '../../services/commission.service.js';
 
 const router = Router();
 
@@ -366,8 +367,6 @@ router.get('/daily-overview', async (req: AuthRequest, res) => {
             return rejectForbidden(res);
         }
 
-        await RewardSnapshotService.syncDailySnapshots(rewardType);
-
         const where = { type: rewardType };
         const [total, rows] = await Promise.all([
             prisma.rewardDailyStat.count({ where }),
@@ -442,8 +441,60 @@ router.get('/eligibility', async (req: AuthRequest, res) => {
             return rejectForbidden(res);
         }
 
+        if (rewardType === 'COMMISSION') {
+            if (status === 'CLAIMED') {
+                return res.json({
+                    success: true,
+                    data: [],
+                    selectedDate: null,
+                    summary: {
+                        totalUsers: 0,
+                        totalRewardAmount: 0
+                    },
+                    pagination: {
+                        total: 0,
+                        page,
+                        limit,
+                        totalPages: 0
+                    }
+                });
+            }
+
+            const result = await CommissionService.listPendingUsers({
+                page,
+                limit,
+                search,
+            });
+
+            return res.json({
+                success: true,
+                data: result.data,
+                selectedDate: null,
+                summary: {
+                    totalUsers: result.total,
+                    totalRewardAmount: result.totalRewardAmount
+                },
+                pagination: {
+                    total: result.total,
+                    page: result.page,
+                    limit: result.limit,
+                    totalPages: Math.ceil(result.total / result.limit)
+                }
+            });
+        }
+
         if (!requestedDate || RewardSnapshotService.isDefaultStatDate(String(req.query.date || ''))) {
-            await RewardSnapshotService.syncDailySnapshots(rewardType, requestedDate ? String(req.query.date) : undefined);
+            const existingDefaultSnapshot = await prisma.rewardUserSnapshot.findFirst({
+                where: {
+                    type: rewardType,
+                    statDate: requestedDate || RewardSnapshotService.getPeriod().statDate
+                },
+                select: { id: true }
+            });
+
+            if (!existingDefaultSnapshot) {
+                await RewardSnapshotService.syncDailySnapshots(rewardType, requestedDate ? String(req.query.date) : undefined);
+            }
         }
 
         let selectedDate = requestedDate;

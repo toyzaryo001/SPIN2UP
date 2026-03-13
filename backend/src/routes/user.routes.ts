@@ -6,6 +6,7 @@ import { BetflixService } from '../services/betflix.service.js';
 import { RewardService } from '../services/reward.service.js';
 import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 import { TurnoverService } from '../services/turnover.service.js';
+import { thaiDateKey, thaiNow } from '../lib/thai-time.js';
 
 const router = Router();
 
@@ -282,30 +283,27 @@ router.get('/streak-stats', authMiddleware, async (req: AuthRequest, res) => {
         // 3. Process Daily Totals
         const dailyDeposits: Record<string, number> = {};
         transactions.forEach(tx => {
-            // Adjust to Thai Time roughly or just use UTC date string if consistent
-            // Use simple YYYY-MM-DD
-            const dateStr = tx.createdAt.toISOString().split('T')[0];
+            const dateStr = thaiDateKey(tx.createdAt);
             dailyDeposits[dateStr] = (dailyDeposits[dateStr] || 0) + Number(tx.amount);
         });
 
         // 4. Calculate Streak
         let currentStreak = 0;
-        const today = new Date().toISOString().split('T')[0];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const today = thaiDateKey();
+        const yesterday = thaiDateKey(thaiNow().subtract(1, 'day').toDate());
 
         // If deposited today >= min, we start count from today backwards
         // If NOT deposited today yet, but deposited yesterday >= min, we start count from yesterday backwards
         // If neither, streak is 0.
 
-        let checkDate = new Date();
+        let checkDate = thaiNow();
         let streakAlive = false;
 
         // Check Today
         if ((dailyDeposits[today] || 0) >= minDeposit) {
             currentStreak = 1;
             streakAlive = true;
-            // Move to yesterday for next loop
-            checkDate.setDate(checkDate.getDate() - 1);
+            checkDate = checkDate.subtract(1, 'day');
         } else {
             // Check Yesterday
             if ((dailyDeposits[yesterday] || 0) >= minDeposit) {
@@ -315,7 +313,7 @@ router.get('/streak-stats', authMiddleware, async (req: AuthRequest, res) => {
                 // Current valid completed streak is 1.
                 // So we start checking from yesterday.
                 streakAlive = true;
-                checkDate.setDate(checkDate.getDate() - 1);
+                checkDate = checkDate.subtract(1, 'day');
             } else {
                 currentStreak = 0;
                 streakAlive = false;
@@ -327,10 +325,10 @@ router.get('/streak-stats', authMiddleware, async (req: AuthRequest, res) => {
             // Now verify strictly consecutive days backwards.
             // Loop up to 7 days max
             for (let i = 0; i < 7; i++) {
-                const dateStr = checkDate.toISOString().split('T')[0];
+                const dateStr = thaiDateKey(checkDate.toDate());
                 if ((dailyDeposits[dateStr] || 0) >= minDeposit) {
                     currentStreak++;
-                    checkDate.setDate(checkDate.getDate() - 1);
+                    checkDate = checkDate.subtract(1, 'day');
                 } else {
                     break;
                 }

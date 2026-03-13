@@ -1,440 +1,315 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import PlayerLayout from "@/components/PlayerLayout";
-import { Share2, ChevronRight } from "lucide-react";
 import axios from "axios";
+import PlayerLayout from "@/components/PlayerLayout";
 import { API_URL } from "@/lib/api";
 
-interface CommissionLevel {
-    level: number;
+interface CommissionSetting {
     rate: number;
-    description: string;
+    minTurnover: number;
+    maxReward: number;
     isActive: boolean;
+}
+
+interface CommissionStats {
+    claimable: number;
+    rate: number;
+    turnover: number;
+    minTurnover: number;
+    maxReward: number;
+    periodStart: string;
+    periodEnd: string;
+    isClaimed: boolean;
 }
 
 export default function CommissionPage() {
     const router = useRouter();
-    const [user, setUser] = useState<any>(null);
-    const [settings, setSettings] = useState<CommissionLevel[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"income" | "info">("income");
-    const [commissionStats, setCommissionStats] = useState<any>(null);
     const [claiming, setClaiming] = useState(false);
+    const [settings, setSettings] = useState<CommissionSetting | null>(null);
+    const [commissionStats, setCommissionStats] = useState<CommissionStats | null>(null);
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    const formatMoney = (value: number) =>
+        Number(value || 0).toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+    const formatDateTime = (value?: string) => {
+        if (!value) return "-";
+        return new Date(value).toLocaleString("th-TH", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    const handleUnauthorized = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("lastActive");
+        window.dispatchEvent(new Event("user-logout"));
+    };
+
+    const fetchData = async () => {
+        try {
+            const [settingsRes, statsRes] = await Promise.all([
+                axios.get(`${API_URL}/public/commission`),
+                token
+                    ? axios.get(`${API_URL}/users/rewards/stats`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    })
+                    : Promise.resolve({ data: { success: false } }),
+            ]);
+
+            setSettings(settingsRes.data || null);
+            if (statsRes.data.success) {
+                setCommissionStats(statsRes.data.data.commission || null);
+            }
+        } catch (error) {
+            console.error("Failed to fetch commission data", error);
+            if (axios.isAxiosError(error) && error.response?.status === 401) {
+                handleUnauthorized();
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        if (userData && userData !== "undefined") {
-            try {
-                setUser(JSON.parse(userData));
-            } catch (e) {
-                console.error("Failed to parse user data");
-            }
-        }
+        void fetchData();
     }, []);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [settingsRes, statsRes] = await Promise.all([
-                    axios.get(`${API_URL}/public/commission`),
-                    user ? axios.get(`${API_URL}/users/rewards/stats`, {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                    }) : Promise.resolve({ data: { success: false } })
-                ]);
-
-                if (Array.isArray(settingsRes.data)) {
-                    setSettings(settingsRes.data);
-                }
-                if (statsRes.data.success) {
-                    setCommissionStats(statsRes.data.data.commission);
-                }
-            } catch (error) {
-                console.error("Failed to fetch commission data", error);
-                if (axios.isAxiosError(error) && error.response?.status === 401) {
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("user");
-                    localStorage.removeItem("lastActive");
-                    window.dispatchEvent(new Event('user-logout'));
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [user]);
-
     const handleClaim = async () => {
-        if (claiming || !commissionStats) return;
+        if (claiming || !commissionStats || commissionStats.claimable <= 0) return;
+
         setClaiming(true);
         try {
-            const res = await axios.post(`${API_URL}/users/rewards/claim`, { type: 'COMMISSION' }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const res = await axios.post(
+                `${API_URL}/users/rewards/claim`,
+                { type: "COMMISSION" },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
             if (res.data.success) {
-                alert(res.data.message);
-                // Refresh stats
-                const newStatsRes = await axios.get(`${API_URL}/users/rewards/stats`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
-                if (newStatsRes.data.success) {
-                    setCommissionStats(newStatsRes.data.data.commission);
-                }
+                alert(res.data.message || "รับค่าคอมสำเร็จ");
+                await fetchData();
             }
         } catch (error: any) {
-            alert(error.response?.data?.message || 'ไม่สามารถรับค่าคอมได้');
+            if (axios.isAxiosError(error) && error.response?.status === 401) {
+                handleUnauthorized();
+                return;
+            }
+            alert(error.response?.data?.message || "ไม่สามารถรับค่าคอมได้");
         } finally {
             setClaiming(false);
         }
     };
 
-    // Commission tiers from API or defaults
-    const tiers = settings.length > 0
-        ? settings.map(s => ({
-            level: s.level,
-            rate: `${Number(s.rate).toFixed(1)}%`,
-            desc: s.description || `ชั้นที่ ${s.level}`
-        }))
-        : [
-            { level: 1, rate: "0.5%", desc: "แนะนำตรง" },
-            { level: 2, rate: "0.3%", desc: "ชั้นที่ 2" },
-            { level: 3, rate: "0.2%", desc: "ชั้นที่ 3" },
-            { level: 4, rate: "0.1%", desc: "ชั้นที่ 4" },
-        ];
+    if (loading) {
+        return (
+            <PlayerLayout>
+                <div style={{ padding: "40px", textAlign: "center" }}>กำลังโหลด...</div>
+            </PlayerLayout>
+        );
+    }
 
     const claimableAmount = commissionStats?.claimable || 0;
-    const isClaimed = commissionStats?.isClaimed || false;
-
-    const categories = [
-        { name: "สล็อต", icon: "🎰", commission: "0.00" },
-        { name: "คาสิโน", icon: "🎲", commission: "0.00" },
-        { name: "กีฬา", icon: "⚽", commission: "0.00" },
-        { name: "เกมโต๊ะ", icon: "🃏", commission: "0.00" },
-    ];
-
-    if (loading) {
-        return <PlayerLayout><div style={{ padding: "40px", textAlign: "center" }}>กำลังโหลด...</div></PlayerLayout>;
-    }
+    const currentTurnover = commissionStats?.turnover || 0;
+    const minTurnover = commissionStats?.minTurnover ?? settings?.minTurnover ?? 0;
+    const rate = commissionStats?.rate ?? settings?.rate ?? 0;
+    const maxReward = commissionStats?.maxReward ?? settings?.maxReward ?? 0;
 
     return (
         <PlayerLayout>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {/* Breadcrumb Header */}
-                <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span
-                            onClick={() => router.push("/activity")}
-                            style={{ color: "#8B949E", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
-                        >
-                            กิจกรรม
-                        </span>
-                        <span style={{ color: "#555", fontSize: "14px" }}>/</span>
-                        <span style={{ color: "#FFD700", fontSize: "14px", fontWeight: 600 }}>ค่าคอม 4 ชั้น</span>
-                    </div>
-                    <button style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        background: "transparent",
-                        border: "none",
-                        color: "#8B949E",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        cursor: "pointer"
-                    }}>
-                        แชร์ <Share2 size={16} />
-                    </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span
+                        onClick={() => router.push("/activity")}
+                        style={{ color: "#8B949E", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+                    >
+                        กิจกรรม
+                    </span>
+                    <span style={{ color: "#555", fontSize: "14px" }}>/</span>
+                    <span style={{ color: "#FFD700", fontSize: "14px", fontWeight: 600 }}>ค่าคอมมิชชั่น</span>
                 </div>
 
-                {/* Credit Section */}
-                <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                }}>
-                    <span style={{ fontSize: "16px", fontWeight: 600, color: "#FFFFFF" }}>
-                        รับเครดิตฟรี
-                    </span>
-                    <button
-                        onClick={() => { }}
+                <div
+                    style={{
+                        position: "relative",
+                        borderRadius: "20px",
+                        overflow: "hidden",
+                        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+                        padding: "24px",
+                        minHeight: "180px",
+                    }}
+                >
+                    <div
                         style={{
-                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
-                            color: "#0D1117",
-                            border: "none",
-                            padding: "10px 20px",
-                            borderRadius: "10px",
-                            fontWeight: 600,
-                            fontSize: "14px",
-                            cursor: "pointer"
+                            position: "absolute",
+                            bottom: "-20px",
+                            left: "20px",
+                            fontSize: "120px",
+                            opacity: 0.9,
                         }}
                     >
-                        ประวัติ
-                    </button>
-                </div>
-
-                {/* Main Banner */}
-                <div style={{
-                    position: "relative",
-                    borderRadius: "20px",
-                    overflow: "hidden",
-                    background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
-                    padding: "24px",
-                    minHeight: "180px"
-                }}>
-                    {/* Trophy Image */}
-                    <div style={{
-                        position: "absolute",
-                        bottom: "-20px",
-                        left: "20px",
-                        fontSize: "120px",
-                        opacity: 0.9
-                    }}>
-                        🏆
+                        💸
                     </div>
 
-                    {/* Content */}
-                    <div style={{
-                        position: "relative",
-                        zIndex: 1,
-                        textAlign: "right"
-                    }}>
+                    <div style={{ position: "relative", zIndex: 1, textAlign: "right" }}>
                         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", marginBottom: "8px" }}>
-                            ปัจจุบัน
+                            ค่าคอมที่กดรับได้ตอนนี้
                         </p>
-                        <p style={{
-                            fontSize: "36px",
-                            fontWeight: 900,
-                            color: "#FFD700",
-                            textShadow: "0 0 20px rgba(255,215,0,0.5)",
-                            margin: "0 0 16px"
-                        }}>
-                            ฿ {claimableAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                        <p
+                            style={{
+                                fontSize: "36px",
+                                fontWeight: 900,
+                                color: "#FFD700",
+                                textShadow: "0 0 20px rgba(255,215,0,0.5)",
+                                margin: "0 0 16px",
+                            }}
+                        >
+                            ฿ {formatMoney(claimableAmount)}
                         </p>
                         <button
                             onClick={handleClaim}
-                            disabled={claiming || claimableAmount <= 0 || isClaimed}
+                            disabled={claiming || claimableAmount <= 0 || !settings?.isActive}
                             style={{
-                                background: (claiming || claimableAmount <= 0 || isClaimed) ? "#30363D" : "linear-gradient(135deg, #FFD700, #FFA500)",
-                                color: (claiming || claimableAmount <= 0 || isClaimed) ? "#8B949E" : "#1a1a2e",
+                                background: claiming || claimableAmount <= 0 || !settings?.isActive
+                                    ? "#30363D"
+                                    : "linear-gradient(135deg, #FFD700, #FFA500)",
+                                color: claiming || claimableAmount <= 0 || !settings?.isActive ? "#8B949E" : "#1a1a2e",
                                 border: "none",
                                 padding: "14px 28px",
                                 borderRadius: "12px",
                                 fontWeight: 700,
                                 fontSize: "16px",
-                                cursor: (claiming || claimableAmount <= 0 || isClaimed) ? "not-allowed" : "pointer",
-                                boxShadow: (claiming || claimableAmount <= 0 || isClaimed) ? "none" : "0 4px 15px rgba(255,215,0,0.4)"
+                                cursor: claiming || claimableAmount <= 0 || !settings?.isActive ? "not-allowed" : "pointer",
+                                boxShadow:
+                                    claiming || claimableAmount <= 0 || !settings?.isActive
+                                        ? "none"
+                                        : "0 4px 15px rgba(255,215,0,0.4)",
                             }}
                         >
-                            {claiming ? 'กำลังดำเนินการ...' : isClaimed ? 'รับสิทธิ์ไปแล้วสัปดาห์นี้' : claimableAmount > 0 ? 'กดรับรายได้' : 'รายได้ยังไม่ถึงยอดขั้นต่ำ'}
+                            {claiming
+                                ? "กำลังดำเนินการ..."
+                                : !settings?.isActive
+                                    ? "ระบบค่าคอมยังไม่เปิดใช้งาน"
+                                    : claimableAmount > 0
+                                        ? "กดรับค่าคอม"
+                                        : "ยอดยังไม่ถึงขั้นต่ำ"}
                         </button>
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "40px",
-                    borderBottom: "2px solid rgba(255,255,255,0.1)",
-                    paddingBottom: "12px"
-                }}>
-                    <button
-                        onClick={() => setActiveTab("income")}
-                        style={{
-                            background: "transparent",
-                            border: "none",
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            color: activeTab === "income" ? "#FFD700" : "#8B949E",
-                            cursor: "pointer",
-                            position: "relative",
-                            paddingBottom: "12px"
-                        }}
-                    >
-                        รายได้
-                        {activeTab === "income" && (
-                            <div style={{
-                                position: "absolute",
-                                bottom: "-14px",
-                                left: 0,
-                                right: 0,
-                                height: "3px",
-                                background: "#FFD700",
-                                borderRadius: "2px"
-                            }} />
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("info")}
-                        style={{
-                            background: "transparent",
-                            border: "none",
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            color: activeTab === "info" ? "#FFD700" : "#8B949E",
-                            cursor: "pointer",
-                            position: "relative",
-                            paddingBottom: "12px"
-                        }}
-                    >
-                        ข้อมูลรายได้
-                        {activeTab === "info" && (
-                            <div style={{
-                                position: "absolute",
-                                bottom: "-14px",
-                                left: 0,
-                                right: 0,
-                                height: "3px",
-                                background: "#FFD700",
-                                borderRadius: "2px"
-                            }} />
-                        )}
-                    </button>
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: "12px",
+                    }}
+                >
+                    <div style={cardStyle}>
+                        <div style={cardLabelStyle}>ยอดเทิร์นสะสม</div>
+                        <div style={cardValueStyle}>{formatMoney(currentTurnover)} ฿</div>
+                    </div>
+                    <div style={cardStyle}>
+                        <div style={cardLabelStyle}>ขั้นต่ำที่กดรับได้</div>
+                        <div style={cardValueStyle}>{formatMoney(minTurnover)} ฿</div>
+                    </div>
+                    <div style={cardStyle}>
+                        <div style={cardLabelStyle}>อัตราคืน</div>
+                        <div style={cardValueStyle}>{rate.toFixed(2)}%</div>
+                    </div>
+                    <div style={cardStyle}>
+                        <div style={cardLabelStyle}>รับสูงสุด</div>
+                        <div style={cardValueStyle}>{formatMoney(maxReward)} ฿</div>
+                    </div>
                 </div>
 
-                {/* Tab Content */}
-                {activeTab === "income" ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        {/* Category List */}
-                        {categories.map((cat, index) => (
-                            <div
-                                key={index}
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    background: "#21262D",
-                                    borderRadius: "14px",
-                                    padding: "16px 20px",
-                                    border: "2px solid #FFD700",
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.15)"
-                                }}
-                            >
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <span style={{ fontSize: "24px" }}>{cat.icon}</span>
-                                    <span style={{ fontSize: "15px", fontWeight: 600, color: "#FFD700" }}>
-                                        ประเภท {cat.name}
-                                    </span>
-                                </div>
-                                <span style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF" }}>
-                                    ฿ {cat.commission}
-                                </span>
-                            </div>
-                        ))}
-
-                        {/* Total */}
-                        <div style={{
-                            background: "linear-gradient(135deg, #FFD700, #FFC000)",
-                            borderRadius: "14px",
-                            padding: "20px",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginTop: "8px"
-                        }}>
-                            <span style={{ fontSize: "16px", fontWeight: 700, color: "#0D1117" }}>
-                                รวมค่าคอมที่กดรับได้
-                            </span>
-                            <span style={{ fontSize: "20px", fontWeight: 800, color: "#0D1117" }}>
-                                ฿ {claimableAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                            </span>
-                        </div>
+                <div style={panelStyle}>
+                    <div style={{ fontSize: "18px", fontWeight: 700, color: "#FFD700", marginBottom: "12px" }}>
+                        วิธีทำงานของค่าคอมมิชชั่น
                     </div>
-                ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        {/* Tier Info */}
-                        <div style={{
-                            background: "#21262D",
-                            borderRadius: "16px",
-                            padding: "20px",
-                            boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
-                            border: "1px solid rgba(255,255,255,0.1)"
-                        }}>
-                            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>
-                                🏆 ระบบค่าคอม 4 ชั้น
-                            </h3>
-                            <p style={{ fontSize: "13px", color: "#8B949E", lineHeight: 1.6, marginBottom: "20px" }}>
-                                รับค่าคอมมิชชั่นจากเพื่อนที่คุณแนะนำ และเพื่อนของเพื่อนอีก 4 ชั้น!
-                                ยิ่งชวนมาก ยิ่งได้มาก!
-                            </p>
+                    <ul style={{ margin: 0, paddingLeft: "18px", color: "#C9D1D9", lineHeight: 1.9 }}>
+                        <li>ระบบจะสะสมยอดเทิร์นให้อัตโนมัติหลังเดิมพันสำเร็จ</li>
+                        <li>เมื่อยอดเทิร์นถึงขั้นต่ำ จะสามารถกดรับค่าคอมได้ทันที</li>
+                        <li>หลังรับสำเร็จ ระบบจะเริ่มสะสมรอบใหม่ให้อัตโนมัติ</li>
+                    </ul>
+                </div>
 
-                            {/* Tier List */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                {tiers.map((tier, index) => (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            padding: "14px 16px",
-                                            background: index === 0 ? "rgba(255, 215, 0, 0.1)" : "rgba(255,255,255,0.05)",
-                                            borderRadius: "12px",
-                                            border: index === 0 ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)"
-                                        }}
-                                    >
-                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                            <div style={{
-                                                width: "32px",
-                                                height: "32px",
-                                                borderRadius: "50%",
-                                                background: index === 0
-                                                    ? "linear-gradient(135deg, #F59E0B, #D97706)"
-                                                    : "#ddd",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                color: "white",
-                                                fontWeight: 700,
-                                                fontSize: "14px"
-                                            }}>
-                                                {tier.level}
-                                            </div>
-                                            <span style={{ fontSize: "14px", fontWeight: 600, color: "#FFFFFF" }}>
-                                                {tier.desc}
-                                            </span>
-                                        </div>
-                                        <span style={{
-                                            fontSize: "16px",
-                                            fontWeight: 700,
-                                            color: index === 0 ? "#FFD700" : "#8B949E"
-                                        }}>
-                                            {tier.rate}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Referral Link */}
-                        <button
-                            onClick={() => router.push("/referral")}
-                            style={{
-                                background: "linear-gradient(135deg, #10b981, #059669)",
-                                color: "white",
-                                border: "none",
-                                padding: "18px",
-                                borderRadius: "14px",
-                                fontWeight: 700,
-                                fontSize: "16px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "8px",
-                                boxShadow: "0 4px 15px rgba(16,185,129,0.4)"
-                            }}
-                        >
-                            ไปหน้าแชร์รับรายได้ <ChevronRight size={20} />
-                        </button>
+                <div style={panelStyle}>
+                    <div style={{ fontSize: "18px", fontWeight: 700, color: "#FFD700", marginBottom: "12px" }}>
+                        สถานะรอบปัจจุบัน
                     </div>
-                )}
+                    <div style={detailRowStyle}>
+                        <span style={detailLabelStyle}>เริ่มสะสมรอบนี้</span>
+                        <span style={detailValueStyle}>{formatDateTime(commissionStats?.periodStart)}</span>
+                    </div>
+                    <div style={detailRowStyle}>
+                        <span style={detailLabelStyle}>อัปเดตล่าสุด</span>
+                        <span style={detailValueStyle}>{formatDateTime(commissionStats?.periodEnd)}</span>
+                    </div>
+                    <div style={detailRowStyle}>
+                        <span style={detailLabelStyle}>สถานะ</span>
+                        <span style={{ ...detailValueStyle, color: claimableAmount > 0 ? "#2ECC71" : "#F39C12" }}>
+                            {claimableAmount > 0 ? "พร้อมกดรับ" : "กำลังสะสมยอด"}
+                        </span>
+                    </div>
+                </div>
             </div>
         </PlayerLayout>
     );
 }
+
+const cardStyle: CSSProperties = {
+    background: "#161B22",
+    borderRadius: "14px",
+    padding: "16px",
+    border: "1px solid rgba(255,255,255,0.08)",
+};
+
+const cardLabelStyle: CSSProperties = {
+    fontSize: "13px",
+    color: "#8B949E",
+    marginBottom: "8px",
+};
+
+const cardValueStyle: CSSProperties = {
+    fontSize: "22px",
+    fontWeight: 700,
+    color: "#FFFFFF",
+};
+
+const panelStyle: CSSProperties = {
+    background: "#161B22",
+    borderRadius: "18px",
+    padding: "20px",
+    border: "1px solid rgba(255,255,255,0.08)",
+};
+
+const detailRowStyle: CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    padding: "10px 0",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+};
+
+const detailLabelStyle: CSSProperties = {
+    color: "#8B949E",
+    fontSize: "14px",
+};
+
+const detailValueStyle: CSSProperties = {
+    color: "#FFFFFF",
+    fontSize: "14px",
+    fontWeight: 600,
+    textAlign: "right",
+};

@@ -10,6 +10,7 @@ import {
     Save,
     Search,
     Settings,
+    Wallet,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -26,18 +27,20 @@ interface TurnoverSettings {
 interface EligibilityRow {
     id: number;
     userId: number;
-    statDate: string;
-    periodStart: string;
-    periodEnd: string;
     rewardAmount: number;
     turnover: number;
-    isClaimed: boolean;
-    claimedAt?: string | null;
+    periodStart: string;
+    periodEnd: string;
     user: {
         username?: string;
         fullName?: string;
         phone?: string;
     };
+}
+
+interface EligibilitySummary {
+    totalUsers: number;
+    totalRewardAmount: number;
 }
 
 export default function CommissionSettingsPage() {
@@ -52,13 +55,17 @@ export default function CommissionSettingsPage() {
 
     const [adminPermissions, setAdminPermissions] = useState<any>(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
     const [rows, setRows] = useState<EligibilityRow[]>([]);
+    const [summary, setSummary] = useState<EligibilitySummary>({
+        totalUsers: 0,
+        totalRewardAmount: 0,
+    });
     const [rowsTotal, setRowsTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
     const [search, setSearch] = useState("");
-    const [selectedDate, setSelectedDate] = useState("");
     const [loadingRows, setLoadingRows] = useState(false);
 
     const getFeaturePermission = (feature: string) => adminPermissions?.activities?.[feature];
@@ -82,11 +89,13 @@ export default function CommissionSettingsPage() {
     const canViewCommission = canView("commission");
     const canManageCommission = canManage("commission");
 
-    const formatDate = (dateStr: string) =>
-        new Date(dateStr).toLocaleDateString("th-TH", {
+    const formatDateTime = (dateStr: string) =>
+        new Date(dateStr).toLocaleString("th-TH", {
             day: "2-digit",
             month: "short",
             year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
         });
 
     const formatMoney = (amount: number) =>
@@ -94,14 +103,6 @@ export default function CommissionSettingsPage() {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
-
-    const toDateInputValue = (dateStr: string) => {
-        const date = new Date(dateStr);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    };
 
     const fetchSettings = async () => {
         try {
@@ -134,10 +135,6 @@ export default function CommissionSettingsPage() {
                 limit: pageSize.toString(),
             });
 
-            if (selectedDate) {
-                params.append("date", selectedDate);
-            }
-
             if (search.trim()) {
                 params.append("search", search.trim());
             }
@@ -146,12 +143,14 @@ export default function CommissionSettingsPage() {
             if (res.data.success) {
                 setRows(res.data.data || []);
                 setRowsTotal(Number(res.data.pagination?.total || 0));
-                if (res.data.selectedDate && !selectedDate) {
-                    setSelectedDate(toDateInputValue(res.data.selectedDate));
-                }
+                setSummary({
+                    totalUsers: Number(res.data.summary?.totalUsers || 0),
+                    totalRewardAmount: Number(res.data.summary?.totalRewardAmount || 0),
+                });
             }
         } catch (error) {
             console.error("Fetch commission pending rows error:", error);
+            toast.error("ดึงรายชื่อค่าคอมค้างรับไม่สำเร็จ");
         } finally {
             setLoadingRows(false);
         }
@@ -192,6 +191,8 @@ export default function CommissionSettingsPage() {
                 }
             } catch (error) {
                 console.error(error);
+            } finally {
+                setPermissionsLoaded(true);
             }
         };
 
@@ -200,8 +201,11 @@ export default function CommissionSettingsPage() {
     }, []);
 
     useEffect(() => {
+        if (!permissionsLoaded || !canViewCommission) {
+            return;
+        }
         fetchRows();
-    }, [page, pageSize, selectedDate]);
+    }, [page, pageSize, permissionsLoaded, isSuperAdmin, adminPermissions]);
 
     const totalPages = Math.ceil(rowsTotal / pageSize);
 
@@ -214,7 +218,9 @@ export default function CommissionSettingsPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">ตั้งค่าคอมมิชชั่น (Turnover Rebate)</h2>
-                    <p className="mt-1 text-sm text-slate-500">แสดงรายชื่อสมาชิกที่มียอดค่าคอมให้กดรับ แต่ยังไม่ได้กดรับ</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        คอมมิชชั่นถูกสะสมแบบทันทีหลังเดิมพัน และจะแสดงเฉพาะสมาชิกที่กดรับได้แต่ยังไม่กดรับ
+                    </p>
                 </div>
                 <Link href="/activities" className="text-sm text-blue-500 hover:underline">
                     ← กลับ
@@ -321,28 +327,37 @@ export default function CommissionSettingsPage() {
                 </div>
             </div>
 
+            <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+                    <p className="text-sm font-medium text-slate-500">สมาชิกที่กดรับได้ตอนนี้</p>
+                    <p className="mt-3 text-3xl font-bold text-slate-800">{summary.totalUsers.toLocaleString("th-TH")} คน</p>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <p className="text-sm font-medium text-slate-500">ยอดค่าคอมค้างรับรวม</p>
+                            <p className="mt-3 text-3xl font-bold text-emerald-600">
+                                {formatMoney(summary.totalRewardAmount)} ฿
+                            </p>
+                        </div>
+                        <Wallet className="text-emerald-500" size={28} />
+                    </div>
+                </div>
+            </div>
+
             <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-800">
                             <Search size={20} className="text-blue-500" />
                             รายชื่อคนที่ยังไม่ได้กดรับค่าคอม
                         </h3>
                         <p className="mt-1 text-sm text-slate-500">
-                            แสดงเฉพาะสมาชิกที่มีค่าคอมค้างรับของรอบวันที่เลือก
+                            แสดงเฉพาะสมาชิกที่มียอดค่าคอมถึงขั้นต่ำและสามารถกดรับได้ทันที
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(event) => {
-                                setSelectedDate(event.target.value);
-                                setPage(1);
-                            }}
-                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                        />
+                    <div className="flex flex-wrap items-center gap-3">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
@@ -390,9 +405,9 @@ export default function CommissionSettingsPage() {
                                         <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">#</th>
                                         <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">Username/เบอร์โทร</th>
                                         <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ชื่อ</th>
-                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ยอดเทิร์น</th>
-                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ค่าคอมที่รับได้</th>
-                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">รอบวันที่</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ยอดเทิร์นสะสม</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">ค่าคอมที่กดรับได้</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-600">เริ่มสะสมรอบนี้</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -402,14 +417,14 @@ export default function CommissionSettingsPage() {
                                                 {(page - 1) * pageSize + index + 1}
                                             </td>
                                             <td className="px-4 py-3 text-sm font-medium text-slate-800">
-                                                {row.user?.username || row.user?.phone}
+                                                {row.user?.username || row.user?.phone || "-"}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-slate-600">{row.user?.fullName || "-"}</td>
                                             <td className="px-4 py-3 text-sm text-slate-600">{formatMoney(row.turnover)} ฿</td>
-                                            <td className="px-4 py-3 text-sm font-semibold text-green-600">
+                                            <td className="px-4 py-3 text-sm font-semibold text-emerald-600">
                                                 {formatMoney(row.rewardAmount)} ฿
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-slate-500">{formatDate(row.periodStart)}</td>
+                                            <td className="px-4 py-3 text-sm text-slate-500">{formatDateTime(row.periodStart)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -424,15 +439,17 @@ export default function CommissionSettingsPage() {
                                 <button
                                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                                     disabled={page <= 1}
-                                    className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50 disabled:opacity-50"
+                                    className="rounded-lg border border-slate-200 p-2 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <ChevronLeft size={18} />
                                 </button>
-                                <span className="text-sm text-slate-600">หน้า {page} / {totalPages || 1}</span>
+                                <span className="text-sm text-slate-500">
+                                    หน้า {page} / {Math.max(totalPages, 1)}
+                                </span>
                                 <button
                                     onClick={() => setPage((current) => Math.min(totalPages || 1, current + 1))}
                                     disabled={page >= totalPages}
-                                    className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50 disabled:opacity-50"
+                                    className="rounded-lg border border-slate-200 p-2 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <ChevronRight size={18} />
                                 </button>

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { BetflixService } from './betflix.service';
 import prisma from '../lib/db.js';
 import { TurnoverService } from './turnover.service.js';
+import { CommissionService } from './commission.service.js';
 
 export class BetLogSyncService {
 
@@ -94,24 +95,27 @@ export class BetLogSyncService {
                                 // We use current user balance as snapshot.
                                 const currentBalance = new Prisma.Decimal(user.balance);
 
-                                await prisma.transaction.create({
-                                    data: {
-                                        userId: user.id,
-                                        amount: new Prisma.Decimal(amount),
-                                        type: 'BET',
-                                        // Since we don't have 'externalId', we put it in note
-                                        note: `${logRef}: ${gameCode} (Win: ${winAmount})`,
-                                        status: 'COMPLETED',
-                                        // Required fields
-                                        balanceBefore: currentBalance,
-                                        balanceAfter: currentBalance, // Changing balance here requires Wallet logic, skipping for log-sync only
+                                await prisma.$transaction(async (tx) => {
+                                    await tx.transaction.create({
+                                        data: {
+                                            userId: user.id,
+                                            amount: new Prisma.Decimal(amount),
+                                            type: 'BET',
+                                            note: `${logRef}: ${gameCode} (Win: ${winAmount})`,
+                                            status: 'COMPLETED',
+                                            balanceBefore: currentBalance,
+                                            balanceAfter: currentBalance,
+                                        }
+                                    });
+
+                                    if (validBet > 0) {
+                                        await CommissionService.recordTurnover(user.id, validBet, new Date(), tx as any);
+                                    }
+
+                                    if (validBet > 0 && user.turnoverLimit && Number(user.turnoverLimit) > 0) {
+                                        await TurnoverService.recordProgress(user.id, validBet, tx);
                                     }
                                 });
-
-                                // Accumulate Turnover for user
-                                if (validBet > 0 && user.turnoverLimit && Number(user.turnoverLimit) > 0) {
-                                    await TurnoverService.recordProgress(user.id, validBet);
-                                }
 
                                 totalImported++;
                             }

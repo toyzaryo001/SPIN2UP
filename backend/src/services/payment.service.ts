@@ -220,7 +220,7 @@ export class PaymentService {
 
         // Check Global Feature Toggle: auto_withdraw
         const autoWithdrawFeature = await prisma.siteFeature.findUnique({ where: { key: 'auto_withdraw' } });
-        const isAutoWithdrawEnabled = autoWithdrawFeature ? autoWithdrawFeature.isEnabled : true; // Default to true if missing? Or false? Better safe than sorry, maybe false if strictly controlled. But for back-compat? User asked for splitting.
+        const isAutoWithdrawEnabled = autoWithdrawFeature ? autoWithdrawFeature.isEnabled : false;
 
         if (isAutoWithdrawEnabled) {
             try {
@@ -446,56 +446,71 @@ export class PaymentService {
             return { success: true, message: 'Already being processed by another request' };
         }
 
-        // 5. Handle Status Change
-        if (result.txStatus === 'SUCCESS') {
-            const typeUpper = transaction.type.toUpperCase();
+        let requiresManualReconcile = false;
 
-            // If DEPOSIT -> Betflix Transfer & Increment Balance
-            if (typeUpper === 'DEPOSIT') {
-                const amount = result.amount || Number(transaction.amount);
+        try {
+            if (result.txStatus === 'SUCCESS') {
+                const typeUpper = transaction.type.toUpperCase();
 
-                // 2. Transfer to Betflix (Game Wallet) FIRST
-                let betflixSuccess = false;
-                let betflixError = '';
+                if (typeUpper === 'DEPOSIT') {
+                    const amount = result.amount || Number(transaction.amount);
 
-                if (transaction.user) {
-                    const betflixResult = await BetflixService.ensureAndTransfer(
-                        transaction.userId,
-                        transaction.user.phone,
-                        transaction.user.betflixUsername,
-                        amount,
-                        `PAYMENT_${transaction.id}`
-                    );
-                    betflixSuccess = betflixResult.success;
-                    betflixError = betflixResult.error || '';
-                }
+                    let betflixSuccess = false;
+                    let betflixError = '';
 
-                if (betflixSuccess) {
-                    // Success: Update User Balance & Transaction Status
-                    await prisma.user.update({
-                        where: { id: transaction.userId },
-                        data: { balance: { increment: amount } }
+                    if (transaction.user) {
+                        const betflixResult = await BetflixService.ensureAndTransfer(
+                            transaction.userId,
+                            transaction.user.phone,
+                            transaction.user.betflixUsername,
+                            amount,
+                            `PAYMENT_${transaction.id}`
+                        );
+                        betflixSuccess = betflixResult.success;
+                        betflixError = betflixResult.error || '';
+                    }
+
+                    if (!betflixSuccess) {
+                        await prisma.transaction.update({
+                            where: { id: transaction.id },
+                            data: {
+                                status: 'FAILED',
+                                note: (transaction.note || '') + ` | Betflix Error: ${betflixError}`,
+                                rawResponse: JSON.stringify(result.rawResponse),
+                                externalId: result.externalId || transaction.externalId
+                            }
+                        });
+
+                        return { success: true };
+                    }
+
+                    requiresManualReconcile = true;
+
+                    await prisma.$transaction(async (tx) => {
+                        const updatedUser = await tx.user.update({
+                            where: { id: transaction.userId },
+                            data: { balance: { increment: amount } }
+                        });
+
+                        await tx.transaction.update({
+                            where: { id: transaction.id },
+                            data: {
+                                status: 'COMPLETED',
+                                balanceAfter: updatedUser.balance,
+                                externalId: result.externalId || transaction.externalId,
+                                rawResponse: JSON.stringify(result.rawResponse)
+                            }
+                        });
                     });
 
-                    const updatedUser = await prisma.user.findUnique({ where: { id: transaction.userId } });
+                    requiresManualReconcile = false;
 
-                    await prisma.transaction.update({
-                        where: { id: transaction.id },
-                        data: {
-                            status: 'COMPLETED',
-                            balanceAfter: updatedUser?.balance,
-                            externalId: result.externalId || transaction.externalId,
-                            rawResponse: JSON.stringify(result.rawResponse)
-                        }
-                    });
-
-                    // Notify Admins via LINE
                     LineNotifyService.notifyDeposit(
                         transaction.user?.username || 'Unknown',
                         amount,
                         transaction.subType || 'Automatic'
                     ).catch(err => console.error('[LineNotify] Error:', err));
-                    // Notify Admins via Telegram
+
                     TelegramNotifyService.notifyDeposit(
                         transaction.user?.username || 'Unknown',
                         amount,
@@ -503,51 +518,92 @@ export class PaymentService {
                     ).catch(err => console.error('[Telegram] Error:', err));
 
                     DepositBonusService.applyPostDepositBenefits(transaction.id).catch(err => console.error('[Deposit Bonus Error]:', err));
-                } else {
-                    // Betflix Failed: Mark Transaction as FAILED (UserBalance NOT incremented)
+                } else if (typeUpper === 'WITHDRAW') {
                     await prisma.transaction.update({
                         where: { id: transaction.id },
                         data: {
-                            status: 'FAILED',
-                            note: (transaction.note || '') + ` | Betflix Error: ${betflixError}`,
+                            status: 'COMPLETED',
+                            externalId: result.externalId || transaction.externalId,
                             rawResponse: JSON.stringify(result.rawResponse)
                         }
                     });
                 }
-            }
-            // If WITHDRAW -> Balance was already deducted. Just update status.
-            else if (typeUpper === 'WITHDRAW') {
+            } else if (result.txStatus === 'FAILED') {
+                await prisma.$transaction(async (tx) => {
+                    if (transaction.type.toUpperCase() === 'WITHDRAW') {
+                        const amount = Number(transaction.amount);
+                        await tx.user.update({
+                            where: { id: transaction.userId },
+                            data: { balance: { increment: amount } }
+                        });
+                    }
+
+                    await tx.transaction.update({
+                        where: { id: transaction.id },
+                        data: {
+                            status: 'FAILED',
+                            note: result.message,
+                            rawResponse: JSON.stringify(result.rawResponse),
+                            externalId: result.externalId || transaction.externalId
+                        }
+                    });
+                });
+            } else {
                 await prisma.transaction.update({
                     where: { id: transaction.id },
                     data: {
-                        status: 'COMPLETED',
-                        externalId: result.externalId || transaction.externalId,
-                        rawResponse: JSON.stringify(result.rawResponse)
+                        status: 'PENDING',
+                        note: result.message || 'Waiting provider confirmation',
+                        rawResponse: JSON.stringify(result.rawResponse),
+                        externalId: result.externalId || transaction.externalId
                     }
                 });
             }
 
-        } else if (result.txStatus === 'FAILED') {
+            return { success: true };
+        } catch (error: any) {
+            console.error(`[Webhook] Processing failed for tx ${transaction.id}:`, error);
+
+            if (requiresManualReconcile) {
+                await prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        status: 'FAILED',
+                        note: `${transaction.note || ''} | Manual reconcile required after Betflix transfer: ${error.message}`,
+                    }
+                }).catch(() => {});
+
+                await AlertService.createAlert({
+                    type: 'CRITICAL',
+                    title: 'Deposit Reconciliation Required',
+                    message: `Deposit transaction #${transaction.id} transferred to game wallet but local finalization failed. Manual review is required.`,
+                    actionUrl: `/admin/transactions`,
+                    actionRequired: true,
+                    metadata: {
+                        gateway: gatewayCode,
+                        transactionId: transaction.id,
+                        userId: transaction.userId,
+                        error: error.message,
+                        timestamp: new Date().toISOString(),
+                    }
+                }).catch(alertError => console.error('[AlertService] Reconcile alert error:', alertError));
+
+                return {
+                    success: false,
+                    message: 'Deposit requires manual reconciliation'
+                };
+            }
+
             await prisma.transaction.update({
                 where: { id: transaction.id },
                 data: {
-                    status: 'FAILED',
-                    note: result.message,
-                    rawResponse: JSON.stringify(result.rawResponse)
+                    status: 'PENDING',
+                    note: `${transaction.note || ''} | Webhook retry pending: ${error.message}`,
                 }
-            });
+            }).catch(() => {});
 
-            // If WITHDRAW -> Refund Balance
-            if (transaction.type.toUpperCase() === 'WITHDRAW') {
-                const amount = Number(transaction.amount);
-                await prisma.user.update({
-                    where: { id: transaction.userId },
-                    data: { balance: { increment: amount } }
-                });
-            }
+            throw error;
         }
-
-        return { success: true };
     }
 
     static async processStreakBonus(userId: number) {

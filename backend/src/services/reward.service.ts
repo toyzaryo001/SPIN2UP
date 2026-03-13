@@ -1,7 +1,8 @@
 import prisma from '../lib/db';
 import { BetflixService } from './betflix.service';
 import { NexusProvider } from './agents/NexusProvider';
-import { thaiDateKey, thaiNow, thaiStartOfDay, thaiEndOfDay } from '../lib/thai-time';
+import { thaiNow, thaiStartOfDay, thaiEndOfDay } from '../lib/thai-time';
+import { CommissionService } from './commission.service.js';
 
 // Types for Reward Calculation
 interface RewardStats {
@@ -46,24 +47,16 @@ export class RewardService {
 
         // 1. Get Settings
         const cashbackSetting = await prisma.cashbackSetting.findFirst();
-        const turnoverSetting = await prisma.turnoverSetting.findFirst();
-
         // Defaults if not set
         const cbRate = Number(cashbackSetting?.rate || 0); // e.g. 5%
         const cbMinLoss = Number(cashbackSetting?.minLoss || 100);
         const cbMax = Number(cashbackSetting?.maxCashback || 10000);
-
-        const toRate = Number(turnoverSetting?.rate || 0); // e.g. 0.5%
-        const toMin = Number(turnoverSetting?.minTurnover || 100);
-        const toMax = Number(turnoverSetting?.maxReward || 10000);
 
         // 2. Define Period (Daily for now, widely used)
         // Cashback: Yesterday (00:00 - 23:59) -> Claimable Today
         const yesterday = thaiNow().subtract(1, 'day');
         const periodStart = thaiStartOfDay(yesterday.toDate()).format('YYYY-MM-DD HH:mm:ss');
         const periodEnd = thaiEndOfDay(yesterday.toDate()).format('YYYY-MM-DD HH:mm:ss');
-        const dateKey = thaiDateKey(yesterday.toDate()); // Used for checking claims
-
         // 3. Check if already claimed
         const claims = await prisma.rewardClaim.findMany({
             where: {
@@ -75,10 +68,7 @@ export class RewardService {
         });
 
         const cashbackClaimed = claims.find(c => c.type === 'CASHBACK');
-        const commissionClaimed = claims.find(c => c.type === 'COMMISSION');
-
         // 4. Fetch Report Data from ALL agents (BetFlix + Nexus)
-        let turnover = 0;
         let winLoss = 0;
 
         // Build fetch promises for all agents
@@ -136,7 +126,6 @@ export class RewardService {
         const results = await Promise.allSettled(fetchPromises);
         for (const r of results) {
             if (r.status === 'fulfilled') {
-                turnover += r.value.turnover;
                 winLoss += r.value.winLoss;
             }
         }
@@ -161,12 +150,7 @@ export class RewardService {
             if (claimableCashback > cbMax) claimableCashback = cbMax;
         }
 
-        // 6. Calculate Commission
-        let claimableCommission = 0;
-        if (turnoverSetting?.isActive && turnover >= toMin) {
-            claimableCommission = Number((turnover * (toRate / 100)).toFixed(2));
-            if (claimableCommission > toMax) claimableCommission = toMax;
-        }
+        const commission = await CommissionService.getUserCommissionState(userId);
 
         return {
             cashback: {
@@ -179,16 +163,7 @@ export class RewardService {
                 periodEnd,
                 isClaimed: !!cashbackClaimed
             },
-            commission: {
-                claimable: claimableCommission,
-                rate: toRate,
-                turnover,
-                minTurnover: toMin,
-                maxReward: toMax,
-                periodStart,
-                periodEnd,
-                isClaimed: !!commissionClaimed
-            }
+            commission
         };
     }
 
@@ -196,6 +171,10 @@ export class RewardService {
      * Claim reward
      */
     static async claimReward(userId: number, type: 'CASHBACK' | 'COMMISSION') {
+        if (type === 'COMMISSION') {
+            return CommissionService.claim(userId);
+        }
+
         const stats = await this.getRewardStats(userId);
         const target = type === 'CASHBACK' ? stats.cashback : stats.commission;
 
@@ -215,9 +194,6 @@ export class RewardService {
         // PREPARE SAGA: 1. Create PRE-CLAIM Record
         // ============================================
         // Check and create atomically using Raw SQL to prevent Race Conditions without needing Schema Unique constraints
-        const periodStartStr = new Date(target.periodStart).toISOString();
-        const periodEndStr = new Date(target.periodEnd).toISOString();
-
         // This query inserts ONLY IF no other claim exists for this user + type + periodStart
         // RETURNING id gives us the newly created claim ID, or undefined if it was skipped (race condition won)
         const insertResult: any[] = await prisma.$queryRaw`

@@ -18,7 +18,7 @@ import paymentRoutes from './routes/payment.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import truewalletWebhookRoutes from './routes/truewallet-webhook.routes.js';
 import { initJwtSecret } from './utils/jwt.js';
-import { BetLogSyncService } from './services/bet-log-sync.service.js';
+import { BackgroundJobsService } from './services/background-jobs.service.js';
 
 dotenv.config();
 
@@ -124,6 +124,7 @@ initJwtSecret().then(() => {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`Health check available at http://0.0.0.0:${PORT}/api/health`);
+        BackgroundJobsService.start();
     });
 }).catch(err => {
     console.error('❌ Failed to initialize JWT secret:', err);

@@ -3,41 +3,43 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Plus, Save, Trash2, Trophy } from "lucide-react";
+import { Image as ImageIcon, Loader2, Plus, Save, Trash2, Trophy, Upload, X } from "lucide-react";
 import api from "@/lib/api";
 
 interface RankTier {
     id: string;
     name: string;
+    logo: string;
     icon: string;
     minDeposit: number;
-    benefit: string;
+    rewardAmount: number;
+    rewardTurnover: number;
     colorFrom: string;
     colorTo: string;
 }
 
 const DEFAULT_RANK_TIERS: RankTier[] = [
-    { id: "bronze", name: "Bronze", icon: "🥉", minDeposit: 0, benefit: "Cashback 3%", colorFrom: "#CD7F32", colorTo: "#A0522D" },
-    { id: "silver", name: "Silver", icon: "🥈", minDeposit: 5000, benefit: "Cashback 4%", colorFrom: "#C0C0C0", colorTo: "#A8A8A8" },
-    { id: "gold", name: "Gold", icon: "🥇", minDeposit: 20000, benefit: "Cashback 5%", colorFrom: "#FFD700", colorTo: "#FFA500" },
-    { id: "platinum", name: "Platinum", icon: "💎", minDeposit: 50000, benefit: "Cashback 7%", colorFrom: "#00CED1", colorTo: "#4169E1" },
-    { id: "diamond", name: "Diamond", icon: "👑", minDeposit: 100000, benefit: "Cashback 10%", colorFrom: "#9B59B6", colorTo: "#E91E63" },
+    { id: "bronze", name: "Bronze", logo: "", icon: "1", minDeposit: 0, rewardAmount: 0, rewardTurnover: 0, colorFrom: "#CD7F32", colorTo: "#A0522D" },
+    { id: "silver", name: "Silver", logo: "", icon: "2", minDeposit: 5000, rewardAmount: 100, rewardTurnover: 500, colorFrom: "#C0C0C0", colorTo: "#A8A8A8" },
+    { id: "gold", name: "Gold", logo: "", icon: "3", minDeposit: 20000, rewardAmount: 300, rewardTurnover: 1500, colorFrom: "#FFD700", colorTo: "#FFA500" },
 ];
 
 export default function AdminRanksPage() {
     const [tiers, setTiers] = useState<RankTier[]>(DEFAULT_RANK_TIERS);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchTiers = async () => {
             try {
                 const res = await api.get("/admin/activities/ranks");
-                if (res.data.success && Array.isArray(res.data.data)) {
+                if (res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
                     setTiers(res.data.data);
                 }
             } catch (error) {
                 console.error("Fetch rank tiers error:", error);
+                toast.error("โหลดข้อมูล Rank ไม่สำเร็จ");
             } finally {
                 setLoading(false);
             }
@@ -47,20 +49,25 @@ export default function AdminRanksPage() {
     }, []);
 
     const updateTier = <K extends keyof RankTier>(index: number, key: K, value: RankTier[K]) => {
-        setTiers((current) =>
-            current.map((tier, tierIndex) => (tierIndex === index ? { ...tier, [key]: value } : tier))
-        );
+        setTiers((current) => current.map((tier, tierIndex) => (
+            tierIndex === index ? { ...tier, [key]: value } : tier
+        )));
     };
 
     const addTier = () => {
+        const nextIndex = tiers.length + 1;
+        const lastMinDeposit = tiers.length > 0 ? Number(tiers[tiers.length - 1].minDeposit || 0) : 0;
+
         setTiers((current) => [
             ...current,
             {
                 id: `tier_${Date.now()}`,
-                name: `Tier ${current.length + 1}`,
-                icon: "🏅",
-                minDeposit: current.length > 0 ? Number(current[current.length - 1].minDeposit || 0) + 10000 : 0,
-                benefit: "สิทธิประโยชน์ใหม่",
+                name: `Tier ${nextIndex}`,
+                logo: "",
+                icon: String(nextIndex),
+                minDeposit: lastMinDeposit + 10000,
+                rewardAmount: 0,
+                rewardTurnover: 0,
                 colorFrom: "#64748B",
                 colorTo: "#334155",
             },
@@ -71,18 +78,74 @@ export default function AdminRanksPage() {
         setTiers((current) => current.filter((_, tierIndex) => tierIndex !== index));
     };
 
+    const handleLogoUpload = async (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            toast.error("กรุณาเลือกไฟล์รูปภาพ");
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("ไฟล์ต้องมีขนาดไม่เกิน 5MB");
+            return;
+        }
+
+        setUploadingIndex(index);
+        try {
+            const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            const res = await api.post("/admin/upload", {
+                image: base64,
+                folder: "ranks",
+            });
+
+            if (res.data.success) {
+                updateTier(index, "logo", res.data.data.url);
+                toast.success("อัปโหลดโลโก้ Rank สำเร็จ");
+            } else {
+                throw new Error(res.data.message || "Upload failed");
+            }
+        } catch (error: any) {
+            console.error("Upload rank logo error:", error);
+            toast.error(error.response?.data?.message || "อัปโหลดโลโก้ Rank ไม่สำเร็จ");
+        } finally {
+            setUploadingIndex(null);
+        }
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
-            const normalized = [...tiers].sort((a, b) => Number(a.minDeposit) - Number(b.minDeposit));
+            const normalized = [...tiers]
+                .map((tier) => ({
+                    ...tier,
+                    id: String(tier.id || "").trim(),
+                    name: String(tier.name || "").trim(),
+                    logo: String(tier.logo || "").trim(),
+                    icon: String(tier.icon || "").trim(),
+                    minDeposit: Number(tier.minDeposit || 0),
+                    rewardAmount: Number(tier.rewardAmount || 0),
+                    rewardTurnover: Number(tier.rewardTurnover || 0),
+                    colorFrom: String(tier.colorFrom || "#64748B").trim(),
+                    colorTo: String(tier.colorTo || "#334155").trim(),
+                }))
+                .sort((a, b) => a.minDeposit - b.minDeposit);
+
             const res = await api.put("/admin/activities/ranks", { tiers: normalized });
             if (res.data.success) {
                 setTiers(res.data.data);
                 toast.success("บันทึก Rank สำเร็จ");
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Save rank tiers error:", error);
-            toast.error("บันทึก Rank ไม่สำเร็จ");
+            toast.error(error.response?.data?.message || "บันทึก Rank ไม่สำเร็จ");
         } finally {
             setSaving(false);
         }
@@ -94,7 +157,7 @@ export default function AdminRanksPage() {
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">จัดการ Rank</h2>
                     <p className="mt-1 text-sm text-slate-500">
-                        แก้ไขระดับ VIP/Rank จากหลังบ้าน และให้หน้า player ใช้ tier ชุดเดียวกันทันที
+                        กำหนดยอดฝากสะสมปลดล็อก Rank, โบนัสที่ให้กดรับ, เทิร์นของโบนัส และโลโก้ที่หน้า player ใช้งานจริง
                     </p>
                 </div>
                 <Link href="/activities" className="text-sm text-blue-500 hover:underline">
@@ -110,7 +173,7 @@ export default function AdminRanksPage() {
                             ระดับ Rank ทั้งหมด
                         </h3>
                         <p className="mt-1 text-sm text-slate-500">
-                            เรียงลำดับตามยอดฝากสะสมขั้นต่ำ ระบบจะ sort ให้ก่อนบันทึก
+                            ระบบจะเรียงลำดับตามยอดฝากสะสมขั้นต่ำ และผู้เล่นจะกดรับโบนัสปลดล็อกได้ครั้งเดียวต่อ Rank
                         </p>
                     </div>
                     <button
@@ -129,17 +192,27 @@ export default function AdminRanksPage() {
                         </div>
                     ) : (
                         tiers.map((tier, index) => (
-                            <div key={tier.id} className="overflow-hidden rounded-2xl border border-slate-200">
+                            <div key={`${tier.id}-${index}`} className="overflow-hidden rounded-2xl border border-slate-200">
                                 <div
                                     className="px-5 py-4 text-white"
                                     style={{ background: `linear-gradient(135deg, ${tier.colorFrom}, ${tier.colorTo})` }}
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-3xl">{tier.icon}</span>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10">
+                                                {tier.logo ? (
+                                                    <img src={tier.logo} alt={tier.name} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <span className="text-2xl font-black">{tier.icon || index + 1}</span>
+                                                )}
+                                            </div>
                                             <div>
                                                 <p className="text-xs uppercase tracking-[0.2em] text-white/70">Tier {index + 1}</p>
                                                 <p className="text-xl font-black">{tier.name || `Tier ${index + 1}`}</p>
+                                                <p className="mt-1 text-xs text-white/80">
+                                                    ฝากสะสมครบ ฿{Number(tier.minDeposit || 0).toLocaleString()} ปลดล็อกรับโบนัส ฿{Number(tier.rewardAmount || 0).toLocaleString()}
+                                                    {Number(tier.rewardTurnover || 0) > 0 ? ` ติดเทิร์น ${Number(tier.rewardTurnover || 0).toLocaleString()}` : " ไม่มีเทิร์น"}
+                                                </p>
                                             </div>
                                         </div>
                                         <button
@@ -163,30 +236,102 @@ export default function AdminRanksPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Icon</label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">รหัส Rank</label>
+                                        <input
+                                            value={tier.id}
+                                            onChange={(event) => updateTier(index, "id", event.target.value)}
+                                            className="w-full rounded-lg border border-slate-200 px-4 py-2 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Icon สำรอง</label>
                                         <input
                                             value={tier.icon}
                                             onChange={(event) => updateTier(index, "icon", event.target.value)}
                                             className="w-full rounded-lg border border-slate-200 px-4 py-2 text-slate-900"
+                                            placeholder="ใช้เมื่อไม่มีโลโก้"
                                         />
                                     </div>
                                     <div>
                                         <label className="mb-1 block text-sm font-medium text-slate-700">ยอดฝากสะสมขั้นต่ำ</label>
                                         <input
                                             type="number"
+                                            min={0}
                                             value={tier.minDeposit}
                                             onChange={(event) => updateTier(index, "minDeposit", Number(event.target.value) || 0)}
                                             className="w-full rounded-lg border border-slate-200 px-4 py-2 text-slate-900"
                                         />
                                     </div>
-                                    <div className="xl:col-span-3">
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">สิทธิประโยชน์</label>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">เงินรางวัลปลดล็อก</label>
                                         <input
-                                            value={tier.benefit}
-                                            onChange={(event) => updateTier(index, "benefit", event.target.value)}
+                                            type="number"
+                                            min={0}
+                                            value={tier.rewardAmount}
+                                            onChange={(event) => updateTier(index, "rewardAmount", Number(event.target.value) || 0)}
                                             className="w-full rounded-lg border border-slate-200 px-4 py-2 text-slate-900"
                                         />
                                     </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">ยอดเทิร์นของรางวัล</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            value={tier.rewardTurnover}
+                                            onChange={(event) => updateTier(index, "rewardTurnover", Number(event.target.value) || 0)}
+                                            className="w-full rounded-lg border border-slate-200 px-4 py-2 text-slate-900"
+                                        />
+                                    </div>
+
+                                    <div className="xl:col-span-3">
+                                        <label className="mb-2 block text-sm font-medium text-slate-700">โลโก้ Rank</label>
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                            <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                                                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                                    {tier.logo ? (
+                                                        <img src={tier.logo} alt={tier.name} className="h-full w-full object-cover" />
+                                                    ) : (
+                                                        <div className="flex flex-col items-center gap-1 text-slate-400">
+                                                            <ImageIcon size={24} />
+                                                            <span className="text-xs">No logo</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 space-y-3">
+                                                    <input
+                                                        value={tier.logo}
+                                                        onChange={(event) => updateTier(index, "logo", event.target.value)}
+                                                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900"
+                                                        placeholder="วาง URL โลโก้ หรือใช้อัปโหลดด้านล่าง"
+                                                    />
+                                                    <div className="flex flex-wrap items-center gap-3">
+                                                        <label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${uploadingIndex === index ? "border-yellow-300 bg-yellow-50 text-yellow-700" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}`}>
+                                                            {uploadingIndex === index ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                                            {uploadingIndex === index ? "กำลังอัปโหลด..." : "อัปโหลดโลโก้"}
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                disabled={uploadingIndex === index}
+                                                                onChange={(event) => void handleLogoUpload(index, event)}
+                                                            />
+                                                        </label>
+                                                        {tier.logo ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateTier(index, "logo", "")}
+                                                                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
+                                                            >
+                                                                <X size={16} />
+                                                                ลบโลโก้
+                                                            </button>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <label className="mb-1 block text-sm font-medium text-slate-700">สีเริ่มต้น</label>
                                         <div className="flex items-center gap-2">
@@ -228,7 +373,7 @@ export default function AdminRanksPage() {
                 <div className="mt-6 flex justify-end">
                     <button
                         onClick={handleSave}
-                        disabled={saving || loading}
+                        disabled={saving || loading || uploadingIndex !== null}
                         className="inline-flex items-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-semibold text-white hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <Save size={18} />

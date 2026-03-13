@@ -1,225 +1,299 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import PlayerLayout from "@/components/PlayerLayout";
-import { Crown } from "lucide-react";
+import api from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import axios from "axios";
-import { API_URL } from "@/lib/api";
+import { useToast } from "@/components/Toast";
+import { Award, Crown, Gift, Lock, Sparkles } from "lucide-react";
 
-interface RankTier {
-    id?: string;
+type RankTierStatus = {
+    id: string;
     name: string;
-    gradient?: string;
-    icon: string;
+    logo?: string;
+    icon?: string;
     minDeposit: number;
-    benefit: string;
-    colorFrom?: string;
-    colorTo?: string;
-}
+    rewardAmount: number;
+    rewardTurnover: number;
+    colorFrom: string;
+    colorTo: string;
+    unlocked: boolean;
+    claimable: boolean;
+    claimedAt: string | null;
+    alreadyClaimed: boolean;
+    remainingDeposit: number;
+};
 
-const DEFAULT_RANKS: RankTier[] = [
-    { name: "Bronze", gradient: "linear-gradient(135deg, #CD7F32, #A0522D)", icon: "🥉", minDeposit: 0, benefit: "Cashback 3%" },
-    { name: "Silver", gradient: "linear-gradient(135deg, #C0C0C0, #A8A8A8)", icon: "🥈", minDeposit: 5000, benefit: "Cashback 4%" },
-    { name: "Gold", gradient: "linear-gradient(135deg, #FFD700, #FFA500)", icon: "🥇", minDeposit: 20000, benefit: "Cashback 5%" },
-    { name: "Platinum", gradient: "linear-gradient(135deg, #00CED1, #4169E1)", icon: "💎", minDeposit: 50000, benefit: "Cashback 7%" },
-    { name: "Diamond", gradient: "linear-gradient(135deg, #9B59B6, #E91E63)", icon: "👑", minDeposit: 100000, benefit: "Cashback 10%" },
-];
+type RankStatus = {
+    totalDeposit: number;
+    currentTierId: string | null;
+    currentTierName: string | null;
+    tiers: RankTierStatus[];
+};
 
 export default function RankPage() {
     const { user, loading: authLoading } = useAuth(true);
-    const [totalDeposit, setTotalDeposit] = useState(0);
+    const toast = useToast();
     const [loading, setLoading] = useState(true);
-    const [rankTiers, setRankTiers] = useState<RankTier[]>(DEFAULT_RANKS);
+    const [claimingTierId, setClaimingTierId] = useState<string | null>(null);
+    const [rankStatus, setRankStatus] = useState<RankStatus | null>(null);
 
-    const dynamicRanks = rankTiers.map((rank) => ({
-        ...rank,
-        gradient: rank.gradient || `linear-gradient(135deg, ${rank.colorFrom || "#64748B"}, ${rank.colorTo || "#334155"})`,
-    }));
+    const fetchRankStatus = async () => {
+        const res = await api.get("/users/rank-rewards");
+        if (res.data.success) {
+            setRankStatus(res.data.data);
+        }
+    };
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            const token = localStorage.getItem("token");
+        const load = async () => {
             try {
-                const [userRes, rankRes] = await Promise.all([
-                    token ? axios.get(`${API_URL}/users/me`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    }) : Promise.resolve({ data: { success: false } }),
-                    axios.get(`${API_URL}/public/ranks`)
-                ]);
-
-                if (userRes.data.success) {
-                    setTotalDeposit(Number(userRes.data.data.totalDeposit || 0));
-                }
-
-                if (Array.isArray(rankRes.data) && rankRes.data.length > 0) {
-                    setRankTiers(rankRes.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch user data for rank", error);
-                if (axios.isAxiosError(error) && error.response?.status === 401) {
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("user");
-                    localStorage.removeItem("lastActive");
-                    window.dispatchEvent(new Event("user-logout"));
-                }
+                await fetchRankStatus();
+            } catch (error: any) {
+                console.error("Fetch rank status error:", error);
+                toast.error("โหลด Rank ไม่สำเร็จ", error.response?.data?.message || "กรุณาลองใหม่อีกครั้ง");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchUserData();
+        void load();
     }, []);
 
     if (authLoading || loading) {
-        return <PlayerLayout><div style={{ padding: "40px", textAlign: "center" }}>กำลังโหลด...</div></PlayerLayout>;
+        return (
+            <PlayerLayout>
+                <div className="p-10 text-center text-white/70">กำลังโหลด...</div>
+            </PlayerLayout>
+        );
     }
-    if (!user) return null;
 
-    let currentRank = 0;
-    for (let i = dynamicRanks.length - 1; i >= 0; i--) {
-        if (totalDeposit >= dynamicRanks[i].minDeposit) {
-            currentRank = i;
-            break;
+    if (!user || !rankStatus) {
+        return null;
+    }
+
+    const currentTier = rankStatus.tiers.find((tier) => tier.id === rankStatus.currentTierId)
+        || rankStatus.tiers.find((tier) => tier.unlocked)
+        || rankStatus.tiers[0];
+    const nextTier = rankStatus.tiers.find((tier) => !tier.unlocked) || null;
+    const currentFloor = currentTier ? Number(currentTier.minDeposit || 0) : 0;
+    const targetDeposit = nextTier ? Number(nextTier.minDeposit || 0) : currentFloor;
+    const totalDeposit = Number(rankStatus.totalDeposit || 0);
+    const progress = nextTier
+        ? Math.max(0, Math.min(100, ((totalDeposit - currentFloor) / Math.max(1, targetDeposit - currentFloor)) * 100))
+        : 100;
+    const claimableCount = rankStatus.tiers.filter((tier) => tier.claimable).length;
+
+    const handleClaim = async (tierId: string) => {
+        try {
+            setClaimingTierId(tierId);
+            const res = await api.post(`/users/rank-rewards/${tierId}/claim`);
+            toast.success("รับโบนัส Rank สำเร็จ", res.data?.message || "ระบบเติมโบนัสเข้ากระเป๋าโบนัสให้แล้ว");
+            await fetchRankStatus();
+        } catch (error: any) {
+            console.error("Claim rank reward error:", error);
+            toast.error("รับโบนัส Rank ไม่สำเร็จ", error.response?.data?.message || "กรุณาลองใหม่อีกครั้ง");
+        } finally {
+            setClaimingTierId(null);
         }
-    }
-
-    const nextRankIndex = currentRank + 1;
-    const nextRank = dynamicRanks[nextRankIndex];
-    const nextRankDeposit = nextRank ? nextRank.minDeposit : dynamicRanks[currentRank].minDeposit;
-
-    let progress = 0;
-    if (nextRank) {
-        progress = (totalDeposit / nextRankDeposit) * 100;
-    } else {
-        progress = 100;
-    }
+    };
 
     return (
         <PlayerLayout>
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={{
-                    background: "linear-gradient(135deg, #FFD700 0%, #FFC000 100%)",
-                    borderRadius: "16px",
-                    padding: "20px",
-                    color: "#0D1117",
-                    boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
-                    display: "flex", alignItems: "center", gap: "12px"
-                }}>
-                    <span style={{ fontSize: "40px" }}>👑</span>
-                    <div>
-                        <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, textShadow: "1px 1px 2px rgba(0,0,0,0.1)" }}>VIP Club</h1>
-                        <p style={{ fontSize: "14px", opacity: 0.9, marginTop: "4px" }}>ยิ่งเล่นยิ่งได้ ยิ่งฝากยิ่งคุ้ม</p>
+            <div className="space-y-5">
+                <div className="overflow-hidden rounded-[28px] border border-[#f0c55d]/30 bg-[radial-gradient(circle_at_top_left,_rgba(255,213,79,0.32),_transparent_45%),linear-gradient(135deg,#141b28_0%,#101623_100%)] p-6 shadow-[0_20px_60px_rgba(5,9,18,0.35)]">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-3">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-[#ffd86b]">
+                                <Crown size={14} />
+                                Rank Club
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-black text-white">พิชิต Rank รับโบนัสปลดล็อก</h1>
+                                <p className="mt-2 max-w-2xl text-sm text-white/65">
+                                    ยิ่งฝากสะสมมาก ยิ่งปลดล็อกรางวัล Rank ได้มากขึ้น โบนัสจะเข้ากระเป๋าโบนัสและติดเทิร์นตามที่แต่ละ Rank กำหนด
+                                </p>
+                            </div>
+                        </div>
+                        <div className="rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-right">
+                            <p className="text-xs uppercase tracking-[0.18em] text-white/40">โบนัสรอรับ</p>
+                            <p className="mt-1 text-2xl font-black text-[#ffd86b]">{claimableCount}</p>
+                            <p className="text-xs text-white/50">Rank</p>
+                        </div>
                     </div>
                 </div>
 
-                <div style={{
-                    background: dynamicRanks[currentRank].gradient,
-                    borderRadius: "16px",
-                    padding: "28px",
-                    textAlign: "center",
-                    color: "white",
-                    boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
-                    position: "relative",
-                    overflow: "hidden"
-                }}>
-                    <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.1)" }} />
-                    <div style={{ position: "relative", zIndex: 1 }}>
-                        <span style={{ fontSize: "64px", display: "block", marginBottom: "12px", filter: "drop-shadow(2px 2px 4px rgba(0,0,0,0.3))" }}>
-                            {dynamicRanks[currentRank].icon}
-                        </span>
-                        <h2 style={{ fontSize: "32px", fontWeight: 900, margin: "0 0 4px", textShadow: "2px 2px 4px rgba(0,0,0,0.3)" }}>
-                            {dynamicRanks[currentRank].name}
-                        </h2>
-                        <p style={{ opacity: 0.9, fontWeight: 600 }}>ระดับปัจจุบันของคุณ</p>
-                        <p style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>ยอดฝากสะสม: ฿{totalDeposit.toLocaleString()}</p>
-                    </div>
-                </div>
-
-                {nextRank ? (
-                    <div style={{
-                        background: "#21262D",
-                        borderRadius: "16px",
-                        padding: "20px",
-                        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                        border: "1px solid rgba(255,255,255,0.1)"
-                    }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                            <span style={{ fontSize: "14px", fontWeight: 700, color: "#8B949E" }}>
-                                เลื่อนขั้นถัดไป: <span style={{ color: "#FFD700" }}>{nextRank.name}</span>
-                            </span>
-                            <span style={{ fontSize: "14px", fontWeight: 700, color: "#FFD700" }}>{progress.toFixed(0)}%</span>
-                        </div>
-                        <div style={{
-                            height: "14px",
-                            background: "rgba(255,255,255,0.1)",
-                            borderRadius: "7px",
-                            overflow: "hidden"
-                        }}>
-                            <div style={{
-                                height: "100%",
-                                background: "linear-gradient(90deg, #FFD700, #FFC000)",
-                                borderRadius: "7px",
-                                width: `${Math.min(progress, 100)}%`,
-                                transition: "width 1s ease-out"
-                            }} />
-                        </div>
-                        <p style={{ fontSize: "13px", color: "#8B949E", marginTop: "10px", textAlign: "center" }}>
-                            ฝากอีก <span style={{ fontWeight: 700, color: "#FFFFFF" }}>฿{Math.max(0, nextRankDeposit - totalDeposit).toLocaleString()}</span> เพื่อเลื่อนขั้น
-                        </p>
-                    </div>
-                ) : (
-                    <div className="text-center p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/30">
-                        <span className="text-yellow-400 font-bold">คุณอยู่ในระดับสูงสุดแล้ว! 👑</span>
-                    </div>
-                )}
-
-                <div style={{
-                    background: "#21262D",
-                    borderRadius: "16px",
-                    padding: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                    border: "1px solid rgba(255,255,255,0.1)"
-                }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: "16px", color: "#FFFFFF", display: "flex", alignItems: "center", gap: "8px", fontSize: "16px" }}>
-                        <Crown size={20} color="#FFD700" />
-                        สิทธิพิเศษแต่ละระดับ
-                    </h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                        {dynamicRanks.map((rank, index) => (
-                            <div
-                                key={rank.name}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "14px",
-                                    padding: "14px",
-                                    borderRadius: "14px",
-                                    border: index === currentRank ? "2px solid #FFD700" : "1px solid rgba(255,255,255,0.1)",
-                                    background: index === currentRank ? "rgba(255, 215, 0, 0.1)" : "rgba(255,255,255,0.05)",
-                                    boxShadow: index === currentRank ? "0 4px 15px rgba(255,215,0,0.15)" : "none"
-                                }}
-                            >
-                                <span style={{ fontSize: "32px" }}>{rank.icon}</span>
-                                <div style={{ flex: 1 }}>
-                                    <p style={{
-                                        fontWeight: 700,
-                                        color: index === currentRank ? "#FFD700" : "#FFFFFF",
-                                        fontSize: "15px",
-                                        margin: 0
-                                    }}>{rank.name}</p>
-                                    <p style={{ fontSize: "12px", color: "#8B949E", marginTop: "2px" }}>ฝากสะสม ฿{rank.minDeposit.toLocaleString()}</p>
+                {currentTier ? (
+                    <div
+                        className="overflow-hidden rounded-[28px] p-[1px] shadow-[0_24px_70px_rgba(0,0,0,0.28)]"
+                        style={{ background: `linear-gradient(135deg, ${currentTier.colorFrom}, ${currentTier.colorTo})` }}
+                    >
+                        <div className="rounded-[27px] bg-[#101622]/90 p-6 backdrop-blur">
+                            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div
+                                        className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/10"
+                                        style={{ background: `linear-gradient(135deg, ${currentTier.colorFrom}, ${currentTier.colorTo})` }}
+                                    >
+                                        {currentTier.logo ? (
+                                            <img src={currentTier.logo} alt={currentTier.name} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <span className="text-3xl font-black text-white">{currentTier.icon || "R"}</span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Rank ปัจจุบัน</p>
+                                        <h2 className="mt-1 text-3xl font-black text-white">{currentTier.name}</h2>
+                                        <p className="mt-1 text-sm text-white/65">ยอดฝากสะสมของคุณ ฿{totalDeposit.toLocaleString()}</p>
+                                    </div>
                                 </div>
-                                <div style={{
-                                    padding: "8px 14px",
-                                    background: "rgba(0, 208, 132, 0.1)",
-                                    border: "1px solid rgba(0, 208, 132, 0.3)",
-                                    borderRadius: "10px"
-                                }}>
-                                    <p style={{ fontSize: "12px", fontWeight: 700, color: "#00D084", margin: 0 }}>{rank.benefit}</p>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">รางวัล Rank นี้</p>
+                                        <p className="mt-2 text-xl font-black text-[#ffd86b]">฿{Number(currentTier.rewardAmount || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">เทิร์นของรางวัล</p>
+                                        <p className="mt-2 text-xl font-black text-white">{Number(currentTier.rewardTurnover || 0).toLocaleString()}</p>
+                                    </div>
                                 </div>
                             </div>
-                        ))}
+
+                            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                                <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+                                    <p className="text-white/65">
+                                        {nextTier
+                                            ? <>กำลังไป Rank ถัดไป <span className="font-bold text-white">{nextTier.name}</span></>
+                                            : <>คุณอยู่ Rank สูงสุดแล้ว</>}
+                                    </p>
+                                    <p className="font-bold text-[#ffd86b]">{progress.toFixed(0)}%</p>
+                                </div>
+                                <div className="h-3 overflow-hidden rounded-full bg-white/10">
+                                    <div
+                                        className="h-full rounded-full bg-[linear-gradient(90deg,#ffd86b_0%,#ffb347_100%)] transition-all"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                                {nextTier ? (
+                                    <p className="mt-3 text-center text-sm text-white/55">
+                                        ฝากสะสมอีก <span className="font-bold text-white">฿{Math.max(0, nextTier.minDeposit - totalDeposit).toLocaleString()}</span> เพื่อปลดล็อก {nextTier.name}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+
+                <div className="rounded-[28px] border border-white/10 bg-[#101622]/85 p-5 shadow-[0_18px_50px_rgba(5,9,18,0.28)]">
+                    <div className="mb-5 flex items-center justify-between gap-3">
+                        <div>
+                            <h3 className="flex items-center gap-2 text-lg font-black text-white">
+                                <Gift size={20} className="text-[#ffd86b]" />
+                                รางวัล Rank ทั้งหมด
+                            </h3>
+                            <p className="mt-1 text-sm text-white/55">ปลดล็อกตามยอดฝากสะสม และกดรับโบนัสได้ครั้งเดียวต่อ Rank</p>
+                        </div>
+                        <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/60">
+                            ฝากสะสมทั้งหมด ฿{totalDeposit.toLocaleString()}
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4">
+                        {rankStatus.tiers.map((tier) => {
+                            const isClaiming = claimingTierId === tier.id;
+                            const statusLabel = tier.alreadyClaimed
+                                ? "รับแล้ว"
+                                : tier.claimable
+                                    ? "กดรับได้"
+                                    : tier.unlocked
+                                        ? "ปลดล็อกแล้ว"
+                                        : "ยังไม่ปลดล็อก";
+
+                            return (
+                                <div
+                                    key={tier.id}
+                                    className="overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))]"
+                                >
+                                    <div
+                                        className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between"
+                                        style={{ background: `linear-gradient(135deg, ${tier.colorFrom}22, ${tier.colorTo}22)` }}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/10">
+                                                {tier.logo ? (
+                                                    <img src={tier.logo} alt={tier.name} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <span className="text-2xl font-black text-white">{tier.icon || "R"}</span>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h4 className="text-xl font-black text-white">{tier.name}</h4>
+                                                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                                                        tier.alreadyClaimed
+                                                            ? "bg-emerald-500/15 text-emerald-300"
+                                                            : tier.claimable
+                                                                ? "bg-yellow-500/15 text-yellow-300"
+                                                                : tier.unlocked
+                                                                    ? "bg-blue-500/15 text-blue-300"
+                                                                    : "bg-white/10 text-white/55"
+                                                    }`}>
+                                                        {statusLabel}
+                                                    </span>
+                                                </div>
+                                                <p className="mt-1 text-sm text-white/60">
+                                                    ปลดล็อกเมื่อฝากสะสมครบ ฿{Number(tier.minDeposit || 0).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-3 sm:grid-cols-3">
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                                                <p className="text-xs uppercase tracking-[0.14em] text-white/40">โบนัส</p>
+                                                <p className="mt-1 text-lg font-black text-[#ffd86b]">฿{Number(tier.rewardAmount || 0).toLocaleString()}</p>
+                                            </div>
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                                                <p className="text-xs uppercase tracking-[0.14em] text-white/40">เทิร์น</p>
+                                                <p className="mt-1 text-lg font-black text-white">{Number(tier.rewardTurnover || 0).toLocaleString()}</p>
+                                            </div>
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                                                <p className="text-xs uppercase tracking-[0.14em] text-white/40">สถานะ</p>
+                                                <p className="mt-1 text-sm font-bold text-white">
+                                                    {tier.unlocked ? "ปลดล็อกแล้ว" : `เหลือ ฿${Number(tier.remainingDeposit || 0).toLocaleString()}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                                        <div className="flex items-center gap-2 text-sm text-white/55">
+                                            {tier.alreadyClaimed ? <Sparkles size={16} className="text-emerald-300" /> : <Lock size={16} className="text-white/40" />}
+                                            {tier.alreadyClaimed
+                                                ? `รับรางวัลแล้วเมื่อ ${new Date(tier.claimedAt as string).toLocaleString("th-TH")}`
+                                                : tier.claimable
+                                                    ? "กดรับโบนัสเข้ากระเป๋าโบนัสได้ทันที"
+                                                    : tier.unlocked
+                                                        ? "Rank นี้ปลดล็อกแล้ว แต่ไม่มีโบนัสให้กดรับ"
+                                                        : "สะสมยอดฝากให้ถึงก่อนจึงจะกดรับได้"}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            disabled={!tier.claimable || isClaiming}
+                                            onClick={() => void handleClaim(tier.id)}
+                                            className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold transition ${
+                                                tier.claimable && !isClaiming
+                                                    ? "bg-[linear-gradient(135deg,#ffd86b_0%,#ffb347_100%)] text-[#111827] shadow-[0_14px_30px_rgba(255,184,71,0.28)] hover:translate-y-[-1px]"
+                                                    : "cursor-not-allowed bg-white/5 text-white/35"
+                                            }`}
+                                        >
+                                            {isClaiming ? <Award size={16} className="animate-pulse" /> : <Gift size={16} />}
+                                            {tier.alreadyClaimed ? "รับแล้ว" : tier.claimable ? "กดรับโบนัส" : "ยังรับไม่ได้"}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

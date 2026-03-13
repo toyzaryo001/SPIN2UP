@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/db.js';
+import { RankService } from '../services/rank.service.js';
 
 const router = Router();
 
@@ -339,11 +340,7 @@ router.get('/commission', async (req: Request, res: Response) => {
 // GET /api/public/ranks - Get rank tiers for player
 router.get('/ranks', async (_req: Request, res: Response) => {
     try {
-        const setting = await prisma.setting.findUnique({
-            where: { key: 'rank_tiers' }
-        });
-
-        res.json(parseRankTiers(setting?.value));
+        res.json(await RankService.getTiers());
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch rank tiers' });
     }

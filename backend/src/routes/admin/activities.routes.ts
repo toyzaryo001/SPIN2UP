@@ -1,50 +1,18 @@
 import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { requirePermission } from '../../middlewares/auth.middleware';
+import { RankService } from '../../services/rank.service.js';
 
 const router = Router();
-
-const DEFAULT_RANK_TIERS = [
-    { id: 'bronze', name: 'Bronze', icon: '🥉', minDeposit: 0, benefit: 'Cashback 3%', colorFrom: '#CD7F32', colorTo: '#A0522D' },
-    { id: 'silver', name: 'Silver', icon: '🥈', minDeposit: 5000, benefit: 'Cashback 4%', colorFrom: '#C0C0C0', colorTo: '#A8A8A8' },
-    { id: 'gold', name: 'Gold', icon: '🥇', minDeposit: 20000, benefit: 'Cashback 5%', colorFrom: '#FFD700', colorTo: '#FFA500' },
-    { id: 'platinum', name: 'Platinum', icon: '💎', minDeposit: 50000, benefit: 'Cashback 7%', colorFrom: '#00CED1', colorTo: '#4169E1' },
-    { id: 'diamond', name: 'Diamond', icon: '👑', minDeposit: 100000, benefit: 'Cashback 10%', colorFrom: '#9B59B6', colorTo: '#E91E63' },
-];
-
-const parseRankTiers = (value?: string | null) => {
-    if (!value) return DEFAULT_RANK_TIERS;
-
-    try {
-        const parsed = JSON.parse(value);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-            return DEFAULT_RANK_TIERS;
-        }
-
-        return parsed.map((tier: any, index: number) => ({
-            id: String(tier.id || `tier_${index + 1}`),
-            name: String(tier.name || `Tier ${index + 1}`),
-            icon: String(tier.icon || '🏅'),
-            minDeposit: Number(tier.minDeposit || 0),
-            benefit: String(tier.benefit || ''),
-            colorFrom: String(tier.colorFrom || '#64748B'),
-            colorTo: String(tier.colorTo || '#334155'),
-        })).sort((a: any, b: any) => a.minDeposit - b.minDeposit);
-    } catch {
-        return DEFAULT_RANK_TIERS;
-    }
-};
 
 // =====================
 // CASHBACK SETTINGS
 // =====================
 
-// GET /admin/activities/cashback - Get cashback settings
-router.get('/cashback', async (req, res) => {
+router.get('/cashback', async (_req, res) => {
     try {
         let settings = await prisma.cashbackSetting.findFirst();
 
-        // Create default if not exists
         if (!settings) {
             settings = await prisma.cashbackSetting.create({
                 data: {
@@ -52,8 +20,8 @@ router.get('/cashback', async (req, res) => {
                     minLoss: 100,
                     maxCashback: 10000,
                     dayOfWeek: 1,
-                    isActive: true
-                }
+                    isActive: true,
+                },
             });
         }
 
@@ -64,23 +32,19 @@ router.get('/cashback', async (req, res) => {
     }
 });
 
-// PUT /admin/activities/cashback - Update cashback settings
 router.put('/cashback', async (req, res) => {
     try {
         const { rate, minLoss, maxCashback, dayOfWeek, isActive } = req.body;
 
-        let settings = await prisma.cashbackSetting.findFirst();
-
-        if (settings) {
-            settings = await prisma.cashbackSetting.update({
-                where: { id: settings.id },
-                data: { rate, minLoss, maxCashback, dayOfWeek, isActive }
+        const existing = await prisma.cashbackSetting.findFirst();
+        const settings = existing
+            ? await prisma.cashbackSetting.update({
+                where: { id: existing.id },
+                data: { rate, minLoss, maxCashback, dayOfWeek, isActive },
+            })
+            : await prisma.cashbackSetting.create({
+                data: { rate, minLoss, maxCashback, dayOfWeek, isActive },
             });
-        } else {
-            settings = await prisma.cashbackSetting.create({
-                data: { rate, minLoss, maxCashback, dayOfWeek, isActive }
-            });
-        }
 
         res.json({ success: true, data: settings });
     } catch (error) {
@@ -93,14 +57,12 @@ router.put('/cashback', async (req, res) => {
 // STREAK SETTINGS
 // =====================
 
-// GET /admin/activities/streak - Get all streak settings
-router.get('/streak', async (req, res) => {
+router.get('/streak', async (_req, res) => {
     try {
         let settings = await prisma.streakSetting.findMany({
-            orderBy: { day: 'asc' }
+            orderBy: { day: 'asc' },
         });
 
-        // Create default if empty
         if (settings.length === 0) {
             const defaults = [
                 { day: 1, minDeposit: 100, bonusAmount: 10, requiresTurnover: false, turnoverMultiplier: 1 },
@@ -112,12 +74,12 @@ router.get('/streak', async (req, res) => {
                 { day: 7, minDeposit: 100, bonusAmount: 300, requiresTurnover: false, turnoverMultiplier: 1 },
             ];
 
-            for (const d of defaults) {
-                await prisma.streakSetting.create({ data: d });
+            for (const item of defaults) {
+                await prisma.streakSetting.create({ data: item });
             }
 
             settings = await prisma.streakSetting.findMany({
-                orderBy: { day: 'asc' }
+                orderBy: { day: 'asc' },
             });
         }
 
@@ -128,16 +90,22 @@ router.get('/streak', async (req, res) => {
     }
 });
 
-// PUT /admin/activities/streak/:day - Update single streak day
 router.put('/streak/:day', async (req, res) => {
     try {
-        const day = parseInt(req.params.day);
+        const day = Number.parseInt(req.params.day, 10);
         const { minDeposit, bonusAmount, requiresTurnover, turnoverMultiplier, isActive } = req.body;
 
         const settings = await prisma.streakSetting.upsert({
             where: { day },
             update: { minDeposit, bonusAmount, requiresTurnover, turnoverMultiplier, isActive },
-            create: { day, minDeposit, bonusAmount, requiresTurnover: requiresTurnover ?? false, turnoverMultiplier: turnoverMultiplier ?? 1, isActive: isActive ?? true }
+            create: {
+                day,
+                minDeposit,
+                bonusAmount,
+                requiresTurnover: requiresTurnover ?? false,
+                turnoverMultiplier: turnoverMultiplier ?? 1,
+                isActive: isActive ?? true,
+            },
         });
 
         res.json({ success: true, data: settings });
@@ -151,14 +119,12 @@ router.put('/streak/:day', async (req, res) => {
 // COMMISSION SETTINGS
 // =====================
 
-// GET /admin/activities/commission - Get all commission settings
-router.get('/commission', async (req, res) => {
+router.get('/commission', async (_req, res) => {
     try {
         let settings = await prisma.commissionSetting.findMany({
-            orderBy: { level: 'asc' }
+            orderBy: { level: 'asc' },
         });
 
-        // Create default if empty
         if (settings.length === 0) {
             const defaults = [
                 { level: 1, rate: 0.5, description: 'แนะนำตรง' },
@@ -167,12 +133,12 @@ router.get('/commission', async (req, res) => {
                 { level: 4, rate: 0.1, description: 'ชั้นที่ 4' },
             ];
 
-            for (const d of defaults) {
-                await prisma.commissionSetting.create({ data: d });
+            for (const item of defaults) {
+                await prisma.commissionSetting.create({ data: item });
             }
 
             settings = await prisma.commissionSetting.findMany({
-                orderBy: { level: 'asc' }
+                orderBy: { level: 'asc' },
             });
         }
 
@@ -183,16 +149,15 @@ router.get('/commission', async (req, res) => {
     }
 });
 
-// PUT /admin/activities/commission/:level - Update single commission level
 router.put('/commission/:level', async (req, res) => {
     try {
-        const level = parseInt(req.params.level);
+        const level = Number.parseInt(req.params.level, 10);
         const { rate, description, isActive } = req.body;
 
         const settings = await prisma.commissionSetting.upsert({
             where: { level },
             update: { rate, description, isActive },
-            create: { level, rate, description, isActive: isActive ?? true }
+            create: { level, rate, description, isActive: isActive ?? true },
         });
 
         res.json({ success: true, data: settings });
@@ -206,7 +171,7 @@ router.put('/commission/:level', async (req, res) => {
 // REFERRAL OVERVIEW
 // =====================
 
-router.get('/referral/overview', requirePermission('activities', 'referral', 'view'), async (req, res) => {
+router.get('/referral/overview', requirePermission('activities', 'referral', 'view'), async (_req, res) => {
     try {
         const referredUsers = await prisma.user.findMany({
             where: { referredBy: { not: null } },
@@ -240,7 +205,12 @@ router.get('/referral/overview', requirePermission('activities', 'referral', 'vi
 
         referredUsers.forEach((user) => {
             if (!user.referredBy) return;
-            const current = topReferrerMap.get(user.referredBy) || { referralCount: 0, latestReferralAt: user.createdAt };
+
+            const current = topReferrerMap.get(user.referredBy) || {
+                referralCount: 0,
+                latestReferralAt: user.createdAt,
+            };
+
             topReferrerMap.set(user.referredBy, {
                 referralCount: current.referralCount + 1,
                 latestReferralAt: current.latestReferralAt > user.createdAt ? current.latestReferralAt : user.createdAt,
@@ -300,14 +270,8 @@ router.get('/referral/overview', requirePermission('activities', 'referral', 'vi
 
 router.get('/ranks', requirePermission('activities', 'ranks', 'view'), async (_req, res) => {
     try {
-        const setting = await prisma.setting.findUnique({
-            where: { key: 'rank_tiers' },
-        });
-
-        res.json({
-            success: true,
-            data: parseRankTiers(setting?.value),
-        });
+        const tiers = await RankService.getTiers();
+        res.json({ success: true, data: tiers });
     } catch (error) {
         console.error('Get rank tiers error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูล Rank' });
@@ -316,31 +280,21 @@ router.get('/ranks', requirePermission('activities', 'ranks', 'view'), async (_r
 
 router.put('/ranks', requirePermission('activities', 'ranks', 'manage'), async (req, res) => {
     try {
-        const tiers = Array.isArray(req.body?.tiers) ? req.body.tiers : [];
-
-        if (tiers.length === 0) {
-            return res.status(400).json({ success: false, message: 'กรุณาระบุข้อมูล Rank อย่างน้อย 1 ระดับ' });
-        }
-
-        const normalizedTiers = tiers.map((tier: any, index: number) => ({
-            id: String(tier.id || `tier_${index + 1}`),
-            name: String(tier.name || `Tier ${index + 1}`),
-            icon: String(tier.icon || '🏅'),
-            minDeposit: Number(tier.minDeposit || 0),
-            benefit: String(tier.benefit || ''),
-            colorFrom: String(tier.colorFrom || '#64748B'),
-            colorTo: String(tier.colorTo || '#334155'),
-        })).sort((a: any, b: any) => a.minDeposit - b.minDeposit);
-
-        await prisma.setting.upsert({
-            where: { key: 'rank_tiers' },
-            update: { value: JSON.stringify(normalizedTiers) },
-            create: { key: 'rank_tiers', value: JSON.stringify(normalizedTiers) },
-        });
-
-        res.json({ success: true, data: normalizedTiers });
+        const tiers = await RankService.saveTiers(req.body?.tiers);
+        res.json({ success: true, data: tiers });
     } catch (error) {
         console.error('Update rank tiers error:', error);
+
+        if (error instanceof Error) {
+            if (error.message === 'RANK_TIERS_REQUIRED') {
+                return res.status(400).json({ success: false, message: 'กรุณาระบุข้อมูล Rank อย่างน้อย 1 ระดับ' });
+            }
+
+            if (error.message === 'RANK_TIER_ID_DUPLICATED') {
+                return res.status(400).json({ success: false, message: 'รหัส Rank ห้ามซ้ำกัน' });
+            }
+        }
+
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึก Rank' });
     }
 });

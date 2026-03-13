@@ -6,6 +6,7 @@ import { BetflixService } from '../services/betflix.service.js';
 import { RewardService } from '../services/reward.service.js';
 import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 import { TurnoverService } from '../services/turnover.service.js';
+import { RankService } from '../services/rank.service.js';
 import { thaiDateKey, thaiNow } from '../lib/thai-time.js';
 
 const router = Router();
@@ -393,6 +394,49 @@ router.post('/rewards/claim', authMiddleware, async (req: AuthRequest, res) => {
     } catch (error: any) {
         console.error('Claim reward error:', error);
         res.status(400).json({ success: false, message: error.message || 'ไม่สามารถรับรางวัลได้' });
+    }
+});
+
+router.get('/rank-rewards', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const data = await RankService.getUserRankStatus(req.user!.userId);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Get rank rewards error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูล Rank' });
+    }
+});
+
+router.post('/rank-rewards/:tierId/claim', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const data = await RankService.claimRankReward(req.user!.userId, req.params.tierId);
+        res.json({
+            success: true,
+            message: `รับรางวัล Rank ${data.rankName} สำเร็จ`,
+            data,
+        });
+    } catch (error) {
+        console.error('Claim rank reward error:', error);
+
+        if (error instanceof Error) {
+            if (error.message === 'RANK_TIER_NOT_FOUND') {
+                return res.status(404).json({ success: false, message: 'ไม่พบ Rank ที่ต้องการรับรางวัล' });
+            }
+
+            if (error.message === 'RANK_REWARD_NOT_AVAILABLE') {
+                return res.status(400).json({ success: false, message: 'Rank นี้ยังไม่มีรางวัลให้กดรับ' });
+            }
+
+            if (error.message === 'RANK_NOT_UNLOCKED') {
+                return res.status(400).json({ success: false, message: 'ยอดฝากสะสมยังไม่ถึงเงื่อนไขของ Rank นี้' });
+            }
+
+            if (error.message === 'RANK_ALREADY_CLAIMED') {
+                return res.status(409).json({ success: false, message: 'คุณเคยกดรับรางวัล Rank นี้แล้ว' });
+            }
+        }
+
+        res.status(500).json({ success: false, message: 'ไม่สามารถรับรางวัล Rank ได้' });
     }
 });
 

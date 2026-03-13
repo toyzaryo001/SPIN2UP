@@ -1,7 +1,7 @@
 import prisma from '../lib/db';
 import { BetflixService } from './betflix.service';
 import { NexusProvider } from './agents/NexusProvider';
-import dayjs from 'dayjs';
+import { thaiDateKey, thaiNow, thaiStartOfDay, thaiEndOfDay } from '../lib/thai-time';
 
 // Types for Reward Calculation
 interface RewardStats {
@@ -29,7 +29,7 @@ interface RewardStats {
 
 export class RewardService {
     private static getStatDate(periodStart: string) {
-        return dayjs(periodStart).startOf('day').toDate();
+        return thaiStartOfDay(periodStart).toDate();
     }
 
     /**
@@ -59,10 +59,10 @@ export class RewardService {
 
         // 2. Define Period (Daily for now, widely used)
         // Cashback: Yesterday (00:00 - 23:59) -> Claimable Today
-        const yesterday = dayjs().subtract(1, 'day');
-        const periodStart = yesterday.format('YYYY-MM-DD 00:00:00');
-        const periodEnd = yesterday.format('YYYY-MM-DD 23:59:59');
-        const dateKey = yesterday.format('YYYY-MM-DD'); // Used for checking claims
+        const yesterday = thaiNow().subtract(1, 'day');
+        const periodStart = thaiStartOfDay(yesterday.toDate()).format('YYYY-MM-DD HH:mm:ss');
+        const periodEnd = thaiEndOfDay(yesterday.toDate()).format('YYYY-MM-DD HH:mm:ss');
+        const dateKey = thaiDateKey(yesterday.toDate()); // Used for checking claims
 
         // 3. Check if already claimed
         const claims = await prisma.rewardClaim.findMany({
@@ -147,8 +147,8 @@ export class RewardService {
         const netLoss = winLoss < 0 ? Math.abs(winLoss) : 0;
         let claimableCashback = 0;
 
-        const currentDay = dayjs().day(); // 0(Sun) - 6(Sat)
-        const currentHour = dayjs().hour(); // 0-23
+        const currentDay = thaiNow().day(); // 0(Sun) - 6(Sat)
+        const currentHour = thaiNow().hour(); // 0-23
         const cbDay = Number(cashbackSetting?.dayOfWeek ?? 1);
         const cbStart = Number(cashbackSetting?.claimStartHour ?? 0);
         const cbEnd = Number(cashbackSetting?.claimEndHour ?? 23);

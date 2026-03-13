@@ -1,5 +1,5 @@
-import dayjs from 'dayjs';
 import prisma from '../lib/db';
+import { thaiDateKey, thaiNow, thaiStartOfDay, thaiEndOfDay } from '../lib/thai-time';
 import { BetflixService } from './betflix.service';
 import { NexusProvider } from './agents/NexusProvider';
 
@@ -31,25 +31,25 @@ interface RewardConfig {
 
 export class RewardSnapshotService {
     static getDefaultStatDate() {
-        return dayjs().subtract(1, 'day').startOf('day');
+        return thaiNow().subtract(1, 'day').startOf('day');
     }
 
     static getPeriod(dateInput?: string): RewardPeriod {
-        const base = dateInput ? dayjs(dateInput).startOf('day') : this.getDefaultStatDate();
+        const base = dateInput ? thaiStartOfDay(dateInput) : this.getDefaultStatDate();
 
         return {
             statDate: base.toDate(),
-            periodStart: base.startOf('day').toDate(),
-            periodEnd: base.endOf('day').toDate(),
-            betflixDate: base.format('YYYY-MM-DD'),
-            nexusStart: base.format('YYYY-MM-DD 00:00:00'),
-            nexusEnd: base.format('YYYY-MM-DD 23:59:59'),
+            periodStart: thaiStartOfDay(base.toDate()).toDate(),
+            periodEnd: thaiEndOfDay(base.toDate()).toDate(),
+            betflixDate: thaiDateKey(base.toDate()),
+            nexusStart: thaiStartOfDay(base.toDate()).format('YYYY-MM-DD HH:mm:ss'),
+            nexusEnd: thaiEndOfDay(base.toDate()).format('YYYY-MM-DD HH:mm:ss'),
         };
     }
 
     static isDefaultStatDate(dateInput?: string) {
         if (!dateInput) return true;
-        return dayjs(dateInput).startOf('day').isSame(this.getDefaultStatDate());
+        return thaiStartOfDay(dateInput).isSame(this.getDefaultStatDate());
     }
 
     private static async getRewardConfig(type: RewardType): Promise<RewardConfig> {

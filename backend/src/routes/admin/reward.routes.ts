@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../../lib/db.js';
 import { requirePermission, type AuthRequest } from '../../middlewares/auth.middleware.js';
+import { thaiStartOfDay } from '../../lib/thai-time.js';
 import { RewardSnapshotService } from '../../services/reward-snapshot.service.js';
 
 const router = Router();
@@ -91,9 +92,8 @@ function rejectForbidden(res: Response) {
 
 function parseSnapshotDate(rawDate: unknown) {
     if (!rawDate) return undefined;
-    const parsed = new Date(String(rawDate));
+    const parsed = thaiStartOfDay(String(rawDate)).toDate();
     if (Number.isNaN(parsed.getTime())) return null;
-    parsed.setHours(0, 0, 0, 0);
     return parsed;
 }
 

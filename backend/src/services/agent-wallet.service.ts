@@ -524,6 +524,104 @@ export class AgentWalletService {
         };
     }
 
+    private static async reconcileLocalDeficitToTarget(
+        userId: number,
+        targetAgentId: number,
+        referenceId?: string,
+        transactionId?: number
+    ) {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                balance: true,
+            },
+        });
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const localBalance = this.toNumber(user.balance);
+        if (localBalance <= this.BALANCE_THRESHOLD) {
+            return { mirroredAmount: 0 };
+        }
+
+        const { totalBalance: totalAgentBalance } = await this.getUserAgentBalances(userId);
+        const deficit = Number((localBalance - totalAgentBalance).toFixed(2));
+
+        if (deficit <= this.BALANCE_THRESHOLD) {
+            return { mirroredAmount: 0 };
+        }
+
+        const targetAgentConfig = await prisma.agentConfig.findUnique({
+            where: { id: targetAgentId },
+        });
+        if (!targetAgentConfig || !targetAgentConfig.isActive) {
+            throw new Error('TARGET_AGENT_NOT_FOUND');
+        }
+
+        const targetAccount = await this.ensureExternalAccount(userId, targetAgentId);
+        const targetAgentService = await AgentFactory.getAgent(targetAgentConfig.code);
+        const mirrorRef = `${referenceId || this.buildReference('BALANCE_MIRROR')}_${targetAgentId}`;
+
+        const transferLog = await this.createTransferLog({
+            userId,
+            transactionId,
+            targetAgentId,
+            type: 'LEGACY_ACCOUNT_BACKFILL',
+            amount: deficit,
+            referenceId: mirrorRef,
+            note: `Mirror local wallet deficit to ${targetAgentConfig.code}`,
+            metadata: {
+                localBalance,
+                totalAgentBalance,
+            },
+        });
+
+        const deposited = await targetAgentService.deposit(
+            targetAccount.externalUsername,
+            deficit,
+            `${mirrorRef}_DEP`
+        );
+
+        if (!deposited) {
+            await this.updateTransferLog(transferLog.id, {
+                status: 'FAILED',
+                note: `LOCAL_DEFICIT_MIRROR_FAILED:${targetAgentConfig.code}`,
+                metadata: {
+                    localBalance,
+                    totalAgentBalance,
+                    deficit,
+                },
+            });
+            throw new Error(`LOCAL_DEFICIT_MIRROR_FAILED:${targetAgentConfig.code}`);
+        }
+
+        await prisma.userExternalAccount.updateMany({
+            where: {
+                userId,
+                agentId: targetAgentId,
+                externalUsername: targetAccount.externalUsername,
+            },
+            data: {
+                balance: { increment: new Prisma.Decimal(deficit) },
+            },
+        }).catch(() => {});
+
+        await this.updateTransferLog(transferLog.id, {
+            status: 'COMPLETED',
+            note: `Mirrored ${deficit} local wallet deficit to ${targetAgentConfig.code}`,
+            metadata: {
+                localBalance,
+                totalAgentBalance,
+                deficit,
+            },
+        });
+
+        return { mirroredAmount: deficit };
+    }
+
     static async prepareLaunch(params: {
         userId: number;
         gameId?: number;
@@ -538,10 +636,15 @@ export class AgentWalletService {
         });
 
         const targetAccount = await this.ensureExternalAccount(params.userId, resolution.agentConfig.id);
-        await this.sweepAllOtherAgentsToTarget(
+        const sweepResult = await this.sweepAllOtherAgentsToTarget(
             params.userId,
             resolution.agentConfig.id,
             this.buildReference(`LAUNCH_${params.userId}`),
+        );
+        const reconcileResult = await this.reconcileLocalDeficitToTarget(
+            params.userId,
+            resolution.agentConfig.id,
+            this.buildReference(`LAUNCH_MIRROR_${params.userId}`),
         );
 
         await prisma.user.update({
@@ -560,6 +663,10 @@ export class AgentWalletService {
         if (!url) {
             throw new Error('AGENT_GAME_LAUNCH_FAILED');
         }
+
+        console.log(
+            `[AgentWallet] Launch prepared for user=${params.userId} target=${resolution.agentConfig.code} moved=${sweepResult.totalMoved} mirrored=${reconcileResult.mirroredAmount}`
+        );
 
         return {
             url,

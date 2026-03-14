@@ -65,14 +65,14 @@ export class TelegramNotifyService {
 
     private static resolveRejectModeText(mode: WithdrawRejectMode, refunded?: boolean) {
         if (mode === 'RETURN_TO_GAME') {
-            return 'คืนยอดกลับเข้าเกมแล้ว';
+            return 'คืนยอดกลับแล้ว';
         }
 
         if (mode === 'KEEP_IN_WEB_WALLET') {
-            return 'ไม่คืนเข้าเกม / อยู่ในกระเป๋าปกติ';
+            return 'ไม่คืนยอด';
         }
 
-        return refunded === false ? 'ไม่คืนยอด' : 'คืนยอดแล้ว';
+        return refunded === false ? 'ไม่คืนยอด' : 'คืนยอดกลับแล้ว';
     }
 
     static async notifyDeposit(username: string, amount: number, method: string, fullName?: string | null) {

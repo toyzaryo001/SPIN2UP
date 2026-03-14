@@ -1,8 +1,11 @@
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import dayjs from 'dayjs';
 import prisma from '../lib/db.js';
 import { AgentWalletService } from './agent-wallet.service.js';
-import { thaiNow } from '../lib/thai-time.js';
+import { THAI_UTC_OFFSET, thaiNow } from '../lib/thai-time.js';
+import { BetflixService } from './betflix.service.js';
+import { NexusProvider } from './agents/NexusProvider.js';
 import { TurnoverService } from './turnover.service.js';
 
 type DbLike = Prisma.TransactionClient | typeof prisma;
@@ -17,8 +20,116 @@ type TurnoverSettingRecord = {
 };
 
 export class CommissionService {
+    private static nexusAgentIdCache: { value: number | null; fetchedAt: number } | null = null;
+
     private static toNumber(value: unknown) {
         return Number(value || 0);
+    }
+
+    private static formatThaiDateTime(value: Date) {
+        return dayjs(value).utcOffset(THAI_UTC_OFFSET).format('YYYY-MM-DD HH:mm:ss');
+    }
+
+    private static async getNexusAgentId() {
+        if (this.nexusAgentIdCache && Date.now() - this.nexusAgentIdCache.fetchedAt < 60_000) {
+            return this.nexusAgentIdCache.value;
+        }
+
+        const agent = await prisma.agentConfig.findUnique({
+            where: { code: 'NEXUS' },
+            select: { id: true },
+        });
+
+        this.nexusAgentIdCache = {
+            value: agent?.id ?? null,
+            fetchedAt: Date.now(),
+        };
+
+        return this.nexusAgentIdCache.value;
+    }
+
+    private static async getLiveTurnoverForUser(args: {
+        betflixUsername?: string | null;
+        nexusUsername?: string | null;
+        periodStart: Date;
+        periodEnd: Date;
+    }) {
+        const periodStartDate = args.periodStart;
+        const periodEndDate = args.periodEnd;
+        const betflixStart = this.formatThaiDateTime(periodStartDate);
+        const betflixEnd = this.formatThaiDateTime(periodEndDate);
+        const nexus = args.nexusUsername ? new NexusProvider() : null;
+
+        const [betflixResult, nexusResult] = await Promise.allSettled([
+            args.betflixUsername
+                ? BetflixService.getReportSummary(args.betflixUsername, betflixStart, betflixEnd)
+                : Promise.resolve(null),
+            args.nexusUsername && nexus
+                ? nexus.getGameLog(args.nexusUsername, betflixStart, betflixEnd)
+                : Promise.resolve(null),
+        ]);
+
+        let turnover = 0;
+
+        if (betflixResult.status === 'fulfilled' && betflixResult.value) {
+            turnover += this.toNumber(
+                betflixResult.value.valid_amount
+                || betflixResult.value.turnover
+                || betflixResult.value.valid_bet
+            );
+        }
+
+        if (nexusResult.status === 'fulfilled' && nexusResult.value) {
+            turnover += this.toNumber(nexusResult.value.totalBet);
+        }
+
+        return turnover;
+    }
+
+    private static async getCommissionContext(userId: number) {
+        const nexusAgentId = await this.getNexusAgentId();
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                phone: true,
+                balance: true,
+                betflixUsername: true,
+                commissionCycleStartedAt: true,
+                externalAccounts: nexusAgentId
+                    ? {
+                        where: { agentId: nexusAgentId },
+                        select: {
+                            externalUsername: true,
+                        },
+                    }
+                    : false,
+            },
+        });
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
+        const periodEnd = thaiNow().toDate();
+        const nexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
+            ? user.externalAccounts[0].externalUsername
+            : null;
+        const turnover = await this.getLiveTurnoverForUser({
+            betflixUsername: user.betflixUsername,
+            nexusUsername,
+            periodStart,
+            periodEnd,
+        });
+
+        return {
+            user,
+            turnover,
+            periodStart,
+            periodEnd,
+            nexusUsername,
+        };
     }
 
     static calculateClaimable(
@@ -96,24 +207,12 @@ export class CommissionService {
     }
 
     static async getUserCommissionState(userId: number) {
-        const [user, setting] = await Promise.all([
-            prisma.user.findUnique({
-                where: { id: userId },
-                select: {
-                    commissionTurnover: true,
-                    commissionCycleStartedAt: true,
-                },
-            }),
+        const [context, setting] = await Promise.all([
+            this.getCommissionContext(userId),
             this.getSetting(),
         ]);
 
-        if (!user) {
-            throw new Error('User not found');
-        }
-
-        const turnover = this.toNumber(user.commissionTurnover);
-        const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
-        const periodEnd = thaiNow().toDate();
+        const { turnover, periodStart, periodEnd } = context;
 
         return {
             claimable: this.calculateClaimable(turnover, setting),
@@ -130,35 +229,18 @@ export class CommissionService {
     }
 
     static async claim(userId: number) {
-        const [user, setting] = await Promise.all([
-            prisma.user.findUnique({
-                where: { id: userId },
-                select: {
-                    id: true,
-                    phone: true,
-                    balance: true,
-                    betflixUsername: true,
-                    commissionTurnover: true,
-                    commissionCycleStartedAt: true,
-                },
-            }),
+        const [context, setting] = await Promise.all([
+            this.getCommissionContext(userId),
             this.getSetting(),
         ]);
 
-        if (!user) {
-            throw new Error('User not found');
-        }
-
-        const turnover = this.toNumber(user.commissionTurnover);
+        const { user, turnover, periodStart, periodEnd } = context;
         const amount = this.calculateClaimable(turnover, setting);
         if (amount <= 0) {
             throw new Error('No reward amount to claim');
         }
         const requiresTurnover = setting?.requiresTurnover === true;
         const turnoverMultiplier = Math.max(1, this.toNumber(setting?.turnoverMultiplier || 1));
-
-        const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
-        const periodEnd = thaiNow().toDate();
 
         const insertResult = await prisma.$queryRaw<{ id: number }[]>`
             INSERT INTO "RewardClaim" ("userId", "type", "amount", "periodStart", "periodEnd", "claimedAt")
@@ -272,7 +354,6 @@ export class CommissionService {
         const skip = (page - 1) * limit;
         const where: Record<string, unknown> = {
             status: { not: 'DELETED' },
-            commissionTurnover: { gte: new Decimal(minTurnover) },
         };
 
         if (search?.trim()) {
@@ -283,49 +364,98 @@ export class CommissionService {
             ];
         }
 
-        const [total, users, summaryUsers] = await Promise.all([
-            prisma.user.count({ where }),
-            prisma.user.findMany({
-                where,
-                select: {
-                    id: true,
-                    username: true,
-                    fullName: true,
-                    phone: true,
-                    commissionTurnover: true,
-                    commissionCycleStartedAt: true,
-                },
-                orderBy: [
-                    { commissionTurnover: 'desc' },
-                    { id: 'asc' },
-                ],
-                skip,
-                take: limit,
-            }),
-            prisma.user.findMany({
-                where,
-                select: {
-                    commissionTurnover: true,
-                },
-            }),
-        ]);
+        const nexusAgentId = await this.getNexusAgentId();
+        const allUsers = await prisma.user.findMany({
+            where,
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                phone: true,
+                betflixUsername: true,
+                commissionCycleStartedAt: true,
+                externalAccounts: nexusAgentId
+                    ? {
+                        where: { agentId: nexusAgentId },
+                        select: {
+                            externalUsername: true,
+                        },
+                    }
+                    : false,
+            },
+        });
+
+        const batchSize = 10;
+        const rankedUsers: Array<{
+            id: number;
+            username: string | null;
+            fullName: string | null;
+            phone: string | null;
+            turnover: number;
+            rewardAmount: number;
+            periodStart: Date;
+            periodEnd: Date;
+        }> = [];
+
+        for (let index = 0; index < allUsers.length; index += batchSize) {
+            const batch = allUsers.slice(index, index + batchSize);
+            const batchResults = await Promise.all(
+                batch.map(async (user) => {
+                    const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
+                    const periodEnd = thaiNow().toDate();
+                    const nexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
+                        ? user.externalAccounts[0].externalUsername
+                        : null;
+                    const turnover = await this.getLiveTurnoverForUser({
+                        betflixUsername: user.betflixUsername,
+                        nexusUsername,
+                        periodStart,
+                        periodEnd,
+                    });
+                    const rewardAmount = this.calculateClaimable(turnover, setting);
+
+                    if (turnover < minTurnover || rewardAmount <= 0) {
+                        return null;
+                    }
+
+                    return {
+                        id: user.id,
+                        username: user.username,
+                        fullName: user.fullName,
+                        phone: user.phone,
+                        turnover,
+                        rewardAmount,
+                        periodStart,
+                        periodEnd,
+                    };
+                })
+            );
+
+            rankedUsers.push(...batchResults.filter((item): item is NonNullable<typeof item> => Boolean(item)));
+        }
+
+        rankedUsers.sort((left, right) => {
+            if (right.turnover !== left.turnover) {
+                return right.turnover - left.turnover;
+            }
+            return left.id - right.id;
+        });
+
+        const total = rankedUsers.length;
+        const users = rankedUsers.slice(skip, skip + limit);
+        const totalRewardAmount = rankedUsers.reduce((sum, user) => sum + user.rewardAmount, 0);
 
         const data = users.map((user) => {
-            const turnover = this.toNumber(user.commissionTurnover);
-            const rewardAmount = this.calculateClaimable(turnover, setting);
-            const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
-            const periodEnd = thaiNow().toDate();
-
             return {
                 id: user.id,
                 userId: user.id,
                 type: 'COMMISSION',
                 statDate: thaiNow().startOf('day').toISOString(),
-                periodStart: periodStart.toISOString(),
-                periodEnd: periodEnd.toISOString(),
-                turnover,
+                periodStart: user.periodStart.toISOString(),
+                periodEnd: user.periodEnd.toISOString(),
+                turnover: user.turnover,
                 netLoss: 0,
-                rewardAmount,
+                rewardAmount: user.rewardAmount,
                 isClaimed: false,
                 claimedAt: null,
                 user: {
@@ -335,10 +465,6 @@ export class CommissionService {
                 },
             };
         });
-
-        const totalRewardAmount = summaryUsers.reduce((sum, user) => {
-            return sum + this.calculateClaimable(this.toNumber(user.commissionTurnover), setting);
-        }, 0);
 
         return {
             data,

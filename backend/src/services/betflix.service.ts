@@ -768,12 +768,19 @@ export class BetflixService {
         const api = await this.getApi();
         const normalizedLastId = Number.isFinite(lastId) && lastId > 0 ? Math.floor(lastId) : 0;
         const params = { lastedID: normalizedLastId.toString() };
+        const isNoNewLogResponse = (payload: any) =>
+            payload?.status === 'error' &&
+            Number(payload?.error_code) === 5;
 
         // Primary endpoint from local Betflix reference docs.
         try {
             const res = await api.get('/v4/report/getBetlogNEW', { params });
             if (res.data.status !== 'error') {
                 return res.data.data || [];
+            }
+            if (isNoNewLogResponse(res.data)) {
+                console.log(`[GetBetLog] No new Betflix logs for cursor ${normalizedLastId} on getBetlogNEW`);
+                return [];
             }
             console.error('[GetBetLog] GET report/getBetlogNEW Error:', res.data);
         } catch (e: any) {
@@ -785,6 +792,10 @@ export class BetflixService {
             const res = await api.get('/v4/report/getBetlogNEWAllDownline', { params });
             if (res.data.status !== 'error') {
                 return res.data.data || [];
+            }
+            if (isNoNewLogResponse(res.data)) {
+                console.log(`[GetBetLog] No new Betflix logs for cursor ${normalizedLastId} on getBetlogNEWAllDownline`);
+                return [];
             }
             console.error('[GetBetLog] GET report/getBetlogNEWAllDownline Error:', res.data);
         } catch (e: any) {

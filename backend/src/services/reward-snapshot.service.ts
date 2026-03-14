@@ -54,7 +54,14 @@ export class RewardSnapshotService {
 
     private static async getRewardConfig(type: RewardType): Promise<RewardConfig> {
         if (type === 'CASHBACK') {
-            const setting = await prisma.cashbackSetting.findFirst();
+            const setting = await prisma.cashbackSetting.findFirst({
+                select: {
+                    isActive: true,
+                    rate: true,
+                    minLoss: true,
+                    maxCashback: true,
+                },
+            });
             return {
                 isActive: Boolean(setting?.isActive),
                 rate: Number(setting?.rate || 0),
@@ -63,7 +70,14 @@ export class RewardSnapshotService {
             };
         }
 
-        const setting = await prisma.turnoverSetting.findFirst();
+        const setting = await prisma.turnoverSetting.findFirst({
+            select: {
+                isActive: true,
+                rate: true,
+                minTurnover: true,
+                maxReward: true,
+            },
+        });
         return {
             isActive: Boolean(setting?.isActive),
             rate: Number(setting?.rate || 0),

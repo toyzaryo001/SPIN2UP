@@ -1,5 +1,4 @@
 import { Prisma } from '@prisma/client';
-import axios from 'axios';
 import { BetflixService } from './betflix.service';
 import prisma from '../lib/db.js';
 import { TurnoverService } from './turnover.service.js';
@@ -15,31 +14,23 @@ export class BetLogSyncService {
         console.log(`[Sync] Starting Betflix Log Sync at ${new Date().toISOString()}`);
 
         try {
-            // 1. Get Config & API Instance
+            // 1. Validate configuration upfront
             const stats = await BetflixService.checkStatus();
-            // We use the config from checkStatus/BetflixService cache or DB
-            const config = await prisma.agentConfig.findFirst({ where: { isActive: true } });
-
-            if (!config) {
-                console.log('[Sync] No active config found.');
+            if (!stats.server.success || !stats.auth.success) {
+                console.log('[Sync] Betflix connection not ready, skipping sync.', stats);
                 return;
             }
-
-            const api = axios.create({
-                baseURL: config.apiKey || 'https://api.betflix.co',
-                headers: {
-                    'x-api-key': config.xApiKey || '',
-                    'x-api-cat': config.xApiCat || '',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            });
 
             // 2. Get Last Synced ID from Settings (since we don't have SyncCursor table)
             const cursorSetting = await prisma.setting.findUnique({
                 where: { key: 'BETFLIX_LAST_LOG_ID' }
             });
 
-            let lastId = cursorSetting ? parseInt(cursorSetting.value) : 0;
+            let lastId = cursorSetting ? parseInt(cursorSetting.value, 10) : 0;
+            if (!Number.isFinite(lastId) || lastId < 0) {
+                console.warn(`[Sync] Invalid BETFLIX_LAST_LOG_ID "${cursorSetting?.value ?? ''}", resetting to 0`);
+                lastId = 0;
+            }
             console.log(`[Sync] Last Synced ID: ${lastId}`);
 
             // 3. Loop Fetch

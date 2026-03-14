@@ -27,10 +27,10 @@ export class BetflixService {
         }
 
         try {
-            // Fetch from AgentConfig
-            const config = await prisma.agentConfig.findFirst({
-                where: { isActive: true },
-                orderBy: { id: 'asc' }
+            // Fetch the dedicated BETFLIX config first. Falling back to "first active"
+            // can accidentally point sync jobs to another provider like NEXUS.
+            const config = await prisma.agentConfig.findUnique({
+                where: { code: 'BETFLIX' }
             });
 
             // Fetch Site Setting (Prefix)
@@ -39,7 +39,7 @@ export class BetflixService {
             });
             const sitePrefix = siteSetting ? siteSetting.value : (process.env.BETFLIX_USER_PREFIX || 'CHKK');
 
-            if (!config) {
+            if (!config || !config.isActive) {
                 // Fallback to env if no DB config found (safety net)
                 return {
                     apiUrl: process.env.BETFLIX_API_URL || 'https://api.bfx.fail',
@@ -78,6 +78,7 @@ export class BetflixService {
 
             console.log('Using Betflix Config:', {
                 apiUrl: configCache.apiUrl,
+                code: 'BETFLIX',
                 prefix: configCache.prefix,
                 sitePrefix: configCache.sitePrefix,
                 hasKey: !!configCache.apiKey,
@@ -765,34 +766,30 @@ export class BetflixService {
      */
     static async getBetLog(lastId: number): Promise<any[]> {
         const api = await this.getApi();
-        const params = new URLSearchParams();
-        params.append('lastedID', lastId.toString());
-        // Also support 'id' param for other versions
-        params.append('id', lastId.toString());
+        const normalizedLastId = Number.isFinite(lastId) && lastId > 0 ? Math.floor(lastId) : 0;
+        const params = { lastedID: normalizedLastId.toString() };
 
-        // 1. Try 'report/getBetlogNEW' (GET) - Reference Primary
-        // 1. Try 'report/getBetlogNEW' (GET) - Reference Primary
+        // Primary endpoint from local Betflix reference docs.
         try {
-            // Note: Reference uses 'report/getBetlogNEW' but some use '/v4/get_bet_log'
-            // We follow Reference logic: report/getBetlogNEW
-            const res = await api.get('/v4/report/getBetlogNEW', { params: Object.fromEntries(params) });
-            if (res.data.status !== 'error') return res.data.data || [];
-            else console.error('[GetBetLog] GET report/getBetlogNEW Error:', res.data);
-        } catch (e: any) { console.error('[GetBetLog] GET report/getBetlogNEW Exception:', e.message); }
+            const res = await api.get('/v4/report/getBetlogNEW', { params });
+            if (res.data.status !== 'error') {
+                return res.data.data || [];
+            }
+            console.error('[GetBetLog] GET report/getBetlogNEW Error:', res.data);
+        } catch (e: any) {
+            console.error('[GetBetLog] GET report/getBetlogNEW Exception:', e.message);
+        }
 
-        // 2. Try 'report/getBetlogNEW' (POST) - Reference Fallback
+        // Some Betflix setups expose the AllDownline endpoint instead.
         try {
-            const res = await api.post('/v4/report/getBetlogNEW', params);
-            if (res.data.status !== 'error') return res.data.data || [];
-            else console.error('[GetBetLog] POST report/getBetlogNEW Error:', res.data);
-        } catch (e: any) { console.error('[GetBetLog] POST report/getBetlogNEW Exception:', e.message); }
-
-        // 3. Try '/v4/get_bet_log' (POST) - Common V4 Fallback
-        try {
-            const res = await api.post('/v4/get_bet_log', params);
-            if (res.data.status !== 'error') return res.data.data || [];
-            else console.error('[GetBetLog] POST v4/get_bet_log Error:', res.data);
-        } catch (e: any) { console.error('[GetBetLog] POST v4/get_bet_log Exception:', e.message); }
+            const res = await api.get('/v4/report/getBetlogNEWAllDownline', { params });
+            if (res.data.status !== 'error') {
+                return res.data.data || [];
+            }
+            console.error('[GetBetLog] GET report/getBetlogNEWAllDownline Error:', res.data);
+        } catch (e: any) {
+            console.error('[GetBetLog] GET report/getBetlogNEWAllDownline Exception:', e.message);
+        }
 
         return [];
     }

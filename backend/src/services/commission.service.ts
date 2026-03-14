@@ -30,9 +30,21 @@ export class CommissionService {
         return dayjs(value).utcOffset(THAI_UTC_OFFSET).format('YYYY-MM-DD HH:mm:ss');
     }
 
-    private static getPeriodStart(value?: Date | null) {
-        if (value) {
-            return value;
+    private static getPeriodStart(args: {
+        cycleStartedAt?: Date | null;
+        lastClaimedPeriodEnd?: Date | null;
+        createdAt?: Date | null;
+    }) {
+        if (args.cycleStartedAt) {
+            return args.cycleStartedAt;
+        }
+
+        if (args.lastClaimedPeriodEnd) {
+            return args.lastClaimedPeriodEnd;
+        }
+
+        if (args.createdAt) {
+            return args.createdAt;
         }
 
         return thaiStartOfDay(thaiNow().toDate()).toDate();
@@ -113,6 +125,7 @@ export class CommissionService {
                 balance: true,
                 betflixUsername: true,
                 commissionCycleStartedAt: true,
+                createdAt: true,
                 externalAccounts: nexusAgentId
                     ? {
                         where: { agentId: nexusAgentId },
@@ -122,6 +135,12 @@ export class CommissionService {
                         },
                     }
                     : false,
+                rewards: {
+                    where: { type: 'COMMISSION' },
+                    orderBy: { claimedAt: 'desc' },
+                    take: 1,
+                    select: { periodEnd: true },
+                },
             },
         });
 
@@ -129,7 +148,11 @@ export class CommissionService {
             throw new Error('User not found');
         }
 
-        const periodStart = this.getPeriodStart(user.commissionCycleStartedAt);
+        const periodStart = this.getPeriodStart({
+            cycleStartedAt: user.commissionCycleStartedAt,
+            lastClaimedPeriodEnd: user.rewards[0]?.periodEnd || null,
+            createdAt: user.createdAt,
+        });
         const periodEnd = thaiNow().toDate();
         const turnover = await this.getTurnoverForUser({
             userId,
@@ -390,6 +413,7 @@ export class CommissionService {
                 phone: true,
                 betflixUsername: true,
                 commissionCycleStartedAt: true,
+                createdAt: true,
                 externalAccounts: nexusAgentId
                     ? {
                         where: { agentId: nexusAgentId },
@@ -399,6 +423,12 @@ export class CommissionService {
                         },
                     }
                     : false,
+                rewards: {
+                    where: { type: 'COMMISSION' },
+                    orderBy: { claimedAt: 'desc' },
+                    take: 1,
+                    select: { periodEnd: true },
+                },
             },
         });
 
@@ -418,7 +448,11 @@ export class CommissionService {
             const batch = allUsers.slice(index, index + batchSize);
             const batchResults = await Promise.all(
                 batch.map(async (user) => {
-                    const periodStart = this.getPeriodStart(user.commissionCycleStartedAt);
+                    const periodStart = this.getPeriodStart({
+                        cycleStartedAt: user.commissionCycleStartedAt,
+                        lastClaimedPeriodEnd: user.rewards[0]?.periodEnd || null,
+                        createdAt: user.createdAt,
+                    });
                     const periodEnd = thaiNow().toDate();
                     const turnover = await this.getTurnoverForUser({
                         userId: user.id,

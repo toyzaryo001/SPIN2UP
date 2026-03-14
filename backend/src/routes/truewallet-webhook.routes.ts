@@ -186,11 +186,11 @@ router.post('/', async (req: Request, res: Response) => {
                 data: {
                     userId: matchedUser.id,
                     type: 'DEPOSIT',
+                    subType: 'TrueWallet',
                     amount: amountBaht,
                     status: 'PENDING',
                     balanceBefore: Number(matchedUser.balance),
                     balanceAfter: Number(matchedUser.balance),
-                    subType: 'TrueWallet',
                     note: `TrueWallet deposit - รอตรวจสอบ (ฝากออโต้ปิดรายบุคคล)`
                 }
             });
@@ -239,6 +239,7 @@ router.post('/', async (req: Request, res: Response) => {
                 data: {
                     userId: matchedUser.id,
                     type: 'DEPOSIT',
+                    subType: 'TrueWallet',
                     amount: amountBaht,
                     status: 'COMPLETED',
                     balanceBefore: Number(updatedUser.balance) - amountBaht,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PlayerLayout from "@/components/PlayerLayout";
 import { Wallet, ArrowDownToLine, Copy, Check, Building2, Smartphone, QrCode, AlertCircle } from "lucide-react";
@@ -78,6 +78,8 @@ const getPromotionFormula = (promotion: SelectedPromotionSummary) => {
 export default function DepositPage() {
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
+    const trueMoneyWatchBalanceRef = useRef<number | null>(null);
+    const trueMoneyAlertShownRef = useRef(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -347,6 +349,49 @@ export default function DepositPage() {
             window.clearInterval(interval);
         };
     }, [qrData?.transactionId]);
+
+    useEffect(() => {
+        if (activeTab !== "deposit" || selectedChannel !== "truemoney") {
+            trueMoneyWatchBalanceRef.current = null;
+            trueMoneyAlertShownRef.current = false;
+            return;
+        }
+
+        if (trueMoneyWatchBalanceRef.current === null) {
+            trueMoneyWatchBalanceRef.current = Number(user?.balance || 0);
+        }
+
+        let isMounted = true;
+
+        const pollTrueMoneyBalance = async () => {
+            const profile = await refreshUserProfile();
+            if (!isMounted || !profile) {
+                return;
+            }
+
+            const nextBalance = Number(profile.balance || 0);
+            const baseBalance = Number(trueMoneyWatchBalanceRef.current || 0);
+
+            if (nextBalance > baseBalance && !trueMoneyAlertShownRef.current) {
+                trueMoneyAlertShownRef.current = true;
+                trueMoneyWatchBalanceRef.current = nextBalance;
+                showAlert("รับยอดฝาก TrueMoney สำเร็จ ระบบอัปเดตยอดให้อัตโนมัติแล้ว", "success");
+                return;
+            }
+
+            if (nextBalance < baseBalance) {
+                trueMoneyWatchBalanceRef.current = nextBalance;
+                trueMoneyAlertShownRef.current = false;
+            }
+        };
+
+        const interval = window.setInterval(pollTrueMoneyBalance, 10000);
+
+        return () => {
+            isMounted = false;
+            window.clearInterval(interval);
+        };
+    }, [activeTab, selectedChannel, user?.id]);
 
     // Auto-select first bank when channel changes
     useEffect(() => {

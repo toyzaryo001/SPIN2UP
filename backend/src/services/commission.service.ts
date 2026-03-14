@@ -26,10 +26,6 @@ export class CommissionService {
         return Number(value || 0);
     }
 
-    private static formatThaiDateTime(value: Date) {
-        return dayjs(value).utcOffset(THAI_UTC_OFFSET).format('YYYY-MM-DD HH:mm:ss');
-    }
-
     private static getPeriodStart(args: {
         cycleStartedAt?: Date | null;
         lastClaimedPeriodEnd?: Date | null;
@@ -48,6 +44,29 @@ export class CommissionService {
         }
 
         return thaiStartOfDay(thaiNow().toDate()).toDate();
+    }
+
+    private static async getBetflixTurnoverFromDailySummary(
+        betflixUsername: string,
+        periodStart: Date,
+        periodEnd: Date
+    ) {
+        let totalTurnover = 0;
+        let cursor = dayjs(periodStart).utcOffset(THAI_UTC_OFFSET).startOf('day');
+        const endDay = dayjs(periodEnd).utcOffset(THAI_UTC_OFFSET).startOf('day');
+
+        while (!cursor.isAfter(endDay, 'day')) {
+            const dateStr = cursor.format('YYYY-MM-DD');
+            const report = await BetflixService.getReportSummary(betflixUsername, dateStr, dateStr);
+            totalTurnover += this.toNumber(
+                report?.valid_amount
+                || report?.turnover
+                || report?.valid_bet
+            );
+            cursor = cursor.add(1, 'day');
+        }
+
+        return totalTurnover;
     }
 
     private static async getNexusAgentId() {
@@ -72,14 +91,15 @@ export class CommissionService {
         userId: number;
         phone?: string | null;
         betflixUsername?: string | null;
+        betflixTurnover?: Decimal | number | null;
         externalAccounts?: Array<{ agentId?: number; externalUsername: string }> | false;
         periodStart: Date;
         periodEnd: Date;
+        allowLiveBootstrapBetflix?: boolean;
     }) {
         const periodStartDate = args.periodStart;
         const periodEndDate = args.periodEnd;
-        const betflixStart = this.formatThaiDateTime(periodStartDate);
-        const betflixEnd = this.formatThaiDateTime(periodEndDate);
+        const persistedBetflixTurnover = this.toNumber(args.betflixTurnover);
 
         await NexusLogSyncService.syncRangeForUsers(
             [{
@@ -91,21 +111,21 @@ export class CommissionService {
             periodEndDate
         );
 
-        const [betflixResult, nexusTurnoverResult] = await Promise.allSettled([
-            args.betflixUsername
-                ? BetflixService.getReportSummary(args.betflixUsername, betflixStart, betflixEnd)
-                : Promise.resolve(null),
+        const [betflixTurnoverResult, nexusTurnoverResult] = await Promise.allSettled([
+            args.betflixUsername && args.allowLiveBootstrapBetflix
+                ? this.getBetflixTurnoverFromDailySummary(
+                    args.betflixUsername,
+                    periodStartDate,
+                    periodEndDate
+                ).then((liveTurnover) => Math.max(persistedBetflixTurnover, liveTurnover))
+                : Promise.resolve(persistedBetflixTurnover),
             NexusLogSyncService.getUserTurnoverFromDb(args.userId, periodStartDate, periodEndDate),
         ]);
 
         let turnover = 0;
 
-        if (betflixResult.status === 'fulfilled' && betflixResult.value) {
-            turnover += this.toNumber(
-                betflixResult.value.valid_amount
-                || betflixResult.value.turnover
-                || betflixResult.value.valid_bet
-            );
+        if (betflixTurnoverResult.status === 'fulfilled') {
+            turnover += this.toNumber(betflixTurnoverResult.value);
         }
 
         if (nexusTurnoverResult.status === 'fulfilled') {
@@ -124,6 +144,7 @@ export class CommissionService {
                 phone: true,
                 balance: true,
                 betflixUsername: true,
+                commissionTurnover: true,
                 commissionCycleStartedAt: true,
                 createdAt: true,
                 externalAccounts: nexusAgentId
@@ -154,13 +175,16 @@ export class CommissionService {
             createdAt: user.createdAt,
         });
         const periodEnd = thaiNow().toDate();
+        const hasPriorClaim = user.rewards.length > 0;
         const turnover = await this.getTurnoverForUser({
             userId,
             phone: user.phone,
             betflixUsername: user.betflixUsername,
+            betflixTurnover: user.commissionTurnover,
             externalAccounts: Array.isArray(user.externalAccounts) ? user.externalAccounts : false,
             periodStart,
             periodEnd,
+            allowLiveBootstrapBetflix: !user.commissionCycleStartedAt && !hasPriorClaim,
         });
 
         return {
@@ -412,6 +436,7 @@ export class CommissionService {
                 fullName: true,
                 phone: true,
                 betflixUsername: true,
+                commissionTurnover: true,
                 commissionCycleStartedAt: true,
                 createdAt: true,
                 externalAccounts: nexusAgentId
@@ -454,13 +479,16 @@ export class CommissionService {
                         createdAt: user.createdAt,
                     });
                     const periodEnd = thaiNow().toDate();
+                    const hasPriorClaim = user.rewards.length > 0;
                     const turnover = await this.getTurnoverForUser({
                         userId: user.id,
                         phone: user.phone,
                         betflixUsername: user.betflixUsername,
+                        betflixTurnover: user.commissionTurnover,
                         externalAccounts: Array.isArray(user.externalAccounts) ? user.externalAccounts : false,
                         periodStart,
                         periodEnd,
+                        allowLiveBootstrapBetflix: !user.commissionCycleStartedAt && !hasPriorClaim,
                     });
                     const rewardAmount = this.calculateClaimable(turnover, setting);
 

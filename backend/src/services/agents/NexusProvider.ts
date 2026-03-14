@@ -85,11 +85,15 @@ export class NexusProvider implements IAgentService {
             const status = String(res?.status ?? '');
             const responseCode = String(res?.code ?? '').toUpperCase();
             const responseMessage = String(res?.msg || res?.message || '');
+            const normalizedMessage = responseMessage.toUpperCase().replace(/[\s_-]+/g, '');
+            const isDuplicatedUser =
+                normalizedMessage.includes('DUPLICATEDUSER') ||
+                normalizedMessage.includes('DUPLICATEUSER') ||
+                responseCode === 'DUPLICATED_USER';
 
             if (
                 status === '1' ||
-                responseMessage === 'DUPLICATED_USER' ||
-                responseCode === 'DUPLICATED_USER'
+                isDuplicatedUser
             ) {
                 return {
                     username: userCode,

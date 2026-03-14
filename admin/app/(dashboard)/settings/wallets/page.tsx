@@ -10,6 +10,7 @@ interface TrueMoneyWallet {
     phoneNumber: string;
     accountName: string;
     jwtSecret: string | null;
+    maskedJwtSecret?: string | null;
     hasSecret: boolean;
     webhookUrl: string;
     isActive: boolean;
@@ -68,7 +69,11 @@ export default function WalletsSettingsPage() {
         }
         try {
             if (editingId) {
-                await api.put(`/admin/settings/truemoney/${editingId}`, form);
+                const submissionData = { ...form };
+                if (!submissionData.jwtSecret.trim()) {
+                    delete (submissionData as { jwtSecret?: string }).jwtSecret;
+                }
+                await api.put(`/admin/settings/truemoney/${editingId}`, submissionData);
                 toast.success("อัปเดตวอลเล็ทสำเร็จ");
             } else {
                 await api.post("/admin/settings/truemoney", form);

@@ -5,6 +5,15 @@ import { clearJwtSecretCache } from '../../utils/jwt.js';
 
 const router = Router();
 
+function maskJwtSecret(secret: string | null | undefined) {
+    if (!secret) return null;
+    return `${secret.slice(0, 6)}***`;
+}
+
+function isMaskedJwtSecret(secret: unknown) {
+    return typeof secret === 'string' && secret.includes('***');
+}
+
 // GET /api/admin/settings - ดูตั้งค่าทั้งหมด (ต้องมีสิทธิ์ดู)
 router.get('/', requirePermission('settings', 'general', 'view'), async (req, res) => {
     try {
@@ -230,10 +239,11 @@ router.get('/truemoney', requirePermission('settings', 'truemoney', 'view'), asy
     try {
         const wallets = await prisma.trueMoneyWallet.findMany({ orderBy: { createdAt: 'desc' } });
         // Mask jwtSecret สำหรับ display (แสดง 6 ตัวแรก + ***)
-        const masked = wallets.map(w => ({
-            ...w,
-            jwtSecret: w.jwtSecret ? w.jwtSecret.slice(0, 6) + '***' : null,
-            hasSecret: !!w.jwtSecret,
+        const masked = wallets.map(({ jwtSecret, ...wallet }) => ({
+            ...wallet,
+            jwtSecret: maskJwtSecret(jwtSecret),
+            maskedJwtSecret: maskJwtSecret(jwtSecret),
+            hasSecret: !!jwtSecret,
             webhookUrl: `https://${req.get('host')}/api/webhooks/truewallet`,
         }));
         res.json({ success: true, data: masked });
@@ -247,12 +257,13 @@ router.get('/truemoney', requirePermission('settings', 'truemoney', 'view'), asy
 router.post('/truemoney', requirePermission('settings', 'truemoney', 'manage'), async (req, res) => {
     try {
         const { phoneNumber, accountName, jwtSecret, isActive, isShow, minDeposit } = req.body;
+        const normalizedSecret = typeof jwtSecret === 'string' ? jwtSecret.trim() : '';
 
         const wallet = await prisma.trueMoneyWallet.create({
             data: {
                 phoneNumber,
                 accountName,
-                jwtSecret: jwtSecret || null,
+                jwtSecret: normalizedSecret || null,
                 isActive: isActive ?? true,
                 isShow: isShow ?? true,
                 minDeposit: minDeposit ? Number(minDeposit) : 0
@@ -272,7 +283,16 @@ router.put('/truemoney/:id', requirePermission('settings', 'truemoney', 'manage'
         const updateData: any = {};
         if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
         if (accountName !== undefined) updateData.accountName = accountName;
-        if (jwtSecret !== undefined) updateData.jwtSecret = jwtSecret || null;
+        if (jwtSecret === null) {
+            updateData.jwtSecret = null;
+        } else if (typeof jwtSecret === 'string') {
+            const normalizedSecret = jwtSecret.trim();
+            if (normalizedSecret && !isMaskedJwtSecret(normalizedSecret)) {
+                updateData.jwtSecret = normalizedSecret;
+            } else if (isMaskedJwtSecret(normalizedSecret)) {
+                console.warn(`[TrueMoney Settings] Ignored masked jwtSecret update for wallet ${req.params.id}`);
+            }
+        }
         if (isActive !== undefined) updateData.isActive = isActive;
         if (isShow !== undefined) updateData.isShow = isShow;
         if (minDeposit !== undefined) updateData.minDeposit = minDeposit;

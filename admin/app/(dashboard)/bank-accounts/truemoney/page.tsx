@@ -12,6 +12,7 @@ interface TrueMoneyWallet {
     isActive: boolean;
     isShow?: boolean;
     jwtSecret?: string | null;
+    maskedJwtSecret?: string | null;
     hasSecret?: boolean;
     webhookUrl?: string;
     minDeposit?: number;
@@ -118,7 +119,7 @@ export default function TrueMoneyPage() {
     const handleToggleStatus = async (wallet: TrueMoneyWallet) => {
         try {
             const newStatus = !wallet.isActive;
-            await api.put(`/admin/settings/truemoney/${wallet.id}`, { ...wallet, isActive: newStatus });
+            await api.put(`/admin/settings/truemoney/${wallet.id}`, { isActive: newStatus });
             setWallets(wallets.map(w => w.id === wallet.id ? { ...w, isActive: newStatus } : w));
             toast.success(`เปลี่ยนสถานะรับยอดเป็น ${newStatus ? 'เปิด' : 'ปิด'}`);
         } catch (error) {
@@ -131,7 +132,7 @@ export default function TrueMoneyPage() {
     const handleToggleShow = async (wallet: TrueMoneyWallet) => {
         try {
             const newShow = !(wallet.isShow ?? true);
-            await api.put(`/admin/settings/truemoney/${wallet.id}`, { ...wallet, isShow: newShow });
+            await api.put(`/admin/settings/truemoney/${wallet.id}`, { isShow: newShow });
             setWallets(wallets.map(w => w.id === wallet.id ? { ...w, isShow: newShow } : w));
             toast.success(`เปลี่ยนสถานะโชว์หน้าเว็บเป็น ${newShow ? 'เปิด' : 'ปิด'}`);
         } catch (error) {

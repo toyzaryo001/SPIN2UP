@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Save, RefreshCw } from "lucide-react";
+import { Save, RefreshCw, Upload, Loader2, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState<any>({});
     const [loading, setLoading] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
 
     const [adminPermissions, setAdminPermissions] = useState<any>(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -63,6 +64,56 @@ export default function SettingsPage() {
         setSettings((prev: any) => ({ ...prev, [key]: value }));
     };
 
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("กรุณาเลือกไฟล์รูปภาพ");
+            e.target.value = "";
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("ไฟล์ต้องมีขนาดไม่เกิน 5MB");
+            e.target.value = "";
+            return;
+        }
+
+        setUploadingLogo(true);
+        try {
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    const base64 = reader.result as string;
+                    const res = await api.post("/admin/upload", {
+                        image: base64,
+                        folder: "site-logos"
+                    });
+
+                    if (res.data.success) {
+                        handleChange("logoUrl", res.data.data.url);
+                        toast.success("อัปโหลดโลโก้สำเร็จ");
+                    }
+                } catch (error: any) {
+                    toast.error(error.response?.data?.message || "อัปโหลดโลโก้ไม่สำเร็จ");
+                } finally {
+                    setUploadingLogo(false);
+                }
+            };
+            reader.onerror = () => {
+                toast.error("อ่านไฟล์ไม่สำเร็จ");
+                setUploadingLogo(false);
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            toast.error("เกิดข้อผิดพลาด");
+            setUploadingLogo(false);
+        }
+
+        e.target.value = "";
+    };
+
     return (
         <div className="space-y-6">
             <h2 className="text-2xl font-bold text-slate-800">ตั้งค่าระบบทั่วไป</h2>
@@ -95,6 +146,43 @@ export default function SettingsPage() {
                                     placeholder="https://example.com/logo.png"
                                 />
                                 <p className="text-xs text-slate-400 mt-1">ลิงก์รูปภาพโลโก้ (ถ้ามีจะแสดงแทนชื่อเว็บ)</p>
+                                <div className="mt-3 space-y-3">
+                                    {settings.logoUrl ? (
+                                        <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                            <img
+                                                src={settings.logoUrl}
+                                                alt="Site logo preview"
+                                                className="h-14 w-14 rounded-lg border border-slate-200 bg-white object-contain p-1"
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-medium text-slate-700">แสดงตัวอย่างโลโก้ปัจจุบัน</p>
+                                                <p className="truncate text-xs text-slate-400">{settings.logoUrl}</p>
+                                            </div>
+                                            {hasPerm('general') && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleChange("logoUrl", "")}
+                                                    className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
+                                                    title="ลบโลโก้"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : null}
+
+                                    <label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${uploadingLogo ? "border-yellow-300 bg-yellow-50 text-yellow-700" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"} ${!hasPerm('general') ? "cursor-not-allowed opacity-50" : ""}`}>
+                                        {uploadingLogo ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                        {uploadingLogo ? "กำลังอัปโหลด..." : "อัปโหลดโลโก้"}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleLogoUpload}
+                                            disabled={!hasPerm('general') || uploadingLogo}
+                                        />
+                                    </label>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Prefix (สำหรับ Username)</label>

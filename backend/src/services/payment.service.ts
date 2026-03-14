@@ -97,7 +97,8 @@ export class PaymentService {
                     TelegramNotifyService.notifyDeposit(
                         transaction.user?.username || 'Unknown',
                         amount,
-                        transaction.subType || 'Automatic'
+                        transaction.subType || 'Automatic',
+                        transaction.user?.fullName || null
                     ).catch(err => console.error('[Telegram] Error:', err));
 
                     DepositBonusService.applyPostDepositBenefits(transaction.id)

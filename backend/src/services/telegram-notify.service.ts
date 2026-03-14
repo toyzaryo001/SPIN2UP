@@ -46,7 +46,7 @@ export class TelegramNotifyService {
         return map;
     }
 
-    static async notifyDeposit(username: string, amount: number, method: string) {
+    static async notifyDeposit(username: string, amount: number, method: string, fullName?: string | null) {
         try {
             const s = await this.getSettings();
             if (s.telegramNotifyDeposit !== 'true') {
@@ -59,13 +59,28 @@ export class TelegramNotifyService {
                 return { success: false, message: 'Missing bot token or chat ID' };
             }
 
-            const msg = `💰 <b>แจ้งฝากเงินใหม่!</b>
-👤 ยูสเซอร์: <code>${username}</code>
-💵 จำนวน: <b>${amount.toLocaleString()} บาท</b>
-🔌 ช่องทาง: ${method}
-🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+            const displayFullName = fullName || '-';
+            const amountText = `<b>${amount.toLocaleString()} บาท</b>`;
+            const timeText = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+            const isTrueWallet = method === 'TrueWallet';
 
-            return this.sendMessage(botToken, chatId, msg);
+            const lines = [
+                '💰 <b>แจ้งฝากเงินใหม่!</b>',
+                `👤 ยูสเซอร์: <code>${username}</code>`,
+                `📝 ชื่อ-สกุล: ${displayFullName}`,
+            ];
+
+            if (isTrueWallet) {
+                lines.push(`💵 จำนวน: ${amountText}`);
+                lines.push(`🔌 ช่องทาง: ${method}`);
+            } else {
+                lines.push(`🔌 ช่องทาง: ${method}`);
+                lines.push(`💵 จำนวน: ${amountText}`);
+            }
+
+            lines.push(`🕒 เวลา: ${timeText}`);
+
+            return this.sendMessage(botToken, chatId, lines.join('\n'));
         } catch (error: any) {
             console.error('[Telegram] notifyDeposit error:', error.message);
             return { success: false, error: error.message };

@@ -253,6 +253,7 @@ async function processWebhookMessage(message: string, source: string, res: Respo
         select: {
             id: true,
             username: true,
+            fullName: true,
             bankAccount: true,
             bankName: true,
             balance: true,
@@ -459,7 +460,12 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             `Automatic SMS (${parsed.sourceBank})`
         ).catch(err => console.error('[LineNotify] Error:', err));
         import('../services/telegram-notify.service.js').then(({ TelegramNotifyService }) => {
-            TelegramNotifyService.notifyDeposit(matchedUser.username, depositAmount, `Automatic SMS (${parsed.sourceBank})`)
+            TelegramNotifyService.notifyDeposit(
+                matchedUser.username,
+                depositAmount,
+                `Automatic SMS (${parsed.sourceBank})`,
+                matchedUser.fullName || null
+            )
                 .catch(err => console.error('[Telegram] Error:', err));
         }).catch(() => {});
 

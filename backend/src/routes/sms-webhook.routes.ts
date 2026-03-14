@@ -25,11 +25,48 @@ function webhookAuth(req: Request, res: Response, next: Function) {
         return next();
     }
 
-    // รับ key จาก header หรือ query param
-    const providedKey = req.headers['x-webhook-key'] || req.query.apikey;
+    let providedKey = req.headers['x-webhook-key']
+        || req.headers['authorization']
+        || (typeof req.body === 'object' && req.body ? (req.body.apikey || req.body.apiKey || req.body.webhookKey) : undefined)
+        || req.query.apikey
+        || req.query.apiKey;
+
+    // บางแอป forward URL มาแปลก ๆ จน Express parse query ไม่เจอ
+    if (!providedKey && req.originalUrl?.includes('?')) {
+        try {
+            const rawQuery = req.originalUrl.split('?')[1] || '';
+            const search = new URLSearchParams(rawQuery);
+            providedKey = search.get('apikey') || search.get('apiKey') || undefined;
+        } catch {
+            // no-op
+        }
+    }
+
+    if (Array.isArray(providedKey)) {
+        providedKey = providedKey[0];
+    }
+    if (typeof providedKey === 'string' && providedKey.startsWith('Bearer ')) {
+        providedKey = providedKey.slice(7).trim();
+    }
+    if (typeof providedKey === 'string') {
+        try {
+            providedKey = decodeURIComponent(providedKey).trim();
+        } catch {
+            providedKey = providedKey.trim();
+        }
+
+        if (expectedKey && providedKey !== expectedKey && providedKey.startsWith(expectedKey)) {
+            providedKey = expectedKey;
+        }
+    }
 
     if (providedKey !== expectedKey) {
-        console.warn('[Webhook Auth] ❌ API Key ไม่ถูกต้อง:', providedKey);
+        console.warn('[Webhook Auth] ❌ API Key ไม่ถูกต้อง:', providedKey, {
+            method: req.method,
+            originalUrl: req.originalUrl,
+            query: req.query,
+            contentType: req.headers['content-type']
+        });
         return res.status(401).json({ success: false, error: 'Invalid API Key' });
     }
 

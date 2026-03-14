@@ -1,7 +1,7 @@
 import prisma from '../lib/db';
 import { thaiDateKey, thaiNow, thaiStartOfDay, thaiEndOfDay } from '../lib/thai-time';
 import { BetflixService } from './betflix.service';
-import { NexusProvider } from './agents/NexusProvider';
+import { NexusLogSyncService } from './nexus-log-sync.service.js';
 
 export type RewardType = 'CASHBACK' | 'COMMISSION';
 
@@ -179,67 +179,29 @@ export class RewardSnapshotService {
         const nexusResults = new Map<number, { turnover: number; winloss: number }>();
 
         if (nexusAgent && allUsers.length > 0) {
-            const nexus = new NexusProvider();
+            await NexusLogSyncService.syncRangeForUsers(
+                allUsers.map((user) => ({
+                    id: user.id,
+                    phone: user.phone,
+                    externalAccounts: Array.isArray(user.externalAccounts)
+                        ? user.externalAccounts.map((account) => ({
+                            agentId: nexusAgent.id,
+                            externalUsername: account.externalUsername,
+                        }))
+                        : false,
+                })),
+                period.periodStart,
+                period.periodEnd
+            );
 
-            for (let index = 0; index < allUsers.length; index += batchSize) {
-                const batch = allUsers.slice(index, index + batchSize);
-                const batchResults = await Promise.all(
-                    batch.map(async (user) => {
-                        try {
-                            const localNexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
-                                ? user.externalAccounts[0].externalUsername
-                                : null;
-                            const nexusUsername = localNexusUsername || await nexus.buildFallbackUsername(user.phone);
-                            if (!nexusUsername) {
-                                return null;
-                            }
+            const aggregated = await NexusLogSyncService.getAggregatedStatsForUsers(
+                allUsers.map((user) => user.id),
+                period.periodStart,
+                period.periodEnd
+            );
 
-                            const log = await nexus.getUnifiedGameLog(
-                                nexusUsername,
-                                period.nexusStart,
-                                period.nexusEnd
-                            );
-
-                            if (!log || (log.totalBet === 0 && log.totalWin === 0)) {
-                                return null;
-                            }
-
-                            if (!localNexusUsername) {
-                                await prisma.userExternalAccount.upsert({
-                                    where: {
-                                        userId_agentId: {
-                                            userId: user.id,
-                                            agentId: nexusAgent.id,
-                                        },
-                                    },
-                                    update: {
-                                        externalUsername: nexusUsername,
-                                    },
-                                    create: {
-                                        userId: user.id,
-                                        agentId: nexusAgent.id,
-                                        externalUsername: nexusUsername,
-                                        externalPassword: '',
-                                    },
-                                }).catch(() => null);
-                            }
-
-                            return {
-                                userId: user.id,
-                                turnover: log.totalBet,
-                                winloss: log.totalWin - log.totalBet,
-                            };
-                        } catch {
-                            return null;
-                        }
-                    })
-                );
-
-                for (const result of batchResults) {
-                    if (result) {
-                        nexusResults.set(result.userId, { turnover: result.turnover, winloss: result.winloss });
-                    }
-                }
+            for (const [userId, result] of aggregated.entries()) {
+                nexusResults.set(userId, result);
             }
         }
 

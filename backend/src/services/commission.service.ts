@@ -3,10 +3,10 @@ import { Decimal } from '@prisma/client/runtime/library';
 import dayjs from 'dayjs';
 import prisma from '../lib/db.js';
 import { AgentWalletService } from './agent-wallet.service.js';
-import { THAI_UTC_OFFSET, thaiNow } from '../lib/thai-time.js';
+import { THAI_UTC_OFFSET, thaiNow, thaiStartOfDay } from '../lib/thai-time.js';
 import { BetflixService } from './betflix.service.js';
-import { NexusProvider } from './agents/NexusProvider.js';
 import { TurnoverService } from './turnover.service.js';
+import { NexusLogSyncService } from './nexus-log-sync.service.js';
 
 type DbLike = Prisma.TransactionClient | typeof prisma;
 
@@ -30,6 +30,14 @@ export class CommissionService {
         return dayjs(value).utcOffset(THAI_UTC_OFFSET).format('YYYY-MM-DD HH:mm:ss');
     }
 
+    private static getPeriodStart(value?: Date | null) {
+        if (value) {
+            return value;
+        }
+
+        return thaiStartOfDay(thaiNow().toDate()).toDate();
+    }
+
     private static async getNexusAgentId() {
         if (this.nexusAgentIdCache && Date.now() - this.nexusAgentIdCache.fetchedAt < 60_000) {
             return this.nexusAgentIdCache.value;
@@ -48,9 +56,11 @@ export class CommissionService {
         return this.nexusAgentIdCache.value;
     }
 
-    private static async getLiveTurnoverForUser(args: {
+    private static async getTurnoverForUser(args: {
+        userId: number;
+        phone?: string | null;
         betflixUsername?: string | null;
-        nexusUsername?: string | null;
+        externalAccounts?: Array<{ agentId?: number; externalUsername: string }> | false;
         periodStart: Date;
         periodEnd: Date;
     }) {
@@ -58,15 +68,22 @@ export class CommissionService {
         const periodEndDate = args.periodEnd;
         const betflixStart = this.formatThaiDateTime(periodStartDate);
         const betflixEnd = this.formatThaiDateTime(periodEndDate);
-        const nexus = args.nexusUsername ? new NexusProvider() : null;
 
-        const [betflixResult, nexusResult] = await Promise.allSettled([
+        await NexusLogSyncService.syncRangeForUsers(
+            [{
+                id: args.userId,
+                phone: args.phone || null,
+                externalAccounts: args.externalAccounts || false,
+            }],
+            periodStartDate,
+            periodEndDate
+        );
+
+        const [betflixResult, nexusTurnoverResult] = await Promise.allSettled([
             args.betflixUsername
                 ? BetflixService.getReportSummary(args.betflixUsername, betflixStart, betflixEnd)
                 : Promise.resolve(null),
-            args.nexusUsername && nexus
-                ? nexus.getUnifiedGameLog(args.nexusUsername, betflixStart, betflixEnd)
-                : Promise.resolve(null),
+            NexusLogSyncService.getUserTurnoverFromDb(args.userId, periodStartDate, periodEndDate),
         ]);
 
         let turnover = 0;
@@ -79,8 +96,8 @@ export class CommissionService {
             );
         }
 
-        if (nexusResult.status === 'fulfilled' && nexusResult.value) {
-            turnover += this.toNumber(nexusResult.value.totalBet);
+        if (nexusTurnoverResult.status === 'fulfilled') {
+            turnover += this.toNumber(nexusTurnoverResult.value);
         }
 
         return turnover;
@@ -100,6 +117,7 @@ export class CommissionService {
                     ? {
                         where: { agentId: nexusAgentId },
                         select: {
+                            agentId: true,
                             externalUsername: true,
                         },
                     }
@@ -111,16 +129,13 @@ export class CommissionService {
             throw new Error('User not found');
         }
 
-        const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
+        const periodStart = this.getPeriodStart(user.commissionCycleStartedAt);
         const periodEnd = thaiNow().toDate();
-        const nexus = nexusAgentId ? new NexusProvider() : null;
-        const localNexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
-            ? user.externalAccounts[0].externalUsername
-            : null;
-        const nexusUsername = localNexusUsername || (nexus ? await nexus.buildFallbackUsername(user.phone) : null);
-        const turnover = await this.getLiveTurnoverForUser({
+        const turnover = await this.getTurnoverForUser({
+            userId,
+            phone: user.phone,
             betflixUsername: user.betflixUsername,
-            nexusUsername,
+            externalAccounts: Array.isArray(user.externalAccounts) ? user.externalAccounts : false,
             periodStart,
             periodEnd,
         });
@@ -130,7 +145,6 @@ export class CommissionService {
             turnover,
             periodStart,
             periodEnd,
-            nexusUsername,
         };
     }
 
@@ -380,6 +394,7 @@ export class CommissionService {
                     ? {
                         where: { agentId: nexusAgentId },
                         select: {
+                            agentId: true,
                             externalUsername: true,
                         },
                     }
@@ -403,16 +418,13 @@ export class CommissionService {
             const batch = allUsers.slice(index, index + batchSize);
             const batchResults = await Promise.all(
                 batch.map(async (user) => {
-                    const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
+                    const periodStart = this.getPeriodStart(user.commissionCycleStartedAt);
                     const periodEnd = thaiNow().toDate();
-                    const nexus = nexusAgentId ? new NexusProvider() : null;
-                    const localNexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
-                        ? user.externalAccounts[0].externalUsername
-                        : null;
-                    const nexusUsername = localNexusUsername || (nexus ? await nexus.buildFallbackUsername(user.phone) : null);
-                    const turnover = await this.getLiveTurnoverForUser({
+                    const turnover = await this.getTurnoverForUser({
+                        userId: user.id,
+                        phone: user.phone,
                         betflixUsername: user.betflixUsername,
-                        nexusUsername,
+                        externalAccounts: Array.isArray(user.externalAccounts) ? user.externalAccounts : false,
                         periodStart,
                         periodEnd,
                     });

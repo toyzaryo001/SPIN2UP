@@ -1,6 +1,7 @@
 import { BetLogSyncService } from './bet-log-sync.service.js';
 import { RewardSnapshotService } from './reward-snapshot.service.js';
 import { JobLockService } from './job-lock.service.js';
+import { NexusLogSyncService } from './nexus-log-sync.service.js';
 
 type JobTimer = ReturnType<typeof setInterval>;
 
@@ -79,6 +80,14 @@ export class BackgroundJobsService {
             intervalMs: this.getInterval('CASHBACK_SNAPSHOT_INTERVAL_MS', 300_000),
             task: async () => {
                 await RewardSnapshotService.syncDailySnapshots('CASHBACK');
+            },
+        });
+
+        this.registerJob({
+            name: 'nexus-log-sync',
+            intervalMs: this.getInterval('NEXUS_LOG_SYNC_INTERVAL_MS', 300_000),
+            task: async () => {
+                await NexusLogSyncService.syncRecentWindow();
             },
         });
     }

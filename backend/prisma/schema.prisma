@@ -41,6 +41,7 @@ model User {
   rankRewardClaims  RankRewardClaim[]
   rewards           RewardClaim[]
   rewardSnapshots   RewardUserSnapshot[]
+  nexusGameLogs     NexusGameLog[]
   agentWalletTransfers AgentWalletTransferLog[]
   selectedPromotion Promotion?            @relation("UserSelectedPromotion", fields: [selectedPromotionId], references: [id])
   transactions      Transaction[]
@@ -68,6 +69,31 @@ model UserExternalAccount {
 
   @@unique([userId, agentId])
   @@index([externalUsername])
+}
+
+model NexusGameLog {
+  id               Int      @id @default(autoincrement())
+  userId           Int?
+  externalUsername String
+  providerCode     String?
+  gameCode         String?
+  gameType         String
+  txnId            String
+  txnType          String
+  betAmount        Decimal  @default(0)
+  winAmount        Decimal  @default(0)
+  occurredAtUtc    DateTime
+  occurredAtThai   DateTime
+  thaiStatDate     DateTime
+  rawPayload       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User?    @relation(fields: [userId], references: [id])
+
+  @@unique([externalUsername, txnId, txnType])
+  @@index([userId, thaiStatDate])
+  @@index([externalUsername, occurredAtUtc])
+  @@index([thaiStatDate])
 }
 
 model Admin {

@@ -309,16 +309,9 @@ export class NexusProvider implements IAgentService {
             let hasMore = true;
 
             while (hasMore) {
-                const res = await this.request('get_game_log', {
-                    user_code: userCode,
-                    game_type: 'slot',
-                    start,
-                    end,
-                    page,
-                    perPage,
-                });
+                const res = await this.getRawGameLog(userCode, 'slot', start, end, page, perPage);
 
-                if (res.status !== 1 || !res.slot) {
+                if (Number(res.status) !== 1 || !res.slot) {
                     // If first page fails, return null
                     if (page === 0) return null;
                     break;
@@ -355,6 +348,24 @@ export class NexusProvider implements IAgentService {
         }
     }
 
+    async getRawGameLog(
+        userCode: string,
+        gameType: string,
+        start: string,
+        end: string,
+        page = 0,
+        perPage = 1000
+    ) {
+        return this.request('get_game_log', {
+            user_code: userCode,
+            game_type: gameType,
+            start,
+            end,
+            page,
+            perPage,
+        });
+    }
+
     async getUnifiedGameLog(userCode: string, start: string, end: string): Promise<{ totalBet: number; totalWin: number; count: number } | null> {
         try {
             let totalBet = 0;
@@ -369,16 +380,9 @@ export class NexusProvider implements IAgentService {
                 let hasMore = true;
 
                 while (hasMore) {
-                    const res = await this.request('get_game_log', {
-                        user_code: userCode,
-                        game_type: gameType,
-                        start,
-                        end,
-                        page,
-                        perPage,
-                    });
+                    const res = await this.getRawGameLog(userCode, gameType, start, end, page, perPage);
 
-                    if (res.status !== 1) {
+                    if (Number(res.status) !== 1) {
                         break;
                     }
 

@@ -2,10 +2,10 @@ import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db';
 import { AgentWalletService } from './agent-wallet.service.js';
 import { BetflixService } from './betflix.service';
-import { NexusProvider } from './agents/NexusProvider';
 import { thaiNow, thaiStartOfDay, thaiEndOfDay } from '../lib/thai-time';
 import { CommissionService } from './commission.service.js';
 import { TurnoverService } from './turnover.service.js';
+import { NexusLogSyncService } from './nexus-log-sync.service.js';
 
 // Types for Reward Calculation
 interface RewardStats {
@@ -62,6 +62,21 @@ export class RewardService {
         const yesterday = thaiNow().subtract(1, 'day');
         const periodStart = thaiStartOfDay(yesterday.toDate()).format('YYYY-MM-DD HH:mm:ss');
         const periodEnd = thaiEndOfDay(yesterday.toDate()).format('YYYY-MM-DD HH:mm:ss');
+        const periodStartDate = thaiStartOfDay(yesterday.toDate()).toDate();
+        const periodEndDate = thaiEndOfDay(yesterday.toDate()).toDate();
+
+        await NexusLogSyncService.syncRangeForUsers(
+            [{
+                id: user.id,
+                phone: user.phone,
+                externalAccounts: user.externalAccounts.map((account: any) => ({
+                    agentId: account.agentId,
+                    externalUsername: account.externalUsername,
+                })),
+            }],
+            periodStartDate,
+            thaiEndOfDay(thaiNow().toDate()).toDate()
+        );
         // 3. Check if already claimed
         const claims = await prisma.rewardClaim.findMany({
             where: {
@@ -97,36 +112,17 @@ export class RewardService {
         }
 
         // 4b. Nexus — ดึงจาก UserExternalAccount (กรองด้วย agent code)
-        const nexusAgentConfig = await prisma.agentConfig.findUnique({ where: { code: 'NEXUS' } });
-        const nexusAccount = nexusAgentConfig
-            ? user.externalAccounts?.find(
-                (acc: any) => acc.agentId === nexusAgentConfig.id && acc.externalUsername
-            )
-            : null;
-        const nexus = nexusAgentConfig ? new NexusProvider() : null;
-        const nexusUsername = nexusAccount?.externalUsername || (nexus ? await nexus.buildFallbackUsername(user.phone) : null);
-        if (nexusUsername) {
-            fetchPromises.push(
-                (async () => {
-                    try {
-                        const log = await nexus!.getUnifiedGameLog(
-                            nexusUsername,
-                            periodStart,
-                            periodEnd
-                        );
-                        if (log) {
-                            return {
-                                turnover: log.totalBet,
-                                winLoss: log.totalWin - log.totalBet // Positive = win, Negative = loss
-                            };
-                        }
-                    } catch (err: any) {
-                        console.error('[Reward] Nexus report error:', err.message);
-                    }
+        fetchPromises.push(
+            NexusLogSyncService.getUserSummaryFromDb(user.id, periodStartDate, periodEndDate)
+                .then((summary) => ({
+                    turnover: summary.turnover,
+                    winLoss: summary.winloss,
+                }))
+                .catch((err: any) => {
+                    console.error('[Reward] Nexus report error:', err.message);
                     return { turnover: 0, winLoss: 0 };
-                })()
-            );
-        }
+                })
+        );
 
         // Fetch all agents in parallel — one agent down won't affect the other
         const results = await Promise.allSettled(fetchPromises);

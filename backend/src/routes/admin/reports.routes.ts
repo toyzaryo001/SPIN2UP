@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../../lib/db';
 import { requirePermission } from '../../middlewares/auth.middleware';
 import { BetflixService } from '../../services/betflix.service';
+import { NexusLogSyncService } from '../../services/nexus-log-sync.service.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -529,9 +530,6 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
         // Format dates
         const startStr = dayjs(start).utcOffset(7).format('YYYY-MM-DD');
         const endStr = dayjs(end).utcOffset(7).format('YYYY-MM-DD');
-        const nexusStartStr = dayjs(start).utcOffset(7).format('YYYY-MM-DD HH:mm:ss');
-        const nexusEndStr = dayjs(end).utcOffset(7).format('YYYY-MM-DD HH:mm:ss');
-
         // Build search filter
         const searchFilter = search ? {
             OR: [
@@ -557,7 +555,7 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
                 externalAccounts: nexusAgent
                     ? {
                         where: { agentId: nexusAgent.id },
-                        select: { externalUsername: true },
+                        select: { agentId: true, externalUsername: true },
                     }
                     : false,
             },
@@ -602,65 +600,33 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
         const nexusResults = new Map<number, { turnover: number; winloss: number }>();
 
         if (nexusAgent && users.length > 0) {
-            const { NexusProvider } = await import('../../services/agents/NexusProvider');
-            const nexus = new NexusProvider();
+            const syncResults = await NexusLogSyncService.syncRangeForUsers(
+                users.map((user) => ({
+                    id: user.id,
+                    phone: user.phone,
+                    externalAccounts: Array.isArray(user.externalAccounts) ? user.externalAccounts : false,
+                })),
+                start,
+                end
+            );
 
-            for (let i = 0; i < users.length; i += batchSize) {
-                const batch = users.slice(i, i + batchSize);
-                const batchResults = await Promise.all(
-                    batch.map(async (user) => {
-                        try {
-                            const localNexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
-                                ? user.externalAccounts[0].externalUsername
-                                : null;
-                            const nexusUsername = localNexusUsername || await nexus.buildFallbackUsername(user.phone);
-                            if (!nexusUsername) {
-                                return null;
-                            }
+            const failedSyncs = syncResults.filter((result) => result.failed);
+            if (failedSyncs.length > 0) {
+                console.warn('[Report win-lose] Nexus sync failed for users:', failedSyncs.map((item) => ({
+                    userId: item.userId,
+                    externalUsername: item.externalUsername,
+                    error: item.error,
+                })));
+            }
 
-                            const log = await nexus.getUnifiedGameLog(
-                                nexusUsername,
-                                nexusStartStr,
-                                nexusEndStr
-                            );
-                            if (log && (log.totalBet > 0 || log.totalWin > 0)) {
-                                const turnover = log.totalBet;
-                                const winloss = log.totalWin - log.totalBet; // win-bet = player profit (negative = house wins)
-                                if (!localNexusUsername) {
-                                    await prisma.userExternalAccount.upsert({
-                                        where: {
-                                            userId_agentId: {
-                                                userId: user.id,
-                                                agentId: nexusAgent.id,
-                                            },
-                                        },
-                                        update: {
-                                            externalUsername: nexusUsername,
-                                        },
-                                        create: {
-                                            userId: user.id,
-                                            agentId: nexusAgent.id,
-                                            externalUsername: nexusUsername,
-                                            externalPassword: '',
-                                        },
-                                    }).catch(() => null);
-                                }
+            const aggregated = await NexusLogSyncService.getAggregatedStatsForUsers(
+                users.map((user) => user.id),
+                start,
+                end
+            );
 
-                                return {
-                                    userId: user.id,
-                                    turnover,
-                                    winloss,
-                                };
-                            }
-                            return null;
-                        } catch {
-                            return null;
-                        }
-                    })
-                );
-                for (const r of batchResults) {
-                    if (r) nexusResults.set(r.userId, { turnover: r.turnover, winloss: r.winloss });
-                }
+            for (const [userId, result] of aggregated.entries()) {
+                nexusResults.set(userId, result);
             }
         }
 

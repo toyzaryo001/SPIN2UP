@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import prisma from '../lib/db.js';
 import { parseBankSMS, matchBankName, matchAccountLast4, generateMessageHash, getBankThaiName } from '../services/sms-parser.service.js';
 import { AgentWalletService } from '../services/agent-wallet.service.js';
@@ -7,6 +7,9 @@ import { DepositBonusService } from '../services/deposit-bonus.service.js';
 import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 
 const router = Router();
+
+// รองรับ SMS Forwarder บางตัวที่ส่ง raw text/plain มาโดยตรง
+router.use('/webhook', express.text({ type: ['text/plain', 'text/*'] }));
 
 // =============================================
 // Middleware: ตรวจสอบ API Key สำหรับ webhook
@@ -31,6 +34,62 @@ function webhookAuth(req: Request, res: Response, next: Function) {
     }
 
     next();
+}
+
+function normalizeCandidate(value: unknown): string {
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'number') return String(value);
+    return '';
+}
+
+function extractWebhookMessage(req: Request): string {
+    if (typeof req.body === 'string') {
+        return req.body.trim();
+    }
+
+    const body = (req.body || {}) as Record<string, any>;
+    const query = (req.query || {}) as Record<string, any>;
+
+    const bodyCandidates = [
+        body.message,
+        body.body,
+        body.text,
+        body.msg,
+        body.content,
+        body.payload,
+        body.sms,
+        body.smsBody,
+        body.messageBody,
+        body.data,
+        body.contentText,
+        body.notification,
+        body.title && body.text ? `${body.title}\n${body.text}` : ''
+    ];
+
+    for (const candidate of bodyCandidates) {
+        const normalized = normalizeCandidate(candidate);
+        if (normalized) return normalized;
+    }
+
+    const queryCandidates = [
+        query.message,
+        query.body,
+        query.text,
+        query.msg,
+        query.content,
+        query.payload,
+        query.sms,
+        query.smsBody,
+        query.messageBody,
+        query.data
+    ];
+
+    for (const candidate of queryCandidates) {
+        const normalized = normalizeCandidate(candidate);
+        if (normalized) return normalized;
+    }
+
+    return '';
 }
 
 // =============================================
@@ -426,14 +485,19 @@ router.post('/webhook', webhookAuth, async (req, res) => {
         if (!process.env.WEBHOOK_API_KEY && (process.env.NODE_ENV === 'production' || process.env.REQUIRE_WEBHOOK_API_KEY === 'true')) {
             return res.status(503).json({
                 success: false,
-                error: 'Webhook security is not configured'
+                error: 'Webhook security is not configured',
+                hint: 'Set WEBHOOK_API_KEY and append ?apikey=YOUR_KEY to the webhook URL'
             });
         }
 
-        const message = req.body.message || req.body.body || req.body.text || req.body.key || req.body.msg || '';
+        const message = extractWebhookMessage(req);
 
         if (!message) {
-            console.log('[Webhook POST] No message in request body');
+            console.log('[Webhook POST] No message in request body', {
+                contentType: req.headers['content-type'],
+                bodyType: typeof req.body,
+                bodyKeys: typeof req.body === 'object' && req.body ? Object.keys(req.body) : []
+            });
             return res.status(400).json({
                 success: false,
                 error: 'No message provided',
@@ -463,11 +527,12 @@ router.get('/webhook', webhookAuth, async (req, res) => {
         if (!process.env.WEBHOOK_API_KEY && (process.env.NODE_ENV === 'production' || process.env.REQUIRE_WEBHOOK_API_KEY === 'true')) {
             return res.status(503).json({
                 success: false,
-                error: 'Webhook security is not configured'
+                error: 'Webhook security is not configured',
+                hint: 'Set WEBHOOK_API_KEY and append ?apikey=YOUR_KEY to the webhook URL'
             });
         }
 
-        const message = (req.query.message || req.query.body || req.query.text || req.query.msg || req.query.key || '') as string;
+        const message = extractWebhookMessage(req);
 
         if (!message) {
             console.log('[Webhook GET] No message in query params');

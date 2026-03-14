@@ -41,6 +41,7 @@ model User {
   rankRewardClaims  RankRewardClaim[]
   rewards           RewardClaim[]
   rewardSnapshots   RewardUserSnapshot[]
+  agentWalletTransfers AgentWalletTransferLog[]
   selectedPromotion Promotion?            @relation("UserSelectedPromotion", fields: [selectedPromotionId], references: [id])
   transactions      Transaction[]
   trueWalletLogs    TrueWalletLog[]
@@ -138,6 +139,7 @@ model Transaction {
   promotion        Promotion?      @relation(fields: [promotionId], references: [id])
   promotionLog     PromotionLog?
   user             User            @relation(fields: [userId], references: [id])
+  agentWalletTransfers AgentWalletTransferLog[]
 
   @@index([userId])
   @@index([type])
@@ -145,6 +147,34 @@ model Transaction {
   @@index([createdAt])
   @@index([promotionId])
   @@index([referenceId])
+}
+
+model AgentWalletTransferLog {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  transactionId Int?
+  sourceAgentId Int?
+  targetAgentId Int?
+  type          String
+  amount        Decimal
+  status        String      @default("PENDING")
+  referenceId   String?
+  note          String?
+  metadata      String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  sourceAgent   AgentConfig? @relation("SourceAgentTransfers", fields: [sourceAgentId], references: [id])
+  targetAgent   AgentConfig? @relation("TargetAgentTransfers", fields: [targetAgentId], references: [id])
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([transactionId])
+  @@index([sourceAgentId])
+  @@index([targetAgentId])
+  @@index([type, status])
+  @@index([referenceId])
+  @@index([createdAt])
 }
 
 model PaymentGateway {
@@ -389,6 +419,8 @@ model AgentConfig {
   games        Game[]
   providers    GameProvider[]
   userAccounts UserExternalAccount[]
+  sourceWalletTransfers AgentWalletTransferLog[] @relation("SourceAgentTransfers")
+  targetWalletTransfers AgentWalletTransferLog[] @relation("TargetAgentTransfers")
 }
 
 model DailyReport {

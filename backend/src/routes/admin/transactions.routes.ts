@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import prisma from '../../lib/db.js';
-import { BetflixService } from '../../services/betflix.service';
+import { AgentWalletService } from '../../services/agent-wallet.service.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -261,15 +261,15 @@ router.post('/resolve-sms', async (req, res) => {
                     }
                 });
 
-                // Deposit to Betflix
-                const betflixResult = await BetflixService.ensureAndTransfer(
-                    user.id, user.phone, user.betflixUsername,
-                    depositAmount, `MANUAL_${transaction.id}`
-                );
-                const betflixSuccess = betflixResult.success;
-                const betflixError = betflixResult.error || '';
+                try {
+                    await AgentWalletService.creditMainAgent(
+                        user.id,
+                        depositAmount,
+                        `MANUAL_${transaction.id}`,
+                        `Manual SMS match ${transaction.id}`,
+                        transaction.id
+                    );
 
-                if (betflixSuccess) {
                     await prisma.$transaction([
                         prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'COMPLETED' } }),
                         prisma.user.update({ where: { id: user.id }, data: { balance: { increment: depositAmount } } }),
@@ -283,20 +283,17 @@ router.post('/resolve-sms', async (req, res) => {
                             }
                         })
                     ]);
-                    return res.json({ success: true, message: 'อนุมัติยอดฝากและเติมเงินสำเร็จ' });
-                } else {
-                    // Failed to transfer to Betflix
+                    return res.json({ success: true, message: '??????????????????????????????????????????????????????????????????????????????????????????' });
+                } catch (error: any) {
                     await prisma.transaction.update({
                         where: { id: transaction.id },
-                        data: { status: 'FAILED', note: `Betflix Error: ${betflixError}` }
+                        data: { status: 'FAILED', note: `Main agent Error: ${error.message || 'Unknown error'}` }
                     });
-                    // Revert SMS log to NO_MATCH so it can be tried again? Or keep as FAILED?
-                    // Usually better to keep as FAILED or NO_MATCH. Let's set to NO_MATCH to allow retry, but log error.
                     await prisma.smsWebhookLog.update({
                         where: { id: Number(logId) },
-                        data: { status: 'NO_MATCH', errorMessage: `Failed: ${betflixError}` }
+                        data: { status: 'NO_MATCH', errorMessage: `Failed: ${error.message || 'Main agent transfer failed'}` }
                     });
-                    return res.status(500).json({ success: false, message: 'เติมเงิน Betflix ไม่สำเร็จ: ' + betflixError });
+                    return res.status(500).json({ success: false, message: '?????????????????????????????????????????????????????????????????????????????????????????????: ' + (error.message || 'Unknown error') });
                 }
 
             } catch (innerError) {

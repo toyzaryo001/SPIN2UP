@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/db.js';
 import { parseBankSMS, matchBankName, matchAccountLast4, generateMessageHash, getBankThaiName } from '../services/sms-parser.service.js';
-import { BetflixService } from '../services/betflix.service.js';
+import { AgentWalletService } from '../services/agent-wallet.service.js';
 import { LineNotifyService } from '../services/line-notify.service.js';
 import { DepositBonusService } from '../services/deposit-bonus.service.js';
 import { PromotionSelectionService } from '../services/promotion-selection.service.js';
@@ -312,18 +312,15 @@ async function processWebhookMessage(message: string, source: string, res: Respo
         return res.json({ success: true, status: 'PENDING_REVIEW', message: 'รอตรวจสอบ (ฝากออโต้ปิดสำหรับผู้ใช้นี้)' });
     }
 
-    // Deposit to Betflix
-    const betflixResult = await BetflixService.ensureAndTransfer(
-        matchedUser.id,
-        matchedUser.bankAccount || matchedUser.username || '',
-        matchedUser.betflixUsername,
-        depositAmount,
-        `AUTO_SMS_${transaction.id}`
-    );
-    const betflixSuccess = betflixResult.success;
-    const betflixError = betflixResult.error || '';
+    try {
+        await AgentWalletService.creditMainAgent(
+            matchedUser.id,
+            depositAmount,
+            `AUTO_SMS_${transaction.id}`,
+            `SMS auto deposit ${transaction.id}`,
+            transaction.id
+        );
 
-    if (betflixSuccess) {
         const updatedUser = await prisma.user.update({
             where: { id: matchedUser.id },
             data: {
@@ -339,7 +336,6 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             }
         });
 
-        // Log success
         const log = await (prisma as any).smsWebhookLog.create({
             data: {
                 rawMessage: message,
@@ -357,13 +353,11 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             }
         });
 
-        // Notify Admins via LINE
         LineNotifyService.notifyDeposit(
             matchedUser.username,
             depositAmount,
             `Automatic SMS (${parsed.sourceBank})`
         ).catch(err => console.error('[LineNotify] Error:', err));
-        // Notify Admins via Telegram
         import('../services/telegram-notify.service.js').then(({ TelegramNotifyService }) => {
             TelegramNotifyService.notifyDeposit(matchedUser.username, depositAmount, `Automatic SMS (${parsed.sourceBank})`)
                 .catch(err => console.error('[Telegram] Error:', err));
@@ -372,7 +366,7 @@ async function processWebhookMessage(message: string, source: string, res: Respo
         await DepositBonusService.applyPostDepositBenefits(transaction.id);
 
         const elapsed = Date.now() - startTime;
-        console.log(`[Webhook ${source}] ✅ Deposit completed in ${elapsed}ms`);
+        console.log(`[Webhook ${source}] Deposit completed in ${elapsed}ms`);
 
         return res.json({
             success: true,
@@ -386,13 +380,12 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             },
             elapsed: `${elapsed}ms`
         });
-    } else {
-        // Betflix failed - mark transaction as failed
+    } catch (error: any) {
         await prisma.transaction.update({
             where: { id: transaction.id },
             data: {
                 status: 'FAILED',
-                note: `${transaction.note} | Betflix Error: ${betflixError}`
+                note: `${transaction.note} | Main agent Error: ${error.message || 'Unknown error'}`
             }
         });
 
@@ -409,18 +402,19 @@ async function processWebhookMessage(message: string, source: string, res: Respo
                 matchedUserId: matchedUser.id,
                 transactionId: transaction.id,
                 status: 'FAILED',
-                errorMessage: betflixError,
+                errorMessage: error.message || 'Main agent transfer failed',
                 matchLevel: 3
             }
         });
 
         return res.json({
             success: false,
-            status: 'BETFLIX_FAILED',
-            message: betflixError,
+            status: 'MAIN_AGENT_FAILED',
+            message: error.message || 'Main agent transfer failed',
             transactionId: transaction.id
         });
     }
+
 }
 
 // =============================================

@@ -1,14 +1,11 @@
 import { Router } from 'express';
 import prisma from '../lib/db.js';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
-import { spinSlot } from '../services/slot-engine.js';
-import { Prisma } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
-import { BetflixService } from '../services/betflix.service.js';
+import { AgentWalletService } from '../services/agent-wallet.service.js';
 
 const router = Router();
 
-// GET /api/games - รายการเกมทั้งหมด
+// GET /api/games - game list
 router.get('/', async (req, res) => {
     try {
         const { providerId, limit = 1500, page = 1, search } = req.query;
@@ -41,7 +38,7 @@ router.get('/', async (req, res) => {
                     isNew: true,
                 },
             }),
-            prisma.game.count({ where })
+            prisma.game.count({ where }),
         ]);
 
         res.json({
@@ -51,8 +48,8 @@ router.get('/', async (req, res) => {
                 page: Number(page),
                 limit: take,
                 total,
-                totalPages: Math.ceil(total / take)
-            }
+                totalPages: Math.ceil(total / take),
+            },
         });
     } catch (error) {
         console.error('Get games error:', error);
@@ -60,10 +57,10 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/games/:slug - รายละเอียดเกม
+// GET /api/games/:slug - game detail
 router.get('/:slug', async (req, res) => {
     try {
-        const game = await prisma.game.findUnique({
+        const game = await prisma.game.findFirst({
             where: { slug: req.params.slug, isActive: true },
         });
 
@@ -78,116 +75,12 @@ router.get('/:slug', async (req, res) => {
     }
 });
 
-// POST /api/games/:slug/spin - หมุนสล็อต
-router.post('/:slug/spin', authMiddleware, async (req: AuthRequest, res) => {
-    try {
-        // Fix: Disable local spin engine in production to prevent "Infinite Money" exploit
-        // (Local wallet updates but doesn't sync with Betflix)
-        return res.status(404).json({ success: false, message: 'Local spin engine is disabled' });
-
-        const { betAmount } = req.body;
-
-        if (!betAmount || betAmount <= 0) {
-            return res.status(400).json({ success: false, message: 'จำนวนเดิมพันไม่ถูกต้อง' });
-        }
-
-        // Find game
-        const game = await prisma.game.findUnique({
-            where: { slug: req.params.slug, isActive: true },
-        });
-
-        if (!game) {
-            return res.status(404).json({ success: false, message: 'ไม่พบเกม' });
-        }
-
-        // Check bet limits
-        if (betAmount < Number(game!.minBet) || betAmount > Number(game!.maxBet)) {
-            return res.status(400).json({
-                success: false,
-                message: `เดิมพันต้องอยู่ระหว่าง ${game!.minBet} - ${game!.maxBet}`,
-            });
-        }
-
-        // Get user
-        const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
-        }
-
-        // Check balance
-        const totalBalance = Number(user!.balance) + Number(user!.bonusBalance);
-        if (totalBalance < betAmount) {
-            return res.status(400).json({ success: false, message: 'ยอดเงินไม่เพียงพอ' });
-        }
-
-        // Spin!
-        const result = spinSlot(betAmount, game!.rtp);
-
-        // Calculate new balance
-        const newBalance = Number(user!.balance) - betAmount + result.totalWin;
-
-        // Update user balance & create transactions
-        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            // Deduct bet
-            await tx.user.update({
-                where: { id: user!.id },
-                data: { balance: new Decimal(newBalance) },
-            });
-
-            // Create bet transaction
-            await tx.transaction.create({
-                data: {
-                    userId: user!.id,
-                    type: 'BET',
-                    amount: new Decimal(betAmount),
-                    balanceBefore: user!.balance,
-                    balanceAfter: new Decimal(Number(user!.balance) - betAmount),
-                    status: 'COMPLETED',
-                    note: `เดิมพัน ${game!.name}`,
-                },
-            });
-
-            // Create win transaction if won
-            if (result.totalWin > 0) {
-                await tx.transaction.create({
-                    data: {
-                        userId: user!.id,
-                        type: 'WIN',
-                        amount: new Decimal(result.totalWin),
-                        balanceBefore: new Decimal(Number(user!.balance) - betAmount),
-                        balanceAfter: new Decimal(newBalance),
-                        status: 'COMPLETED',
-                        note: `ชนะ ${game!.name}`,
-                    },
-                });
-            }
-
-            // Create game session
-            await tx.gameSession.create({
-                data: {
-                    userId: user!.id,
-                    gameId: game!.id,
-                    betAmount: new Decimal(betAmount),
-                    winAmount: new Decimal(result.totalWin),
-                    result: JSON.stringify(result),
-                },
-            });
-        });
-
-        res.json({
-            success: true,
-            data: {
-                result,
-                balance: newBalance,
-            },
-        });
-    } catch (error) {
-        console.error('Spin error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
-    }
+// POST /api/games/:slug/spin - local spin disabled
+router.post('/:slug/spin', authMiddleware, async (_req: AuthRequest, res) => {
+    return res.status(404).json({ success: false, message: 'Local spin engine is disabled' });
 });
 
-// GET /api/games/history - ประวัติการเล่น
+// GET /api/games/user/history
 router.get('/user/history', authMiddleware, async (req: AuthRequest, res) => {
     try {
         const { page = 1, limit = 20 } = req.query;
@@ -222,150 +115,67 @@ router.get('/user/history', authMiddleware, async (req: AuthRequest, res) => {
     }
 });
 
-// POST /api/games/launch - เข้าเล่นเกม (Betflix Direct Play)
-// POST /api/games/launch - เข้าเล่นเกม (Betflix Direct Play)
-// POST /api/games/launch - เข้าเล่นเกม (Mix Board / Multi-Agent)
+// POST /api/games/launch - strict multi-agent launch
 router.post('/launch', authMiddleware, async (req: AuthRequest, res) => {
+    let providerCode: string | undefined;
+    let gameCode: string | undefined;
+
     try {
-        const { providerCode, gameCode, lang = 'th' } = req.body;
+        ({ providerCode, gameCode } = req.body);
+        const { lang = 'th' } = req.body;
         const userId = req.user!.userId;
 
-        console.log('🎮 Launch Request:', { providerCode, gameCode, lang, userId });
+        if (!gameCode) {
+            return res.status(400).json({
+                success: false,
+                message: 'กรุณาระบุรหัสเกม',
+            });
+        }
 
-        let url: string | null = null;
-        let errorDetail = '';
-
-
-        // 0. Lobby-mode providers: Skip DB game lookup, go straight to direct agent launch
-        //    (They don't have individual Game records, so DB lookup will always fail)
-        const lobbyProvider = await prisma.gameProvider.findFirst({
+        const localGame = await prisma.game.findFirst({
             where: {
-                slug: providerCode,
-                isLobbyMode: true,
-                isActive: true
-            }
+                slug: gameCode,
+                isActive: true,
+            },
+            select: { id: true },
         });
 
-        if (lobbyProvider) {
-            console.log(`🏟️ Lobby Mode Provider detected: ${lobbyProvider.name} — skipping DB game lookup, using direct agent launch.`);
-            // Don't try to find a Game record — fall through directly to the fallback block
-        }
-
-
-        // 1. If not lobby or lobby failed, try to find local Game record
-        if (!url && !lobbyProvider) {
-            const game = await prisma.game.findFirst({
-                where: {
-                    slug: gameCode,
-                    isActive: true,
-                },
-                include: { provider: true }
+        const launchResult = localGame
+            ? await AgentWalletService.prepareLaunch({
+                userId,
+                gameId: localGame.id,
+                providerCode,
+                gameCode,
+                lang,
+            })
+            : await AgentWalletService.prepareLaunch({
+                userId,
+                providerCode,
+                gameCode,
+                lang,
             });
 
-            if (game) {
-                console.log(`✅ Found Local Game ID: ${game.id} (Agent ID: ${game.agentId || 'Default'})`);
-
-                try {
-                    const { WalletService } = await import('../services/WalletService.js');
-                    url = await WalletService.launchGame(userId, game.id, lang);
-                } catch (e: any) {
-                    console.error('❌ WalletService Launch Error:', e);
-                    errorDetail = e.message;
-                }
-            }
-        }
-
-        // 2. If still no URL (lobby or game not in DB), use Main Agent Direct Launch
-        if (!url) {
-            console.log(`🚀 Direct Agent Launch — lobbyProvider: ${lobbyProvider?.name || 'none'}, providerCode: ${providerCode}, gameCode: ${gameCode}`);
-
-            try {
-                const { AgentFactory } = await import('../services/agents/AgentFactory.js');
-
-                // Get main agent config (need the ID to match externalAccounts)
-                const mainAgentConfig = await prisma.agentConfig.findFirst({
-                    where: { isMain: true, isActive: true }
-                }) || await prisma.agentConfig.findFirst({ orderBy: { id: 'asc' } });
-
-                if (!mainAgentConfig) throw new Error('No agent config found');
-
-                const mainAgent = await AgentFactory.getAgent(mainAgentConfig.code);
-                console.log(`🚀 Main agent: ${mainAgentConfig.code} (ID: ${mainAgentConfig.id})`);
-
-                const user = await prisma.user.findUnique({
-                    where: { id: userId },
-                    include: { externalAccounts: true }
-                });
-
-                if (!user) {
-                    console.error('❌ User not found:', userId);
-                    errorDetail = 'User not found';
-                } else {
-                    console.log(`🚀 User: ${user.username}, phone: ${user.phone}, accounts: ${user.externalAccounts.length}`);
-
-                    // Use existing externalAccount (same pattern as WalletService)
-                    let externalUsername: string | null = null;
-                    const existingAccount = user.externalAccounts.find((a: any) => a.agentId === mainAgentConfig.id);
-
-                    if (existingAccount) {
-                        externalUsername = existingAccount.externalUsername;
-                        console.log(`🚀 Existing account found: ${externalUsername}`);
-                    } else {
-                        // Only register if no existing account
-                        console.log(`🚀 No existing account for agent ${mainAgentConfig.id}, registering...`);
-                        const creds = await mainAgent.register(user.id, user.phone);
-                        if (creds) {
-                            externalUsername = creds.username;
-                            // Save for future use (ignore duplicate errors)
-                            await prisma.userExternalAccount.create({
-                                data: {
-                                    userId: user.id,
-                                    agentId: mainAgentConfig.id,
-                                    externalUsername: creds.username,
-                                    externalPassword: creds.password || '',
-                                }
-                            }).catch(() => { });
-                            console.log(`🚀 Registered new: ${externalUsername}`);
-                        } else {
-                            console.error(`🚀 Register failed for user ${user.username}`);
-                        }
-                    }
-
-                    if (externalUsername) {
-                        // Always send original gameCode — BetflixService handles prefix stripping
-                        console.log(`🚀 launchGame(${externalUsername}, '${gameCode}', '${providerCode}', '${lang}')`);
-
-                        url = await mainAgent.launchGame(externalUsername, gameCode, providerCode, lang);
-                        console.log(`🚀 Result:`, url ? `URL=${url.substring(0, 100)}...` : 'NULL');
-                    }
-                }
-            } catch (e: any) {
-                console.error('❌ Direct Launch Error:', e.message, e.stack);
-                errorDetail = e.message;
-            }
-        }
-
-        if (!url) {
-            return res.status(500).json({
-                success: false,
-                message: errorDetail || 'ไม่สามารถเข้าเล่นเกมได้ (Launch Failed)',
-                debug: { providerCode, gameCode }
-            });
-        }
-
-        console.log('✅ Returns URL:', url);
-        res.json({ success: true, data: { url } });
-
+        res.json({ success: true, data: { url: launchResult.url } });
     } catch (error: any) {
-        console.error('Launch generic error:', error);
-        res.status(500).json({
+        console.error('Launch error:', error);
+
+        if (error.message === 'GAME_AGENT_MAPPING_REQUIRED') {
+            return res.status(409).json({
+                success: false,
+                code: 'GAME_AGENT_MAPPING_REQUIRED',
+                message: 'เกมนี้ยังไม่ได้ผูกกระดานสำหรับเข้าเล่น',
+            });
+        }
+
+        const statusCode = error.message === 'GAME_NOT_FOUND' ? 404 : 500;
+        res.status(statusCode).json({
             success: false,
             message: `เกิดข้อผิดพลาด: ${error.message}`,
             debug: {
                 originalError: error.message,
-                providerCode: req.body.providerCode,
-                gameCode: req.body.gameCode
-            }
+                providerCode,
+                gameCode,
+            },
         });
     }
 });

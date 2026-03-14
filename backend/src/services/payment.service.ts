@@ -1,6 +1,5 @@
 import prisma from '../lib/db';
 import { PaymentFactory } from './payment/PaymentFactory';
-import { BetflixService } from './betflix.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { LineNotifyService } from './line-notify.service';
 import { TelegramNotifyService } from './telegram-notify.service';
@@ -8,6 +7,7 @@ import { AlertService } from './alert.service';
 import { DepositBonusService } from './deposit-bonus.service.js';
 import { PromotionSelectionService } from './promotion-selection.service.js';
 import { TurnoverService } from './turnover.service.js';
+import { AgentWalletService } from './agent-wallet.service.js';
 
 export class PaymentService {
     private static normalizeCheckedTransaction(rawResult: any) {
@@ -47,39 +47,18 @@ export class PaymentService {
 
         try {
             if (result.txStatus === 'SUCCESS') {
-                const typeUpper = transaction.type.toUpperCase();
+                const typeUpper = String(transaction.type || '').toUpperCase();
 
                 if (typeUpper === 'DEPOSIT') {
                     const amount = result.amount || Number(transaction.amount);
 
-                    let betflixSuccess = false;
-                    let betflixError = '';
-
-                    if (transaction.user) {
-                        const betflixResult = await BetflixService.ensureAndTransfer(
-                            transaction.userId,
-                            transaction.user.phone,
-                            transaction.user.betflixUsername,
-                            amount,
-                            `PAYMENT_${transaction.id}`
-                        );
-                        betflixSuccess = betflixResult.success;
-                        betflixError = betflixResult.error || '';
-                    }
-
-                    if (!betflixSuccess) {
-                        await prisma.transaction.update({
-                            where: { id: transaction.id },
-                            data: {
-                                status: 'FAILED',
-                                note: (transaction.note || '') + ` | Betflix Error: ${betflixError}`,
-                                rawResponse: JSON.stringify(result.rawResponse),
-                                externalId: result.externalId || transaction.externalId
-                            }
-                        });
-
-                        return { success: true };
-                    }
+                    await AgentWalletService.creditMainAgent(
+                        transaction.userId,
+                        amount,
+                        `PAYMENT_${transaction.id}`,
+                        `Deposit transaction ${transaction.id}`,
+                        transaction.id
+                    );
 
                     requiresManualReconcile = true;
 
@@ -114,7 +93,8 @@ export class PaymentService {
                         transaction.subType || 'Automatic'
                     ).catch(err => console.error('[Telegram] Error:', err));
 
-                    DepositBonusService.applyPostDepositBenefits(transaction.id).catch(err => console.error('[Deposit Bonus Error]:', err));
+                    DepositBonusService.applyPostDepositBenefits(transaction.id)
+                        .catch(err => console.error('[Deposit Bonus Error]:', err));
                 } else if (typeUpper === 'WITHDRAW') {
                     await prisma.transaction.update({
                         where: { id: transaction.id },
@@ -126,16 +106,15 @@ export class PaymentService {
                     });
                 }
             } else if (result.txStatus === 'FAILED') {
-                await prisma.$transaction(async (tx) => {
-                    if (transaction.type.toUpperCase() === 'WITHDRAW') {
-                        const amount = Number(transaction.amount);
-                        await tx.user.update({
-                            where: { id: transaction.userId },
-                            data: { balance: { increment: amount } }
-                        });
-                    }
-
-                    await tx.transaction.update({
+                if (String(transaction.type || '').toUpperCase() === 'WITHDRAW') {
+                    await this.refundTransaction(
+                        transaction.id,
+                        transaction.userId,
+                        Number(transaction.amount),
+                        result.message || 'Withdraw failed'
+                    );
+                } else {
+                    await prisma.transaction.update({
                         where: { id: transaction.id },
                         data: {
                             status: 'FAILED',
@@ -144,7 +123,7 @@ export class PaymentService {
                             externalId: result.externalId || transaction.externalId
                         }
                     });
-                });
+                }
             } else {
                 await prisma.transaction.update({
                     where: { id: transaction.id },
@@ -166,14 +145,14 @@ export class PaymentService {
                     where: { id: transaction.id },
                     data: {
                         status: 'FAILED',
-                        note: `${transaction.note || ''} | Manual reconcile required after Betflix transfer: ${error.message}`,
+                        note: `${transaction.note || ''} | Manual reconcile required after agent credit: ${error.message}`,
                     }
                 }).catch(() => {});
 
                 await AlertService.createAlert({
                     type: 'CRITICAL',
                     title: 'Deposit Reconciliation Required',
-                    message: `Deposit transaction #${transaction.id} transferred to game wallet but local finalization failed. Manual review is required.`,
+                    message: `Deposit transaction #${transaction.id} transferred to agent wallet but local finalization failed. Manual review is required.`,
                     actionUrl: `/admin/transactions`,
                     actionRequired: true,
                     metadata: {
@@ -203,33 +182,22 @@ export class PaymentService {
         }
     }
 
-
-    /**
-     * Create a deposit request (Payin)
-     */
     static async createAutoDeposit(userId: number, amount: number, gatewayCode?: string) {
-        // 1. Validate Amount
         if (amount <= 0) throw new Error('Invalid amount');
 
-        // Check Feature Toggle: auto_deposit
         const autoDepositFeature = await prisma.siteFeature.findUnique({ where: { key: 'auto_deposit' } });
         if (autoDepositFeature && !autoDepositFeature.isEnabled) {
-            throw new Error('Auto deposit is disabled'); // Or localized message
+            throw new Error('Auto deposit is disabled');
         }
 
-        // 2. Get Provider
-        let provider;
-        if (gatewayCode) {
-            provider = await PaymentFactory.getProvider(gatewayCode);
-        } else {
-            provider = await PaymentFactory.getDefaultProvider();
-        }
+        const provider = gatewayCode
+            ? await PaymentFactory.getProvider(gatewayCode)
+            : await PaymentFactory.getDefaultProvider();
 
         if (!provider) {
             throw new Error('Payment gateway not available');
         }
 
-        // 3. Get User
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new Error('User not found');
 
@@ -238,11 +206,7 @@ export class PaymentService {
             throw new Error('SELECTED_PROMOTION_MIN_DEPOSIT_NOT_MET');
         }
 
-        // 4. Create Transaction Record (PENDING)
-        // We need a reference ID BEFORE calling the provider, so we use a placeholder or generate one first.
         const referenceId = `PAYIN_${Date.now()}_${userId}`;
-
-        // Find gateway ID and validate config
         const gateway = await prisma.paymentGateway.findUnique({ where: { code: provider.code } });
         if (!gateway) {
             throw new Error('Payment gateway configuration not found');
@@ -254,8 +218,8 @@ export class PaymentService {
         let gatewayConfig: any = {};
         try {
             gatewayConfig = JSON.parse(gateway.config);
-        } catch (e) {
-            console.error("Failed to parse gateway config", e);
+        } catch (error) {
+            console.error('Failed to parse gateway config', error);
         }
 
         if (gatewayConfig.canDeposit === false) {
@@ -268,21 +232,18 @@ export class PaymentService {
                 type: 'DEPOSIT',
                 amount,
                 balanceBefore: user.balance,
-                balanceAfter: user.balance, // No change yet
+                balanceAfter: user.balance,
                 status: 'PENDING',
-                // channel: 'auto', // Removed as it's not in schema
-                subType: 'QRCODE', // or 'promptpay'
-                paymentGatewayId: gateway?.id,
-                referenceId: referenceId,
+                subType: 'QRCODE',
+                paymentGatewayId: gateway.id,
+                referenceId,
                 note: `Auto Deposit via ${provider.code.toUpperCase()}`
             }
         });
 
-        // 5. Call Provider to get QR
         const result = await provider.createPayin(amount, user, referenceId);
 
         if (!result.success) {
-            // Update to FAILED
             await prisma.transaction.update({
                 where: { id: transaction.id },
                 data: {
@@ -294,7 +255,6 @@ export class PaymentService {
             throw new Error(result.message || 'Failed to create payment at provider');
         }
 
-        // 6. Update Transaction with QR and External ID
         await prisma.transaction.update({
             where: { id: transaction.id },
             data: {
@@ -313,23 +273,26 @@ export class PaymentService {
 
         return {
             transactionId: transaction.id,
-            referenceId: referenceId,
+            referenceId,
             qrCode: result.qrCode,
             amount: result.amount || amount,
-            expiredAt: new Date(Date.now() + 15 * 60 * 1000) // 15 mins expiry estimation
+            expiredAt: new Date(Date.now() + 15 * 60 * 1000)
         };
     }
 
-    /**
-     * Create a withdrawal request (Payout)
-     */
     static async createWithdraw(userId: number, amount: number) {
-        // 1. Validate Amount
         if (amount <= 0) throw new Error('Invalid amount');
 
-        // 2. Get User
-        const user = await prisma.user.findUnique({ where: { id: userId } });
+        let user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new Error('User not found');
+
+        const syncedBalance = await AgentWalletService.syncLocalBalanceFromAgents(userId)
+            .catch(() => Number(user?.balance || 0));
+        if (syncedBalance !== Number(user.balance)) {
+            user = await prisma.user.findUnique({ where: { id: userId } });
+            if (!user) throw new Error('User not found');
+        }
+
         if (Number(user.balance) < amount) throw new Error('Insufficient balance');
 
         const turnoverRemaining = TurnoverService.getRemaining(user);
@@ -337,47 +300,31 @@ export class PaymentService {
             throw new Error(`ท่านยังทำเทิร์นไม่ครบ (ขาดอีก ${turnoverRemaining.toLocaleString()} บาท)`);
         }
 
-        // Check Turnover
-        const currentTurnover = Number(user.currentTurnover || 0);
-        const turnoverLimit = Number(user.turnoverLimit || 0);
-        if (turnoverLimit > 0 && currentTurnover < turnoverLimit) {
-            const missing = turnoverLimit - currentTurnover;
-            throw new Error(`ท่านยังทำเทิร์นไม่ครบ (ขาดอีก ${missing.toLocaleString()} บาท)`);
-        }
-
-        // 3. Get Bank Account (User's)
         if (!user.bankAccount || !user.bankName) {
             throw new Error('User bank account not found');
         }
 
-        // ============================================
-        // STEP A: หัก balance ใน DB ก่อน (Atomic Optimistic Lock) — ป้องกัน double-spend
-        // ============================================
         const transaction = await prisma.$transaction(async (tx) => {
-            // เช็ค balance และหักเงินทันทีโดยใช้เงื่อนไข (Optimistic Concurrency Control)
-            // วิธีนี้ Database จะหา Record ที่เงินพอเท่านั้น ถ้าไม่พอ `count` จะเป็น 0 ทันที 
-            // ลดความเสี่ยงจาก Race condition 100%
             const updateResult = await tx.user.updateMany({
                 where: {
                     id: userId,
-                    balance: { gte: amount } // เช็คระดับ DB ว่ายอดต้องมากกว่าหรือเท่ากับที่ขอถอน
+                    balance: { gte: amount }
                 },
                 data: { balance: { decrement: amount } }
             });
 
             if (updateResult.count === 0) {
-                throw new Error('ยอดเงินไม่เพียงพอ หรือมีการทำรายการซ้อนทับกัน');
+                throw new Error('ยอดเงินไม่เพียงพอ หรือมีรายการซ้อนทับกัน');
             }
 
-            // เนื่องจาก updateMany ไม่คืนค่า object ที่อัปเดต ต้องดึงค่าเพื่อทำ log
             const freshUser = await tx.user.findUnique({ where: { id: userId } });
 
-            return await tx.transaction.create({
+            return tx.transaction.create({
                 data: {
                     userId,
                     type: 'WITHDRAW',
                     amount: new Decimal(amount),
-                    balanceBefore: new Decimal(Number(freshUser!.balance) + amount), // ย้อนค่าก่อนหัก
+                    balanceBefore: new Decimal(Number(freshUser!.balance) + amount),
                     balanceAfter: freshUser!.balance,
                     status: 'PENDING',
                     note: 'Withdraw Request',
@@ -386,32 +333,29 @@ export class PaymentService {
             });
         });
 
-        // ============================================
-        // STEP B: ถอนจาก Game Wallet (Betflix) — หลัง DB หักแล้ว
-        // ถ้าล้มเหลว → refund คืน DB
-        // ============================================
-        if (user.betflixUsername) {
-            const success = await BetflixService.transfer(user.betflixUsername, -amount, `WDING_${transaction.id}`);
-            if (!success) {
-                // Betflix ล้มเหลว → คืนเงินใน DB
-                await this.refundTransaction(transaction.id, userId, amount, 'ถอนจาก Game Wallet ล้มเหลว — คืนเงินอัตโนมัติ');
-                throw new Error('ไม่สามารถถอนเงินออกจากเกมได้ (Game Wallet Error) — เงินถูกคืนแล้ว');
-            }
-        } else {
-            console.warn(`User ${user.username} has no betflix wallet, withdrawing local balance only.`);
+        try {
+            await AgentWalletService.pullFundsForWithdrawal(
+                userId,
+                amount,
+                `WDING_${transaction.id}`,
+                transaction.id
+            );
+        } catch (error: any) {
+            await this.refundTransaction(
+                transaction.id,
+                userId,
+                amount,
+                `Withdraw pull failed: ${error.message}`
+            );
+            throw new Error(`ไม่สามารถดึงเครดิตจากกระดานเกมได้ (${error.message})`);
         }
 
-        // Notify Admins via LINE
         LineNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[LineNotify] Error:', err));
-        // Notify Admins via Telegram
         TelegramNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[Telegram] Error:', err));
 
-        // 5. Check Auto Withdraw Condition
-        // Logic: Auto Feature ON + Gateway Auto ON + Gateway Withdraw ON
         let shouldAutoWithdraw = false;
-        let activeGateway = null;
+        let activeGateway: any = null;
 
-        // Check Global Feature Toggle: auto_withdraw
         const autoWithdrawFeature = await prisma.siteFeature.findUnique({ where: { key: 'auto_withdraw' } });
         const isAutoWithdrawEnabled = autoWithdrawFeature ? autoWithdrawFeature.isEnabled : false;
 
@@ -429,14 +373,15 @@ export class PaymentService {
                             activeGateway = gateway;
                             break;
                         }
-                    } catch (e) { continue; }
+                    } catch {
+                        continue;
+                    }
                 }
             } catch (error) {
                 console.error('Error checking auto withdraw config', error);
             }
         }
 
-        // --- NEW RULE: TrueMoney ALWAYS goes to manual review (PENDING) ---
         if (
             shouldAutoWithdraw &&
             user.bankName &&
@@ -446,7 +391,6 @@ export class PaymentService {
             shouldAutoWithdraw = false;
         }
 
-        // 6. If Auto Withdraw is OFF, stop here.
         if (!shouldAutoWithdraw || !activeGateway) {
             return {
                 success: true,
@@ -456,9 +400,7 @@ export class PaymentService {
             };
         }
 
-        // 7. If Auto Withdraw is ON, proceed to convert to Payout
         try {
-            // Update Gateway ID
             await prisma.transaction.update({
                 where: { id: transaction.id },
                 data: {
@@ -470,7 +412,6 @@ export class PaymentService {
             const provider = await PaymentFactory.getProvider(activeGateway.code);
             if (!provider) throw new Error('Provider not found');
 
-            // Call Provider Payout
             const referenceId = `PAYOUT_${transaction.id}`;
             await prisma.transaction.update({ where: { id: transaction.id }, data: { referenceId } });
 
@@ -485,9 +426,7 @@ export class PaymentService {
                     }
                 });
             } else {
-                // Provider Rejected -> Refund EVERYTHING
                 await this.refundTransaction(transaction.id, userId, amount, `Auto Withdraw Failed: ${result.message}`);
-
                 return {
                     success: false,
                     message: `ทำรายการไม่สำเร็จ: ${result.message || 'Provider Rejected'}`,
@@ -502,11 +441,8 @@ export class PaymentService {
                 transactionId: transaction.id,
                 status: 'PENDING'
             };
-
         } catch (error: any) {
             console.error('Auto Withdraw Error:', error);
-            // If we are unsure if provider called, we keep PENDING.
-            // If we know it failed (e.g. factory error), we could refund, but safer to let admin Check.
             await prisma.transaction.update({
                 where: { id: transaction.id },
                 data: { note: `Auto Error: ${error.message}. Waiting Manual.` }
@@ -521,16 +457,17 @@ export class PaymentService {
         }
     }
 
-    // Helper to Refund
     static async refundTransaction(transactionId: number, userId: number, amount: number, note: string) {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-
-        // 1. Refund Betflix
-        if (user?.betflixUsername) {
-            await BetflixService.transfer(user.betflixUsername, amount, `REFUND_${transactionId}`);
+        const pulls = await AgentWalletService.getPulledFundsForTransaction(transactionId);
+        if (pulls.length > 0) {
+            await AgentWalletService.refundPulledFunds(
+                pulls,
+                `REFUND_${transactionId}`,
+                note,
+                transactionId
+            );
         }
 
-        // 2. Refund Local & Update Status
         await prisma.$transaction([
             prisma.user.update({
                 where: { id: userId },
@@ -540,7 +477,7 @@ export class PaymentService {
                 where: { id: transactionId },
                 data: {
                     status: 'FAILED',
-                    note: note
+                    note
                 }
             })
         ]);
@@ -620,43 +557,33 @@ export class PaymentService {
         };
     }
 
-    /**
-     * Process Webhook from Provider
-     */
     static async processWebhook(gatewayCode: string, payload: any, headers: any, clientIp?: string) {
-        // ... (Existing code) ...
-        // 1. Get Provider
         const provider = await PaymentFactory.getProvider(gatewayCode);
         if (!provider) throw new Error(`Provider ${gatewayCode} not found`);
 
-        // 2. Verify Webhook (pass client IP for provider-specific verification)
         if (!provider.verifyWebhook(payload, clientIp)) {
             const errorMsg = `Invalid Webhook from [${gatewayCode}] IP: ${clientIp || 'unknown'}`;
             console.error(errorMsg);
 
-            // Create security alert for invalid webhook
             await AlertService.createAlert({
                 type: 'WARNING',
-                title: '⚠️ INVALID WEBHOOK RECEIVED',
-                message: `Webhook verification failed for gateway [${gatewayCode}]. Client IP: ${clientIp}. ` +
-                    `This may indicate a security issue or misconfiguration.`,
+                title: 'Invalid webhook received',
+                message: `Webhook verification failed for gateway [${gatewayCode}]. Client IP: ${clientIp}. This may indicate a security issue or misconfiguration.`,
                 actionUrl: `/admin/transactions`,
-                actionRequired: false,  // Warning only, doesn't need immediate action
+                actionRequired: false,
                 metadata: {
                     gateway: gatewayCode,
-                    clientIp: clientIp,
+                    clientIp,
                     timestamp: new Date().toISOString(),
-                    payload: payload  // Store payload for investigation
+                    payload
                 }
             });
 
             throw new Error(errorMsg);
         }
 
-        // 3. Process Payload
         const result = await provider.processWebhook(payload);
 
-        // 4. Find Transaction
         const transaction = await prisma.transaction.findFirst({
             where: {
                 OR: [
@@ -670,12 +597,10 @@ export class PaymentService {
         if (!transaction) {
             console.error(`Transaction not found for webhook: ${JSON.stringify(result)}`);
 
-            // Create alert - transaction not found could indicate orphaned webhook
             await AlertService.createAlert({
                 type: 'CRITICAL',
-                title: '⚠️ WEBHOOK TRANSACTION NOT FOUND',
-                message: `Webhook received from [${gatewayCode}] but matching transaction not found. ` +
-                    `Reference ID: ${result.transactionId}. This may indicate a missing or stale transaction.`,
+                title: 'Webhook transaction not found',
+                message: `Webhook received from [${gatewayCode}] but matching transaction not found. Reference ID: ${result.transactionId}.`,
                 actionUrl: `/admin/transactions`,
                 actionRequired: false,
                 metadata: {
@@ -689,15 +614,10 @@ export class PaymentService {
             return { success: false, message: 'Transaction not found' };
         }
 
-        if (transaction.status === 'COMPLETED' || transaction.status === 'APPROVED' || transaction.status === 'PROCESSING') {
+        if (['COMPLETED', 'APPROVED', 'PROCESSING'].includes(transaction.status)) {
             return { success: true, message: 'Already processed or currently processing' };
         }
 
-        // ============================================
-        // PREVENT DOUBLE CREDIT: Atomic Optimistic Lock
-        // ============================================
-        // We update status from PENDING -> PROCESSING
-        // If count === 0, another request already locked it.
         const lockUpdate = await prisma.transaction.updateMany({
             where: {
                 id: transaction.id,
@@ -715,5 +635,4 @@ export class PaymentService {
 
         return this.processTransactionResult(transaction, result, gatewayCode);
     }
-
 }

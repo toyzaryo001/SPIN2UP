@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db.js';
-import { BetflixService } from './betflix.service.js';
+import { AgentWalletService } from './agent-wallet.service.js';
 import { thaiNow } from '../lib/thai-time.js';
 import { TurnoverService } from './turnover.service.js';
 
@@ -179,16 +179,14 @@ export class CommissionService {
         const claimId = insertResult[0].id;
 
         try {
-            const betflixResult = await BetflixService.ensureAndTransfer(
-                userId,
-                user.phone,
-                user.betflixUsername,
-                amount,
-                `REWARD_COMMISSION_${claimId}`
-            );
-
-            if (!betflixResult.success) {
-                throw new Error(betflixResult.error || 'Cannot transfer commission reward');
+            if (!requiresTurnover) {
+                await AgentWalletService.creditMainAgent(
+                    userId,
+                    amount,
+                    `REWARD_COMMISSION_${claimId}`,
+                    'Commission reward claim',
+                    claimId
+                );
             }
 
             const cycleResetAt = thaiNow().toDate();

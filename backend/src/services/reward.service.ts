@@ -1,5 +1,6 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db';
+import { AgentWalletService } from './agent-wallet.service.js';
 import { BetflixService } from './betflix.service';
 import { NexusProvider } from './agents/NexusProvider';
 import { thaiNow, thaiStartOfDay, thaiEndOfDay } from '../lib/thai-time';
@@ -227,12 +228,14 @@ export class RewardService {
         // BETFLIX SYNC: Deposit to Game Wallet MUST Happen AFTER DB lock
         // ============================================
         try {
-            const betflixResult = await BetflixService.ensureAndTransfer(
-                userId, user.phone, user.betflixUsername, amount, `REWARD_${type}_${claimRecordId}`
-            );
-
-            if (!betflixResult.success) {
-                throw new Error(betflixResult.error || 'ไม่สามารถเติมเงินเข้ากระเป๋าเกมได้');
+            if (!requiresTurnover) {
+                await AgentWalletService.creditMainAgent(
+                    userId,
+                    amount,
+                    `REWARD_${type}_${claimRecordId}`,
+                    `${type} reward claim`,
+                    claimRecordId
+                );
             }
 
             // ============================================

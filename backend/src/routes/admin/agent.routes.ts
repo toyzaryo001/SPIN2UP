@@ -82,6 +82,50 @@ router.get('/connection-test', requirePermission('agents', 'connection_test', 'v
     }
 });
 
+// GET /api/admin/agents/unmapped-games - เกมที่ยังไม่มี agent mapping
+router.get('/unmapped-games', requirePermission('agents', 'games', 'view'), async (req, res) => {
+    try {
+        const games = await prisma.game.findMany({
+            where: {
+                isActive: true,
+                agentId: null,
+                OR: [
+                    { provider: null },
+                    { provider: { defaultAgentId: null } },
+                ],
+            },
+            include: {
+                provider: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        defaultAgentId: true,
+                    },
+                },
+            },
+            orderBy: [
+                { providerId: 'asc' },
+                { name: 'asc' },
+            ],
+        });
+
+        res.json({
+            success: true,
+            data: games.map((game) => ({
+                id: game.id,
+                name: game.name,
+                slug: game.slug,
+                provider: game.provider,
+                agentId: game.agentId,
+            })),
+        });
+    } catch (error) {
+        console.error('Get unmapped games error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 // GET /api/admin/agents/debug-connection - ดู Raw Response
 router.get('/debug-connection', requirePermission('agents', 'connection_test', 'view'), async (req, res) => {
     try {

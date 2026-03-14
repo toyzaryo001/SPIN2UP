@@ -2,9 +2,10 @@ import { Router } from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission } from '../../middlewares/auth.middleware.js';
-import { BetflixService } from '../../services/betflix.service.js';
 import { DepositBonusService } from '../../services/deposit-bonus.service.js';
 import { TurnoverService } from '../../services/turnover.service.js';
+import { AgentWalletService } from '../../services/agent-wallet.service.js';
+import { PaymentService } from '../../services/payment.service.js';
 
 const router = Router();
 
@@ -50,19 +51,17 @@ router.post('/deposit', async (req: AuthRequest, res) => {
         const balanceAfter = Number(balanceBefore) + Number(amount);
 
         if (!isBonus) {
-            const result = await BetflixService.ensureAndTransfer(
-                user.id,
-                user.phone,
-                user.betflixUsername,
-                Number(amount),
-                `MANUAL_${Date.now()}`
-            );
-
-            if (!result.success) {
-                const status = result.betflixUsername ? 502 : 400;
-                return res.status(status).json({
+            try {
+                await AgentWalletService.creditMainAgent(
+                    user.id,
+                    Number(amount),
+                    `MANUAL_${Date.now()}`,
+                    'Manual credit'
+                );
+            } catch (error: any) {
+                return res.status(502).json({
                     success: false,
-                    message: result.error || 'เติมเงินเข้ากระเป๋าเกมไม่สำเร็จ'
+                    message: error.message || 'เติมเงินเข้ากระดานหลักไม่สำเร็จ'
                 });
             }
         }
@@ -146,14 +145,15 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
 
         const balanceAfter = Number(balanceBefore) - Number(amount);
 
-        if (!isBonus && user.betflixUsername) {
-            const success = await BetflixService.transfer(
-                user.betflixUsername,
-                -Number(amount),
-                `DEDUCT_${Date.now()}`
-            );
-            if (!success) {
-                return res.status(500).json({ success: false, message: 'ดึงเงินจากกระเป๋าเกมไม่สำเร็จ' });
+        if (!isBonus) {
+            try {
+                await AgentWalletService.pullFundsForWithdrawal(
+                    user.id,
+                    Number(amount),
+                    `DEDUCT_${Date.now()}`
+                );
+            } catch (error: any) {
+                return res.status(500).json({ success: false, message: error.message || 'ดึงเงินจากกระดานเกมไม่สำเร็จ' });
             }
         }
 
@@ -289,20 +289,17 @@ router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'ma
         if (shouldRefund) {
             const amount = Number(transaction.amount);
 
-            if (transaction.user.betflixUsername) {
-                await BetflixService.transfer(transaction.user.betflixUsername, amount, `REFUND_${transaction.id}`);
-            }
+            await PaymentService.refundTransaction(
+                transaction.id,
+                transaction.userId,
+                amount,
+                note || 'Manual withdrawal rejected'
+            );
 
-            await prisma.$transaction([
-                prisma.user.update({
-                    where: { id: transaction.userId },
-                    data: { balance: { increment: amount } }
-                }),
-                prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: { status: 'REJECTED', note, adminId: req.user!.userId }
-                })
-            ]);
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: { status: 'REJECTED', note, adminId: req.user!.userId }
+            });
 
             return res.json({ success: true, message: 'ปฏิเสธและคืนยอดเงินสำเร็จ' });
         }
@@ -334,19 +331,18 @@ router.post('/approve-deposit', requirePermission('manual', 'deposit', 'manage')
 
         const newBalance = Number(transaction.user.balance) + Number(transaction.amount);
 
-        const betflixResult = await BetflixService.ensureAndTransfer(
-            transaction.userId,
-            transaction.user.phone,
-            transaction.user.betflixUsername,
-            Number(transaction.amount),
-            `DEP_${transaction.id}`
-        );
-
-        if (!betflixResult.success) {
-            const status = betflixResult.betflixUsername ? 502 : 400;
-            return res.status(status).json({
+        try {
+            await AgentWalletService.creditMainAgent(
+                transaction.userId,
+                Number(transaction.amount),
+                `DEP_${transaction.id}`,
+                `Manual approve deposit ${transaction.id}`,
+                transaction.id
+            );
+        } catch (error: any) {
+            return res.status(502).json({
                 success: false,
-                message: betflixResult.error || 'เติมเงินเข้ากระเป๋าเกมไม่สำเร็จ'
+                message: error.message || 'เติมเงินเข้ากระดานหลักไม่สำเร็จ'
             });
         }
 

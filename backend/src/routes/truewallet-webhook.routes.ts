@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/db.js';
-import { BetflixService } from '../services/betflix.service.js';
+import { AgentWalletService } from '../services/agent-wallet.service.js';
 import { LineNotifyService } from '../services/line-notify.service.js';
 import { DepositBonusService } from '../services/deposit-bonus.service.js';
 import { PromotionSelectionService } from '../services/promotion-selection.service.js';
@@ -207,46 +207,17 @@ router.post('/', async (req: Request, res: Response) => {
             return res.status(200).json({ success: true, status: 'PENDING_REVIEW', message: 'รอตรวจสอบ (ฝากออโต้ปิดสำหรับผู้ใช้นี้)', logId: walletLog.id });
         }
 
-        // 8. ฝากเงินเข้ากระดาน — ใช้ ensureAndTransfer() ที่ refactor ไว้แล้ว
-        const betflixResult = await BetflixService.ensureAndTransfer(
-            matchedUser.id,
-            (matchedUser as any).phone || (matchedUser as any).bankAccount || (matchedUser as any).username || '',
-            (matchedUser as any).betflixUsername || null,
-            amountBaht,
-            `TW_${walletLog.id}`
-        );
-
-        if (!betflixResult.success) {
-            // ฝากเข้ากระดานไม่สำเร็จ
-            await prisma.trueWalletLog.update({
-                where: { id: walletLog.id },
-                data: { status: 'FAILED', errorMessage: betflixResult.error || 'BetFlix transfer failed' }
-            });
-            console.error(`[TrueWallet Webhook] BetFlix transfer failed:`, betflixResult.error);
-            return res.status(200).json({ success: false, status: 'TRANSFER_FAILED', logId: walletLog.id });
-        }
-
-        // 9. สร้าง Transaction + เพิ่ม balance ให้ user
-        const transaction = await prisma.$transaction(async (tx) => {
-            // A. Update User Balance First to prevent race conditions showing old data
-            const updatedUser = await tx.user.update({
-                where: { id: matchedUser.id },
-                data: { balance: { increment: amountBaht } }
-            });
-
-            // B. Create Transaction Log using the FRESH balance data
-            return await tx.transaction.create({
-                data: {
-                    userId: matchedUser.id,
-                    type: 'DEPOSIT',
-                    subType: 'TrueWallet',
-                    amount: amountBaht,
-                    status: 'COMPLETED',
-                    balanceBefore: Number(updatedUser.balance) - amountBaht,
-                    balanceAfter: Number(updatedUser.balance),
-                    note: `TrueWallet ฝากอัตโนมัติ จาก ${normalizePhone(senderMobile)}${senderName ? ` (${senderName})` : ''}`,
-                }
-            });
+        const transaction = await prisma.transaction.create({
+            data: {
+                userId: matchedUser.id,
+                type: 'DEPOSIT',
+                subType: 'TrueWallet',
+                amount: amountBaht,
+                status: 'PENDING',
+                balanceBefore: Number(matchedUser.balance),
+                balanceAfter: Number(matchedUser.balance),
+                note: `TrueWallet ???????????????????????????????????? ????????? ${normalizePhone(senderMobile)}${senderName ? ` (${senderName})` : ''}`,
+            }
         });
 
         await PromotionSelectionService.bindSelectedPromotionToTransaction(
@@ -255,6 +226,53 @@ router.post('/', async (req: Request, res: Response) => {
             Number(amountBaht),
             'passive'
         );
+
+        try {
+            await AgentWalletService.creditMainAgent(
+                matchedUser.id,
+                amountBaht,
+                `TW_${walletLog.id}`,
+                'TrueWallet auto deposit',
+                transaction.id
+            );
+        } catch (error: any) {
+            await Promise.all([
+                prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        status: 'FAILED',
+                        note: `TrueWallet transfer failed: ${error.message || 'Unknown error'}`
+                    }
+                }),
+                prisma.trueWalletLog.update({
+                    where: { id: walletLog.id },
+                    data: {
+                        status: 'FAILED',
+                        transactionDbId: transaction.id,
+                        errorMessage: error.message || 'Main agent transfer failed'
+                    }
+                })
+            ]);
+
+            console.error('[TrueWallet Webhook] Main agent transfer failed:', error);
+            return res.status(200).json({ success: false, status: 'TRANSFER_FAILED', logId: walletLog.id });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            const updatedUser = await tx.user.update({
+                where: { id: matchedUser.id },
+                data: { balance: { increment: amountBaht } }
+            });
+
+            await tx.transaction.update({
+                where: { id: transaction.id },
+                data: {
+                    status: 'COMPLETED',
+                    balanceBefore: Number(updatedUser.balance) - amountBaht,
+                    balanceAfter: Number(updatedUser.balance),
+                }
+            });
+        });
 
         // 10. อัปเดต log เป็น COMPLETED
         await prisma.trueWalletLog.update({

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import prisma from '../lib/db.js';
 import bcrypt from 'bcryptjs';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
-import { BetflixService } from '../services/betflix.service.js';
+import { AgentWalletService } from '../services/agent-wallet.service.js';
 import { RewardService } from '../services/reward.service.js';
 import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 import { TurnoverService } from '../services/turnover.service.js';
@@ -51,19 +51,10 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
         const totalDeposit = depositAgg._sum.amount || 0;
 
         let liveBalance = Number(user.balance || 0);
-
-        // Fetch Betflix Balance
-        if (user.betflixUsername) {
-            const betflixBalance = await BetflixService.getBalance(user.betflixUsername);
-
-            liveBalance = betflixBalance;
-
-            if (Number(user.balance) !== betflixBalance) {
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { balance: betflixBalance }
-                });
-            }
+        try {
+            liveBalance = await AgentWalletService.syncLocalBalanceFromAgents(user.id);
+        } catch (error) {
+            console.error('[Users /me] Failed to sync multi-agent balance:', error);
         }
 
         const turnoverCleared = await TurnoverService.clearIfLowBalance(user.id, liveBalance);

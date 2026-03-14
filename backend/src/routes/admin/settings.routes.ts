@@ -162,25 +162,36 @@ router.post('/agent', requirePermission('agents', 'settings', 'manage'), async (
         const { name, apiKey, apiSecret, callbackUrl, rtp, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance, code, isMain, isActive } = req.body;
 
         // Validation for unique code is handled by DB, but we can check early if needed
+        const config = await prisma.$transaction(async (tx) => {
+            if (isMain === true) {
+                await tx.agentConfig.updateMany({
+                    where: { isMain: true },
+                    data: { isMain: false },
+                });
+            }
 
-        const config = await prisma.agentConfig.create({
-            data: {
-                name,
-                apiKey,
-                apiSecret,
-                callbackUrl,
-                rtp: rtp ? Number(rtp) : 0.96,
-                minBet: minBet ? Number(minBet) : 1,
-                maxBet: maxBet ? Number(maxBet) : 10000,
-                upline,
-                xApiKey,
-                xApiCat,
-                gameEntrance,
-                code: code ? code.toUpperCase() : 'BETFLIX', // Default to BETFLIX if not provided
-                isMain: isMain ?? false,
-                isActive: isActive ?? true
-            },
+            return tx.agentConfig.create({
+                data: {
+                    name,
+                    apiKey,
+                    apiSecret,
+                    callbackUrl,
+                    rtp: rtp ? Number(rtp) : 0.96,
+                    minBet: minBet ? Number(minBet) : 1,
+                    maxBet: maxBet ? Number(maxBet) : 10000,
+                    upline,
+                    xApiKey,
+                    xApiCat,
+                    gameEntrance,
+                    code: code ? code.toUpperCase() : 'BETFLIX', // Default to BETFLIX if not provided
+                    isMain: isMain ?? false,
+                    isActive: isActive ?? true
+                },
+            });
         });
+
+        const { AgentFactory } = await import('../../services/agents/AgentFactory.js');
+        AgentFactory.clearCache();
 
         res.status(201).json({ success: true, data: config });
     } catch (error: any) {
@@ -198,29 +209,41 @@ router.put('/agent/:id', requirePermission('agents', 'settings', 'manage'), asyn
         const { id } = req.params;
         const { name, apiKey, apiSecret, callbackUrl, rtp, minBet, maxBet, upline, xApiKey, xApiCat, gameEntrance, code, isMain, isActive } = req.body;
 
-        const config = await prisma.agentConfig.update({
-            where: { id: Number(id) },
-            data: {
-                name,
-                apiKey,
-                apiSecret,
-                callbackUrl,
-                rtp: rtp ? Number(rtp) : undefined,
-                minBet: minBet ? Number(minBet) : undefined,
-                maxBet: maxBet ? Number(maxBet) : undefined,
-                upline,
-                xApiKey,
-                xApiCat,
-                gameEntrance,
-                code: code ? code.toUpperCase() : undefined,
-                isMain,
-                isActive
-            },
+        const config = await prisma.$transaction(async (tx) => {
+            if (isMain === true) {
+                await tx.agentConfig.updateMany({
+                    where: {
+                        id: { not: Number(id) },
+                        isMain: true,
+                    },
+                    data: { isMain: false },
+                });
+            }
+
+            return tx.agentConfig.update({
+                where: { id: Number(id) },
+                data: {
+                    name,
+                    apiKey,
+                    apiSecret,
+                    callbackUrl,
+                    rtp: rtp ? Number(rtp) : undefined,
+                    minBet: minBet ? Number(minBet) : undefined,
+                    maxBet: maxBet ? Number(maxBet) : undefined,
+                    upline,
+                    xApiKey,
+                    xApiCat,
+                    gameEntrance,
+                    code: code ? code.toUpperCase() : undefined,
+                    isMain,
+                    isActive
+                },
+            });
         });
 
         // Clear Agent Factory Cache to apply new settings immediately
         const { AgentFactory } = await import('../../services/agents/AgentFactory.js');
-        AgentFactory.clearCache(config.code);
+        AgentFactory.clearCache();
 
         res.json({ success: true, data: config });
     } catch (error: any) {

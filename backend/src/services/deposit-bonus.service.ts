@@ -4,6 +4,7 @@ import prisma from '../lib/db.js';
 import { PromotionSelectionService } from './promotion-selection.service.js';
 import { StreakService } from './streak.service.js';
 import { TurnoverService } from './turnover.service.js';
+import { AgentWalletService } from './agent-wallet.service.js';
 
 export class DepositBonusService {
     static async applyPostDepositBenefits(transactionId: number) {
@@ -74,11 +75,20 @@ export class DepositBonusService {
             : 0;
 
         try {
+            if (bonusAmount > 0) {
+                await AgentWalletService.creditMainAgent(
+                    transaction.userId,
+                    bonusAmount,
+                    `PROMO_BONUS_${transaction.id}`,
+                    `Promotion bonus: ${promotion.name}`
+                );
+            }
+
             await prisma.$transaction(async (tx) => {
                 const updatedUser = await tx.user.update({
                     where: { id: transaction.userId },
                     data: {
-                        bonusBalance: { increment: new Decimal(bonusAmount) },
+                        balance: { increment: new Decimal(bonusAmount) },
                     },
                 });
 
@@ -99,8 +109,8 @@ export class DepositBonusService {
                         type: 'BONUS',
                         subType: 'PROMOTION',
                         amount: new Decimal(bonusAmount),
-                        balanceBefore: new Decimal(Number(updatedUser.bonusBalance) - bonusAmount),
-                        balanceAfter: updatedUser.bonusBalance,
+                        balanceBefore: new Decimal(Number(updatedUser.balance) - bonusAmount),
+                        balanceAfter: updatedUser.balance,
                         status: 'COMPLETED',
                         note: `Promotion Bonus: ${promotion.name}`,
                         promotionId: promotion.id,

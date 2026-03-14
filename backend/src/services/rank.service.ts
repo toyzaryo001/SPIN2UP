@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db.js';
 import { TurnoverService } from './turnover.service.js';
+import { AgentWalletService } from './agent-wallet.service.js';
 
 type RankDb = Prisma.TransactionClient | typeof prisma;
 
@@ -158,7 +159,7 @@ export class RankService {
             throw new Error('RANK_TIER_NOT_FOUND');
         }
 
-        return prisma.$transaction(async (tx) => {
+        const claim = await prisma.$transaction(async (tx) => {
             const tiers = await this.getTiers(tx);
             const tier = tiers.find((item) => item.id === normalizedTierId);
 
@@ -188,20 +189,6 @@ export class RankService {
                 throw new Error('RANK_ALREADY_CLAIMED');
             }
 
-            const updatedUser = await tx.user.update({
-                where: { id: userId },
-                data: {
-                    bonusBalance: { increment: new Decimal(tier.rewardAmount) },
-                },
-                select: {
-                    bonusBalance: true,
-                },
-            });
-
-            if (this.toNumber(tier.rewardTurnover) > 0) {
-                await TurnoverService.addManualRequirement(userId, tier.rewardTurnover, tx);
-            }
-
             const claim = await tx.rankRewardClaim.create({
                 data: {
                     userId,
@@ -210,21 +197,6 @@ export class RankService {
                     rewardAmount: new Decimal(tier.rewardAmount),
                     turnoverAmount: new Decimal(tier.rewardTurnover),
                     totalDepositAtClaim: new Decimal(totalDeposit),
-                },
-            });
-
-            await tx.transaction.create({
-                data: {
-                    userId,
-                    type: 'BONUS',
-                    subType: 'RANK_REWARD',
-                    amount: new Decimal(tier.rewardAmount),
-                    balanceBefore: new Decimal(Number(updatedUser.bonusBalance) - tier.rewardAmount),
-                    balanceAfter: updatedUser.bonusBalance,
-                    status: 'COMPLETED',
-                    note: this.toNumber(tier.rewardTurnover) > 0
-                        ? `Rank Reward: ${tier.name} (Turnover ${tier.rewardTurnover})`
-                        : `Rank Reward: ${tier.name}`,
                 },
             });
 
@@ -237,5 +209,57 @@ export class RankService {
                 claimedAt: claim.claimedAt,
             };
         });
+
+        try {
+            await AgentWalletService.creditMainAgent(
+                userId,
+                claim.rewardAmount,
+                `RANK_REWARD_${claim.id}`,
+                `Rank Reward: ${claim.rankName}`
+            );
+
+            await prisma.$transaction(async (tx) => {
+                const updatedUser = await tx.user.update({
+                    where: { id: userId },
+                    data: {
+                        balance: { increment: new Decimal(claim.rewardAmount) },
+                    },
+                    select: {
+                        balance: true,
+                    },
+                });
+
+                if (this.toNumber(claim.turnoverAmount) > 0) {
+                    await TurnoverService.addManualRequirement(userId, claim.turnoverAmount, tx);
+                }
+
+                await tx.transaction.create({
+                    data: {
+                        userId,
+                        type: 'BONUS',
+                        subType: 'RANK_REWARD',
+                        amount: new Decimal(claim.rewardAmount),
+                        balanceBefore: new Decimal(Number(updatedUser.balance) - claim.rewardAmount),
+                        balanceAfter: updatedUser.balance,
+                        status: 'COMPLETED',
+                        note: this.toNumber(claim.turnoverAmount) > 0
+                            ? `Rank Reward: ${claim.rankName} (Turnover ${claim.turnoverAmount})`
+                            : `Rank Reward: ${claim.rankName}`,
+                    },
+                });
+            });
+        } catch (error) {
+            await prisma.rankRewardClaim.delete({
+                where: {
+                    userId_rankTierId: {
+                        userId,
+                        rankTierId: claim.rankTierId,
+                    },
+                },
+            }).catch(() => {});
+            throw error;
+        }
+
+        return claim;
     }
 }

@@ -61,16 +61,15 @@ router.post('/deposit', async (req: AuthRequest, res) => {
             return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
         }
 
-        const balanceBefore = isBonus ? user.bonusBalance : user.balance;
+        const balanceBefore = user.balance;
         const balanceAfter = Number(balanceBefore) + Number(amount);
 
-        if (!isBonus) {
-            try {
+        try {
                 await AgentWalletService.creditMainAgent(
                     user.id,
                     Number(amount),
                     `MANUAL_${Date.now()}`,
-                    'Manual credit'
+                    isBonus ? 'Manual bonus credit' : 'Manual credit'
                 );
             } catch (error: any) {
                 return res.status(502).json({
@@ -78,20 +77,11 @@ router.post('/deposit', async (req: AuthRequest, res) => {
                     message: error.message || 'เติมเงินเข้ากระดานหลักไม่สำเร็จ'
                 });
             }
-        }
-
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            if (isBonus) {
-                await tx.user.update({
-                    where: { id: user.id },
-                    data: { bonusBalance: new Prisma.Decimal(balanceAfter) }
-                });
-            } else {
-                await tx.user.update({
-                    where: { id: user.id },
-                    data: { balance: new Prisma.Decimal(balanceAfter) }
-                });
-            }
+            await tx.user.update({
+                where: { id: user.id },
+                data: { balance: new Prisma.Decimal(balanceAfter) }
+            });
 
             await tx.transaction.create({
                 data: {

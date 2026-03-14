@@ -324,15 +324,12 @@ export class CommissionService {
         const claimId = insertResult[0].id;
 
         try {
-            if (!requiresTurnover) {
-                await AgentWalletService.creditMainAgent(
-                    userId,
-                    amount,
-                    `REWARD_COMMISSION_${claimId}`,
-                    'Commission reward claim',
-                    claimId
-                );
-            }
+            await AgentWalletService.creditMainAgent(
+                userId,
+                amount,
+                `REWARD_COMMISSION_${claimId}`,
+                'Commission reward claim'
+            );
 
             const cycleResetAt = thaiNow().toDate();
 
@@ -340,9 +337,7 @@ export class CommissionService {
                 const updatedUser = await tx.user.update({
                     where: { id: userId },
                     data: {
-                        ...(requiresTurnover
-                            ? { bonusBalance: { increment: new Decimal(amount) } }
-                            : { balance: { increment: amount } }),
+                        balance: { increment: new Decimal(amount) },
                         commissionTurnover: new Decimal(0),
                         commissionCycleStartedAt: cycleResetAt,
                     },
@@ -364,12 +359,8 @@ export class CommissionService {
                         userId,
                         type: 'REWARD_COMMISSION',
                         amount: new Decimal(amount),
-                        balanceBefore: requiresTurnover
-                            ? new Decimal(Number(updatedUser.bonusBalance) - amount)
-                            : new Decimal(Number(updatedUser.balance) - amount),
-                        balanceAfter: requiresTurnover
-                            ? updatedUser.bonusBalance
-                            : updatedUser.balance,
+                        balanceBefore: new Decimal(Number(updatedUser.balance) - amount),
+                        balanceAfter: updatedUser.balance,
                         status: 'COMPLETED',
                         note: requiresTurnover
                             ? `COMMISSION for period ${periodStart.toISOString()} - ${periodEnd.toISOString()} (Turnover x${turnoverMultiplier})`
@@ -382,7 +373,7 @@ export class CommissionService {
                     amount,
                     balance: updatedUser.balance,
                     bonusBalance: updatedUser.bonusBalance,
-                    walletType: requiresTurnover ? 'BONUS' : 'BALANCE',
+                    walletType: 'BALANCE',
                     turnoverApplied,
                     periodStart: periodStart.toISOString(),
                     periodEnd: periodEnd.toISOString(),

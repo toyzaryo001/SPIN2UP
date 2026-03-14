@@ -225,15 +225,12 @@ export class RewardService {
         // BETFLIX SYNC: Deposit to Game Wallet MUST Happen AFTER DB lock
         // ============================================
         try {
-            if (!requiresTurnover) {
-                await AgentWalletService.creditMainAgent(
-                    userId,
-                    amount,
-                    `REWARD_${type}_${claimRecordId}`,
-                    `${type} reward claim`,
-                    claimRecordId
-                );
-            }
+            await AgentWalletService.creditMainAgent(
+                userId,
+                amount,
+                `REWARD_${type}_${claimRecordId}`,
+                `${type} reward claim`
+            );
 
             // ============================================
             // COMPLETE SAGA: 2. Confirm Claim & Update Balance
@@ -252,9 +249,7 @@ export class RewardService {
 
                 const updatedUser = await tx.user.update({
                     where: { id: userId },
-                    data: requiresTurnover
-                        ? { bonusBalance: { increment: new Decimal(amount) } }
-                        : { balance: { increment: amount } }
+                    data: { balance: { increment: new Decimal(amount) } }
                 });
 
                 let turnoverApplied = 0;
@@ -273,12 +268,8 @@ export class RewardService {
                         userId,
                         type: type === 'CASHBACK' ? 'REWARD_CASHBACK' : 'REWARD_COMMISSION',
                         amount: new Decimal(amount),
-                        balanceBefore: requiresTurnover
-                            ? new Decimal(Number(updatedUser.bonusBalance) - amount)
-                            : new Decimal(Number(updatedUser.balance) - amount),
-                        balanceAfter: requiresTurnover
-                            ? updatedUser.bonusBalance
-                            : updatedUser.balance,
+                        balanceBefore: new Decimal(Number(updatedUser.balance) - amount),
+                        balanceAfter: updatedUser.balance,
                         status: 'COMPLETED',
                         note: requiresTurnover
                             ? `${type} for period ${target.periodStart.split(' ')[0]} (Turnover x${turnoverMultiplier})`
@@ -359,7 +350,7 @@ export class RewardService {
                     amount,
                     balance: updatedUser.balance,
                     bonusBalance: updatedUser.bonusBalance,
-                    walletType: requiresTurnover ? 'BONUS' : 'BALANCE',
+                    walletType: 'BALANCE',
                     turnoverApplied,
                 };
             });

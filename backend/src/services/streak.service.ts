@@ -3,6 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../lib/db.js';
 import { thaiDateKey, thaiNow, thaiStartOfDay } from '../lib/thai-time.js';
 import { TurnoverService } from './turnover.service.js';
+import { AgentWalletService } from './agent-wallet.service.js';
 
 type StreakDb = Prisma.TransactionClient | typeof prisma;
 
@@ -217,12 +218,20 @@ export class StreakService {
 
             const bonusAmount = matchedSetting.bonusAmount;
             const turnoverMultiplier = matchedSetting.turnoverMultiplier;
+            const todayKey = thaiDateKey(thaiNow().toDate());
+
+            await AgentWalletService.creditMainAgent(
+                userId,
+                bonusAmount,
+                `STREAK_${userId}_${currentStreak}_${todayKey}`,
+                `Streak Day ${currentStreak} Bonus`
+            );
 
             await prisma.$transaction(async (tx) => {
                 const updatedUser = await tx.user.update({
                     where: { id: userId },
                     data: {
-                        bonusBalance: { increment: new Decimal(bonusAmount) },
+                        balance: { increment: new Decimal(bonusAmount) },
                     },
                 });
 
@@ -242,8 +251,8 @@ export class StreakService {
                         type: 'BONUS',
                         subType: 'STREAK',
                         amount: new Decimal(bonusAmount),
-                        balanceBefore: new Decimal(this.toNumber(updatedUser.bonusBalance) - bonusAmount),
-                        balanceAfter: updatedUser.bonusBalance,
+                        balanceBefore: new Decimal(this.toNumber(updatedUser.balance) - bonusAmount),
+                        balanceAfter: updatedUser.balance,
                         status: 'COMPLETED',
                         note: matchedSetting.requiresTurnover
                             ? `Streak Day ${currentStreak} Bonus (Turnover x${turnoverMultiplier})`

@@ -348,10 +348,10 @@ export default function MixBoardPage() {
             </div>
 
             {/* Main Dual Pane Content */}
-            <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden h-[calc(100vh-200px)]">
+            <div className="flex-1 min-h-0 grid grid-cols-12 gap-4 overflow-hidden h-[calc(100vh-200px)]">
 
                 {/* LEFT PANE: SOURCE */}
-                <div className="col-span-12 md:col-span-5 bg-white rounded-xl shadow border border-slate-200 flex flex-col">
+                <div className="col-span-12 md:col-span-5 min-h-0 bg-white rounded-xl shadow border border-slate-200 flex flex-col">
                     <div className="p-4 border-b border-slate-100 bg-slate-50 rounded-t-xl space-y-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-slate-700 font-bold">
@@ -407,7 +407,7 @@ export default function MixBoardPage() {
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1">
                         {loadingSource ? (
                             <div className="text-center py-10 text-slate-400">Loading...</div>
                         ) : sourceGames.map(game => {
@@ -442,7 +442,7 @@ export default function MixBoardPage() {
                 </div>
 
                 {/* MIDDLE: ACTIONS */}
-                <div className="col-span-12 md:col-span-2 flex flex-col justify-center items-center gap-4">
+                <div className="col-span-12 md:col-span-2 min-h-0 flex flex-col justify-center items-center gap-4">
                     <div className="bg-slate-100 p-4 rounded-full">
                         <ArrowRight size={24} className="text-slate-400" />
                     </div>
@@ -466,7 +466,7 @@ export default function MixBoardPage() {
                 </div>
 
                 {/* RIGHT PANE: TARGET */}
-                <div className="col-span-12 md:col-span-5 bg-white rounded-xl shadow border border-slate-200 flex flex-col">
+                <div className="col-span-12 md:col-span-5 min-h-0 bg-white rounded-xl shadow border border-slate-200 flex flex-col">
                     <div className="p-4 border-b border-slate-100 bg-emerald-50 rounded-t-xl space-y-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-emerald-800 font-bold">
@@ -499,7 +499,7 @@ export default function MixBoardPage() {
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-50/50">
+                    <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1 bg-slate-50/50">
                         {loadingTarget ? (
                             <div className="text-center py-10 text-slate-400">Loading...</div>
                         ) : targetGames.length === 0 ? (

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import prisma from '../lib/db.js';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 import { Decimal } from '@prisma/client/runtime/library';
-import { PaymentService } from '../services/payment.service.js';
+import { PaymentService, PaymentValidationError } from '../services/payment.service.js';
 import { PromotionSelectionService } from '../services/promotion-selection.service.js';
 
 const router = Router();
@@ -133,7 +133,8 @@ router.post('/withdraw', authMiddleware, async (req: AuthRequest, res) => {
         res.status(201).json(result);
     } catch (error: any) {
         console.error('Withdraw error:', error);
-        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการทำรายการ' });
+        const statusCode = error instanceof PaymentValidationError ? 400 : 500;
+        res.status(statusCode).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการทำรายการ' });
     }
 });
 

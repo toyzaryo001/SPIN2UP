@@ -9,6 +9,13 @@ import { PromotionSelectionService } from './promotion-selection.service.js';
 import { TurnoverService } from './turnover.service.js';
 import { AgentWalletService } from './agent-wallet.service.js';
 
+export class PaymentValidationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'PaymentValidationError';
+    }
+}
+
 export class PaymentService {
     private static normalizeCheckedTransaction(rawResult: any) {
         const data = rawResult?.data?.transaction || rawResult?.data || {};
@@ -281,10 +288,19 @@ export class PaymentService {
     }
 
     static async createWithdraw(userId: number, amount: number) {
-        if (amount <= 0) throw new Error('Invalid amount');
+        if (amount <= 0) throw new PaymentValidationError('จำนวนเงินไม่ถูกต้อง');
+
+        const minWithdrawSetting = await prisma.setting.findUnique({
+            where: { key: 'minWithdraw' },
+            select: { value: true }
+        });
+        const minWithdraw = Number(minWithdrawSetting?.value || 100);
+        if (Number.isFinite(minWithdraw) && minWithdraw > 0 && amount < minWithdraw) {
+            throw new PaymentValidationError(`ถอนขั้นต่ำ ${minWithdraw.toLocaleString()} บาท`);
+        }
 
         let user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user) throw new Error('User not found');
+        if (!user) throw new PaymentValidationError('ไม่พบข้อมูลผู้ใช้');
 
         const syncedBalance = await AgentWalletService.syncLocalBalanceFromAgents(userId)
             .catch(() => Number(user?.balance || 0));
@@ -293,15 +309,15 @@ export class PaymentService {
             if (!user) throw new Error('User not found');
         }
 
-        if (Number(user.balance) < amount) throw new Error('Insufficient balance');
+        if (Number(user.balance) < amount) throw new PaymentValidationError('ยอดเงินไม่เพียงพอ');
 
         const turnoverRemaining = TurnoverService.getRemaining(user);
         if (turnoverRemaining > 0) {
-            throw new Error(`ท่านยังทำเทิร์นไม่ครบ (ขาดอีก ${turnoverRemaining.toLocaleString()} บาท)`);
+            throw new PaymentValidationError(`ท่านยังทำเทิร์นไม่ครบ (ขาดอีก ${turnoverRemaining.toLocaleString()} บาท)`);
         }
 
         if (!user.bankAccount || !user.bankName) {
-            throw new Error('User bank account not found');
+            throw new PaymentValidationError('ไม่พบบัญชีธนาคารสำหรับถอนเงิน');
         }
 
         const transaction = await prisma.$transaction(async (tx) => {
@@ -347,7 +363,7 @@ export class PaymentService {
                 amount,
                 `Withdraw pull failed: ${error.message}`
             );
-            throw new Error(`ไม่สามารถดึงเครดิตจากกระดานเกมได้ (${error.message})`);
+            throw new PaymentValidationError(`ไม่สามารถดึงเครดิตจากกระดานเกมได้ (${error.message})`);
         }
 
         LineNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[LineNotify] Error:', err));

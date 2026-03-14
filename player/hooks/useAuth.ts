@@ -20,8 +20,11 @@ export function useAuth(requireAuth: boolean = true) {
 
     useEffect(() => {
         const checkUser = () => {
+            const token = localStorage.getItem("token");
             const userData = localStorage.getItem("user");
-            if (!userData || userData === "undefined") {
+            if (!token || !userData || userData === "undefined") {
+                localStorage.removeItem("user");
+                setUser(null);
                 if (requireAuth) {
                     router.push("/?action=login");
                 }

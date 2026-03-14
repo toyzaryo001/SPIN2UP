@@ -33,6 +33,26 @@ export default function SessionManager() {
     const lastActiveRef = useRef<number>(Date.now());
 
     useEffect(() => {
+        const validateSession = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const res = await axios.get(`${API_URL}/users/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (res.data?.success && res.data?.data) {
+                    localStorage.setItem('user', JSON.stringify(res.data.data));
+                    window.dispatchEvent(new Event('user-login'));
+                }
+            } catch (error: any) {
+                if (error.response?.status === 401) {
+                    performLogout();
+                }
+            }
+        };
+
         // === GLOBAL AXIOS 401 + SESSION_KICKED INTERCEPTOR ===
         const interceptorId = axios.interceptors.response.use(
             (response) => response,
@@ -68,6 +88,8 @@ export default function SessionManager() {
             };
         }
 
+        void validateSession();
+
         // Check if session expired while away
         const storedLastActive = localStorage.getItem('lastActive');
         if (storedLastActive) {
@@ -101,10 +123,22 @@ export default function SessionManager() {
             }
         };
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                void validateSession();
+            }
+        };
+
+        const handleWindowFocus = () => {
+            void validateSession();
+        };
+
         // Attach listeners
         events.forEach(event => {
             window.addEventListener(event, handleActivity);
         });
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleWindowFocus);
 
         // Set initial timer
         resetTimer();
@@ -130,6 +164,8 @@ export default function SessionManager() {
             events.forEach(event => {
                 window.removeEventListener(event, handleActivity);
             });
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleWindowFocus);
         };
     }, []);
 

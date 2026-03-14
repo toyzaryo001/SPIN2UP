@@ -51,6 +51,11 @@ interface DepositQrData {
 const formatCurrency = (value: number | null | undefined) =>
     Number(value || 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
+const isTrueMoneyUserAccount = (bankName?: string | null) => {
+    const normalized = String(bankName || "").trim().toUpperCase();
+    return normalized === "TRUEMONEY" || normalized === "TRUEWALLET";
+};
+
 const getDepositStatusMessage = (status: string) => {
     switch (status) {
         case "COMPLETED":
@@ -89,7 +94,7 @@ export default function DepositPage() {
                     const parsedUser = JSON.parse(saved);
                     setUser(parsedUser);
                     // Auto-select TrueMoney channel for wallet-registered users
-                    if ((parsedUser?.bankName || '').toUpperCase() === 'TRUEMONEY') {
+                    if (isTrueMoneyUserAccount(parsedUser?.bankName)) {
                         setSelectedChannel('truemoney');
                     }
                 } else {
@@ -114,6 +119,7 @@ export default function DepositPage() {
     const [withdrawAmount, setWithdrawAmount] = useState<string>("");
     const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
     const [selectedPromotion, setSelectedPromotion] = useState<SelectedPromotionSummary | null>(null);
+    const isTrueMoneyUser = isTrueMoneyUserAccount(user?.bankName);
 
     // Alert Modal State
     const [alertState, setAlertState] = useState<{
@@ -147,6 +153,15 @@ export default function DepositPage() {
             const res = await fetch(`${API_URL}/users/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            if (res.status === 401) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                localStorage.removeItem("lastActive");
+                window.dispatchEvent(new Event("user-logout"));
+                router.push("/?action=login");
+                return null;
+            }
+
             const data = await res.json();
 
             if (data.success) {
@@ -224,6 +239,13 @@ export default function DepositPage() {
         refreshUserProfile();
         fetchSelectedPromotion();
     }, [loading]);
+
+    useEffect(() => {
+        if (isTrueMoneyUser && selectedChannel !== "truemoney") {
+            setSelectedChannel("truemoney");
+            setQrData(null);
+        }
+    }, [isTrueMoneyUser, selectedChannel]);
 
     const fetchConfig = async () => {
         try {
@@ -396,6 +418,7 @@ export default function DepositPage() {
     // Auto-select first bank when channel changes
     useEffect(() => {
         const channelFilteredBanks = bankAccounts.filter(bank => {
+            if (isTrueMoneyUser) return bank.type === "truemoney" || bank.bankName === "TrueMoney";
             if (selectedChannel === "truemoney") return bank.type === "truemoney" || bank.bankName === "TrueMoney";
             return bank.type !== "truemoney" && bank.bankName !== "TrueMoney" && bank.bankName !== "PromptPay";
         });
@@ -407,7 +430,7 @@ export default function DepositPage() {
         } else {
             setSelectedBank(null);
         }
-    }, [selectedChannel, bankAccounts]);
+    }, [selectedChannel, bankAccounts, isTrueMoneyUser]);
 
     const handleDeposit = async () => {
         if (!depositAmount || Number(depositAmount) <= 0) {
@@ -543,6 +566,7 @@ export default function DepositPage() {
 
     const renderManualDeposit = () => {
         const filteredBanks = bankAccounts.filter(bank => {
+            if (isTrueMoneyUser) return bank.type === "truemoney" || bank.bankName === "TrueMoney";
             if (selectedChannel === "truemoney") return bank.type === "truemoney" || bank.bankName === "TrueMoney";
             // For standard bank transfer, exclude truemoney
             return bank.type !== "truemoney" && bank.bankName !== "TrueMoney" && bank.bankName !== "PromptPay";
@@ -803,13 +827,13 @@ export default function DepositPage() {
                                     // Protect against initial empty state before fetchConfig completes
                                     if (Object.keys(features).length === 0) return false;
 
+                                    if (isTrueMoneyUser) {
+                                        return ch.id === 'truemoney' && features.deposit_truemoney !== false;
+                                    }
+
                                     if (ch.id === 'bank' && features.deposit_bank === false) return false;
                                     if (ch.id === 'truemoney' && features.deposit_truemoney === false) return false;
                                     if (ch.id === 'promptpay' && features.deposit_promptpay === false) return false;
-
-                                    // Wallet-registered users only see TrueMoney channel
-                                    const userBankName = (user?.bankName || '').toUpperCase();
-                                    if (userBankName === 'TRUEMONEY' && ch.id === 'bank') return false;
                                     return true;
                                 }).map((ch) => (
                                     <button

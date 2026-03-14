@@ -65,7 +65,7 @@ export class CommissionService {
                 ? BetflixService.getReportSummary(args.betflixUsername, betflixStart, betflixEnd)
                 : Promise.resolve(null),
             args.nexusUsername && nexus
-                ? nexus.getGameLog(args.nexusUsername, betflixStart, betflixEnd)
+                ? nexus.getUnifiedGameLog(args.nexusUsername, betflixStart, betflixEnd)
                 : Promise.resolve(null),
         ]);
 

@@ -109,7 +109,7 @@ export class RewardService {
             fetchPromises.push(
                 (async () => {
                     try {
-                        const log = await nexus!.getGameLog(
+                        const log = await nexus!.getUnifiedGameLog(
                             nexusUsername,
                             periodStart,
                             periodEnd

@@ -194,7 +194,7 @@ export class RewardSnapshotService {
                                 return null;
                             }
 
-                            const log = await nexus.getGameLog(
+                            const log = await nexus.getUnifiedGameLog(
                                 nexusUsername,
                                 period.nexusStart,
                                 period.nexusEnd

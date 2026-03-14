@@ -618,7 +618,7 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
                                 return null;
                             }
 
-                            const log = await nexus.getGameLog(
+                            const log = await nexus.getUnifiedGameLog(
                                 nexusUsername,
                                 nexusStartStr,
                                 nexusEndStr

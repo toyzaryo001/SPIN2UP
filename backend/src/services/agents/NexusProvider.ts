@@ -355,6 +355,83 @@ export class NexusProvider implements IAgentService {
         }
     }
 
+    async getUnifiedGameLog(userCode: string, start: string, end: string): Promise<{ totalBet: number; totalWin: number; count: number } | null> {
+        try {
+            let totalBet = 0;
+            let totalWin = 0;
+            let count = 0;
+            const perPage = 1000;
+            const gameTypes = ['slot', 'casino', 'fishing', 'table', 'arcade'];
+            const seenRecordIds = new Set<string>();
+
+            for (const gameType of gameTypes) {
+                let page = 0;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const res = await this.request('get_game_log', {
+                        user_code: userCode,
+                        game_type: gameType,
+                        start,
+                        end,
+                        page,
+                        perPage,
+                    });
+
+                    if (res.status !== 1) {
+                        break;
+                    }
+
+                    const records = Object.entries(res)
+                        .filter(([key, value]) => key !== 'page' && key !== 'perPage' && key !== 'total_count' && Array.isArray(value))
+                        .flatMap(([, value]) => value as any[]);
+
+                    if (records.length === 0) {
+                        break;
+                    }
+
+                    for (const record of records) {
+                        const recordId = String(
+                            record.txn_id
+                            || record.history_id
+                            || `${gameType}-${record.created_at}-${record.bet_money || record.bet || 0}-${record.win_money || record.win || 0}`
+                        );
+                        if (seenRecordIds.has(recordId)) {
+                            continue;
+                        }
+                        seenRecordIds.add(recordId);
+
+                        if (record.txn_type === 'debit') {
+                            totalBet += Number(record.bet_money || record.bet || 0);
+                        } else if (record.txn_type === 'credit') {
+                            totalWin += Number(record.win_money || record.win || 0);
+                        } else {
+                            totalBet += Number(record.bet_money || record.bet || 0);
+                            totalWin += Number(record.win_money || record.win || 0);
+                        }
+                        count++;
+                    }
+
+                    const totalCount = Number(res.total_count || records.length || 0);
+                    if ((page + 1) * perPage >= totalCount || records.length < perPage) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+            }
+
+            if (count === 0 && totalBet === 0 && totalWin === 0) {
+                return null;
+            }
+
+            return { totalBet, totalWin, count };
+        } catch (error: any) {
+            console.error(`[Nexus] getUnifiedGameLog error for ${userCode}:`, error.message);
+            return null;
+        }
+    }
+
     async debug(): Promise<any> {
         return await this.request('provider_list');
     }

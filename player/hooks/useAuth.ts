@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-interface User {
+export interface User {
     id: number;
     username: string;
     phone: string;
@@ -11,6 +11,9 @@ interface User {
     balance: number;
     bankName?: string;
     bankAccount?: string;
+    currentRankId?: string | null;
+    currentRankName?: string | null;
+    totalDeposit?: number;
 }
 
 export function useAuth(requireAuth: boolean = true) {

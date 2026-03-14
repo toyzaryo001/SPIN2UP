@@ -40,15 +40,8 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
             return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
         }
 
-        const depositAgg = await prisma.transaction.aggregate({
-            _sum: { amount: true },
-            where: {
-                userId: req.user!.userId,
-                type: 'DEPOSIT',
-                status: { in: ['APPROVED', 'COMPLETED'] }
-            }
-        });
-        const totalDeposit = depositAgg._sum.amount || 0;
+        const rankStatus = await RankService.getUserRankStatus(req.user!.userId);
+        const fallbackTier = rankStatus.tiers[0] || null;
 
         let liveBalance = Number(user.balance || 0);
         try {
@@ -67,7 +60,9 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
                 balance: liveBalance,
                 currentTurnover: turnoverCleared ? 0 : user.currentTurnover,
                 turnoverLimit: turnoverCleared ? 0 : user.turnoverLimit,
-                totalDeposit,
+                totalDeposit: Number(rankStatus.totalDeposit || 0),
+                currentRankId: rankStatus.currentTierId || fallbackTier?.id || null,
+                currentRankName: rankStatus.currentTierName || fallbackTier?.name || null,
                 selectedPromotion,
             }
         });

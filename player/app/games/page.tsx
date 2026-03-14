@@ -12,6 +12,7 @@ import BottomNav from "@/components/BottomNav";
 import ContactDrawer from "@/components/ContactDrawer";
 import GameCard from "@/components/GameCard";
 import AuthModals from "@/components/AuthModals";
+import MobileProviderStrip from "@/components/MobileProviderStrip";
 import { useGameLauncher } from "@/components/GameLauncher";
 
 // --- Sidebar Component ---
@@ -103,7 +104,10 @@ const SlotsContent = ({ games, category, providers: globalProviders, onPlay }: a
                 <Sidebar title={`ค่าย${category?.name || 'สล็อต'}`} items={providerList} active={activeProvider} setActive={handleProviderChange} />
             </div>
             {/* Mobile Provider Selector */}
-            <div className="md:hidden col-span-1 -mx-4 px-4 overflow-x-auto pb-3">
+            <div className="md:hidden col-span-1">
+                <MobileProviderStrip items={providerList} active={activeProvider} onSelect={handleProviderChange} />
+            </div>
+            <div className="hidden md:hidden col-span-1 -mx-4 px-4 overflow-x-auto pb-3">
                 <div className="flex gap-2 min-w-max">
                     {providerList.length > 0 ? providerList.map((p: any) => (
                         <button
@@ -239,6 +243,9 @@ const CasinoContent = ({ games, category, providers: globalProviders, onPlay }: 
                 <Sidebar title={`ค่าย${category?.name || 'คาสิโน'}`} items={providerList} active={activeProvider} setActive={handleProviderChange} />
             </div>
             <div className="md:hidden col-span-1">
+                <MobileProviderStrip items={providerList} active={activeProvider} onSelect={handleProviderChange} />
+            </div>
+            <div className="hidden md:hidden col-span-1">
                 <select
                     className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg p-3 outline-none focus:border-yellow-500 font-sans"
                     value={activeProvider}

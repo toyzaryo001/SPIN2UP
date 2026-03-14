@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 import prisma from '../lib/db.js';
 import { signToken } from '../utils/jwt.js';
 import { BetflixService } from '../services/betflix.service.js';
+import { RankService } from '../services/rank.service.js';
 import { authMiddleware, AuthRequest } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -27,6 +28,17 @@ function getTenantPrisma(url: string): PrismaClient {
         prismaCache.set(key, new PrismaClient({ datasources: { db: { url } } }));
     }
     return prismaCache.get(key)!;
+}
+
+async function getRankSummary(userId: number) {
+    const rankStatus = await RankService.getUserRankStatus(userId);
+    const fallbackTier = rankStatus.tiers[0] || null;
+
+    return {
+        currentRankId: rankStatus.currentTierId || fallbackTier?.id || null,
+        currentRankName: rankStatus.currentTierName || fallbackTier?.name || null,
+        totalDeposit: Number(rankStatus.totalDeposit || 0),
+    };
 }
 
 // Validation schemas
@@ -141,6 +153,7 @@ router.post('/register', async (req, res) => {
 
         // Generate token (all registrations are players, role is always USER)
         const token = signToken({ userId: user.id, role: 'USER' });
+        const rankSummary = await getRankSummary(user.id);
 
         res.status(201).json({
             success: true,
@@ -151,6 +164,9 @@ router.post('/register', async (req, res) => {
                     username: user.username,
                     fullName: user.fullName,
                     phone: user.phone,
+                    balance: Number(user.balance || 0),
+                    bonusBalance: Number(user.bonusBalance || 0),
+                    ...rankSummary,
                 },
                 token,
             },
@@ -221,6 +237,7 @@ router.post('/login', async (req, res) => {
 
         // Generate JWT with sessionToken embedded
         const token = signToken({ userId: user.id, role: 'USER', sessionToken });
+        const rankSummary = await getRankSummary(user.id);
 
         res.json({
             success: true,
@@ -233,6 +250,7 @@ router.post('/login', async (req, res) => {
                     phone: user.phone,
                     balance: user.balance,
                     bonusBalance: user.bonusBalance,
+                    ...rankSummary,
                 },
                 token,
             },
@@ -293,9 +311,14 @@ router.get('/me', authMiddleware, async (req: any, res) => {
             return res.status(403).json({ success: false, message: 'บัญชีถูกระงับ' });
         }
 
+        const rankSummary = await getRankSummary(user.id);
+
         res.json({
             success: true,
-            data: user
+            data: {
+                ...user,
+                ...rankSummary,
+            }
         });
     } catch (error) {
         console.error('Get me error:', error);

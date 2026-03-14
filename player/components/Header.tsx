@@ -129,6 +129,11 @@ export default function Header({
 
     const siteName = settings?.siteName;
     const logoUrl = settings?.logoUrl;
+    const currentRankName = typeof user?.currentRankName === "string" && user.currentRankName.trim()
+        ? user.currentRankName.trim()
+        : "Bronze";
+    const totalDeposit = Number(user?.totalDeposit || 0);
+    const rankSummaryText = `${currentRankName} • ฝากสะสม ฿${totalDeposit.toLocaleString()}`;
 
     return (
         <header className="sticky top-0 z-50 glass-card border-b-0 transition-all duration-300 bg-[#0D1117]/95 backdrop-blur-md">
@@ -191,7 +196,9 @@ export default function Header({
                                     </div>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">Vip Level 1</span>
+                                    <span className="max-w-[150px] truncate text-[11px] font-semibold text-slate-400 md:max-w-none">
+                                        {rankSummaryText}
+                                    </span>
                                     <span className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors">{user.username}</span>
                                 </div>
                             </div>

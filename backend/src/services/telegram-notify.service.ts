@@ -87,6 +87,62 @@ export class TelegramNotifyService {
         }
     }
 
+    static async notifyManualCredit(username: string, amount: number, fullName?: string | null, note?: string | null) {
+        try {
+            const s = await this.getSettings();
+            if (s.telegramNotifyDeposit !== 'true') {
+                return { success: false, message: 'Telegram deposit notify disabled' };
+            }
+
+            const botToken = s.telegramBotToken;
+            const chatId = s.telegramChatIdDeposit || s.telegramChatId;
+            if (!botToken || !chatId) {
+                return { success: false, message: 'Missing bot token or chat ID' };
+            }
+
+            const msg = `🛠 <b>แจ้งปรับเครดิตโดยแอดมิน</b>
+👤 ยูสเซอร์: <code>${username}</code>
+📝 ชื่อ-สกุล: ${fullName || '-'}
+➕ ประเภท: เพิ่มเครดิต
+💵 จำนวน: <b>${amount.toLocaleString()} บาท</b>
+🧾 หมายเหตุ: ${note || '-'}
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+
+            return this.sendMessage(botToken, chatId, msg);
+        } catch (error: any) {
+            console.error('[Telegram] notifyManualCredit error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    static async notifyManualDeduct(username: string, amount: number, fullName?: string | null, note?: string | null) {
+        try {
+            const s = await this.getSettings();
+            if (s.telegramNotifyWithdraw !== 'true') {
+                return { success: false, message: 'Telegram withdraw notify disabled' };
+            }
+
+            const botToken = s.telegramBotToken;
+            const chatId = s.telegramChatIdWithdraw || s.telegramChatId;
+            if (!botToken || !chatId) {
+                return { success: false, message: 'Missing bot token or chat ID' };
+            }
+
+            const msg = `🛠 <b>แจ้งปรับเครดิตโดยแอดมิน</b>
+👤 ยูสเซอร์: <code>${username}</code>
+📝 ชื่อ-สกุล: ${fullName || '-'}
+➖ ประเภท: ลดเครดิต
+💵 จำนวน: <b>${amount.toLocaleString()} บาท</b>
+🧾 หมายเหตุ: ${note || '-'}
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+
+            return this.sendMessage(botToken, chatId, msg);
+        } catch (error: any) {
+            console.error('[Telegram] notifyManualDeduct error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
     static async notifyWithdraw(username: string, amount: number) {
         try {
             const s = await this.getSettings();

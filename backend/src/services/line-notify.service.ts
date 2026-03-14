@@ -4,13 +4,8 @@ import prisma from '../lib/db';
 export class LineNotifyService {
     private static API_URL = 'https://notify-api.line.me/api/notify';
 
-    /**
-     * Send a notification message to LINE
-     * @param message The message to send
-     */
     static async notify(message: string) {
         try {
-            // 1. Check if LINE Notify feature is enabled
             const feature = await prisma.siteFeature.findUnique({
                 where: { key: 'line_notify' }
             });
@@ -19,7 +14,6 @@ export class LineNotifyService {
                 return { success: false, message: 'LINE Notify is disabled' };
             }
 
-            // 2. Get LINE Notify Token from settings
             const tokenSetting = await prisma.setting.findUnique({
                 where: { key: 'line_notify_token' }
             });
@@ -30,7 +24,6 @@ export class LineNotifyService {
                 return { success: false, message: 'Missing token' };
             }
 
-            // 3. Send to LINE Notify API
             const response = await axios.post(
                 this.API_URL,
                 new URLSearchParams({ message }).toString(),
@@ -49,9 +42,6 @@ export class LineNotifyService {
         }
     }
 
-    /**
-     * Notify about a new deposit
-     */
     static async notifyDeposit(username: string, amount: number, method: string) {
         const msg = `
 📣 แจ้งฝากเงินใหม่!
@@ -63,9 +53,6 @@ export class LineNotifyService {
         return this.notify(msg);
     }
 
-    /**
-     * Notify about a new withdrawal request
-     */
     static async notifyWithdraw(username: string, amount: number) {
         const msg = `
 💸 แจ้งถอนเงิน!
@@ -73,6 +60,32 @@ export class LineNotifyService {
 💰 จำนวน: ${amount.toLocaleString()} บาท
 🕒 เวลา: ${new Date().toLocaleString('th-TH')}
 ⚠️ โปรดตรวจสอบและอนุมัติในระบบ
+`.trim();
+        return this.notify(msg);
+    }
+
+    static async notifyManualCredit(username: string, amount: number, fullName?: string | null, note?: string | null) {
+        const msg = `
+🛠 แจ้งปรับเครดิตโดยแอดมิน
+👤 ยูสเซอร์: ${username}
+📝 ชื่อ-สกุล: ${fullName || '-'}
+➕ ประเภท: เพิ่มเครดิต
+💰 จำนวน: ${amount.toLocaleString()} บาท
+🧾 หมายเหตุ: ${note || '-'}
+🕒 เวลา: ${new Date().toLocaleString('th-TH')}
+`.trim();
+        return this.notify(msg);
+    }
+
+    static async notifyManualDeduct(username: string, amount: number, fullName?: string | null, note?: string | null) {
+        const msg = `
+🛠 แจ้งปรับเครดิตโดยแอดมิน
+👤 ยูสเซอร์: ${username}
+📝 ชื่อ-สกุล: ${fullName || '-'}
+➖ ประเภท: ลดเครดิต
+💰 จำนวน: ${amount.toLocaleString()} บาท
+🧾 หมายเหตุ: ${note || '-'}
+🕒 เวลา: ${new Date().toLocaleString('th-TH')}
 `.trim();
         return this.notify(msg);
     }

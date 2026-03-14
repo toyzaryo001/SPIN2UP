@@ -6,6 +6,8 @@ import { DepositBonusService } from '../../services/deposit-bonus.service.js';
 import { TurnoverService } from '../../services/turnover.service.js';
 import { AgentWalletService } from '../../services/agent-wallet.service.js';
 import { PaymentService } from '../../services/payment.service.js';
+import { LineNotifyService } from '../../services/line-notify.service.js';
+import { TelegramNotifyService } from '../../services/telegram-notify.service.js';
 
 const router = Router();
 
@@ -109,6 +111,20 @@ router.post('/deposit', async (req: AuthRequest, res) => {
             });
         });
 
+        LineNotifyService.notifyManualCredit(
+            user.username,
+            Number(amount),
+            user.fullName || null,
+            note || null
+        ).catch(err => console.error('[LineNotify] Manual credit error:', err));
+
+        TelegramNotifyService.notifyManualCredit(
+            user.username,
+            Number(amount),
+            user.fullName || null,
+            note || null
+        ).catch(err => console.error('[Telegram] Manual credit error:', err));
+
         return res.json({
             success: true,
             message: 'เติมเงินสำเร็จ',
@@ -195,6 +211,20 @@ router.post('/deduct', requirePermission('manual', 'withdraw', 'manage'), async 
                 },
             });
         });
+
+        LineNotifyService.notifyManualDeduct(
+            user.username,
+            Number(amount),
+            user.fullName || null,
+            note || null
+        ).catch(err => console.error('[LineNotify] Manual deduct error:', err));
+
+        TelegramNotifyService.notifyManualDeduct(
+            user.username,
+            Number(amount),
+            user.fullName || null,
+            note || null
+        ).catch(err => console.error('[Telegram] Manual deduct error:', err));
 
         return res.json({ success: true, message: 'ลดเครดิตสำเร็จ', data: { newBalance: balanceAfter } });
     } catch (error) {

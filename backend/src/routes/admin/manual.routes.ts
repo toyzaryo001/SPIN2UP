@@ -346,7 +346,7 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'm
 
 router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'manage'), async (req: AuthRequest, res) => {
     try {
-        const { transactionId, note, refund } = req.body;
+        const { transactionId, note, rejectMode } = req.body;
 
         const transaction = await prisma.transaction.findUnique({
             where: { id: Number(transactionId) },
@@ -362,55 +362,97 @@ router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'ma
             select: { username: true, fullName: true }
         });
         const adminName = admin?.fullName || admin?.username || `Admin #${req.user!.userId}`;
-        const shouldRefund = refund !== false;
+        const normalizedRejectMode = rejectMode === 'RETURN_TO_GAME' ? 'RETURN_TO_GAME' : 'KEEP_IN_WEB_WALLET';
+        const amount = Number(transaction.amount);
 
-        if (shouldRefund) {
-            const amount = Number(transaction.amount);
+        await PaymentService.refundTransaction(
+            transaction.id,
+            transaction.userId,
+            amount,
+            note || 'Manual withdrawal rejected',
+            'RESTORED_TO_WEB'
+        );
 
-            await PaymentService.refundTransaction(
-                transaction.id,
-                transaction.userId,
-                amount,
-                note || 'Manual withdrawal rejected'
-            );
+        if (normalizedRejectMode === 'RETURN_TO_GAME') {
+            try {
+                const restored = await AgentWalletService.restoreFundsToLastActiveGame(
+                    transaction.userId,
+                    amount,
+                    `WD_RESTORE_${transaction.id}`,
+                    transaction.id
+                );
 
-            await prisma.transaction.update({
-                where: { id: transaction.id },
-                data: { status: 'REJECTED', note, adminId: req.user!.userId }
-            });
+                await prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        status: 'REJECTED',
+                        note,
+                        adminId: req.user!.userId,
+                        settleStatus: 'RESTORED_TO_GAME',
+                        settledAgentId: restored.agentId,
+                        settledExternalUsername: restored.externalUsername,
+                        settledAmount: new Prisma.Decimal(restored.restoredAmount),
+                        settledAt: new Date(),
+                    }
+                });
 
             TelegramNotifyService.notifyWithdrawRejected({
                 username: transaction.user.username,
                 fullName: transaction.user.fullName || null,
-                amount: Number(transaction.amount),
+                amount,
                 bankName: transaction.user.bankName || null,
                 bankAccount: transaction.user.bankAccount || null,
                 method: resolveWithdrawNotifyMethod(transaction.user.bankName, transaction.paymentGateway?.code || null),
                 transactionId: transaction.id,
                 adminName,
                 note: note || 'Manual withdrawal rejected',
+                rejectMode: 'RETURN_TO_GAME',
                 refunded: true
             }).catch(err => console.error('[Telegram] Withdraw reject notify error:', err));
+
+        } catch (error: any) {
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: {
+                    status: 'FAILED',
+                    note: `${note || 'Manual withdrawal rejected'} | Restore to game failed: ${error.message}`,
+                    adminId: req.user!.userId,
+                    settleStatus: 'RESTORE_TO_GAME_FAILED',
+                }
+            });
+
+            return res.status(500).json({
+                success: false,
+                message: `คืนยอดกลับเข้าเกมไม่สำเร็จ เงินถูกคืนไว้ในกระเป๋าปกติแล้ว (${error.message})`
+            });
+        }
 
             return res.json({ success: true, message: 'ปฏิเสธและคืนยอดเงินสำเร็จ' });
         }
 
         await prisma.transaction.update({
             where: { id: Number(transactionId) },
-            data: { status: 'REJECTED', note, adminId: req.user!.userId },
+            data: {
+                status: 'REJECTED',
+                note,
+                adminId: req.user!.userId,
+                settleStatus: 'RESTORED_TO_WEB',
+                settledAt: new Date(),
+            },
         });
 
         TelegramNotifyService.notifyWithdrawRejected({
             username: transaction.user.username,
             fullName: transaction.user.fullName || null,
-            amount: Number(transaction.amount),
+            amount,
             bankName: transaction.user.bankName || null,
             bankAccount: transaction.user.bankAccount || null,
             method: resolveWithdrawNotifyMethod(transaction.user.bankName, transaction.paymentGateway?.code || null),
             transactionId: transaction.id,
             adminName,
             note: note || 'Manual withdrawal rejected',
-            refunded: false
+            rejectMode: 'KEEP_IN_WEB_WALLET',
+            refunded: true
         }).catch(err => console.error('[Telegram] Withdraw reject notify error:', err));
 
         return res.json({ success: true, message: 'ปฏิเสธสำเร็จ (ไม่คืนยอด)' });

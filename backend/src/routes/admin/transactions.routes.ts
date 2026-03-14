@@ -160,7 +160,10 @@ router.get('/pending-withdrawals', async (req, res) => {
     try {
         const transactions = await prisma.transaction.findMany({
             where: { type: 'WITHDRAW', status: 'PENDING' },
-            include: { user: { select: { username: true, fullName: true, phone: true, bankName: true, bankAccount: true } } },
+            include: {
+                user: { select: { username: true, fullName: true, phone: true, bankName: true, bankAccount: true } },
+                settledAgent: { select: { id: true, code: true, name: true } }
+            },
             orderBy: { createdAt: 'asc' },
         });
 

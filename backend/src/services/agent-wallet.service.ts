@@ -699,6 +699,173 @@ export class AgentWalletService {
         };
     }
 
+    static async resolveWithdrawalAgentContext(userId: number) {
+        const user = await this.hydrateLegacyMainAccount(userId);
+        const mainAgent = await this.getMainAgentConfig();
+        const targetAgentId = user.lastActiveAgentId || mainAgent.id;
+
+        const agentConfig = await prisma.agentConfig.findUnique({
+            where: { id: targetAgentId },
+        });
+        if (!agentConfig || !agentConfig.isActive) {
+            throw new Error('WITHDRAW_AGENT_NOT_AVAILABLE');
+        }
+
+        const account = await this.ensureExternalAccount(userId, targetAgentId);
+        return {
+            user,
+            agentConfig,
+            account,
+        };
+    }
+
+    static async settleFundsToLastActiveAgentForWithdrawal(
+        userId: number,
+        amount: number,
+        referenceId?: string,
+        transactionId?: number
+    ) {
+        if (amount <= 0) {
+            throw new Error('INVALID_WITHDRAW_AMOUNT');
+        }
+
+        const { agentConfig, account } = await this.resolveWithdrawalAgentContext(userId);
+        const settleRef = referenceId || this.buildReference('WITHDRAW_SETTLE');
+
+        const transferLog = await this.createTransferLog({
+            userId,
+            transactionId,
+            sourceAgentId: agentConfig.id,
+            type: 'WITHDRAW_SETTLE_TO_AGENT',
+            amount,
+            referenceId: settleRef,
+            note: `Settle ${amount} from ${agentConfig.code} to agent wallet`,
+            metadata: {
+                externalUsername: account.externalUsername,
+                mode: 'LAST_ACTIVE_ONLY',
+            },
+        });
+
+        const agentService = await AgentFactory.getAgent(agentConfig.code);
+        const withdrawn = await agentService.withdraw(
+            account.externalUsername,
+            amount,
+            `${settleRef}_WD`
+        );
+
+        if (withdrawn === false) {
+            await this.updateTransferLog(transferLog.id, {
+                status: 'FAILED',
+                note: `WITHDRAW_SETTLE_FAILED:${agentConfig.code}`,
+            });
+            throw new Error(`WITHDRAW_SETTLE_FAILED:${agentConfig.code}`);
+        }
+
+        const settledAmount = typeof withdrawn === 'number' ? withdrawn : amount;
+        if (settledAmount <= this.BALANCE_THRESHOLD) {
+            await this.updateTransferLog(transferLog.id, {
+                status: 'FAILED',
+                note: `WITHDRAW_SETTLE_ZERO:${agentConfig.code}`,
+            });
+            throw new Error(`WITHDRAW_SETTLE_ZERO:${agentConfig.code}`);
+        }
+
+        await prisma.userExternalAccount.update({
+            where: { id: account.id },
+            data: {
+                balance: {
+                    decrement: new Prisma.Decimal(settledAmount),
+                },
+            },
+        }).catch(() => {});
+
+        await this.updateTransferLog(transferLog.id, {
+            status: 'COMPLETED',
+            note: `Settled ${settledAmount} from ${agentConfig.code} to agent wallet`,
+            metadata: {
+                settledAmount,
+                externalUsername: account.externalUsername,
+                mode: 'LAST_ACTIVE_ONLY',
+            },
+        });
+
+        return {
+            agentId: agentConfig.id,
+            agentCode: agentConfig.code,
+            externalUsername: account.externalUsername,
+            settledAmount,
+            transferLogId: transferLog.id,
+        };
+    }
+
+    static async restoreFundsToLastActiveGame(
+        userId: number,
+        amount: number,
+        referenceId?: string,
+        transactionId?: number
+    ) {
+        if (amount <= 0) {
+            throw new Error('INVALID_RESTORE_AMOUNT');
+        }
+
+        const { agentConfig, account } = await this.resolveWithdrawalAgentContext(userId);
+        const restoreRef = referenceId || this.buildReference('WITHDRAW_RESTORE');
+
+        const transferLog = await this.createTransferLog({
+            userId,
+            transactionId,
+            targetAgentId: agentConfig.id,
+            type: 'WITHDRAW_RESTORE_TO_GAME',
+            amount,
+            referenceId: restoreRef,
+            note: `Restore ${amount} to ${agentConfig.code} game wallet`,
+            metadata: {
+                externalUsername: account.externalUsername,
+            },
+        });
+
+        const agentService = await AgentFactory.getAgent(agentConfig.code);
+        const deposited = await agentService.deposit(
+            account.externalUsername,
+            amount,
+            `${restoreRef}_DEP`
+        );
+
+        if (!deposited) {
+            await this.updateTransferLog(transferLog.id, {
+                status: 'FAILED',
+                note: `WITHDRAW_RESTORE_TO_GAME_FAILED:${agentConfig.code}`,
+            });
+            throw new Error(`WITHDRAW_RESTORE_TO_GAME_FAILED:${agentConfig.code}`);
+        }
+
+        await prisma.userExternalAccount.update({
+            where: { id: account.id },
+            data: {
+                balance: {
+                    increment: new Prisma.Decimal(amount),
+                },
+            },
+        }).catch(() => {});
+
+        await this.updateTransferLog(transferLog.id, {
+            status: 'COMPLETED',
+            note: `Restored ${amount} to ${agentConfig.code} game wallet`,
+            metadata: {
+                externalUsername: account.externalUsername,
+                restoredAmount: amount,
+            },
+        });
+
+        return {
+            agentId: agentConfig.id,
+            agentCode: agentConfig.code,
+            externalUsername: account.externalUsername,
+            restoredAmount: amount,
+            transferLogId: transferLog.id,
+        };
+    }
+
     static async pullFundsForWithdrawal(
         userId: number,
         amount: number,

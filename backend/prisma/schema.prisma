@@ -135,10 +135,16 @@ model Transaction {
   qrCode           String?
   rawResponse      String?
   referenceId      String?         @unique
+  settledAgentId   Int?
+  settledExternalUsername String?
+  settleStatus     String?
+  settledAmount    Decimal?        @default(0)
+  settledAt        DateTime?
   paymentGateway   PaymentGateway? @relation(fields: [paymentGatewayId], references: [id])
   promotion        Promotion?      @relation(fields: [promotionId], references: [id])
   promotionLog     PromotionLog?
   user             User            @relation(fields: [userId], references: [id])
+  settledAgent     AgentConfig?    @relation("TransactionSettledAgent", fields: [settledAgentId], references: [id])
   agentWalletTransfers AgentWalletTransferLog[]
 
   @@index([userId])
@@ -421,6 +427,7 @@ model AgentConfig {
   userAccounts UserExternalAccount[]
   sourceWalletTransfers AgentWalletTransferLog[] @relation("SourceAgentTransfers")
   targetWalletTransfers AgentWalletTransferLog[] @relation("TargetAgentTransfers")
+  settledTransactions  Transaction[]             @relation("TransactionSettledAgent")
 }
 
 model DailyReport {

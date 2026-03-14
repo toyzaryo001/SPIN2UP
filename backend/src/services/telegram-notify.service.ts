@@ -1,6 +1,8 @@
 import axios from 'axios';
 import prisma from '../lib/db';
 
+type WithdrawRejectMode = 'RETURN_TO_GAME' | 'KEEP_IN_WEB_WALLET' | null | undefined;
+
 export class TelegramNotifyService {
     private static API_URL = 'https://api.telegram.org';
 
@@ -59,6 +61,18 @@ export class TelegramNotifyService {
         }
 
         return { botToken, chatId };
+    }
+
+    private static resolveRejectModeText(mode: WithdrawRejectMode, refunded?: boolean) {
+        if (mode === 'RETURN_TO_GAME') {
+            return 'คืนยอดกลับเข้าเกมแล้ว';
+        }
+
+        if (mode === 'KEEP_IN_WEB_WALLET') {
+            return 'ไม่คืนเข้าเกม / อยู่ในกระเป๋าปกติ';
+        }
+
+        return refunded === false ? 'ไม่คืนยอด' : 'คืนยอดแล้ว';
     }
 
     static async notifyDeposit(username: string, amount: number, method: string, fullName?: string | null) {
@@ -166,6 +180,8 @@ export class TelegramNotifyService {
         bankAccount?: string | null;
         method: string;
         transactionId?: number | null;
+        settledAgentCode?: string | null;
+        settledExternalUsername?: string | null;
     }) {
         try {
             const config = await this.getWithdrawNotificationConfig();
@@ -173,7 +189,7 @@ export class TelegramNotifyService {
                 return { success: false, message: 'Telegram withdraw notify disabled or not configured' };
             }
 
-            const msg = `💸 <b>แจ้งรายการถอนใหม่</b>
+            const message = `💸 <b>แจ้งรายการถอนใหม่</b>
 👤 ยูสเซอร์: <code>${details.username}</code>
 📝 ชื่อ-สกุล: ${details.fullName || '-'}
 🔌 ช่องทาง: ${details.method}
@@ -184,7 +200,7 @@ export class TelegramNotifyService {
 📌 สถานะ: รอทำรายการ
 🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
 
-            return this.sendMessage(config.botToken, config.chatId, msg);
+            return this.sendMessage(config.botToken, config.chatId, message);
         } catch (error: any) {
             console.error('[Telegram] notifyWithdrawCreated error:', error.message);
             return { success: false, error: error.message };
@@ -239,6 +255,7 @@ export class TelegramNotifyService {
         adminName?: string | null;
         note?: string | null;
         refunded?: boolean;
+        rejectMode?: 'RETURN_TO_GAME' | 'KEEP_IN_WEB_WALLET' | null;
     }) {
         try {
             const config = await this.getWithdrawNotificationConfig();
@@ -246,7 +263,8 @@ export class TelegramNotifyService {
                 return { success: false, message: 'Telegram withdraw notify disabled or not configured' };
             }
 
-            const msg = `❌ <b>ปฏิเสธรายการถอน</b>
+            const refundText = this.resolveRejectModeText(details.rejectMode, details.refunded);
+            const message = `❌ <b>ปฏิเสธรายการถอน</b>
 👤 ยูสเซอร์: <code>${details.username}</code>
 📝 ชื่อ-สกุล: ${details.fullName || '-'}
 🔌 ช่องทาง: ${details.method}
@@ -255,12 +273,12 @@ export class TelegramNotifyService {
 💵 จำนวน: <b>${details.amount.toLocaleString()} บาท</b>
 🧾 รายการ: ${details.transactionId ? `#${details.transactionId}` : '-'}
 👨‍💼 ดำเนินการโดย: ${details.adminName || '-'}
-↩️ คืนยอด: ${details.refunded === false ? 'ไม่คืนยอด' : 'คืนยอดแล้ว'}
+↩️ การคืนยอด: ${refundText}
 📝 เหตุผล: ${details.note || '-'}
 📌 สถานะ: ปฏิเสธ
 🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
 
-            return this.sendMessage(config.botToken, config.chatId, msg);
+            return this.sendMessage(config.botToken, config.chatId, message);
         } catch (error: any) {
             console.error('[Telegram] notifyWithdrawRejected error:', error.message);
             return { success: false, error: error.message };

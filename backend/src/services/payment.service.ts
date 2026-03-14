@@ -52,6 +52,10 @@ export class PaymentService {
         return user?.bankName ? `Bank (${user.bankName})` : 'Bank';
     }
 
+    private static resolveRejectStatusMode(mode?: string | null) {
+        return mode === 'RETURN_TO_GAME' ? 'RESTORED_TO_GAME' : 'RESTORED_TO_WEB';
+    }
+
     private static async processTransactionResult(
         transaction: any,
         result: {
@@ -157,6 +161,7 @@ export class PaymentService {
                         transactionId: transaction.id,
                         adminName: gatewayCode ? `Payment ${String(gatewayCode).toUpperCase()}` : 'System',
                         note: result.message || 'Withdraw failed',
+                        rejectMode: 'KEEP_IN_WEB_WALLET',
                         refunded: true
                     }).catch(err => console.error('[Telegram] Withdraw rejected error:', err));
                 } else {
@@ -388,20 +393,34 @@ export class PaymentService {
             });
         });
 
+        let settledContext: Awaited<ReturnType<typeof AgentWalletService.settleFundsToLastActiveAgentForWithdrawal>> | null = null;
         try {
-            await AgentWalletService.pullFundsForWithdrawal(
+            settledContext = await AgentWalletService.settleFundsToLastActiveAgentForWithdrawal(
                 userId,
                 amount,
                 `WDING_${transaction.id}`,
                 transaction.id
             );
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: {
+                    settledAgentId: settledContext.agentId,
+                    settledExternalUsername: settledContext.externalUsername,
+                    settleStatus: 'SETTLED_TO_AGENT_WALLET',
+                    settledAmount: new Decimal(settledContext.settledAmount),
+                    settledAt: new Date(),
+                    note: `Withdraw Request | Settled to ${settledContext.agentCode}`
+                }
+            });
         } catch (error: any) {
             await this.refundTransaction(
                 transaction.id,
                 userId,
                 amount,
-                `Withdraw pull failed: ${error.message}`
+                `Withdraw settle failed: ${error.message}`,
+                'SETTLE_FAILED'
             );
+            throw new PaymentValidationError(`ไม่สามารถคืนเครดิตกลับเข้ากระเป๋ากระดานได้ (${error.message})`);
             throw new PaymentValidationError(`ไม่สามารถดึงเครดิตจากกระดานเกมได้ (${error.message})`);
         }
 
@@ -455,7 +474,9 @@ export class PaymentService {
             bankName: user.bankName || null,
             bankAccount: user.bankAccount || null,
             method: pendingMethod,
-            transactionId: transaction.id
+            transactionId: transaction.id,
+            settledAgentCode: settledContext?.agentCode || null,
+            settledExternalUsername: settledContext?.externalUsername || null
         }).catch(err => console.error('[Telegram] Withdraw created error:', err));
 
         if (!shouldAutoWithdraw || !activeGateway) {
@@ -493,7 +514,7 @@ export class PaymentService {
                     }
                 });
             } else {
-                await this.refundTransaction(transaction.id, userId, amount, `Auto Withdraw Failed: ${result.message}`);
+                await this.refundTransaction(transaction.id, userId, amount, `Auto Withdraw Failed: ${result.message}`, 'RESTORED_TO_WEB');
                 return {
                     success: false,
                     message: `ทำรายการไม่สำเร็จ: ${result.message || 'Provider Rejected'}`,
@@ -524,17 +545,13 @@ export class PaymentService {
         }
     }
 
-    static async refundTransaction(transactionId: number, userId: number, amount: number, note: string) {
-        const pulls = await AgentWalletService.getPulledFundsForTransaction(transactionId);
-        if (pulls.length > 0) {
-            await AgentWalletService.refundPulledFunds(
-                pulls,
-                `REFUND_${transactionId}`,
-                note,
-                transactionId
-            );
-        }
-
+    static async refundTransaction(
+        transactionId: number,
+        userId: number,
+        amount: number,
+        note: string,
+        settleStatus: string = 'RESTORED_TO_WEB'
+    ) {
         await prisma.$transaction([
             prisma.user.update({
                 where: { id: userId },
@@ -544,7 +561,8 @@ export class PaymentService {
                 where: { id: transactionId },
                 data: {
                     status: 'FAILED',
-                    note
+                    note,
+                    settleStatus
                 }
             })
         ]);

@@ -1,0 +1,2 @@
+ALTER TABLE "AgentConfig"
+ADD COLUMN IF NOT EXISTS "upline" TEXT;

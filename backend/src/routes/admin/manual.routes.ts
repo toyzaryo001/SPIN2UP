@@ -11,6 +11,18 @@ import { TelegramNotifyService } from '../../services/telegram-notify.service.js
 
 const router = Router();
 
+const resolveWithdrawNotifyMethod = (bankName?: string | null, gatewayCode?: string | null) => {
+    if (gatewayCode) {
+        return `Payment (${String(gatewayCode).toUpperCase()})`;
+    }
+
+    if (String(bankName || '').toUpperCase() === 'TRUEMONEY') {
+        return 'TrueWallet';
+    }
+
+    return bankName ? `Bank (${bankName})` : 'Bank';
+};
+
 router.post('/deposit', async (req: AuthRequest, res) => {
     try {
         const { userId, amount, subType, note, turnoverAmount } = req.body;
@@ -239,7 +251,7 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'm
 
         const transaction = await prisma.transaction.findUnique({
             where: { id: Number(transactionId) },
-            include: { user: true },
+            include: { user: true, paymentGateway: true },
         });
 
         if (!transaction) {
@@ -249,6 +261,12 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'm
         if (transaction.status !== 'PENDING') {
             return res.status(400).json({ success: false, message: 'รายการนี้ถูกดำเนินการแล้ว' });
         }
+
+        const admin = await prisma.admin.findUnique({
+            where: { id: req.user!.userId },
+            select: { username: true, fullName: true }
+        });
+        const adminName = admin?.fullName || admin?.username || `Admin #${req.user!.userId}`;
 
         if (mode === 'auto') {
             const { PaymentFactory } = require('../../services/payment/PaymentFactory');
@@ -275,6 +293,19 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'm
                         note: (transaction.note || '') + ' [Auto-Approved]'
                     },
                 });
+
+                TelegramNotifyService.notifyWithdrawApproved({
+                    username: transaction.user.username,
+                    fullName: transaction.user.fullName || null,
+                    amount: Number(transaction.amount),
+                    bankName: transaction.user.bankName || null,
+                    bankAccount: transaction.user.bankAccount || null,
+                    method: resolveWithdrawNotifyMethod(transaction.user.bankName, code),
+                    transactionId: transaction.id,
+                    adminName,
+                    note: `Auto payout via ${code.toUpperCase()}`
+                }).catch(err => console.error('[Telegram] Withdraw approve notify error:', err));
+
                 return res.json({ success: true, message: 'ทำรายการถอนอัตโนมัติสำเร็จ' });
             }
 
@@ -294,6 +325,18 @@ router.post('/approve-withdrawal', requirePermission('manual', 'withdrawals', 'm
             },
         });
 
+        TelegramNotifyService.notifyWithdrawApproved({
+            username: transaction.user.username,
+            fullName: transaction.user.fullName || null,
+            amount: Number(transaction.amount),
+            bankName: transaction.user.bankName || null,
+            bankAccount: transaction.user.bankAccount || null,
+            method: resolveWithdrawNotifyMethod(transaction.user.bankName),
+            transactionId: transaction.id,
+            adminName,
+            note: 'Manual approved'
+        }).catch(err => console.error('[Telegram] Withdraw approve notify error:', err));
+
         return res.json({ success: true, message: 'อนุมัติสำเร็จ (Manual)' });
     } catch (error: any) {
         console.error('Approve withdrawal error:', error);
@@ -307,13 +350,18 @@ router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'ma
 
         const transaction = await prisma.transaction.findUnique({
             where: { id: Number(transactionId) },
-            include: { user: true }
+            include: { user: true, paymentGateway: true }
         });
 
         if (!transaction || transaction.status !== 'PENDING') {
             return res.status(400).json({ success: false, message: 'รายการไม่ถูกต้อง' });
         }
 
+        const admin = await prisma.admin.findUnique({
+            where: { id: req.user!.userId },
+            select: { username: true, fullName: true }
+        });
+        const adminName = admin?.fullName || admin?.username || `Admin #${req.user!.userId}`;
         const shouldRefund = refund !== false;
 
         if (shouldRefund) {
@@ -331,6 +379,19 @@ router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'ma
                 data: { status: 'REJECTED', note, adminId: req.user!.userId }
             });
 
+            TelegramNotifyService.notifyWithdrawRejected({
+                username: transaction.user.username,
+                fullName: transaction.user.fullName || null,
+                amount: Number(transaction.amount),
+                bankName: transaction.user.bankName || null,
+                bankAccount: transaction.user.bankAccount || null,
+                method: resolveWithdrawNotifyMethod(transaction.user.bankName, transaction.paymentGateway?.code || null),
+                transactionId: transaction.id,
+                adminName,
+                note: note || 'Manual withdrawal rejected',
+                refunded: true
+            }).catch(err => console.error('[Telegram] Withdraw reject notify error:', err));
+
             return res.json({ success: true, message: 'ปฏิเสธและคืนยอดเงินสำเร็จ' });
         }
 
@@ -338,6 +399,19 @@ router.post('/reject-withdrawal', requirePermission('manual', 'withdrawals', 'ma
             where: { id: Number(transactionId) },
             data: { status: 'REJECTED', note, adminId: req.user!.userId },
         });
+
+        TelegramNotifyService.notifyWithdrawRejected({
+            username: transaction.user.username,
+            fullName: transaction.user.fullName || null,
+            amount: Number(transaction.amount),
+            bankName: transaction.user.bankName || null,
+            bankAccount: transaction.user.bankAccount || null,
+            method: resolveWithdrawNotifyMethod(transaction.user.bankName, transaction.paymentGateway?.code || null),
+            transactionId: transaction.id,
+            adminName,
+            note: note || 'Manual withdrawal rejected',
+            refunded: false
+        }).catch(err => console.error('[Telegram] Withdraw reject notify error:', err));
 
         return res.json({ success: true, message: 'ปฏิเสธสำเร็จ (ไม่คืนยอด)' });
     } catch (error) {

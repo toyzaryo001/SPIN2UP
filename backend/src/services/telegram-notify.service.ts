@@ -46,6 +46,21 @@ export class TelegramNotifyService {
         return map;
     }
 
+    private static async getWithdrawNotificationConfig() {
+        const s = await this.getSettings();
+        if (s.telegramNotifyWithdraw !== 'true') {
+            return null;
+        }
+
+        const botToken = s.telegramBotToken;
+        const chatId = s.telegramChatIdWithdraw || s.telegramChatId;
+        if (!botToken || !chatId) {
+            return null;
+        }
+
+        return { botToken, chatId };
+    }
+
     static async notifyDeposit(username: string, amount: number, method: string, fullName?: string | null) {
         try {
             const s = await this.getSettings();
@@ -139,6 +154,115 @@ export class TelegramNotifyService {
             return this.sendMessage(botToken, chatId, msg);
         } catch (error: any) {
             console.error('[Telegram] notifyManualDeduct error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    static async notifyWithdrawCreated(details: {
+        username: string;
+        fullName?: string | null;
+        amount: number;
+        bankName?: string | null;
+        bankAccount?: string | null;
+        method: string;
+        transactionId?: number | null;
+    }) {
+        try {
+            const config = await this.getWithdrawNotificationConfig();
+            if (!config) {
+                return { success: false, message: 'Telegram withdraw notify disabled or not configured' };
+            }
+
+            const msg = `💸 <b>แจ้งรายการถอนใหม่</b>
+👤 ยูสเซอร์: <code>${details.username}</code>
+📝 ชื่อ-สกุล: ${details.fullName || '-'}
+🔌 ช่องทาง: ${details.method}
+🏦 ปลายทาง: ${details.bankName || '-'}
+💳 เลขบัญชี/วอลเล็ท: ${details.bankAccount || '-'}
+💵 จำนวน: <b>${details.amount.toLocaleString()} บาท</b>
+🧾 รายการ: ${details.transactionId ? `#${details.transactionId}` : '-'}
+📌 สถานะ: รอทำรายการ
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+
+            return this.sendMessage(config.botToken, config.chatId, msg);
+        } catch (error: any) {
+            console.error('[Telegram] notifyWithdrawCreated error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    static async notifyWithdrawApproved(details: {
+        username: string;
+        fullName?: string | null;
+        amount: number;
+        bankName?: string | null;
+        bankAccount?: string | null;
+        method: string;
+        transactionId?: number | null;
+        adminName?: string | null;
+        note?: string | null;
+    }) {
+        try {
+            const config = await this.getWithdrawNotificationConfig();
+            if (!config) {
+                return { success: false, message: 'Telegram withdraw notify disabled or not configured' };
+            }
+
+            const msg = `✅ <b>อนุมัติรายการถอนแล้ว</b>
+👤 ยูสเซอร์: <code>${details.username}</code>
+📝 ชื่อ-สกุล: ${details.fullName || '-'}
+🔌 ช่องทาง: ${details.method}
+🏦 ปลายทาง: ${details.bankName || '-'}
+💳 เลขบัญชี/วอลเล็ท: ${details.bankAccount || '-'}
+💵 จำนวน: <b>${details.amount.toLocaleString()} บาท</b>
+🧾 รายการ: ${details.transactionId ? `#${details.transactionId}` : '-'}
+👨‍💼 ดำเนินการโดย: ${details.adminName || '-'}
+📝 หมายเหตุ: ${details.note || '-'}
+📌 สถานะ: อนุมัติแล้ว
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+
+            return this.sendMessage(config.botToken, config.chatId, msg);
+        } catch (error: any) {
+            console.error('[Telegram] notifyWithdrawApproved error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    static async notifyWithdrawRejected(details: {
+        username: string;
+        fullName?: string | null;
+        amount: number;
+        bankName?: string | null;
+        bankAccount?: string | null;
+        method: string;
+        transactionId?: number | null;
+        adminName?: string | null;
+        note?: string | null;
+        refunded?: boolean;
+    }) {
+        try {
+            const config = await this.getWithdrawNotificationConfig();
+            if (!config) {
+                return { success: false, message: 'Telegram withdraw notify disabled or not configured' };
+            }
+
+            const msg = `❌ <b>ปฏิเสธรายการถอน</b>
+👤 ยูสเซอร์: <code>${details.username}</code>
+📝 ชื่อ-สกุล: ${details.fullName || '-'}
+🔌 ช่องทาง: ${details.method}
+🏦 ปลายทาง: ${details.bankName || '-'}
+💳 เลขบัญชี/วอลเล็ท: ${details.bankAccount || '-'}
+💵 จำนวน: <b>${details.amount.toLocaleString()} บาท</b>
+🧾 รายการ: ${details.transactionId ? `#${details.transactionId}` : '-'}
+👨‍💼 ดำเนินการโดย: ${details.adminName || '-'}
+↩️ คืนยอด: ${details.refunded === false ? 'ไม่คืนยอด' : 'คืนยอดแล้ว'}
+📝 เหตุผล: ${details.note || '-'}
+📌 สถานะ: ปฏิเสธ
+🕒 เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+
+            return this.sendMessage(config.botToken, config.chatId, msg);
+        } catch (error: any) {
+            console.error('[Telegram] notifyWithdrawRejected error:', error.message);
             return { success: false, error: error.message };
         }
     }

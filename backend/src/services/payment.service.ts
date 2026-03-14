@@ -39,6 +39,19 @@ export class PaymentService {
         };
     }
 
+    private static resolveWithdrawMethod(user: any, gatewayCode?: string | null) {
+        if (gatewayCode) {
+            return `Payment (${String(gatewayCode).toUpperCase()})`;
+        }
+
+        const bankName = String(user?.bankName || '').toUpperCase();
+        if (bankName === 'TRUEMONEY') {
+            return 'TrueWallet';
+        }
+
+        return user?.bankName ? `Bank (${user.bankName})` : 'Bank';
+    }
+
     private static async processTransactionResult(
         transaction: any,
         result: {
@@ -112,6 +125,18 @@ export class PaymentService {
                             rawResponse: JSON.stringify(result.rawResponse)
                         }
                     });
+
+                    TelegramNotifyService.notifyWithdrawApproved({
+                        username: transaction.user?.username || 'Unknown',
+                        fullName: transaction.user?.fullName || null,
+                        amount: Number(transaction.amount),
+                        bankName: transaction.user?.bankName || null,
+                        bankAccount: transaction.user?.bankAccount || null,
+                        method: this.resolveWithdrawMethod(transaction.user, gatewayCode),
+                        transactionId: transaction.id,
+                        adminName: gatewayCode ? `Payment ${String(gatewayCode).toUpperCase()}` : 'System',
+                        note: result.message || 'Payment provider completed'
+                    }).catch(err => console.error('[Telegram] Withdraw approved error:', err));
                 }
             } else if (result.txStatus === 'FAILED') {
                 if (String(transaction.type || '').toUpperCase() === 'WITHDRAW') {
@@ -121,6 +146,19 @@ export class PaymentService {
                         Number(transaction.amount),
                         result.message || 'Withdraw failed'
                     );
+
+                    TelegramNotifyService.notifyWithdrawRejected({
+                        username: transaction.user?.username || 'Unknown',
+                        fullName: transaction.user?.fullName || null,
+                        amount: Number(transaction.amount),
+                        bankName: transaction.user?.bankName || null,
+                        bankAccount: transaction.user?.bankAccount || null,
+                        method: this.resolveWithdrawMethod(transaction.user, gatewayCode),
+                        transactionId: transaction.id,
+                        adminName: gatewayCode ? `Payment ${String(gatewayCode).toUpperCase()}` : 'System',
+                        note: result.message || 'Withdraw failed',
+                        refunded: true
+                    }).catch(err => console.error('[Telegram] Withdraw rejected error:', err));
                 } else {
                     await prisma.transaction.update({
                         where: { id: transaction.id },
@@ -367,9 +405,6 @@ export class PaymentService {
             throw new PaymentValidationError(`ไม่สามารถดึงเครดิตจากกระดานเกมได้ (${error.message})`);
         }
 
-        LineNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[LineNotify] Error:', err));
-        TelegramNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[Telegram] Error:', err));
-
         let shouldAutoWithdraw = false;
         let activeGateway: any = null;
 
@@ -407,6 +442,21 @@ export class PaymentService {
             console.log(`[Withdraw] User ${user.username} is using TrueMoney. Bypassing Auto-Withdraw to force manual review.`);
             shouldAutoWithdraw = false;
         }
+
+        const pendingMethod = shouldAutoWithdraw && activeGateway
+            ? this.resolveWithdrawMethod(user, activeGateway.code)
+            : this.resolveWithdrawMethod(user);
+
+        LineNotifyService.notifyWithdraw(user.username, amount).catch(err => console.error('[LineNotify] Error:', err));
+        TelegramNotifyService.notifyWithdrawCreated({
+            username: user.username,
+            fullName: user.fullName || null,
+            amount,
+            bankName: user.bankName || null,
+            bankAccount: user.bankAccount || null,
+            method: pendingMethod,
+            transactionId: transaction.id
+        }).catch(err => console.error('[Telegram] Withdraw created error:', err));
 
         if (!shouldAutoWithdraw || !activeGateway) {
             return {

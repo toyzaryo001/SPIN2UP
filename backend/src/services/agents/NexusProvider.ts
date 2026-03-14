@@ -82,16 +82,33 @@ export class NexusProvider implements IAgentService {
                 user_code: userCode
             });
 
-            if (res.status === 1 || res.msg === 'DUPLICATED_USER') {
+            const status = String(res?.status ?? '');
+            const responseCode = String(res?.code ?? '').toUpperCase();
+            const responseMessage = String(res?.msg || res?.message || '');
+
+            if (
+                status === '1' ||
+                responseMessage === 'DUPLICATED_USER' ||
+                responseCode === 'DUPLICATED_USER'
+            ) {
                 return {
                     username: userCode,
                     password: '' // Nexus doesn't seem to require user password for API launch
                 };
             }
-            return null;
+
+            console.error('[Nexus] user_create failed:', {
+                userCode,
+                response: res,
+            });
+
+            throw new Error(
+                `NEXUS_USER_CREATE_FAILED:${responseCode || status || 'UNKNOWN'}:${responseMessage || 'UNKNOWN'}`
+            );
+
         } catch (e) {
             console.error('Nexus Register Failed', e);
-            return null;
+            throw e;
         }
     }
 

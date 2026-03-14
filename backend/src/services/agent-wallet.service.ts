@@ -183,7 +183,13 @@ export class AgentWalletService {
         }
 
         const agentService = await AgentFactory.getAgent(agentConfig.code);
-        const credentials = await agentService.register(user.id, user.phone);
+        let credentials;
+        try {
+            credentials = await agentService.register(user.id, user.phone);
+        } catch (error: any) {
+            const detail = error instanceof Error ? error.message : 'UNKNOWN_REGISTER_ERROR';
+            throw new Error(`AGENT_ACCOUNT_REGISTER_FAILED:${agentConfig.code}:${detail}`);
+        }
 
         if (!credentials?.username) {
             throw new Error(`AGENT_ACCOUNT_REGISTER_FAILED:${agentConfig.code}`);

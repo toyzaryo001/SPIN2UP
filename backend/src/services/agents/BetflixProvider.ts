@@ -31,9 +31,19 @@ export class BetflixProvider implements IAgentService {
         const siteSetting = await prisma.setting.findUnique({ where: { key: 'prefix' } });
         const sitePrefix = siteSetting ? siteSetting.value : (process.env.BETFLIX_USER_PREFIX || 'CHKK');
 
+        let realApiUrl = 'https://api.bfx.fail';
+        let realApiKey = config.xApiKey || '';
+
+        if (config.apiKey && config.apiKey.startsWith('http')) {
+            realApiUrl = config.apiKey;
+        } else if (config.apiKey && !config.xApiKey) {
+            console.warn(`[BetflixProvider] Detected Key in URL field (${config.apiKey.substring(0, 5)}...). Recovering as API Key.`);
+            realApiKey = config.apiKey;
+        }
+
         this.configCache = {
-            apiUrl: config.apiKey || 'https://api.bfx.fail',
-            apiKey: config.xApiKey || '',
+            apiUrl: realApiUrl,
+            apiKey: realApiKey,
             apiCat: config.xApiCat || '',
             prefix: config.upline || 'be31kk',
             sitePrefix: sitePrefix,
@@ -63,7 +73,7 @@ export class BetflixProvider implements IAgentService {
 
         if (/^CK\d{6,8}$/i.test(raw)) return raw;
 
-        const fullPrefix = (config.sitePrefix).toLowerCase();
+        const fullPrefix = (config.prefix + config.sitePrefix).toLowerCase();
         if (raw.toLowerCase().startsWith(fullPrefix)) return raw;
 
         const phoneMatch = raw.replace(/\D/g, '').match(/(\d{6})$/);
@@ -101,9 +111,9 @@ export class BetflixProvider implements IAgentService {
 
                 try {
                     const res = await api.post('/v4/user/register', params);
-                    if (res.data.status === 'success' || res.data.status === 1 || res.data.error_code === 0) {
-                        return { username: res.data.data?.username || username, password };
-                    }
+            if (res.data.status === 'success' || res.data.status === 1 || res.data.error_code === 0) {
+                return { username: res.data.data?.username || username, password };
+            }
 
                     console.log(`[Betflix Register API] Res data for ${username}:`, JSON.stringify(res.data));
                     const msg = (res.data.msg || res.data.message || '').toLowerCase();
@@ -166,7 +176,11 @@ export class BetflixProvider implements IAgentService {
             params.append('ref', ref || Date.now().toString());
 
             const res = await api.post('/v4/user/transfer', params);
-            return res.data.status === 'success';
+            if (res.data.status === 'success') {
+                return true;
+            }
+            console.error('[BetflixProvider] Transfer failed response:', res.data);
+            return false;
         } catch (e) {
             console.error('Betflix Transfer Error:', e);
             return false;

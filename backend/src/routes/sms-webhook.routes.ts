@@ -80,6 +80,8 @@ function normalizeCandidate(value: unknown): string {
 }
 
 function extractWebhookMessage(req: Request): string {
+    const webhookKey = process.env.WEBHOOK_API_KEY || '';
+
     if (typeof req.body === 'string') {
         return req.body.trim();
     }
@@ -99,6 +101,7 @@ function extractWebhookMessage(req: Request): string {
         body.messageBody,
         body.data,
         body.contentText,
+        typeof body.key === 'string' && body.key !== webhookKey ? body.key : '',
         body.notification,
         body.title && body.text ? `${body.title}\n${body.text}` : ''
     ];
@@ -118,7 +121,8 @@ function extractWebhookMessage(req: Request): string {
         query.sms,
         query.smsBody,
         query.messageBody,
-        query.data
+        query.data,
+        typeof query.key === 'string' && query.key !== webhookKey ? query.key : ''
     ];
 
     for (const candidate of queryCandidates) {

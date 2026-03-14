@@ -103,13 +103,14 @@ export class RewardService {
                 (acc: any) => acc.agentId === nexusAgentConfig.id && acc.externalUsername
             )
             : null;
-        if (nexusAccount) {
+        const nexus = nexusAgentConfig ? new NexusProvider() : null;
+        const nexusUsername = nexusAccount?.externalUsername || (nexus ? await nexus.buildFallbackUsername(user.phone) : null);
+        if (nexusUsername) {
             fetchPromises.push(
                 (async () => {
                     try {
-                        const nexus = new NexusProvider();
-                        const log = await nexus.getGameLog(
-                            nexusAccount.externalUsername,
+                        const log = await nexus!.getGameLog(
+                            nexusUsername,
                             periodStart,
                             periodEnd
                         );

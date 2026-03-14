@@ -120,38 +120,27 @@ export class RewardSnapshotService {
     }
 
     private static async fetchUserActivities(period: RewardPeriod): Promise<UserActivityRow[]> {
-        const betflixUsersPromise = prisma.user.findMany({
+        const nexusAgent = await prisma.agentConfig.findUnique({ where: { code: 'NEXUS' } });
+        const allUsers = await prisma.user.findMany({
             where: {
-                betflixUsername: { not: null },
                 status: { not: 'DELETED' },
             },
             select: {
                 id: true,
                 username: true,
                 fullName: true,
+                phone: true,
                 betflixUsername: true,
+                externalAccounts: nexusAgent
+                    ? {
+                        where: { agentId: nexusAgent.id },
+                        select: { externalUsername: true },
+                    }
+                    : false,
             },
             orderBy: { createdAt: 'desc' },
         });
-
-        const nexusAgent = await prisma.agentConfig.findUnique({ where: { code: 'NEXUS' } });
-        const nexusAccountsPromise = nexusAgent
-            ? prisma.userExternalAccount.findMany({
-                where: { agentId: nexusAgent.id },
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            username: true,
-                            fullName: true,
-                            status: true,
-                        },
-                    },
-                },
-            }).then(accounts => accounts.filter(account => account.user.status !== 'DELETED'))
-            : Promise.resolve([]);
-
-        const [betflixUsers, nexusAccounts] = await Promise.all([betflixUsersPromise, nexusAccountsPromise]);
+        const betflixUsers = allUsers.filter(user => Boolean(user.betflixUsername));
 
         const batchSize = 5;
         const betflixResults = new Map<number, { turnover: number; winloss: number }>();
@@ -189,16 +178,24 @@ export class RewardSnapshotService {
 
         const nexusResults = new Map<number, { turnover: number; winloss: number }>();
 
-        if (nexusAgent && nexusAccounts.length > 0) {
+        if (nexusAgent && allUsers.length > 0) {
             const nexus = new NexusProvider();
 
-            for (let index = 0; index < nexusAccounts.length; index += batchSize) {
-                const batch = nexusAccounts.slice(index, index + batchSize);
+            for (let index = 0; index < allUsers.length; index += batchSize) {
+                const batch = allUsers.slice(index, index + batchSize);
                 const batchResults = await Promise.all(
-                    batch.map(async (account) => {
+                    batch.map(async (user) => {
                         try {
+                            const localNexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
+                                ? user.externalAccounts[0].externalUsername
+                                : null;
+                            const nexusUsername = localNexusUsername || await nexus.buildFallbackUsername(user.phone);
+                            if (!nexusUsername) {
+                                return null;
+                            }
+
                             const log = await nexus.getGameLog(
-                                account.externalUsername,
+                                nexusUsername,
                                 period.nexusStart,
                                 period.nexusEnd
                             );
@@ -207,8 +204,28 @@ export class RewardSnapshotService {
                                 return null;
                             }
 
+                            if (!localNexusUsername) {
+                                await prisma.userExternalAccount.upsert({
+                                    where: {
+                                        userId_agentId: {
+                                            userId: user.id,
+                                            agentId: nexusAgent.id,
+                                        },
+                                    },
+                                    update: {
+                                        externalUsername: nexusUsername,
+                                    },
+                                    create: {
+                                        userId: user.id,
+                                        agentId: nexusAgent.id,
+                                        externalUsername: nexusUsername,
+                                        externalPassword: '',
+                                    },
+                                }).catch(() => null);
+                            }
+
                             return {
-                                userId: account.userId,
+                                userId: user.id,
                                 turnover: log.totalBet,
                                 winloss: log.totalWin - log.totalBet,
                             };
@@ -226,10 +243,10 @@ export class RewardSnapshotService {
             }
         }
 
-        const users = new Map<number, UserActivityRow>();
+        const aggregatedUsers = new Map<number, UserActivityRow>();
 
         for (const user of betflixUsers) {
-            users.set(user.id, {
+            aggregatedUsers.set(user.id, {
                 userId: user.id,
                 username: user.username || '',
                 fullName: user.fullName,
@@ -238,12 +255,12 @@ export class RewardSnapshotService {
             });
         }
 
-        for (const account of nexusAccounts) {
-            if (!users.has(account.userId)) {
-                users.set(account.userId, {
-                    userId: account.userId,
-                    username: account.user.username || '',
-                    fullName: account.user.fullName,
+        for (const user of allUsers) {
+            if (!aggregatedUsers.has(user.id)) {
+                aggregatedUsers.set(user.id, {
+                    userId: user.id,
+                    username: user.username || '',
+                    fullName: user.fullName,
                     turnover: 0,
                     winloss: 0,
                 });
@@ -251,20 +268,20 @@ export class RewardSnapshotService {
         }
 
         for (const [userId, result] of betflixResults.entries()) {
-            const current = users.get(userId);
+            const current = aggregatedUsers.get(userId);
             if (!current) continue;
             current.turnover += result.turnover;
             current.winloss += result.winloss;
         }
 
         for (const [userId, result] of nexusResults.entries()) {
-            const current = users.get(userId);
+            const current = aggregatedUsers.get(userId);
             if (!current) continue;
             current.turnover += result.turnover;
             current.winloss += result.winloss;
         }
 
-        return [...users.values()].filter(user => user.turnover > 0 || user.winloss !== 0);
+        return [...aggregatedUsers.values()].filter(user => user.turnover > 0 || user.winloss !== 0);
     }
 
     static async syncDailySnapshots(type: RewardType, dateInput?: string) {

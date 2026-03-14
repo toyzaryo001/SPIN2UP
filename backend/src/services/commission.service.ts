@@ -113,9 +113,11 @@ export class CommissionService {
 
         const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
         const periodEnd = thaiNow().toDate();
-        const nexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
+        const nexus = nexusAgentId ? new NexusProvider() : null;
+        const localNexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
             ? user.externalAccounts[0].externalUsername
             : null;
+        const nexusUsername = localNexusUsername || (nexus ? await nexus.buildFallbackUsername(user.phone) : null);
         const turnover = await this.getLiveTurnoverForUser({
             betflixUsername: user.betflixUsername,
             nexusUsername,
@@ -403,9 +405,11 @@ export class CommissionService {
                 batch.map(async (user) => {
                     const periodStart = user.commissionCycleStartedAt || thaiNow().toDate();
                     const periodEnd = thaiNow().toDate();
-                    const nexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
+                    const nexus = nexusAgentId ? new NexusProvider() : null;
+                    const localNexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
                         ? user.externalAccounts[0].externalUsername
                         : null;
+                    const nexusUsername = localNexusUsername || (nexus ? await nexus.buildFallbackUsername(user.phone) : null);
                     const turnover = await this.getLiveTurnoverForUser({
                         betflixUsername: user.betflixUsername,
                         nexusUsername,

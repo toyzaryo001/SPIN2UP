@@ -11,6 +11,21 @@ export class NexusProvider implements IAgentService {
 
     constructor() { }
 
+    static normalizePhone(phone: string | null | undefined) {
+        return String(phone || '').replace(/\D/g, '');
+    }
+
+    static buildUserCode(agentCode: string | null | undefined, phone: string | null | undefined) {
+        const normalizedAgentCode = String(agentCode || '').trim();
+        const normalizedPhone = this.normalizePhone(phone);
+
+        if (!normalizedAgentCode || !normalizedPhone) {
+            return null;
+        }
+
+        return `${normalizedAgentCode}_${normalizedPhone}`;
+    }
+
     private async getConfig() {
         if (this.configCache && (Date.now() - this.configCache.timestamp < 60000)) {
             return this.configCache;
@@ -29,6 +44,11 @@ export class NexusProvider implements IAgentService {
             timestamp: Date.now()
         };
         return this.configCache;
+    }
+
+    async buildFallbackUsername(phone: string | null | undefined) {
+        const config = await this.getConfig();
+        return NexusProvider.buildUserCode(config.upline, phone);
     }
 
     private async getApi(): Promise<AxiosInstance> {
@@ -73,10 +93,10 @@ export class NexusProvider implements IAgentService {
     async register(userId: number, phone: string): Promise<{ username: string; password?: string; } | null> {
         try {
             const config = await this.getConfig();
-            // Generate unique user code. Nexus uses 'user_code'
-            // Pattern: prefix + phone (last 10? or full?)
-            // Let's use site prefix logic if possible, or just standard format
-            const userCode = `${config.upline}_${phone}`; // Simple format: agent_phone
+            const userCode = NexusProvider.buildUserCode(config.upline, phone);
+            if (!userCode) {
+                throw new Error('NEXUS_USER_CODE_INVALID');
+            }
 
             const res = await this.request('user_create', {
                 user_code: userCode

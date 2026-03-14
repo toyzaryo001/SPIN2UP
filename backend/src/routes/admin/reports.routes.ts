@@ -540,36 +540,33 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
             ],
         } : {};
 
-        // ========== 1. BetFlix Users ==========
-        const betflixUsersPromise = prisma.user.findMany({
+        const nexusAgent = await prisma.agentConfig.findUnique({ where: { code: 'NEXUS' } });
+
+        // ========== 1. Load users once ==========
+        const users = await prisma.user.findMany({
             where: {
-                betflixUsername: { not: null },
                 status: { not: 'DELETED' },
                 ...searchFilter,
             },
-            select: { id: true, username: true, fullName: true, betflixUsername: true },
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                phone: true,
+                betflixUsername: true,
+                externalAccounts: nexusAgent
+                    ? {
+                        where: { agentId: nexusAgent.id },
+                        select: { externalUsername: true },
+                    }
+                    : false,
+            },
             orderBy: { createdAt: 'desc' },
         });
 
-        // ========== 2. Nexus Users (from UserExternalAccount) ==========
-        const nexusAgent = await prisma.agentConfig.findUnique({ where: { code: 'NEXUS' } });
-        const nexusUsersPromise = nexusAgent ? prisma.userExternalAccount.findMany({
-            where: { agentId: nexusAgent.id },
-            include: {
-                user: {
-                    select: { id: true, username: true, fullName: true, status: true },
-                },
-            },
-        }).then(accounts => accounts.filter(a => {
-            if (a.user.status === 'DELETED') return false;
-            if (!search) return true;
-            const s = (search as string).toLowerCase();
-            return (a.user.username?.toLowerCase().includes(s) || a.user.fullName?.toLowerCase().includes(s));
-        })) : Promise.resolve([]);
+        const betflixUsers = users.filter((user) => Boolean(user.betflixUsername));
 
-        const [betflixUsers, nexusAccounts] = await Promise.all([betflixUsersPromise, nexusUsersPromise]);
-
-        // ========== 3. Fetch BetFlix reports (batch of 5) ==========
+        // ========== 2. Fetch BetFlix reports (batch of 5) ==========
         const betflixResults = new Map<number, { turnover: number; winloss: number }>();
         const batchSize = 5;
 
@@ -601,28 +598,56 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
             }
         }
 
-        // ========== 4. Fetch Nexus game logs (batch of 5) ==========
+        // ========== 3. Fetch Nexus game logs (batch of 5) ==========
         const nexusResults = new Map<number, { turnover: number; winloss: number }>();
 
-        if (nexusAgent && nexusAccounts.length > 0) {
+        if (nexusAgent && users.length > 0) {
             const { NexusProvider } = await import('../../services/agents/NexusProvider');
             const nexus = new NexusProvider();
 
-            for (let i = 0; i < nexusAccounts.length; i += batchSize) {
-                const batch = nexusAccounts.slice(i, i + batchSize);
+            for (let i = 0; i < users.length; i += batchSize) {
+                const batch = users.slice(i, i + batchSize);
                 const batchResults = await Promise.all(
-                    batch.map(async (account) => {
+                    batch.map(async (user) => {
                         try {
+                            const localNexusUsername = Array.isArray(user.externalAccounts) && user.externalAccounts.length > 0
+                                ? user.externalAccounts[0].externalUsername
+                                : null;
+                            const nexusUsername = localNexusUsername || await nexus.buildFallbackUsername(user.phone);
+                            if (!nexusUsername) {
+                                return null;
+                            }
+
                             const log = await nexus.getGameLog(
-                                account.externalUsername,
+                                nexusUsername,
                                 nexusStartStr,
                                 nexusEndStr
                             );
                             if (log && (log.totalBet > 0 || log.totalWin > 0)) {
                                 const turnover = log.totalBet;
                                 const winloss = log.totalWin - log.totalBet; // win-bet = player profit (negative = house wins)
+                                if (!localNexusUsername) {
+                                    await prisma.userExternalAccount.upsert({
+                                        where: {
+                                            userId_agentId: {
+                                                userId: user.id,
+                                                agentId: nexusAgent.id,
+                                            },
+                                        },
+                                        update: {
+                                            externalUsername: nexusUsername,
+                                        },
+                                        create: {
+                                            userId: user.id,
+                                            agentId: nexusAgent.id,
+                                            externalUsername: nexusUsername,
+                                            externalPassword: '',
+                                        },
+                                    }).catch(() => null);
+                                }
+
                                 return {
-                                    userId: account.userId,
+                                    userId: user.id,
                                     turnover,
                                     winloss,
                                 };
@@ -639,19 +664,13 @@ router.get('/win-lose', requirePermission('reports', 'win_lose', 'view'), async 
             }
         }
 
-        // ========== 5. Merge results per userId ==========
+        // ========== 4. Merge results per userId ==========
         const allUserIds = new Set<number>();
         const userInfoMap = new Map<number, { username: string; fullName: string | null }>();
 
-        for (const u of betflixUsers) {
+        for (const u of users) {
             allUserIds.add(u.id);
             userInfoMap.set(u.id, { username: u.username || '', fullName: u.fullName });
-        }
-        for (const a of nexusAccounts) {
-            allUserIds.add(a.userId);
-            if (!userInfoMap.has(a.userId)) {
-                userInfoMap.set(a.userId, { username: a.user.username || '', fullName: a.user.fullName });
-            }
         }
 
         const mergedResults: any[] = [];

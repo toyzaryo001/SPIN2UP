@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { formatBaht } from "@/lib/utils";
 import {
   Users, UserPlus, ArrowDownToLine, ArrowUpFromLine, TrendingUp,
-  Wallet, Gift, Activity, UserCheck, Calendar, RefreshCw
+  Wallet, Gift, Activity, UserCheck, Calendar, RefreshCw, Building2, Smartphone, CreditCard
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -38,6 +38,28 @@ interface DashboardData {
   chartData: { date: string; deposit: number; withdraw: number; newUsers: number }[];
   recentUsers: { id: number; username: string; fullName: string; balance: number; createdAt: string }[];
   recentTransactions: { id: number; type: string; amount: number; status: string; createdAt: string; user: { username: string; fullName: string } }[];
+  linkedChannels: {
+    banks: {
+      id: number;
+      bankName: string;
+      accountNumber: string;
+      accountName: string;
+      type: string;
+      balance: number;
+    }[];
+    trueMoneyWallets: {
+      id: number;
+      phoneNumber: string;
+      accountName: string;
+      balance: number | null;
+    }[];
+    paymentGateways: {
+      id: number;
+      code: string;
+      name: string;
+      balance: number | null;
+    }[];
+  };
 }
 
 type DatePreset = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'custom';
@@ -171,6 +193,59 @@ export default function Dashboard() {
     >
       {label}
     </button>
+  );
+
+  const formatOptionalBaht = (amount: number | null | undefined) =>
+    typeof amount === 'number' && Number.isFinite(amount) ? formatBaht(amount) : '-';
+
+  const ChannelCard = ({
+    title,
+    icon: Icon,
+    items,
+    emptyLabel,
+    renderLabel,
+    renderSubLabel,
+    renderAmount,
+  }: {
+    title: string;
+    icon: any;
+    items: any[];
+    emptyLabel: string;
+    renderLabel: (item: any) => string;
+    renderSubLabel?: (item: any) => string | null;
+    renderAmount: (item: any) => string;
+  }) => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="p-2 rounded-lg bg-slate-100">
+          <Icon size={18} className="text-slate-700" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+      </div>
+
+      <div className="space-y-3">
+        {items.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
+            {emptyLabel}
+          </div>
+        ) : (
+          items.map((item, index) => (
+            <div key={item.id ?? `${title}-${index}`} className="flex items-start justify-between gap-4 rounded-lg border border-slate-100 px-4 py-3">
+              <div className="min-w-0">
+                <p className="font-medium text-slate-900 truncate">{index + 1}. {renderLabel(item)}</p>
+                {renderSubLabel ? (
+                  <p className="text-xs text-slate-500 mt-1">{renderSubLabel(item)}</p>
+                ) : null}
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-xs text-slate-400">ยอดเงิน</p>
+                <p className="font-semibold text-slate-800">{renderAmount(item)}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 
   if (loading && !data) {
@@ -467,6 +542,46 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      {/* Linked Channels */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-bold text-slate-800">ช่องทางบัญชีที่ผูกกับระบบ</h3>
+          <p className="text-sm text-slate-500 mt-1">แสดงรายการบัญชีธนาคาร วอลเล็ท และ payment gateway ที่เปิดใช้งานอยู่</p>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <ChannelCard
+            title="ธนาคาร"
+            icon={Building2}
+            items={data?.linkedChannels?.banks || []}
+            emptyLabel="ยังไม่มีบัญชีธนาคารที่เปิดใช้งาน"
+            renderLabel={(item) => `${item.bankName} • ${item.accountNumber}`}
+            renderSubLabel={(item) => `${item.accountName}${item.type ? ` • ${item.type}` : ''}`}
+            renderAmount={(item) => formatOptionalBaht(item.balance)}
+          />
+
+          <ChannelCard
+            title="True Wallet"
+            icon={Smartphone}
+            items={data?.linkedChannels?.trueMoneyWallets || []}
+            emptyLabel="ยังไม่มี TrueMoney Wallet ที่เปิดใช้งาน"
+            renderLabel={(item) => item.phoneNumber}
+            renderSubLabel={(item) => item.accountName}
+            renderAmount={(item) => formatOptionalBaht(item.balance)}
+          />
+
+          <ChannelCard
+            title="Payment"
+            icon={CreditCard}
+            items={data?.linkedChannels?.paymentGateways || []}
+            emptyLabel="ยังไม่มี Payment Gateway ที่เปิดใช้งาน"
+            renderLabel={(item) => item.name}
+            renderSubLabel={(item) => item.code?.toUpperCase?.() || null}
+            renderAmount={(item) => formatOptionalBaht(item.balance)}
+          />
         </div>
       </div>
     </div>

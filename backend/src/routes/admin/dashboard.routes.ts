@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../../lib/db.js';
 import { requirePermission } from '../../middlewares/auth.middleware.js';
 import { BetflixService } from '../../services/betflix.service.js';
+import { PaymentFactory } from '../../services/payment/PaymentFactory.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -44,7 +45,10 @@ router.get('/', async (req, res) => {
             withdrawInRange,
             bonusInRange,
             recentUsers,
-            recentTransactions
+            recentTransactions,
+            bankAccounts,
+            trueMoneyWallets,
+            paymentGateways,
         ] = await Promise.all([
             // Total users (all time)
             prisma.user.count(),
@@ -78,12 +82,64 @@ router.get('/', async (req, res) => {
             }),
             // Recent transactions (last 10)
             prisma.transaction.findMany({
-                where: { status: { not: 'FAILED' } },
+                where: { status: 'COMPLETED' },
                 orderBy: { createdAt: 'desc' },
                 take: 10,
                 include: { user: { select: { username: true, fullName: true } } }
-            })
+            }),
+            prisma.bankAccount.findMany({
+                where: { isActive: true },
+                orderBy: [
+                    { type: 'asc' },
+                    { createdAt: 'asc' },
+                ],
+                select: {
+                    id: true,
+                    bankName: true,
+                    accountNumber: true,
+                    accountName: true,
+                    type: true,
+                    balance: true,
+                },
+            }),
+            prisma.trueMoneyWallet.findMany({
+                where: { isActive: true },
+                orderBy: { createdAt: 'asc' },
+                select: {
+                    id: true,
+                    phoneNumber: true,
+                    accountName: true,
+                },
+            }),
+            prisma.paymentGateway.findMany({
+                where: { isActive: true },
+                orderBy: { sortOrder: 'asc' },
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                },
+            }),
         ]);
+
+        const paymentGatewayBalances = await Promise.all(
+            paymentGateways.map(async (gateway) => {
+                try {
+                    const provider = await PaymentFactory.getProvider(gateway.code);
+                    const balance = provider ? await provider.getBalance() : null;
+                    return {
+                        ...gateway,
+                        balance: typeof balance === 'number' && Number.isFinite(balance) ? balance : null,
+                    };
+                } catch (error) {
+                    console.error(`[Dashboard] Payment gateway balance error for ${gateway.code}:`, error);
+                    return {
+                        ...gateway,
+                        balance: null,
+                    };
+                }
+            })
+        );
 
         // First deposits from new users in range (สมัครฝาก)
         const newUserIds = await prisma.user.findMany({
@@ -251,7 +307,24 @@ router.get('/', async (req, res) => {
                 },
                 chartData,
                 recentUsers,
-                recentTransactions
+                recentTransactions,
+                linkedChannels: {
+                    banks: bankAccounts.map((bank) => ({
+                        id: bank.id,
+                        bankName: bank.bankName,
+                        accountNumber: bank.accountNumber,
+                        accountName: bank.accountName,
+                        type: bank.type,
+                        balance: Number(bank.balance || 0),
+                    })),
+                    trueMoneyWallets: trueMoneyWallets.map((wallet) => ({
+                        id: wallet.id,
+                        phoneNumber: wallet.phoneNumber,
+                        accountName: wallet.accountName,
+                        balance: null,
+                    })),
+                    paymentGateways: paymentGatewayBalances,
+                },
             }
         });
     } catch (error) {

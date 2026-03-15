@@ -157,7 +157,7 @@ export default function TrueMoneyPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800">จัดการ TrueMoney Wallet</h2>
                 </div>
-                <button onClick={() => openModal()} disabled={!hasPerm('banks')} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={() => openModal()} disabled={!hasPerm('truemoney')} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus size={18} /> เพิ่ม Wallet
                 </button>
             </div>
@@ -233,7 +233,7 @@ export default function TrueMoneyPage() {
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => handleToggleShow(wallet)}
-                                                disabled={!hasPerm('banks')}
+                                                disabled={!hasPerm('truemoney')}
                                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 ${(wallet.isShow ?? true) ? 'bg-blue-500' : 'bg-slate-200'
                                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                                                 title={(wallet.isShow ?? true) ? "แสดงบนหน้าฝากเงินผู้เล่น" : "ซ่อนจากหน้าฝากเงินผู้เล่น"}
@@ -245,7 +245,7 @@ export default function TrueMoneyPage() {
                                         <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => handleToggleStatus(wallet)}
-                                                disabled={!hasPerm('banks')}
+                                                disabled={!hasPerm('truemoney')}
                                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 ${wallet.isActive ? 'bg-emerald-500' : 'bg-slate-200'
                                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                                                 title={wallet.isActive ? "ระบบจะปรับยอดให้อัตโนมัติ" : "ปิดการปรับยอดอัตโนมัติ"}
@@ -258,7 +258,7 @@ export default function TrueMoneyPage() {
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => openModal(wallet)}
-                                                    disabled={!hasPerm('banks')}
+                                                    disabled={!hasPerm('truemoney')}
                                                     className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     title="แก้ไข"
                                                 >
@@ -266,7 +266,7 @@ export default function TrueMoneyPage() {
                                                 </button>
                                                 <button
                                                     onClick={() => { setDeletingWallet(wallet); setIsDeleteModalOpen(true); }}
-                                                    disabled={!hasPerm('banks')}
+                                                    disabled={!hasPerm('truemoney')}
                                                     className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     title="ลบ"
                                                 >

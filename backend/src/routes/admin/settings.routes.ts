@@ -56,6 +56,38 @@ router.put('/', requirePermission('settings', 'general', 'manage'), async (req: 
     }
 });
 
+router.get('/logo-banks', requirePermission('settings', 'logobank', 'view'), async (req, res) => {
+    try {
+        const setting = await prisma.setting.findUnique({ where: { key: 'enabled_banks' } });
+        res.json({
+            success: true,
+            data: {
+                enabled_banks: setting?.value || JSON.stringify(["KBANK", "SCB", "KTB", "BBL", "TRUEMONEY"]),
+            },
+        });
+    } catch (error) {
+        console.error('Get logo banks error:', error);
+        res.status(500).json({ success: false, message: 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”' });
+    }
+});
+
+router.put('/logo-banks', requirePermission('settings', 'logobank', 'manage'), async (req, res) => {
+    try {
+        const { enabled_banks } = req.body;
+
+        await prisma.setting.upsert({
+            where: { key: 'enabled_banks' },
+            update: { value: String(enabled_banks ?? '[]') },
+            create: { key: 'enabled_banks', value: String(enabled_banks ?? '[]') },
+        });
+
+        res.json({ success: true, message: 'à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸²à¸ªà¸³à¹€à¸£à¹‡à¸ˆ' });
+    } catch (error) {
+        console.error('Update logo banks error:', error);
+        res.status(500).json({ success: false, message: 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”' });
+    }
+});
+
 // === Bank Accounts ===
 
 // GET /api/admin/settings/banks (ต้องมีสิทธิ์ดู)
@@ -462,6 +494,58 @@ router.delete('/contacts/:id', requirePermission('settings', 'contacts', 'manage
     } catch (error) {
         console.error('Delete contact error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+const NOTIFY_SETTING_KEYS = [
+    'lineNotifyToken',
+    'lineNotifyDeposit',
+    'lineNotifyWithdraw',
+    'telegramBotToken',
+    'telegramChatId',
+    'telegramChatIdDeposit',
+    'telegramChatIdWithdraw',
+    'telegramChatIdRegister',
+    'telegramNotifyDeposit',
+    'telegramNotifyWithdraw',
+    'telegramNotifyRegister',
+];
+
+router.get('/notify-config', requirePermission('settings', 'notify', 'view'), async (req, res) => {
+    try {
+        const settings = await prisma.setting.findMany({
+            where: { key: { in: NOTIFY_SETTING_KEYS } },
+        });
+        const settingsMap: Record<string, string> = {};
+        settings.forEach((setting) => {
+            settingsMap[setting.key] = setting.value;
+        });
+
+        res.json({ success: true, data: settingsMap });
+    } catch (error) {
+        console.error('Get notify settings error:', error);
+        res.status(500).json({ success: false, message: 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”' });
+    }
+});
+
+router.put('/notify-config', requirePermission('settings', 'notify', 'manage'), async (req, res) => {
+    try {
+        const settings = req.body as Record<string, string>;
+
+        for (const [key, value] of Object.entries(settings)) {
+            if (!NOTIFY_SETTING_KEYS.includes(key)) continue;
+
+            await prisma.setting.upsert({
+                where: { key },
+                update: { value: String(value) },
+                create: { key, value: String(value) },
+            });
+        }
+
+        res.json({ success: true, message: 'à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸²à¸ªà¸³à¹€à¸£à¹‡à¸ˆ' });
+    } catch (error) {
+        console.error('Update notify settings error:', error);
+        res.status(500).json({ success: false, message: 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”' });
     }
 });
 

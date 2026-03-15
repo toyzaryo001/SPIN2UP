@@ -36,7 +36,7 @@ export default function NotifySettingsPage() {
 
     const fetchSettings = async () => {
         try {
-            const res = await api.get("/admin/settings");
+            const res = await api.get("/admin/settings/notify-config");
             if (res.data.success) {
                 setSettings(res.data.data);
             }
@@ -49,7 +49,7 @@ export default function NotifySettingsPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            await api.put("/admin/settings", settings);
+            await api.put("/admin/settings/notify-config", settings);
             toast.success("บันทึกสำเร็จ");
         } catch (error) {
             console.error("Save error:", error);

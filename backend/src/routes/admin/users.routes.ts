@@ -380,7 +380,7 @@ router.put('/:id', adminMiddleware, async (req: AuthRequest, res) => {
 });
 
 // GET /api/admin/users/:id/edit-logs - ประวัติแก้ไขเฉพาะ user
-router.get('/:id/edit-logs', async (req, res) => {
+router.get('/:id/edit-logs', requirePermission('members', 'history', 'view'), async (req, res) => {
     try {
         const logs = await prisma.editLog.findMany({
             where: { targetType: 'User', targetId: Number(req.params.id) },
@@ -396,7 +396,7 @@ router.get('/:id/edit-logs', async (req, res) => {
 });
 
 // DEBUG: Test Soft Delete Query validity (GET because browser can run it)
-router.get('/:id/debug-delete', requirePermission('members', 'list', 'manage'), async (req: AuthRequest, res) => {
+router.get('/:id/debug-delete', requirePermission('members', 'delete', 'manage'), async (req: AuthRequest, res) => {
     try {
         const userId = Number(req.params.id);
         const targetUser = await prisma.user.findUnique({ where: { id: userId } });

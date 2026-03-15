@@ -142,7 +142,7 @@ export default function WalletsSettingsPage() {
                         <RefreshCw className="w-4 h-4" /> รีเฟรช
                     </button>
                     <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ phoneNumber: "", accountName: "", jwtSecret: "" }); }}
-                        disabled={!hasPerm('banks')}
+                        disabled={!hasPerm('truemoney')}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Plus className="w-4 h-4" /> เพิ่มวอลเล็ท
                     </button>
@@ -183,7 +183,7 @@ export default function WalletsSettingsPage() {
                             <p className="text-xs text-gray-500 mt-1">สำคัญ: ใส่ Secret ที่ได้รับหลังตั้งค่า Webhook ที่ TrueWallet เพื่อ verify ว่าข้อมูลมาจาก TrueWallet จริง</p>
                         </div>
                         <div className="flex gap-2">
-                            <button type="submit" disabled={!hasPerm('banks')} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button type="submit" disabled={!hasPerm('truemoney')} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <Save className="w-4 h-4" /> {editingId ? "อัปเดต" : "บันทึก"}
                             </button>
                             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }}
@@ -253,15 +253,15 @@ export default function WalletsSettingsPage() {
                                 {/* Actions */}
                                 <div className="flex gap-2">
                                     <button onClick={() => handleToggle(wallet)}
-                                        disabled={!hasPerm('banks')}
+                                        disabled={!hasPerm('truemoney')}
                                         className={`px-3 py-1.5 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${wallet.isActive ? "bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30" : "bg-green-600/20 text-green-400 hover:bg-green-600/30"}`}>
                                         {wallet.isActive ? "ปิด" : "เปิด"}
                                     </button>
                                     <button onClick={() => handleEdit(wallet)}
-                                        disabled={!hasPerm('banks')}
+                                        disabled={!hasPerm('truemoney')}
                                         className="px-3 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">แก้ไข</button>
                                     <button onClick={() => handleDelete(wallet.id)}
-                                        disabled={!hasPerm('banks')}
+                                        disabled={!hasPerm('truemoney')}
                                         className="px-3 py-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>

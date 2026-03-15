@@ -148,7 +148,7 @@ export default function AnnouncementsPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800">จัดการประกาศ (Popup/Marquee)</h2>
                 </div>
-                <button onClick={() => openModal()} disabled={!hasPerm('banners')} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={() => openModal()} disabled={!hasPerm('announcements')} className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus size={18} /> เพิ่มประกาศ
                 </button>
             </div>
@@ -196,8 +196,8 @@ export default function AnnouncementsPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <button onClick={() => openModal(ann)} disabled={!hasPerm('banners')} className="p-2 hover:bg-slate-100 rounded text-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"><Edit size={16} /></button>
-                                        <button onClick={() => { setDeletingAnn(ann); setIsDeleteModalOpen(true); }} disabled={!hasPerm('banners')} className="p-2 hover:bg-red-50 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
+                                        <button onClick={() => openModal(ann)} disabled={!hasPerm('announcements')} className="p-2 hover:bg-slate-100 rounded text-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"><Edit size={16} /></button>
+                                        <button onClick={() => { setDeletingAnn(ann); setIsDeleteModalOpen(true); }} disabled={!hasPerm('announcements')} className="p-2 hover:bg-red-50 rounded text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
                                     </td>
                                 </tr>
                             ))}

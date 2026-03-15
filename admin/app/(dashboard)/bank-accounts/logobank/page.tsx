@@ -105,7 +105,7 @@ export default function LogoBankPage() {
     const fetchSettings = async () => {
         try {
             setLoading(true);
-            const res = await api.get("/admin/settings");
+            const res = await api.get("/admin/settings/logo-banks");
             if (res.data.success && res.data.data?.enabled_banks) {
                 setEnabledBanks(JSON.parse(res.data.data.enabled_banks));
             } else {
@@ -129,7 +129,7 @@ export default function LogoBankPage() {
     const handleSave = async () => {
         try {
             setSaving(true);
-            await api.put("/admin/settings", {
+            await api.put("/admin/settings/logo-banks", {
                 enabled_banks: JSON.stringify(enabledBanks)
             });
             toast.success("บันทึกสำเร็จ");
@@ -172,7 +172,7 @@ export default function LogoBankPage() {
                 </div>
                 <button
                     onClick={handleSave}
-                    disabled={saving || !hasPerm('banks')}
+                    disabled={saving || !hasPerm('logobank')}
                     className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Save size={18} />

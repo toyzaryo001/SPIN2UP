@@ -26,7 +26,7 @@ export default function MemberRegisterPage() {
 
     const hasPerm = (action: string) => {
         if (isSuperAdmin) return true;
-        const p = adminPermissions?.['members'];
+        const p = adminPermissions?.['members']?.[action];
         if (!p) return false;
         if (typeof p === 'boolean') return p;
         return !!p.manage;
@@ -206,7 +206,7 @@ export default function MemberRegisterPage() {
                         </Link>
                         <button
                             type="submit"
-                            disabled={isSaving || !hasPerm('members')}
+                            disabled={isSaving || !hasPerm('register')}
                             className="flex-1 px-4 py-3 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 disabled:opacity-50 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                         >
                             <Save size={20} />

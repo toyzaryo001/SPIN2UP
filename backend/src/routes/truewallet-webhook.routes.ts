@@ -178,9 +178,18 @@ router.post('/', async (req: Request, res: Response) => {
 
         console.log(`[TrueWallet Webhook] Matched user: ${matchedUser.fullName} (ID: ${matchedUser.id}, level: ${matchLevel})`);
 
-        // === Per-User Auto Deposit Check ===
-        if (matchedUser.autoDeposit === false) {
-            console.log(`[TrueWallet Webhook] User ${matchedUser.id} has autoDeposit=false, creating PENDING transaction for manual review`);
+        const minDepositRequired = Number(matchedWallet.minDeposit || 0);
+        const isBelowWalletMinDeposit =
+            minDepositRequired > 0 && Number(amountBaht) < minDepositRequired;
+        const pendingReviewReason = matchedUser.autoDeposit === false
+            ? 'ฝากออโต้ปิดสำหรับผู้ใช้นี้'
+            : isBelowWalletMinDeposit
+                ? `ยอดฝากต่ำกว่าขั้นต่ำของวอลเล็ทรับเงิน (${minDepositRequired} บาท)`
+                : null;
+
+        // === Manual Review Check ===
+        if (pendingReviewReason) {
+            console.log(`[TrueWallet Webhook] Transaction left as PENDING for manual review: ${pendingReviewReason}`);
             // Create pending transaction for manual review
             const pendingTx = await prisma.transaction.create({
                 data: {
@@ -202,9 +211,13 @@ router.post('/', async (req: Request, res: Response) => {
             );
             await prisma.trueWalletLog.update({
                 where: { id: walletLog.id },
-                data: { status: 'PENDING_REVIEW', transactionId: String(pendingTx.id) }
+                data: {
+                    status: 'PENDING_REVIEW',
+                    transactionDbId: pendingTx.id,
+                    errorMessage: pendingReviewReason
+                }
             });
-            return res.status(200).json({ success: true, status: 'PENDING_REVIEW', message: 'รอตรวจสอบ (ฝากออโต้ปิดสำหรับผู้ใช้นี้)', logId: walletLog.id });
+            return res.status(200).json({ success: true, status: 'PENDING_REVIEW', message: `รอตรวจสอบ (${pendingReviewReason})`, logId: walletLog.id });
         }
 
         const transaction = await prisma.transaction.create({

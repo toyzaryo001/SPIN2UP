@@ -361,9 +361,17 @@ async function processWebhookMessage(message: string, source: string, res: Respo
     console.log(`[Webhook ${source}] Level 3 PASSED: Bank verified`);
     console.log(`[Webhook ${source}] ✅ All 3 levels matched! Processing deposit for`, matchedUser.username, 'amount:', parsed.amount);
 
-    // ============ CREATE TRANSACTION & DEPOSIT TO BETFLIX ============
+    // ============ CREATE TRANSACTION & DEPOSIT TO MAIN AGENT ============
     const balanceBefore = Number(matchedUser.balance);
     const depositAmount = parsed.amount;
+    const minDepositRequired = Number(matchedBank.minDeposit || 0);
+    const isBelowBankMinDeposit =
+        minDepositRequired > 0 && Number(depositAmount) < minDepositRequired;
+    const pendingReviewReason = matchedUser.autoDeposit === false
+        ? 'ฝากออโต้ปิดสำหรับผู้ใช้นี้'
+        : isBelowBankMinDeposit
+            ? `ยอดฝากต่ำกว่าขั้นต่ำของบัญชีรับเงิน (${minDepositRequired} บาท)`
+            : null;
 
     // Create pending transaction
     const transaction = await prisma.transaction.create({
@@ -375,7 +383,7 @@ async function processWebhookMessage(message: string, source: string, res: Respo
             balanceBefore: balanceBefore,
             balanceAfter: balanceBefore,
             status: 'PENDING',
-            note: `Auto deposit via SMS - ${parsed.sourceBank} X${parsed.sourceAccountLast4} - ${parsed.sourceName}`
+            note: `Auto deposit via SMS - ${parsed.sourceBank} X${parsed.sourceAccountLast4} - ${parsed.sourceName}${pendingReviewReason ? ` | ${pendingReviewReason}` : ''}`
         }
     });
 
@@ -388,9 +396,9 @@ async function processWebhookMessage(message: string, source: string, res: Respo
 
     console.log(`[Webhook ${source}] Created pending transaction:`, transaction.id);
 
-    // === Per-User Auto Deposit Check ===
-    if (matchedUser.autoDeposit === false) {
-        console.log(`[Webhook ${source}] User ${matchedUser.id} has autoDeposit=false, leaving transaction PENDING for manual review`);
+    // === Manual Review Check ===
+    if (pendingReviewReason) {
+        console.log(`[Webhook ${source}] Transaction ${transaction.id} left as PENDING for manual review: ${pendingReviewReason}`);
         // Log to SMS webhook log
         try {
             await (prisma as any).smsWebhookLog.create({
@@ -406,11 +414,12 @@ async function processWebhookMessage(message: string, source: string, res: Respo
                     matchedUserId: matchedUser.id,
                     transactionId: transaction.id,
                     status: 'PENDING_REVIEW',
+                    errorMessage: pendingReviewReason,
                     matchLevel: 3
                 }
             });
         } catch (e) { console.error('SMS log error:', e); }
-        return res.json({ success: true, status: 'PENDING_REVIEW', message: 'รอตรวจสอบ (ฝากออโต้ปิดสำหรับผู้ใช้นี้)' });
+        return res.json({ success: true, status: 'PENDING_REVIEW', message: `รอตรวจสอบ (${pendingReviewReason})` });
     }
 
     try {

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import prisma from '../../lib/db.js';
 import { AuthRequest, requirePermission, adminMiddleware } from '../../middlewares/auth.middleware.js';
 import { BetflixService } from '../../services/betflix.service.js';
+import { AgentWalletService } from '../../services/agent-wallet.service.js';
 import { TelegramNotifyService } from '../../services/telegram-notify.service.js';
 
 const router = Router();
@@ -77,26 +78,16 @@ router.get('/', requirePermission('members', 'list', 'view'), async (req, res) =
             referrers.forEach(r => { referrersMap[r.id] = r.phone; });
         }
 
-        // Sync Balance with Betflix (Real-time)
+        // Sync Balance with all active agents (Betflix + Nexus + future agents)
 
         const usersWithBalance = await Promise.all(users.map(async (user) => {
             let finalUser: any = { ...user, referrerPhone: user.referredBy ? referrersMap[user.referredBy] : '-' };
-            
-            if (user.betflixUsername) {
-                try {
-                    const betflixBalance = await BetflixService.getBalance(user.betflixUsername);
 
-                    // Update local DB if balance is different (to keep sync for future)
-                    if (Number(user.balance) !== betflixBalance) {
-                        await prisma.user.update({
-                            where: { id: user.id },
-                            data: { balance: betflixBalance }
-                        });
-                        finalUser.balance = betflixBalance;
-                    }
-                } catch (e) {
-                    // Ignore error and keep old balance
-                }
+            try {
+                const liveBalance = await AgentWalletService.syncLocalBalanceFromAgents(user.id);
+                finalUser.balance = liveBalance;
+            } catch (e) {
+                // Ignore error and keep old balance
             }
             return finalUser;
         }));

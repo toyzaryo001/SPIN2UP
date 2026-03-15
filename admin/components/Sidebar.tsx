@@ -86,6 +86,7 @@ const allMenuItems: MenuItem[] = [
     submenu: [
       { label: "รายงานสมัครใหม่", href: "/reports/new-users", permissionCheck: { category: "reports", action: "new_users" } },
       { label: "รายงานสมัครใหม่ฝากเงิน", href: "/reports/new-users-deposit", permissionCheck: { category: "reports", action: "new_users_deposit" } },
+      { label: "รายงานสมัครไม่ฝาก", href: "/reports/new-users-no-deposit", permissionCheck: { category: "reports", action: "new_users_no_deposit" } },
       { label: "รายงานโบนัส", href: "/reports/bonus", permissionCheck: { category: "reports", action: "bonus" } },
       { label: "รายงานกำไรขาดทุน", href: "/reports/profit-loss", permissionCheck: { category: "reports", action: "profit" } },
       { label: "รายงานยูสไม่ออนไลน์", href: "/reports/inactive-users", permissionCheck: { category: "reports", action: "inactive_users" } },

@@ -126,7 +126,7 @@ router.get('/new-users', requirePermission('reports', 'new_users', 'view'), asyn
 // GET /api/admin/reports/new-users-deposit - 4.2 สมัครใหม่+ฝากในวัน (ต้องมีสิทธิ์ดู)
 router.get('/new-users-deposit', requirePermission('reports', 'new_users_deposit', 'view'), async (req, res) => {
     try {
-        const { preset = 'today', startDate, endDate } = req.query;
+        const { preset = 'today', startDate, endDate, search } = req.query;
         const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
 
         const dailyData = await getDailyData(start, end, async (date) => {
@@ -136,33 +136,142 @@ router.get('/new-users-deposit', requirePermission('reports', 'new_users_deposit
             // ผู้ใช้ที่สมัครในวันนั้น
             const newUsers = await prisma.user.findMany({
                 where: { createdAt: { gte: date, lte: dayEnd } },
-                select: { id: true, username: true, fullName: true },
+                select: { id: true, username: true, fullName: true, createdAt: true },
             });
 
-            // ตรวจสอบว่าใครฝากเงินในวันเดียวกัน
-            const usersWithDeposit = [];
-            for (const user of newUsers) {
-                const deposit = await prisma.transaction.findFirst({
+            const deposits = newUsers.length > 0
+                ? await prisma.transaction.findMany({
                     where: {
-                        userId: user.id,
+                        userId: { in: newUsers.map((user) => user.id) },
                         type: 'DEPOSIT',
                         status: 'COMPLETED',
                         createdAt: { gte: date, lte: dayEnd },
                     },
-                });
-                if (deposit) {
-                    usersWithDeposit.push({ ...user, firstDeposit: deposit.amount });
+                    orderBy: { createdAt: 'asc' },
+                    select: {
+                        id: true,
+                        userId: true,
+                        amount: true,
+                        createdAt: true,
+                        status: true,
+                    },
+                })
+                : [];
+
+            const firstDepositByUser = new Map<number, typeof deposits[number]>();
+            for (const deposit of deposits) {
+                if (!firstDepositByUser.has(deposit.userId)) {
+                    firstDepositByUser.set(deposit.userId, deposit);
                 }
             }
+
+            const usersWithDeposit = newUsers
+                .filter((user) => firstDepositByUser.has(user.id))
+                .map((user) => {
+                    const firstDeposit = firstDepositByUser.get(user.id)!;
+                    return {
+                        id: `nud-${user.id}-${firstDeposit.id}`,
+                        userId: user.id,
+                        username: user.username,
+                        fullName: user.fullName,
+                        registeredAt: user.createdAt,
+                        createdAt: firstDeposit.createdAt,
+                        amount: Number(firstDeposit.amount || 0),
+                        status: firstDeposit.status,
+                    };
+                });
 
             return { count: usersWithDeposit.length, users: usersWithDeposit };
         });
 
-        const totalCount = dailyData.reduce((sum, d) => sum + d.count, 0);
+        const searchValue = String(search || '').trim().toLowerCase();
+        const users = dailyData
+            .flatMap((day) => day.users || [])
+            .filter((user: any) => {
+                if (!searchValue) {
+                    return true;
+                }
+                return [
+                    user.username,
+                    user.fullName,
+                ].some((value) => String(value || '').toLowerCase().includes(searchValue));
+            })
+            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const totalCount = users.length;
+        const totalAmount = users.reduce((sum: number, user: any) => sum + Number(user.amount || 0), 0);
 
-        res.json({ success: true, data: { dailyData, summary: { totalCount } } });
+        res.json({ success: true, data: { dailyData, users, summary: { totalCount, count: totalCount, totalAmount } } });
     } catch (error) {
         console.error('Report new users deposit error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// GET /api/admin/reports/new-users-no-deposit - สมัครแล้วไม่เคยฝากเลย
+router.get('/new-users-no-deposit', requirePermission('reports', 'new_users_no_deposit', 'view'), async (req, res) => {
+    try {
+        const { preset = 'today', startDate, endDate, search } = req.query;
+        const { start, end } = getDateRange(preset as string, startDate as string, endDate as string);
+
+        const dailyData = await getDailyData(start, end, async (date) => {
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const newUsers = await prisma.user.findMany({
+                where: { createdAt: { gte: date, lte: dayEnd } },
+                select: {
+                    id: true,
+                    username: true,
+                    fullName: true,
+                    phone: true,
+                    bankName: true,
+                    createdAt: true,
+                },
+            });
+
+            const completedDeposits = newUsers.length > 0
+                ? await prisma.transaction.findMany({
+                    where: {
+                        userId: { in: newUsers.map((user) => user.id) },
+                        type: 'DEPOSIT',
+                        status: 'COMPLETED',
+                    },
+                    select: { userId: true },
+                    distinct: ['userId'],
+                })
+                : [];
+
+            const depositedUserIds = new Set(completedDeposits.map((tx) => tx.userId));
+            const usersWithoutDeposit = newUsers
+                .filter((user) => !depositedUserIds.has(user.id))
+                .map((user) => ({
+                    ...user,
+                    status: 'NO_DEPOSIT',
+                }));
+
+            return { count: usersWithoutDeposit.length, users: usersWithoutDeposit };
+        });
+
+        const searchValue = String(search || '').trim().toLowerCase();
+        const users = dailyData
+            .flatMap((day) => day.users || [])
+            .filter((user: any) => {
+                if (!searchValue) {
+                    return true;
+                }
+                return [
+                    user.username,
+                    user.fullName,
+                    user.phone,
+                    user.bankName,
+                ].some((value) => String(value || '').toLowerCase().includes(searchValue));
+            })
+            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const totalCount = users.length;
+
+        res.json({ success: true, data: { dailyData, users, summary: { totalCount, count: totalCount } } });
+    } catch (error) {
+        console.error('Report new users no deposit error:', error);
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });

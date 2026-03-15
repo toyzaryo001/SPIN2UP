@@ -45,6 +45,7 @@ const PERMISSION_MATRIX = [
         features: [
             { key: 'new_users', label: 'รายงานสมัครใหม่' },
             { key: 'new_users_deposit', label: 'รายงานสมัครใหม่ฝากเงิน' },
+            { key: 'new_users_no_deposit', label: 'รายงานสมัครไม่ฝาก' },
             { key: 'deposits', label: 'รายงานฝากเงิน' },
             { key: 'withdrawals', label: 'รายงานถอนเงิน' },
             { key: 'failed_deposits', label: 'ฝากล้มเหลว' },

@@ -48,7 +48,7 @@ router.get('/me', async (req: AuthRequest, res: Response) => {
             permissions = {
                 members: { list: true, register: true, edit_general: true, edit_bank: true, edit_password: true, auto_deposit: true, change_status: true, delete: true, history: true },
                 manual: { deposit: true, withdraw: true, withdrawals: true, history: true },
-                reports: { new_users: true, new_users_deposit: true, deposits: true, withdrawals: true, failed_deposits: true, failed_withdrawals: true, bonus: true, profit: true, inactive_users: true, win_lose: true },
+                reports: { new_users: true, new_users_deposit: true, new_users_no_deposit: true, deposits: true, withdrawals: true, failed_deposits: true, failed_withdrawals: true, bonus: true, profit: true, inactive_users: true, win_lose: true },
                 settings: { general: true, features: true, contacts: true, notify: true, banks: true, truemoney: true, logobank: true, payment: true },
                 promotions: { list: true },
                 banners: { banners: true, announcements: true },

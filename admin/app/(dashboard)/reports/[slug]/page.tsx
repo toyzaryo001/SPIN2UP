@@ -9,7 +9,8 @@ import toast from 'react-hot-toast';
 // Map slugs to Page Titles and columns
 const reportConfig: Record<string, { title: string; columns: string[] }> = {
     "new-users": { title: "รายงานสมัครใหม่", columns: ["วันที่สมัคร", "Username", "ชื่อ-นามสกุล", "เบอร์โทร", "ธนาคาร", "ยอดเงิน"] },
-    "new-users-deposit": { title: "รายงานสมัครใหม่ฝากเงิน", columns: ["วันที่", "Username", "ชื่อ-นามสกุล", "ยอดฝากแรก", "สถานะ"] },
+    "new-users-deposit": { title: "รายงานสมัครใหม่ฝากเงิน", columns: ["วันฝากแรก", "Username", "ชื่อ-นามสกุล", "ยอดฝากแรก", "สถานะ"] },
+    "new-users-no-deposit": { title: "รายงานสมัครไม่ฝาก", columns: ["วันที่สมัคร", "Username", "ชื่อ-นามสกุล", "เบอร์โทร", "ธนาคาร", "สถานะ"] },
     "deposit": { title: "รายงานฝากเงิน", columns: ["วันที่", "Username", "จำนวนเงิน", "ช่องทาง", "สถานะ", "ผู้ทำรายการ"] },
     "withdraw": { title: "รายงานถอนเงิน", columns: ["วันที่", "Username", "จำนวนเงิน", "ธนาคาร", "เลขบัญชี", "สถานะ", "ผู้ทำรายการ"] },
     "failed-deposit": { title: "รายงานฝากล้มเหลว", columns: ["วันที่", "Username", "จำนวนเงิน", "ช่องทาง", "สถานะ", "ผู้ทำรายการ"] },
@@ -200,13 +201,22 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                 // e.g. use "/admin/transactions" NOT "/api/admin/transactions"
                 // ======================================================
 
-                if (['withdraw', 'failed-withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
+                if (['new-users-deposit', 'new-users-no-deposit'].includes(slug)) {
+                    const url = `/admin/reports/${slug}${query}&preset=${dateRange}${dateRange === 'custom' ? `&startDate=${startISO}&endDate=${endISO}` : ''}`;
+                    const res = await api.get(url);
+                    const result = res.data;
+                    if (result.success) {
+                        setData(result.data.users || []);
+                        setSummary(result.data.summary || null);
+                        setTotalPages(1);
+                    }
+
+                } else if (['withdraw', 'failed-withdraw', 'bonus'].includes(slug)) {
                     // Transaction-based reports → /admin/transactions
                     const typeMap: Record<string, string> = {
                         "withdraw": "WITHDRAW",
                         "failed-withdraw": "WITHDRAW,MANUAL_DEDUCT",
                         "bonus": "BONUS",
-                        "new-users-deposit": "DEPOSIT",
                     };
                     const statusQuery = slug === 'withdraw' ? '&status=PENDING,COMPLETED' : slug === 'failed-withdraw' ? '&status=FAILED' : '';
                     const url = `/admin/transactions${query}&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}${statusQuery}`;
@@ -272,7 +282,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
 
                 } else {
                     // Fallback: try report endpoints
-                    const url = `/admin/reports/${slug}${query}&preset=${dateRange}`;
+                    const url = `/admin/reports/${slug}${query}&preset=${dateRange}${dateRange === 'custom' ? `&startDate=${startISO}&endDate=${endISO}` : ''}`;
                     try {
                         const res = await api.get(url);
                         if (res.data.success) {
@@ -302,7 +312,47 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
     const renderRow = (item: any, index: number) => {
         const rowNum = index + 1 + (page - 1) * 20;
 
-        if (slug === 'deposit' || slug === 'failed-deposit' || slug === 'new-users-deposit') {
+        if (slug === 'new-users-deposit') {
+            return (
+                <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                    <td className="px-6 py-4">
+                        <div>
+                            <p className="font-bold text-slate-700">{item.username || '-'}</p>
+                            {item.fullName && <p className="text-xs text-slate-400">{item.fullName}</p>}
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">{item.fullName || '-'}</td>
+                    <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
+                    <td className="px-6 py-4">
+                        <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                            {item.status || 'COMPLETED'}
+                        </span>
+                    </td>
+                </tr>
+            );
+        }
+
+        if (slug === 'new-users-no-deposit') {
+            return (
+                <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
+                    <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                    <td className="px-6 py-4 font-bold text-slate-700">{item.username || '-'}</td>
+                    <td className="px-6 py-4 text-slate-600">{item.fullName || '-'}</td>
+                    <td className="px-6 py-4 text-slate-500">{item.phone || '-'}</td>
+                    <td className="px-6 py-4 text-slate-500">{item.bankName || '-'}</td>
+                    <td className="px-6 py-4">
+                        <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+                            ไม่เคยฝาก
+                        </span>
+                    </td>
+                </tr>
+            );
+        }
+
+        if (slug === 'deposit' || slug === 'failed-deposit') {
             return (
                 <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center text-slate-500">{rowNum}</td>
@@ -313,14 +363,7 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                             {(item.user?.fullName || item.fullName) && <p className="text-xs text-slate-400">{item.user?.fullName || item.fullName}</p>}
                         </div>
                     </td>
-                    {slug === 'new-users-deposit' ? (
-                        <>
-                            <td className="px-6 py-4 text-slate-600">{item.user?.fullName || '-'}</td>
-                            <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
-                        </>
-                    ) : (
-                        <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
-                    )}
+                    <td className="px-6 py-4 font-bold text-emerald-600">{formatBaht(item.amount)}</td>
                     {(slug === 'deposit' || slug === 'failed-deposit') && (
                         <td className="px-6 py-4">
                             <span className={`text-xs px-2 py-1 rounded ${item.channel?.includes('Auto') || item.subType?.includes('Auto') ? 'bg-purple-100 text-purple-700' :
@@ -495,14 +538,24 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
                                 // Fetch all data for export (up to 10000 rows)
                                 const { startISO, endISO } = getDateRange(dateRange, customStart, customEnd);
 
-                                if (['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug)) {
+                                if (['new-users-deposit', 'new-users-no-deposit'].includes(slug)) {
+                                    const res = await api.get(`/admin/reports/${slug}?page=1&limit=10000&preset=${dateRange}${dateRange === 'custom' ? `&startDate=${startISO}&endDate=${endISO}` : ''}${search ? `&search=${search}` : ''}`);
+                                    const users = res.data?.data?.users || [];
+                                    if (slug === 'new-users-deposit') {
+                                        exportToCsv(config.title, ['วันฝากแรก', 'Username', 'ชื่อ-นามสกุล', 'ยอดฝากแรก', 'สถานะ'],
+                                            users.map((u: any) => [formatDate(u.createdAt), u.username, u.fullName, u.amount, u.status || 'COMPLETED']));
+                                    } else {
+                                        exportToCsv(config.title, ['วันที่สมัคร', 'Username', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'ธนาคาร', 'สถานะ'],
+                                            users.map((u: any) => [formatDate(u.createdAt), u.username, u.fullName, u.phone || '', u.bankName || '', 'ไม่เคยฝาก']));
+                                    }
+                                } else if (['deposit', 'withdraw', 'bonus'].includes(slug)) {
                                     if (slug === 'deposit') {
                                         const res = await api.get(`/admin/reports/all-deposits?page=1&limit=10000&preset=custom&startDate=${startISO}&endDate=${endISO}${search ? `&search=${search}` : ''}`);
                                         const txs = res.data?.data?.transactions || [];
                                         exportToCsv(config.title, ['วันที่', 'Username', 'ชื่อ', 'จำนวนเงิน', 'ช่องทาง', 'สถานะ', 'ผู้ทำรายการ'],
                                             txs.map((t: any) => [formatDate(t.date || t.createdAt), t.username || t.user?.username, t.fullName || t.user?.fullName, t.amount, t.channel || t.subType || t.type, t.status, t.admin || (t.adminId ? `Admin #${t.adminId}` : 'System')]));
                                     } else {
-                                        const typeMap: Record<string, string> = { "withdraw": "WITHDRAW", "bonus": "BONUS", "new-users-deposit": "DEPOSIT" };
+                                        const typeMap: Record<string, string> = { "withdraw": "WITHDRAW", "bonus": "BONUS" };
                                         const res = await api.get(`/admin/transactions?page=1&limit=10000&type=${typeMap[slug]}&startDate=${startISO}&endDate=${endISO}${search ? `&search=${search}` : ''}`);
                                         const txs = res.data?.data?.transactions || [];
                                         if (slug === 'withdraw') {
@@ -622,16 +675,18 @@ export default function ReportPage({ params }: { params: Promise<{ slug: string 
 
             {/* Summary Cards */}
             {
-                summary && ['deposit', 'withdraw', 'bonus', 'new-users-deposit'].includes(slug) && (
+                summary && ['deposit', 'withdraw', 'bonus', 'new-users-deposit', 'new-users-no-deposit'].includes(slug) && (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <p className="text-slate-500 text-sm">จำนวนรายการ</p>
                             <p className="text-2xl font-bold text-slate-800">{summary.count || summary.totalCount || 0}</p>
                         </div>
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                            <p className="text-slate-500 text-sm">ยอดรวม</p>
-                            <p className={`text-2xl font-bold ${slug === 'withdraw' ? 'text-red-600' : slug === 'bonus' ? 'text-purple-600' : 'text-emerald-600'}`}>{formatBaht(summary.totalAmount)}</p>
-                        </div>
+                        {slug !== 'new-users-no-deposit' && (
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                <p className="text-slate-500 text-sm">ยอดรวม</p>
+                                <p className={`text-2xl font-bold ${slug === 'withdraw' ? 'text-red-600' : slug === 'bonus' ? 'text-purple-600' : 'text-emerald-600'}`}>{formatBaht(summary.totalAmount)}</p>
+                            </div>
+                        )}
                     </div>
                 )
             }
